@@ -34,3 +34,8 @@ ios/App/build
 ios/App/DerivedData
 ios/App/Podfile.lock
 ios/.gradle
+ios/App/App/public
+ios/App/App/capacitor.config.json
+ios/App/output
+xcuserdata/
+*.xcuserstate
