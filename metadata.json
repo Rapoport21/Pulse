@@ -1,0 +1,5 @@
+{
+  "name": "PULSE",
+  "description": "Patient Urgency & Load Situational Engine - A mission-control dashboard for hospital operations.",
+  "requestFramePermissions": []
+}
