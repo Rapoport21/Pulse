@@ -349,10 +349,15 @@ function App() {
         {toast && (
           <motion.div
             key={toast.message}
-            initial={{ opacity: 0, y: -12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            initial={{ opacity: 0, y: -16, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.98 }}
+            transition={{
+              type: 'spring',
+              stiffness: 520,
+              damping: 34,
+              mass: 0.7,
+            }}
             style={{
               position: 'fixed',
               top: CHROME.headerHeight + 16,

@@ -279,13 +279,16 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
 };
 
 /**
- * Always-visible tiny connection indicator. Renders a small dot in the bottom-left.
+ * Always-visible tiny connection indicator. Renders a small dot in the bottom-left
+ * on desktop. Hidden on mobile — MobileView renders its own connection status
+ * inline in the top HUD strip so it doesn't overlap the bottom tab bar.
  */
 export const ConnectionIndicator: React.FC = () => {
   const status = useConnectionStatus();
   const dotColor = statusToColor(status);
   return (
     <div
+      className="pulse-connection-indicator"
       style={{
         position: 'fixed',
         bottom: SPACE.sm,

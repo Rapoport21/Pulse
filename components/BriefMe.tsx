@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Check, Sparkles, RefreshCw, Send } from 'lucide-react';
+import { Copy, Check, BrainCircuit, RefreshCw, Send } from 'lucide-react';
 import { UserProfile } from '../types';
 import { ROLE_INSIGHTS } from '../data/userProfiles';
 import {
@@ -301,7 +301,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                     briefingGenerated ? (
                       <Check size={13} strokeWidth={2} />
                     ) : (
-                      <Sparkles size={13} strokeWidth={2} />
+                      <BrainCircuit size={13} strokeWidth={1.75} />
                     )
                   }
                   style={

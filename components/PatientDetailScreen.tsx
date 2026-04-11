@@ -309,40 +309,30 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       {/* Top HUD strip — tactical header with back + save */}
       <HudStrip side="top" fixed={false} height={52}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flex: 1, minWidth: 0 }}>
-          <button
+          {/* Minimal icon-only back button — the old bordered label+icon
+              duplicated the "back" affordance with redundant chrome. */}
+          <motion.button
             type="button"
             onClick={onClose}
             aria-label="Back"
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ x: -2 }}
+            transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
+              width: 32,
+              height: 32,
               display: 'flex',
               alignItems: 'center',
-              gap: 4,
-              padding: `${SPACE.xs}px ${SPACE.sm}px`,
+              justifyContent: 'center',
               background: 'transparent',
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: RADIUS.sm,
+              border: 'none',
               color: COLORS.textSecondary,
               cursor: 'pointer',
-              fontFamily: FONTS.mono,
-              fontSize: 11,
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              fontWeight: 500,
-              transition: `all ${MOTION.fast}s ease`,
               flexShrink: 0,
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = COLORS.borderStrong;
-              e.currentTarget.style.color = COLORS.textPrimary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = COLORS.border;
-              e.currentTarget.style.color = COLORS.textSecondary;
-            }}
           >
-            <ChevronLeft size={13} strokeWidth={2} />
-            Back
-          </button>
+            <ChevronLeft size={18} strokeWidth={2} />
+          </motion.button>
 
           <div
             style={{

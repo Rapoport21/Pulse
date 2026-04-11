@@ -43,6 +43,23 @@
         background-color: #000000;
         color: #e5e5e5;
       }
+      /*
+       * iOS Safari zooms the viewport when focusing an <input> or <textarea>
+       * whose computed font-size is < 16px. Force 16px on mobile viewports
+       * to prevent that zoom jump while keeping the visual scale smaller on
+       * larger screens (our design system uses 13–14px inputs on desktop).
+       */
+      @media (max-width: 768px) {
+        input, textarea, select {
+          font-size: 16px !important;
+        }
+        /* MobileView renders its own connection status in the top HUD strip,
+           so hide the floating desktop indicator to avoid overlapping the
+           bottom tab bar on phones. */
+        .pulse-connection-indicator {
+          display: none !important;
+        }
+      }
       @keyframes scale-x {
         0% { transform: scaleX(0); }
         100% { transform: scaleX(1); }

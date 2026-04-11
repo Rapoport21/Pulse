@@ -215,8 +215,59 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         padding: SPACE['2xl'],
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: SPACE.lg,
       }}
     >
+      {/* Page Header — HUD strip (full width so both columns below start on
+          the same baseline: "Saturation Forecast" and "Inbound EMS" are
+          visually aligned at the top of the grid). */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          gap: SPACE.lg,
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <SectionTitle
+            id="HORIZON.4H"
+            label="Predictive Capacity Horizon"
+            divider={false}
+            style={{ marginBottom: 4 }}
+          />
+          <Mono tone="muted" size="xs">
+            // 4-hour forecast · Role view: {currentUser.role.replace('_', ' ')} ·{' '}
+            {isSimulating ? 'SIMULATION MODE' : 'Live telemetry'}
+          </Mono>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
+          <StatusPill
+            label={
+              systemStatus === 'manual'
+                ? 'MANUAL'
+                : systemStatus === 'stale'
+                ? 'DEGRADED'
+                : isSafe
+                ? 'NOMINAL'
+                : 'CRITICAL'
+            }
+            tone={
+              systemStatus === 'manual'
+                ? 'crit'
+                : systemStatus === 'stale'
+                ? 'warn'
+                : isSafe
+                ? 'ok'
+                : 'crit'
+            }
+            pulse={systemStatus === 'normal' && !isSafe}
+          />
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
@@ -227,52 +278,6 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       >
         {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg, minWidth: 0 }}>
-          {/* Page Header — HUD strip */}
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-end',
-              gap: SPACE.lg,
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-              <SectionTitle
-                id="HORIZON.4H"
-                label="Predictive Capacity Horizon"
-                divider={false}
-                style={{ marginBottom: 4 }}
-              />
-              <Mono tone="muted" size="xs">
-                // 4-hour forecast · Role view: {currentUser.role.replace('_', ' ')} ·{' '}
-                {isSimulating ? 'SIMULATION MODE' : 'Live telemetry'}
-              </Mono>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
-              <StatusPill
-                label={
-                  systemStatus === 'manual'
-                    ? 'MANUAL'
-                    : systemStatus === 'stale'
-                    ? 'DEGRADED'
-                    : isSafe
-                    ? 'NOMINAL'
-                    : 'CRITICAL'
-                }
-                tone={
-                  systemStatus === 'manual'
-                    ? 'crit'
-                    : systemStatus === 'stale'
-                    ? 'warn'
-                    : isSafe
-                    ? 'ok'
-                    : 'crit'
-                }
-                pulse={systemStatus === 'normal' && !isSafe}
-              />
-            </div>
-          </div>
-
           {/* Stale Data Banner */}
           <AnimatePresence>
             {systemStatus === 'stale' && (

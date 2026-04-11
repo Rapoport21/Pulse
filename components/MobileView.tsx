@@ -21,7 +21,8 @@ import {
   LayoutDashboard,
   Bell,
   ChevronRight,
-  Sparkles,
+  ChevronLeft,
+  BrainCircuit,
   Radio,
 } from 'lucide-react';
 import {
@@ -32,11 +33,13 @@ import {
   XAxis,
   Tooltip,
   ReferenceLine,
+  CartesianGrid,
 } from 'recharts';
 import { UserProfile, UserRole } from '../types';
 import { ROLE_ACTIONS } from '../data/userProfiles';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { getDeviceId } from '../lib/realtime';
+import { getDeviceId, useConnectionStatus } from '../lib/realtime';
+import { triggerHaptic } from '../lib/haptics';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import {
   COLORS,
@@ -477,6 +480,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [time, setTime] = useState(new Date());
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const myDeviceId = getDeviceId();
+  const connectionStatus = useConnectionStatus();
+  const connectionColor =
+    connectionStatus === 'connected'
+      ? COLORS.ok
+      : connectionStatus === 'connecting'
+        ? COLORS.warn
+        : COLORS.crit;
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -592,14 +602,37 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   const myPatients = getMyPatients();
 
-  const chartData = [
-    { time: 'Now', load: isSurgeActive ? 32 : 85 },
-    { time: '+1h', load: isSurgeActive ? 30 : 92 },
-    { time: '+2h', load: isSurgeActive ? 28 : 98 },
-    { time: '+3h', load: isSurgeActive ? 25 : 105 },
-    { time: '+4h', load: isSurgeActive ? 22 : 112 },
-  ];
-  const isSafe = chartData[4].load < 100;
+  // 4-hour forecast sampled at 15-minute intervals → 17 points gives a
+  // detailed curve that still feels responsive to touch on a phone. Adds
+  // a small sine-wave jitter so the line reads as real telemetry rather
+  // than a clean monotonic curve.
+  const chartData = React.useMemo(() => {
+    const pts: Array<{ time: string; tick: string; load: number }> = [];
+    const baseStart = isSurgeActive ? 32 : 85;
+    const baseEnd = isSurgeActive ? 22 : 112;
+    for (let i = 0; i <= 16; i++) {
+      const t = i / 16;
+      const eased = t * t * (3 - 2 * t); // smoothstep
+      const base = baseStart + (baseEnd - baseStart) * eased;
+      const jitter = Math.sin(i * 1.3) * 1.4 + Math.cos(i * 0.7) * 0.9;
+      const load = Math.max(18, Math.min(130, base + jitter));
+      const minutes = i * 15;
+      const hourPart = Math.floor(minutes / 60);
+      const minPart = minutes % 60;
+      const hasLabel = minPart === 0;
+      pts.push({
+        time: hasLabel
+          ? hourPart === 0
+            ? 'Now'
+            : `+${hourPart}h`
+          : '',
+        tick: `+${hourPart}h${minPart.toString().padStart(2, '0')}`,
+        load: Number(load.toFixed(1)),
+      });
+    }
+    return pts;
+  }, [isSurgeActive]);
+  const isSafe = chartData[chartData.length - 1].load < 100;
 
   const mockAlerts = [
     {
@@ -763,8 +796,26 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <CornerBracket position="tl" color={COLORS.borderStrong} size={5} thickness={1} />
             <CornerBracket position="br" color={COLORS.borderStrong} size={5} thickness={1} />
             {currentUser.avatarInitials}
-            <span
+            {/* Network status dot — replaces the floating ConnectionIndicator
+                that used to overlap the bottom tab bar. */}
+            <motion.span
               aria-hidden
+              aria-label={`Network ${connectionStatus}`}
+              animate={{
+                boxShadow:
+                  connectionStatus === 'connected'
+                    ? [
+                        `0 0 4px ${connectionColor}`,
+                        `0 0 10px ${connectionColor}`,
+                        `0 0 4px ${connectionColor}`,
+                      ]
+                    : `0 0 6px ${connectionColor}`,
+              }}
+              transition={{
+                duration: 2.4,
+                repeat: connectionStatus === 'connected' ? Infinity : 0,
+                ease: 'easeInOut',
+              }}
               style={{
                 position: 'absolute',
                 bottom: -2,
@@ -772,9 +823,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 width: 7,
                 height: 7,
                 borderRadius: RADIUS.full,
-                background: COLORS.ok,
+                background: connectionColor,
                 border: `1.5px solid ${COLORS.bg}`,
-                boxShadow: `0 0 6px ${COLORS.ok}`,
               }}
             />
           </div>
@@ -804,9 +854,40 @@ export const MobileView: React.FC<MobileViewProps> = ({
             >
               {currentUser.name}
             </div>
-            <Mono tone="muted" size="xs">
-              {currentUser.role.replace('_', ' ')} · {timeStr}
-            </Mono>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                minWidth: 0,
+              }}
+            >
+              <Mono tone="muted" size="xs">
+                {currentUser.role.replace('_', ' ')} · {timeStr}
+              </Mono>
+              <span
+                aria-hidden
+                style={{
+                  display: 'inline-block',
+                  width: 4,
+                  height: 4,
+                  borderRadius: RADIUS.full,
+                  background: connectionColor,
+                  boxShadow: `0 0 4px ${connectionColor}`,
+                }}
+              />
+              <Mono
+                tone="dim"
+                size="xs"
+                style={{ fontSize: 9, letterSpacing: '0.12em' }}
+              >
+                {connectionStatus === 'connected'
+                  ? 'LINK'
+                  : connectionStatus === 'connecting'
+                    ? 'SYNC'
+                    : 'OFFL'}
+              </Mono>
+            </div>
           </div>
         </div>
 
@@ -818,9 +899,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
             flexShrink: 0,
           }}
         >
-          <button
+          <motion.button
             onClick={() => onOpenChat()}
             aria-label="Open PULSE AI"
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ borderColor: COLORS.info }}
+            transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               width: 44,
               height: 36,
@@ -832,14 +916,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
               borderRadius: RADIUS.sm,
               color: COLORS.info,
               cursor: 'pointer',
-              transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
             }}
           >
-            <Sparkles size={16} />
-          </button>
-          <button
+            <BrainCircuit size={16} strokeWidth={1.75} />
+          </motion.button>
+          <motion.button
             onClick={() => setShowMenu(!showMenu)}
             aria-label={showMenu ? 'Close menu' : 'Open menu'}
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ borderColor: COLORS.borderHover }}
+            transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               width: 44,
               height: 36,
@@ -851,11 +937,25 @@ export const MobileView: React.FC<MobileViewProps> = ({
               borderRadius: RADIUS.sm,
               color: showMenu ? COLORS.textPrimary : COLORS.textSecondary,
               cursor: 'pointer',
-              transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
             }}
           >
-            {showMenu ? <X size={16} /> : <Menu size={16} />}
-          </button>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={showMenu ? 'x' : 'menu'}
+                initial={{ opacity: 0, rotate: -90 }}
+                animate={{ opacity: 1, rotate: 0 }}
+                exit={{ opacity: 0, rotate: 90 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {showMenu ? <X size={16} /> : <Menu size={16} />}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
         </div>
       </HudStrip>
 
@@ -895,8 +995,46 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 zIndex: 1,
               }}
             >
-              <BracketLabel tone="secondary">OPERATOR MENU</BracketLabel>
-              <Mono tone="dim">// SEC-LVL 2</Mono>
+              <motion.button
+                type="button"
+                onClick={() => setShowMenu(false)}
+                aria-label="Close menu"
+                whileTap={{ scale: 0.94 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: `6px ${SPACE.sm}px`,
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textSecondary,
+                  cursor: 'pointer',
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  fontWeight: 500,
+                }}
+              >
+                <ChevronLeft size={12} strokeWidth={2} />
+                Back
+              </motion.button>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                }}
+              >
+                <BracketLabel tone="secondary" size="xs">
+                  OPERATOR MENU
+                </BracketLabel>
+                <Mono tone="dim" size="xs">
+                  SEC-LVL 2
+                </Mono>
+              </div>
             </div>
 
             <motion.div
@@ -912,6 +1050,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 tabIndex={0}
                 onClick={() => {
                   if (!isSurgeActive) {
+                    triggerHaptic('heavy');
                     onActivateSurge();
                   }
                   setShowMenu(false);
@@ -919,6 +1058,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
                   if ((e.key === 'Enter' || e.key === ' ') && !isSurgeActive) {
                     e.preventDefault();
+                    triggerHaptic('heavy');
                     onActivateSurge();
                     setShowMenu(false);
                   }
@@ -1146,10 +1286,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <StatusPill label="Live" tone="ok" pulse />
             </div>
 
-            {/* AI Shift Brief — informational (AI content, not urgent),
-                so only the Sparkles icon carries the brand accent. The
-                former accentBar + ScanningLine + red label were visual
-                noise that diluted the accent elsewhere in the shell. */}
+            {/* AI Shift Brief — informational (AI content, not urgent).
+                The former accentBar + ScanningLine + red label were visual
+                noise that diluted the accent elsewhere in the shell. Icon
+                carries the info tone (blue) so AI content is visually
+                distinct from the accent-only urgency lane. */}
             <TacticalCard padding="none">
               <div
                 style={{
@@ -1166,7 +1307,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     marginBottom: SPACE.sm,
                   }}
                 >
-                  <Sparkles size={14} color={COLORS.info} />
+                  <BrainCircuit size={14} strokeWidth={1.75} color={COLORS.info} />
                   <BracketLabel tone="secondary">AI SHIFT BRIEF</BracketLabel>
                 </div>
                 <p
@@ -1225,10 +1366,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   overflowX: 'auto',
                   scrollSnapType: 'x mandatory',
                   paddingBottom: SPACE.xs,
-                  marginLeft: -SPACE.base,
-                  marginRight: -SPACE.base,
-                  paddingLeft: SPACE.base,
-                  paddingRight: SPACE.base,
                   scrollbarWidth: 'none',
                 }}
               >
@@ -1237,21 +1374,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     icon: PhoneCall,
                     label: 'PAGE ON-CALL',
                     tone: 'info' as const,
+                    haptic: 'light' as const,
                     action: () => showToast('Paging On-Call Physician...', 'info'),
                   },
                   {
                     icon: Flame,
                     label: 'CODE BLUE',
                     tone: 'crit' as const,
+                    haptic: 'heavy' as const,
                     action: () => showToast('Code Blue Initiated', 'error'),
                   },
                   {
                     icon: ShieldAlert,
                     label: 'DIVERT STATUS',
                     tone: 'warn' as const,
+                    haptic: 'medium' as const,
                     action: () => showToast('Divert status requested', 'info'),
                   },
-                ].map((btn) => {
+                ].map((btn, qIdx) => {
                   const color =
                     btn.tone === 'info'
                       ? COLORS.info
@@ -1259,9 +1399,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       ? COLORS.crit
                       : COLORS.warn;
                   return (
-                    <button
+                    <motion.button
                       key={btn.label}
-                      onClick={btn.action}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        delay: 0.15 + qIdx * 0.05,
+                        duration: MOTION.base,
+                        ease: MOTION.ease,
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                      whileHover={{
+                        background: COLORS.surfaceElev,
+                        borderColor: color,
+                      }}
+                      onClick={() => {
+                        triggerHaptic(btn.haptic);
+                        btn.action();
+                      }}
                       style={{
                         flexShrink: 0,
                         scrollSnapAlign: 'start',
@@ -1290,7 +1445,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       >
                         {btn.label}
                       </span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -1392,11 +1547,20 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       tone={isSafe ? 'ok' : 'crit'}
                     />
                   </div>
-                  <div style={{ height: 140, width: '100%', marginLeft: -8 }}>
+                  <div
+                    style={{
+                      height: 180,
+                      width: '100%',
+                      marginLeft: -8,
+                      // Stop the parent tab from intercepting horizontal
+                      // drags when the user scrubs the chart.
+                      touchAction: 'pan-y',
+                    }}
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={chartData}
-                        margin={{ top: 5, right: 8, left: 0, bottom: 0 }}
+                        margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
                       >
                         <defs>
                           <linearGradient
@@ -1408,30 +1572,50 @@ export const MobileView: React.FC<MobileViewProps> = ({
                           >
                             <stop
                               offset="5%"
-                              stopColor={isSafe ? COLORS.ok : COLORS.crit}
-                              stopOpacity={0.4}
+                              stopColor={isSafe ? COLORS.info : COLORS.crit}
+                              stopOpacity={0.55}
                             />
                             <stop
                               offset="95%"
-                              stopColor={isSafe ? COLORS.ok : COLORS.crit}
+                              stopColor={isSafe ? COLORS.info : COLORS.crit}
                               stopOpacity={0}
                             />
                           </linearGradient>
                         </defs>
+                        <CartesianGrid
+                          strokeDasharray="2 4"
+                          stroke={COLORS.border}
+                          vertical={false}
+                        />
                         <XAxis
                           dataKey="time"
                           stroke={COLORS.textMuted}
                           tick={{
-                            fontSize: 10,
+                            fontSize: 9,
                             fontFamily: FONTS.mono,
-                            letterSpacing: '0.1em',
+                            letterSpacing: '0.12em',
                             fill: COLORS.textMuted,
                           }}
                           axisLine={{ stroke: COLORS.border }}
                           tickLine={false}
+                          interval={0}
                           dy={8}
                         />
-                        <YAxis hide domain={[0, 120]} />
+                        <YAxis
+                          domain={[0, 130]}
+                          width={28}
+                          stroke={COLORS.textMuted}
+                          tick={{
+                            fontSize: 9,
+                            fontFamily: FONTS.mono,
+                            letterSpacing: '0.1em',
+                            fill: COLORS.textDim,
+                          }}
+                          axisLine={false}
+                          tickLine={false}
+                          ticks={[0, 50, 100]}
+                          tickFormatter={(v) => `${v}%`}
+                        />
                         <Tooltip
                           contentStyle={{
                             backgroundColor: COLORS.surfaceElev,
@@ -1450,8 +1634,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             `${value}%`,
                             'Saturation',
                           ]}
+                          labelFormatter={(_label, payload) =>
+                            (payload?.[0]?.payload as { tick?: string } | undefined)
+                              ?.tick ?? ''
+                          }
                           cursor={{
-                            stroke: COLORS.borderStrong,
+                            stroke: COLORS.textSecondary,
                             strokeWidth: 1,
                             strokeDasharray: '2 4',
                           }}
@@ -1459,20 +1647,50 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <ReferenceLine
                           y={100}
                           stroke={COLORS.crit}
-                          strokeDasharray="2 4"
+                          strokeDasharray="3 4"
                           strokeWidth={1}
+                          label={{
+                            value: 'CAPACITY',
+                            position: 'insideTopRight',
+                            fill: COLORS.crit,
+                            fontSize: 8,
+                            fontFamily: FONTS.mono,
+                            letterSpacing: '0.14em',
+                          }}
                         />
                         <Area
                           type="monotone"
                           dataKey="load"
-                          stroke={isSafe ? COLORS.ok : COLORS.crit}
-                          strokeWidth={2}
+                          stroke={isSafe ? COLORS.info : COLORS.crit}
+                          strokeWidth={1.75}
                           fillOpacity={1}
                           fill="url(#colorLoadMobile)"
+                          activeDot={{
+                            r: 4,
+                            stroke: COLORS.bg,
+                            strokeWidth: 2,
+                            fill: isSafe ? COLORS.info : COLORS.crit,
+                          }}
+                          isAnimationActive
+                          animationDuration={700}
+                          animationEasing="ease-out"
                         />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+                  <Mono
+                    tone="dim"
+                    size="xs"
+                    style={{
+                      marginTop: 6,
+                      fontSize: 9,
+                      letterSpacing: '0.14em',
+                      display: 'block',
+                      textAlign: 'center',
+                    }}
+                  >
+                    DRAG ACROSS CHART TO SCRUB · 15-MIN RESOLUTION
+                  </Mono>
                 </div>
               </TacticalCard>
             </div>
@@ -1568,10 +1786,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   const acked = !!task.acknowledgedBy;
                   const ackedByMe = task.acknowledgedBy === myDeviceId;
                   return (
-                    <button
+                    <motion.button
                       key={task.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: acked ? 0.55 : 1, x: 0 }}
+                      transition={{
+                        delay: i * 0.04,
+                        duration: MOTION.base,
+                        ease: MOTION.ease,
+                      }}
+                      whileTap={!acked ? { scale: 0.98 } : undefined}
                       onClick={() => {
                         if (!acked) {
+                          triggerHaptic('medium');
                           onAcknowledgeTask(task.id, myDeviceId);
                           showToast('Task acknowledged', 'success');
                         }
@@ -1591,10 +1818,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         display: 'flex',
                         gap: SPACE.md,
                         cursor: acked ? 'default' : 'pointer',
-                        opacity: acked ? 0.55 : 1,
                         fontFamily: FONTS.sans,
                         color: COLORS.textPrimary,
-                        transition: `opacity ${MOTION.fast}s ease`,
                       }}
                     >
                       <div style={{ flexShrink: 0, marginTop: 2 }}>
@@ -1669,7 +1894,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                           </div>
                         )}
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </TacticalCard>
@@ -1989,13 +2214,22 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 gap: SPACE.md,
               }}
             >
-              {myPatients.map((patient) => {
+              {myPatients.map((patient, pIdx) => {
                 const critical = patient.status === 'critical';
                 const warning = patient.status === 'warning';
                 const tone = critical ? 'crit' : warning ? 'warn' : 'ok';
                 return (
-                  <TacticalCard
+                  <motion.div
                     key={patient.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: pIdx * 0.04,
+                      duration: MOTION.base,
+                      ease: MOTION.ease,
+                    }}
+                  >
+                  <TacticalCard
                     interactive
                     highlight={critical}
                     role="button"
@@ -2160,6 +2394,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       </div>
                     </div>
                   </TacticalCard>
+                  </motion.div>
                 );
               })}
             </div>
@@ -2234,8 +2469,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     ? AlertCircle
                     : Activity;
                 return (
-                  <div
+                  <motion.div
                     key={alert.id}
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      delay: i * 0.05,
+                      duration: MOTION.base,
+                      ease: MOTION.ease,
+                    }}
                     style={{
                       padding: SPACE.base,
                       minHeight: 72,
@@ -2326,7 +2568,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         }}
                       />
                     )}
-                  </div>
+                  </motion.div>
                 );
               })}
             </TacticalCard>
@@ -2622,7 +2864,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
           zIndex: 40,
           background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
           borderTop: `1px solid ${COLORS.borderStrong}`,
-          padding: `${SPACE.xs}px ${SPACE.xs}px ${SPACE.xs}px`,
+          // Horizontal padding keeps active-tab corner brackets from
+          // clipping the screen edge on the outermost tabs.
+          padding: `${SPACE.xs}px ${SPACE.sm}px ${SPACE.xs}px`,
           paddingBottom: `max(env(safe-area-inset-bottom), ${SPACE.xs}px)`,
         }}
       >
@@ -2643,38 +2887,83 @@ export const MobileView: React.FC<MobileViewProps> = ({
             const badgeTone =
               item.id === 'tasks' ? COLORS.accent : COLORS.info;
             return (
-              <button
+              <motion.button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  if (!active) triggerHaptic('medium');
+                  setActiveTab(item.id);
+                }}
                 aria-label={item.label}
                 aria-pressed={active}
+                whileTap={{ scale: 0.92 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   position: 'relative',
-                  minHeight: 52,
+                  minHeight: 44,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 4,
-                  padding: `${SPACE.xs}px ${SPACE.xs}px`,
-                  background: active ? COLORS.surfaceElev : 'transparent',
-                  border: `1px solid ${active ? COLORS.borderHover : 'transparent'}`,
+                  gap: 3,
+                  padding: `${SPACE.xs}px 2px`,
+                  background: 'transparent',
+                  border: '1px solid transparent',
                   borderRadius: RADIUS.sm,
                   cursor: 'pointer',
                   color: active ? COLORS.textPrimary : COLORS.textMuted,
-                  transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                  transition: `color ${MOTION.fast}s ease`,
                 }}
               >
+                {/* Active indicator — shared layout morphs between tabs */}
                 {active && (
-                  <BracketFrame
-                    color={COLORS.borderHover}
-                    size={5}
-                    visible
-                  />
+                  <motion.span
+                    layoutId="mobile-nav-active-frame"
+                    aria-hidden
+                    transition={{
+                      type: 'spring',
+                      stiffness: 520,
+                      damping: 38,
+                      mass: 0.8,
+                    }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: COLORS.surfaceElev,
+                      border: `1px solid ${COLORS.borderHover}`,
+                      borderRadius: RADIUS.sm,
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    <CornerBracket
+                      position="tl"
+                      color={COLORS.borderHover}
+                      size={4}
+                      thickness={1.5}
+                    />
+                    <CornerBracket
+                      position="tr"
+                      color={COLORS.borderHover}
+                      size={4}
+                      thickness={1.5}
+                    />
+                    <CornerBracket
+                      position="bl"
+                      color={COLORS.borderHover}
+                      size={4}
+                      thickness={1.5}
+                    />
+                    <CornerBracket
+                      position="br"
+                      color={COLORS.borderHover}
+                      size={4}
+                      thickness={1.5}
+                    />
+                  </motion.span>
                 )}
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', zIndex: 1 }}>
                   <Icon
-                    size={18}
+                    size={16}
+                    strokeWidth={active ? 2.25 : 1.75}
                   />
                   {hasBadge && (
                     <span
@@ -2682,29 +2971,31 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       style={{
                         position: 'absolute',
                         top: -3,
-                        right: -5,
-                        width: 6,
-                        height: 6,
+                        right: -4,
+                        width: 5,
+                        height: 5,
                         borderRadius: RADIUS.full,
                         background: badgeTone,
-                        boxShadow: `0 0 6px ${badgeTone}`,
+                        boxShadow: `0 0 5px ${badgeTone}`,
                       }}
                     />
                   )}
                 </div>
                 <span
                   style={{
+                    position: 'relative',
+                    zIndex: 1,
                     fontFamily: FONTS.mono,
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: 500,
-                    letterSpacing: '0.12em',
+                    letterSpacing: '0.1em',
                     textTransform: 'uppercase',
                     lineHeight: 1,
                   }}
                 >
                   {item.label}
                 </span>
-              </button>
+              </motion.button>
             );
           })}
         </div>

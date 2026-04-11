@@ -4,7 +4,7 @@ import {
   X,
   Send,
   Bot,
-  Sparkles,
+  BrainCircuit,
   Activity,
   Network,
   AlertTriangle,
@@ -859,7 +859,7 @@ ${urgentTasks
                       letterSpacing: '0.04em',
                     }}
                   >
-                    <Sparkles size={11} strokeWidth={2} />
+                    <BrainCircuit size={11} strokeWidth={1.75} />
                     <span>{p.action}</span>
                   </div>
                 </div>
@@ -1309,7 +1309,7 @@ ${urgentTasks
                     color: COLORS.info,
                   }}
                 >
-                  <Sparkles size={18} strokeWidth={2} />
+                  <BrainCircuit size={18} strokeWidth={1.75} />
                 </div>
                 <div>
                   <div
@@ -1598,7 +1598,8 @@ ${urgentTasks
                     border: 'none',
                     outline: 'none',
                     color: COLORS.textPrimary,
-                    fontSize: 13,
+                    // 16px prevents iOS Safari auto-zoom on focus
+                    fontSize: 16,
                     fontFamily: FONTS.sans,
                     letterSpacing: '-0.003em',
                   }}

@@ -90,16 +90,39 @@ export const Mono: React.FC<MonoProps> = ({
 
 // ─────────────────────────────────────────────────────────────────────────
 // BracketLabel — [ LABEL ] — mono wrapped in brackets
+// Uses flex layout so brackets don't inherit letter-spacing from the
+// inner label — otherwise `]` drifts right of the last character.
 // ─────────────────────────────────────────────────────────────────────────
 export const BracketLabel: React.FC<{
   children: React.ReactNode;
   tone?: MonoTone;
   size?: 'xs' | 'sm' | 'base';
-}> = ({ children, tone = 'accent', size = 'sm' }) => (
-  <Mono tone={tone} size={size}>
-    [ {children} ]
-  </Mono>
-);
+  style?: React.CSSProperties;
+}> = ({ children, tone = 'accent', size = 'sm', style }) => {
+  const scale = size === 'xs' ? TYPE.monoXs : size === 'base' ? TYPE.mono : TYPE.monoSm;
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 3,
+        fontFamily: FONTS.mono,
+        fontSize: scale.size,
+        fontWeight: scale.weight,
+        lineHeight: 1,
+        textTransform: 'uppercase',
+        color: monoToneColor(tone),
+        whiteSpace: 'nowrap',
+        letterSpacing: 0,
+        ...style,
+      }}
+    >
+      <span aria-hidden style={{ opacity: 0.7 }}>[</span>
+      <span style={{ letterSpacing: scale.tracking }}>{children}</span>
+      <span aria-hidden style={{ opacity: 0.7 }}>]</span>
+    </span>
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // StatusPill — terminal-style live status with glowing dot
