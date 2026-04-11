@@ -36,6 +36,7 @@ import {
   ReferenceLine,
   CartesianGrid,
 } from 'recharts';
+import QRCode from 'qrcode';
 import { UserProfile, UserRole } from '../types';
 import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { PatientDetailScreen } from './PatientDetailScreen';
@@ -134,6 +135,148 @@ const vitalColor = (status: VitalStatus): string => {
   if (status === 'critical') return COLORS.crit;
   if (status === 'warning') return COLORS.warn;
   return COLORS.textPrimary;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// TestQRInlineCard — compact always-visible scannable target.
+//
+// Renders a 96x96 QR plate alongside a short explanation. The whole
+// card is a button that expands to the fullscreen TestQRModal on tap
+// so the user can zoom in when they want to scan from a second device.
+// The inline size is deliberately small (this is a dev/test affordance,
+// not product chrome) but still large enough to be decoded by another
+// phone from ~20cm away.
+// ─────────────────────────────────────────────────────────────────────────
+interface TestQRInlineCardProps {
+  payload: string;
+  label: string;
+  sublabel: string;
+  onExpand: () => void;
+}
+
+const TestQRInlineCard: React.FC<TestQRInlineCardProps> = ({
+  payload,
+  label,
+  sublabel,
+  onExpand,
+}) => {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    QRCode.toDataURL(payload, {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#050505',
+        light: '#FAFAFA',
+      },
+    })
+      .then((url) => {
+        if (alive) setDataUrl(url);
+      })
+      .catch(() => {
+        // Silent failure — card will just show empty plate.
+      });
+    return () => {
+      alive = false;
+    };
+  }, [payload]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        triggerHaptic('light');
+        onExpand();
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.md,
+        width: '100%',
+        padding: SPACE.base,
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        cursor: 'pointer',
+        textAlign: 'left',
+        fontFamily: 'inherit',
+      }}
+      aria-label={`${label} — tap to enlarge`}
+    >
+      {/* White plate containing the QR — white is required for
+          reliable decoding by camera-based scanners. */}
+      <div
+        style={{
+          width: 96,
+          height: 96,
+          flexShrink: 0,
+          background: '#FAFAFA',
+          padding: 6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: RADIUS.sm,
+        }}
+      >
+        {dataUrl ? (
+          <img
+            src={dataUrl}
+            alt="Test QR code"
+            width={84}
+            height={84}
+            style={{
+              imageRendering: 'pixelated',
+              display: 'block',
+              width: 84,
+              height: 84,
+            }}
+          />
+        ) : (
+          <span
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: 8,
+              color: COLORS.textMuted,
+            }}
+          >
+            …
+          </span>
+        )}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <BracketLabel tone="info">{label}</BracketLabel>
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: FONTS.sans,
+            fontSize: 13,
+            fontWeight: 500,
+            color: COLORS.textPrimary,
+            letterSpacing: '-0.005em',
+            lineHeight: 1.3,
+          }}
+        >
+          {sublabel}
+        </div>
+        <div
+          style={{
+            marginTop: SPACE.xs,
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: COLORS.textMuted,
+          }}
+        >
+          TAP TO ENLARGE
+        </div>
+      </div>
+    </button>
+  );
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1988,6 +2131,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 })}
               </div>
             </div>
+
+            {/* Inline test QR card — always-visible scannable target
+                so the user doesn't have to hunt in the horizontal
+                Quick Actions row for the TEST QR button. Tap to
+                expand to a fullscreen view for easier cross-device
+                scanning. Encodes pulse://tab/patients → opens the
+                Patients tab when scanned by the SCAN QR button. */}
+            <TestQRInlineCard
+              payload="pulse://tab/patients"
+              label="TEST SCAN TARGET"
+              sublabel="Scan this code to open the Patients tab."
+              onExpand={() => setShowTestQR(true)}
+            />
 
             {/* AI Shift Brief — narrative summary of the above.
                 Positioned LAST on the dashboard because narrative is

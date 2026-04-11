@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import QrScanner from 'qr-scanner';
-import { X, QrCode, AlertCircle, Zap, ZapOff } from 'lucide-react';
+import { X, QrCode, AlertCircle, Zap, ZapOff, RotateCcw } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -30,10 +30,20 @@ import { triggerHaptic } from '../lib/haptics';
  * the first open triggers the standard iOS camera permission
  * dialog (driven by NSCameraUsageDescription in Info.plist).
  *
- * Design: black background, centered 260x260 reticle with corner
- * brackets in info-blue, slow vertical scan line, dim footer hint,
- * bracket-frame close button top-right. Matches the tactical HUD
- * aesthetic used everywhere else in the app.
+ * Critical implementation detail: the parent MobileView ticks its
+ * clock state once per second, which means the `onScan` prop
+ * receives a new function reference on every tick. If we put
+ * `onScan` in the useEffect dependency array, the scanner gets
+ * destroyed and recreated every second — which aborts the
+ * in-flight getUserMedia() promise and surfaces as "The operation
+ * was aborted." Bug fixed here by:
+ *   1. Holding `onScan` in a ref that never triggers re-init.
+ *   2. Running the init useEffect with an empty dep array.
+ *   3. Guarding start() with a local `cancelled` flag so an
+ *      aborted init silently exits instead of showing an error.
+ *
+ * The scanner also supports an explicit retry — bumping `retryKey`
+ * re-runs the init effect and clears any prior error state.
  */
 
 interface QRScannerModalProps {
@@ -48,76 +58,146 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const scannerRef = useRef<QrScanner | null>(null);
   const hasDecodedRef = useRef(false);
+
+  // Hold the latest onScan callback in a ref so parent re-renders
+  // (e.g. MobileView's 1s clock tick) don't re-run the init effect.
+  const onScanRef = useRef(onScan);
+  useEffect(() => {
+    onScanRef.current = onScan;
+  });
+
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
   const [hasFlash, setHasFlash] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     const videoEl = videoRef.current;
     if (!videoEl) return;
 
-    const scanner = new QrScanner(
-      videoEl,
-      (result) => {
-        // Gate to a single decode per session so rapid-fire frames
-        // don't double-fire the handler before the modal unmounts.
-        if (hasDecodedRef.current) return;
-        hasDecodedRef.current = true;
-        triggerHaptic('medium');
-        onScan(result.data);
-      },
-      {
-        returnDetailedScanResult: true,
-        preferredCamera: 'environment',
-        // Let us draw our own reticle in the React tree — don't
-        // inject the library's default highlight overlays.
-        highlightScanRegion: false,
-        highlightCodeOutline: false,
-        maxScansPerSecond: 5,
-      },
-    );
-    scannerRef.current = scanner;
+    let cancelled = false;
+    let scanner: QrScanner | null = null;
 
-    scanner
-      .start()
-      .then(async () => {
-        setStarted(true);
-        try {
-          const hasIt = await scanner.hasFlash();
-          setHasFlash(hasIt);
-        } catch {
-          setHasFlash(false);
+    // Reset state for this init attempt (important on retry).
+    setError(null);
+    setStarted(false);
+    hasDecodedRef.current = false;
+
+    const init = async () => {
+      try {
+        // Pre-flight: check that the platform even exposes a camera
+        // before we try to open one. This is what catches the iOS
+        // Simulator case cleanly instead of surfacing a raw
+        // "NotFoundError" to the user.
+        const cameraAvailable = await QrScanner.hasCamera();
+        if (cancelled) return;
+        if (!cameraAvailable) {
+          setError(
+            'No camera detected. If you are running in the iOS Simulator, cameras are not supported — install on a real iPhone to test.',
+          );
+          return;
         }
-      })
-      .catch((err: unknown) => {
+
+        scanner = new QrScanner(
+          videoEl,
+          (result) => {
+            // Gate to a single decode per session so rapid-fire frames
+            // don't double-fire the handler before the modal unmounts.
+            if (hasDecodedRef.current) return;
+            hasDecodedRef.current = true;
+            triggerHaptic('medium');
+            onScanRef.current(result.data);
+          },
+          {
+            returnDetailedScanResult: true,
+            preferredCamera: 'environment',
+            // Draw our own reticle in React — suppress library overlays.
+            highlightScanRegion: false,
+            highlightCodeOutline: false,
+            maxScansPerSecond: 5,
+          },
+        );
+        scannerRef.current = scanner;
+
+        await scanner.start();
+        if (cancelled) {
+          scanner.stop();
+          scanner.destroy();
+          return;
+        }
+
+        setStarted(true);
+
+        try {
+          const flashAvailable = await scanner.hasFlash();
+          if (!cancelled) setHasFlash(flashAvailable);
+        } catch {
+          // Non-fatal — just hide the flash button.
+          if (!cancelled) setHasFlash(false);
+        }
+      } catch (err: unknown) {
+        // Silently swallow errors from an aborted init — they were
+        // expected because the component unmounted during setup.
+        if (cancelled) return;
+
         const raw = err instanceof Error ? err.message : String(err);
         const msg = raw.toLowerCase();
-        if (msg.includes('permission') || msg.includes('denied') || msg.includes('notallowed')) {
+
+        if (
+          msg.includes('permission') ||
+          msg.includes('denied') ||
+          msg.includes('notallowed')
+        ) {
           setError(
-            'Camera permission denied. Enable it in Settings → PULSE → Camera, then reopen the scanner.',
+            'Camera permission denied. Open Settings → PULSE → Camera, toggle it on, then tap RETRY.',
           );
-        } else if (msg.includes('not found') || msg.includes('notfound') || msg.includes('no camera')) {
+        } else if (
+          msg.includes('not found') ||
+          msg.includes('notfound') ||
+          msg.includes('no camera')
+        ) {
           setError(
-            'No camera detected. This device has no available camera, or you are running in the iOS Simulator (which has no camera — test on a real device).',
+            'No camera detected. If you are running in the iOS Simulator, cameras are not supported — install on a real iPhone to test.',
           );
         } else if (msg.includes('secure') || msg.includes('https')) {
           setError(
             'Camera access requires HTTPS or localhost. Open the app over a secure origin.',
           );
+        } else if (msg.includes('abort')) {
+          setError(
+            'Scanner init was interrupted. Tap RETRY to try again.',
+          );
+        } else if (msg.includes('in use') || msg.includes('notreadable')) {
+          setError(
+            'Camera is in use by another app. Close other camera apps (FaceTime, Camera, Zoom) and tap RETRY.',
+          );
         } else {
           setError(`Camera error: ${raw}`);
         }
-      });
+      }
+    };
+
+    init();
 
     return () => {
-      scanner.stop();
-      scanner.destroy();
+      cancelled = true;
+      if (scanner) {
+        try {
+          scanner.stop();
+          scanner.destroy();
+        } catch {
+          // ignore
+        }
+      }
       scannerRef.current = null;
     };
-  }, [onScan]);
+    // Empty deps — onScan is held in a ref so we don't need it here.
+    // `retryKey` is the only thing that should force a re-run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [retryKey]);
 
-  const toggleFlash = async () => {
+  const toggleFlash = useCallback(async () => {
     const scanner = scannerRef.current;
     if (!scanner || !hasFlash) return;
     try {
@@ -127,7 +207,12 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
     } catch {
       // ignore
     }
-  };
+  }, [hasFlash]);
+
+  const handleRetry = useCallback(() => {
+    triggerHaptic('light');
+    setRetryKey((n) => n + 1);
+  }, []);
 
   return (
     <motion.div
@@ -169,7 +254,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           left: 0,
           right: 0,
           padding: `${SPACE.md}px ${SPACE.base}px`,
-          background: 'linear-gradient(180deg, rgba(0,0,0,0.85), rgba(0,0,0,0))',
+          background:
+            'linear-gradient(180deg, rgba(0,0,0,0.85), rgba(0,0,0,0))',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -181,7 +267,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           <BracketLabel tone="primary">QR SCANNER</BracketLabel>
         </div>
         <div style={{ display: 'flex', gap: SPACE.sm }}>
-          {hasFlash && (
+          {hasFlash && !error && (
             <button
               type="button"
               onClick={toggleFlash}
@@ -247,10 +333,34 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             pointerEvents: 'none',
           }}
         >
-          <CornerBracket position="tl" color={COLORS.info} size={26} thickness={2} inset={0} />
-          <CornerBracket position="tr" color={COLORS.info} size={26} thickness={2} inset={0} />
-          <CornerBracket position="bl" color={COLORS.info} size={26} thickness={2} inset={0} />
-          <CornerBracket position="br" color={COLORS.info} size={26} thickness={2} inset={0} />
+          <CornerBracket
+            position="tl"
+            color={COLORS.info}
+            size={26}
+            thickness={2}
+            inset={0}
+          />
+          <CornerBracket
+            position="tr"
+            color={COLORS.info}
+            size={26}
+            thickness={2}
+            inset={0}
+          />
+          <CornerBracket
+            position="bl"
+            color={COLORS.info}
+            size={26}
+            thickness={2}
+            inset={0}
+          />
+          <CornerBracket
+            position="br"
+            color={COLORS.info}
+            size={26}
+            thickness={2}
+            inset={0}
+          />
           {started && (
             <motion.div
               initial={{ top: '0%' }}
@@ -281,7 +391,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: 'min(88%, 340px)',
+            width: 'min(88%, 360px)',
             padding: SPACE.base,
             background: COLORS.surface,
             border: `1px solid ${COLORS.crit}`,
@@ -301,7 +411,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           <p
             style={{
               marginTop: SPACE.sm,
-              marginBottom: 0,
+              marginBottom: SPACE.base,
               fontFamily: FONTS.sans,
               fontSize: 13,
               color: COLORS.textSecondary,
@@ -310,6 +420,64 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           >
             {error}
           </p>
+          <div
+            style={{
+              display: 'flex',
+              gap: SPACE.sm,
+              justifyContent: 'center',
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleRetry}
+              style={{
+                minHeight: 40,
+                padding: `0 ${SPACE.md}px`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                background: COLORS.surfaceElev,
+                border: `1px solid ${COLORS.info}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.info,
+                cursor: 'pointer',
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <RotateCcw size={12} />
+              <span>RETRY</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                onClose();
+              }}
+              style={{
+                minHeight: 40,
+                padding: `0 ${SPACE.md}px`,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                background: COLORS.surfaceElev,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                cursor: 'pointer',
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
+              CLOSE
+            </button>
+          </div>
         </div>
       )}
 
