@@ -90,9 +90,28 @@ export const Mono: React.FC<MonoProps> = ({
 
 // ─────────────────────────────────────────────────────────────────────────
 // BracketLabel — [ LABEL ] — mono wrapped in brackets
+//
 // Uses flex layout so brackets don't inherit letter-spacing from the
 // inner label — otherwise `]` drifts right of the last character.
+//
+// Vertical alignment fix: in Geist Mono the `[` and `]` glyphs extend
+// 22 font-units below the baseline (descender) while capital letters
+// P/L/E sit exactly on the baseline (0 descent). Measured via the
+// browser's `measureText` API at 200px font: letter visual center
+// at -71, bracket visual center at -64 — so the bracket is 7 units
+// (0.035em) closer to the baseline than the letter. The user
+// perceives this as "P not aligned with the brackets" because the
+// flex alignItems:center aligns the line boxes, not the ink inside.
+// Fix: shift the bracket spans up by 0.035em so their visual center
+// matches the letter cap-height center. Transform is used instead
+// of margin so layout is unaffected.
 // ─────────────────────────────────────────────────────────────────────────
+const bracketGlyphStyle: React.CSSProperties = {
+  opacity: 0.7,
+  transform: 'translateY(-0.035em)',
+  display: 'inline-block',
+};
+
 export const BracketLabel: React.FC<{
   children: React.ReactNode;
   tone?: MonoTone;
@@ -117,9 +136,9 @@ export const BracketLabel: React.FC<{
         ...style,
       }}
     >
-      <span aria-hidden style={{ opacity: 0.7 }}>[</span>
+      <span aria-hidden style={bracketGlyphStyle}>[</span>
       <span style={{ letterSpacing: scale.tracking }}>{children}</span>
-      <span aria-hidden style={{ opacity: 0.7 }}>]</span>
+      <span aria-hidden style={bracketGlyphStyle}>]</span>
     </span>
   );
 };

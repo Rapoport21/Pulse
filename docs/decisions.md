@@ -12,6 +12,36 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-11 · BracketLabel: glyph-center alignment (-0.035em transform)
+
+**Context.** User reported: "on mobile loading screen P in red box is
+not aligned with text". Diagnosis: in Geist Mono, the `[` and `]`
+glyphs have 22 font-units of descent (extending below baseline)
+while capital letters like P/L/E have 0 descent. Measured via the
+browser's `measureText` API at 200px font: letter ink center at -71,
+bracket ink center at -64. The bracket visual center sits 7 units
+(0.035em) closer to the baseline than the letter center. The flex
+`alignItems: center` correctly aligns the line boxes — but the
+*ink* inside the bracket's line box is biased low. Visually, the
+brackets appear to sit lower than the letters.
+
+**Decision.** In `BracketLabel`, wrap the `[` and `]` spans in a
+shared `bracketGlyphStyle` that applies
+`transform: translateY(-0.035em); display: inline-block`. Transform
+is used instead of margin so layout is unaffected. The shift is
+em-relative so it scales correctly at every BracketLabel size (xs,
+sm, base).
+
+**Rejected.** (a) `margin-top: -0.035em` — would shift the element's
+flex hitbox up, creating subtle misalignment with adjacent flex
+children. (b) Scaling brackets smaller (`font-size: 0.82em`) to
+match letter cap-height — loses the tactical bracket-heavy aesthetic
+and makes the brackets look timid. (c) Replacing brackets with a
+CSS box border — kills the type aesthetic entirely. (d) Using
+`⟦ ⟧` double brackets — different glyph, different problem.
+
+---
+
 ## 2026-04-11 · Mobile dashboard reorder: state hero first, narrative last
 
 **Context.** Mobile dashboard opened with "AI Shift Brief" as the first
