@@ -133,6 +133,190 @@ Every month we delay, another component ossifies.
 Skip component-level tests for now — they're high-maintenance and
 the smoke tests catch most of what they would.
 
+### T1.5 · Clinical data model (FHIR-compatible)
+
+**Where.** `types.ts` stops at `ZoneStatus`. There is no `Patient`,
+`Encounter`, `Vital`, `Allergy`, `Problem`, `Observation`, `Order`,
+`MedicationAdministration`, `Note`, or `AuditEvent`. What the app calls
+a "patient" today is a row rendered from a literal string mock.
+
+**Now.** Any clinical surface we build is a new throwaway ad-hoc
+shape. When the real data arrives, every component has to be rewritten
+because nothing was typed against a durable contract.
+
+**Why it matters.** The FHIR R4 Patient/Encounter/Observation/Condition
+resource set is the closest thing healthcare has to a lingua franca.
+If our types mirror it, plugging in a real FHIR endpoint (Epic,
+Cerner, Meditech — all speak R4) becomes an adapter problem, not a
+rewrite. If our types don't, it's a rewrite.
+
+**What to do.** One `types/clinical.ts` file with FHIR-aligned
+interfaces — not the full spec, just the bits we actually render:
+`Patient` (MRN, name, sex, DOB, preferredLanguage), `Encounter` (FIN,
+status, admit time, discharge time, class, location, acuity),
+`Vital` (systolic, diastolic, heartRate, spO2, temp, respRate,
+painScore, GCS, timestamp), `Allergy` (substance, reaction, severity,
+verified), `Problem` (ICD-10, display, onset, status),
+`MedicationOrder` (drug, route, dose, frequency, indication,
+ordering provider), `MedicationAdministration` (drug, dose given,
+time, witness), `CodeStatus` ('FULL' | 'DNR' | 'DNI' | 'DNR/DNI' |
+'COMFORT'), `Isolation` ('NONE' | 'CONTACT' | 'DROPLET' | 'AIRBORNE' |
+'PROTECTIVE'), `AdvanceDirective` flags, `InsuranceCoverage`,
+`Note` (SOAP / I-PASS / nursing). Every new clinical component reads
+from these types. Mock data implements the shape. The adapter layer
+([T1.2](#t12--real-data-or-admit-the-prototype)) swaps in real data
+later without touching components.
+
+### T1.6 · Immutable audit log for every mutation
+
+**Where.** No audit log exists. `ActionBoard` status changes,
+`setSurgeState`, `globalHandoverNotes`, `setUrgentTasks` — all mutate
+React state and vanish.
+
+**Now.** "Who acknowledged the code blue task at 02:14:07?" has no
+answer. The closest we have is a `history` array on each `ActionItem`
+with freeform strings, and it isn't even always populated.
+
+**Why it matters.** HIPAA §164.312(b) is explicit: "implement hardware,
+software, and/or procedural mechanisms that record and examine
+activity in information systems." The Joint Commission goes further
+— every chart entry must be attributable to a specific credentialed
+actor with a timestamp. Without an audit log, PULSE is legally
+disqualified from touching a real chart.
+
+**What to do.** `lib/auditLog.ts` exposes `audit.log({ actor, action,
+target, before, after, reason? })`. Every state-mutating function in
+the app calls `audit.log(...)` before the mutation lands. Entries
+append to an immutable ring buffer (bounded so memory stays sane)
+backed by IndexedDB for persistence across reloads. A Manager-only
+panel renders the log in reverse chronological order with filter by
+actor, target, action. When the backend arrives ([T1.2](#t12--real-data-or-admit-the-prototype)),
+the ring buffer becomes a local optimistic mirror of server log
+entries. Pair with [T1.1](#t11--identity-not-name-typing) so every
+`actor` is a real identity-of-actor, not a self-selected role.
+
+### T1.7 · Patient identity with code status, allergies, isolation
+
+**Where.** `LiveOps.tsx` patient rows currently show a name + room +
+chief complaint + ESI badge. `PatientDetailScreen` in `MobileView.tsx`
+shows the same plus a few vitals.
+
+**Now.** No code status. No allergies. No isolation. No weight. No
+advance directive flag. No language preference. The identity of the
+patient — the things that change what every other clinician *does* to
+them — is invisible.
+
+**Why it matters.** These five data points are the non-negotiable
+header on every paper chart, every EHR banner, every bedside
+whiteboard, in every hospital. Missing them from a clinical UI is
+the difference between a concept and a product. A "FULL CODE" vs
+"DNR" distinction is the difference between running a code and
+holding a hand. A peanut allergy vs no peanut allergy is the
+difference between giving a med and killing a patient.
+
+**What to do.** `PatientHeaderStrip` component that renders above
+the vitals on every patient view: `[MRN-1234]  JANE DOE  ♀ 72yo
+62kg` on the top row, `[FULL CODE] [NKA] [CONTACT ISOLATION] [EN]`
+chips on the second row, color-coded. DNR → accent red with a white
+"DNR" chip; allergies → amber chip listing substances; isolation →
+blue chip for contact, yellow for droplet, red for airborne. Allergy
+chip is clickable and opens a modal listing each allergen with
+reaction + severity. Chip labels use the same `BracketLabel`
+primitive as the rest of the app so the tactical register holds.
+
+### T1.8 · Early warning scores (MEWS / NEWS2 / qSOFA / sepsis bundle)
+
+**Where.** Nowhere. Individual vitals exist as decoration. No tile
+computes a score.
+
+**Now.** A patient with HR 112, BP 88/52, RR 28, SpO2 91% is rendered
+as four values in four colors. An experienced nurse sees "sepsis"
+immediately. The app doesn't help.
+
+**Why it matters.** The single highest-leverage clinical-decision
+support feature in modern EHRs is automated early warning score
+computation. NEWS2 is endorsed by the Royal College of Physicians
+and runs on every NHS ward. MEWS is the same in the US. qSOFA has
+been the sepsis screen since Sepsis-3 in 2016. Epic, Cerner, and
+Meditech all ship this feature. PULSE has the vitals it needs to
+compute all three — it just doesn't.
+
+**What to do.** `lib/clinicalScores.ts` — pure functions that take
+a `Vital` and return `{ mews, news2, qsofa, sepsis: { meetsSIRS,
+suspectedInfection, organDysfunction } }`. Each score returns both
+the numeric value and a risk bucket (`low` | `moderate` | `high` |
+`critical`) with the action guidance attached (e.g. NEWS2 ≥7 →
+"immediate clinical review, likely need escalation"). A
+`ClinicalScoreTile` component renders the most relevant score
+prominently on the patient header with a delta arrow, plus the
+other two in smaller form. Tapping opens a breakdown showing which
+vitals are driving the score. Score computation runs on every new
+vital entry so the score is always live.
+
+### T1.9 · ESI triage intake flow (Emergency Severity Index 1–5)
+
+**Where.** No triage screen exists. Patients in the mock list already
+have an `esi` level but no way to *enter* it.
+
+**Now.** Triage is the single most clinically consequential decision
+in any ED. It determines room assignment, nurse ratio, physician
+pick-up order, and order-set defaults. PULSE has no way to perform
+one.
+
+**Why it matters.** Triage is the one workflow every EMS arrival,
+every walk-in, every urgent care handoff passes through. If PULSE
+wants to live in the ED, it has to own triage. If it doesn't, it's
+a decorative layer on top of Epic ASAP.
+
+**What to do.** `ESITriageScreen` — a wizard with the canonical
+Gilboy algorithm:
+1. **Is the patient dying?** (airway / pulse / responsive) → ESI 1,
+   route straight to trauma bay.
+2. **Is the patient high-risk?** (new stroke symptoms, chest pain
+   w/ reassurance-refractory, etc.) → ESI 2, go to acute bed.
+3. **How many resources does the patient need?** (0, 1, or ≥2 —
+   labs, imaging, IV meds, consults all count) plus vital-sign
+   danger zone check → ESI 3, 4, or 5.
+Each question has a buttoned answer, not a typed free-text. Vital
+signs come from a mini vital-entry modal triggered inline. The
+final screen produces an ESI badge, suggested room/zone, suggested
+nurse assignment, and a one-line text handoff. Store the triage
+record in the audit log and attach it to the encounter.
+
+### T1.10 · PHI masking + session lock
+
+**Where.** `App.tsx` has no inactivity timer. No name masking.
+Patient names render full-string everywhere including the dashboard
+tickers.
+
+**Now.** If a nurse leaves her iPad unlocked on the charge desk and a
+visitor walks by, every patient name on the current screen is
+visible. HIPAA's "minimum necessary" rule is violated by default.
+
+**Why it matters.** The single most common HIPAA violation cited in
+OCR enforcement actions is "unauthorized access to PHI due to
+inadequate access controls." Unlocked devices are the #1 vector.
+Hospital IT will not deploy software that can't auto-lock.
+
+**What to do.** Two pieces:
+1. **Session lock.** `useIdleTimer` hook listens for `mousemove`,
+   `touchstart`, `keydown`. After 5 minutes of inactivity on mobile
+   (15 minutes on desktop), the app drops a full-screen lock overlay
+   with a biometric unlock button (Face ID via Capacitor's Biometric
+   Auth plugin). On web, a 6-digit PIN. Lock resets the inactivity
+   timer on unlock. The lock overlay blurs the content behind it via
+   `backdrop-filter: blur(24px)`.
+2. **PHI masking toggle.** Header button that toggles `maskPhi` in
+   the Zustand UI store. When on, names render as `J*** D***`, DOBs
+   render as `72yo`, SSNs as `xxx-xx-last4`, and photos are
+   replaced with initials. Audit log masks actor name the same way.
+   Default is *off* — clinicians need to see the whole name — but
+   one tap flips the whole app when a visitor approaches the
+   station.
+
+Both are cheap to build client-side, and both are mandatory the day
+we talk to a real hospital IT team.
+
 ---
 
 ## T2 · High leverage now
@@ -322,6 +506,672 @@ commit. Add a sentence to `docs/decisions.md`: "Inline styles with
 design tokens is the chosen approach." The commit message is the
 decision.
 
+### T2.8 · Role-based messaging with escalation chains
+
+**Where.** `ChatAssistant.tsx` is a 1699-line AI chat surface, not
+a team messaging surface. There is no DM, no channel, no role
+broadcast, no escalation.
+
+**Now.** If a bedside nurse needs to reach the on-call hospitalist,
+she picks up an actual phone and pages. If the charge nurse needs
+to tell every RN on a shift that a trauma is inbound, she shouts.
+PULSE has AI chat but zero human chat.
+
+**Why it matters.** The single most common "help me replace"
+conversation with clinical customers in the TigerConnect/PerfectServe
+space isn't about the pager — it's about the *escalation chain*.
+"If the primary doesn't answer in 2 minutes, page the secondary. If
+the secondary doesn't answer in 5 minutes, page the attending."
+That logic lives in the messaging layer, and PULSE has no messaging
+layer.
+
+**What to do.** `lib/messages.ts` + `components/CommsTab.tsx`:
+- **DM.** One-to-one threads keyed by `(senderId, recipientId)`.
+  Persist in Supabase with RLS so only participants read.
+- **Role broadcast.** One-to-many to all users with a given role in
+  a given unit. "TRAUMA INBOUND 5m" to `@all-er-nurses`. Read
+  receipts aggregated ("14 of 16 read").
+- **Escalation chain.** Every critical message attaches a chain
+  (`[primary → secondary → attending]`) with a timeout per hop. A
+  background timer walks the chain if the current target hasn't
+  acknowledged. The UI shows a live timeline of who was paged
+  when.
+- **Role-routing, not person-routing.** Messages address the role
+  first ("whoever is on call for nephrology") and resolve through
+  the on-call directory ([T2.20](#t220--on-call-directory--escalation)).
+
+Every message gets a full audit trail so "who was told what when"
+is answerable months later.
+
+### T2.9 · Bed board that mutates state
+
+**Where.** `LiveOps.tsx` has a bed-zone grid but each cell is a
+read-only render of a static `ZoneStatus` row.
+
+**Now.** You can see bed 4A is occupied. You can't change it. You
+can't assign a patient to it, mark it dirty, trigger housekeeping,
+or transfer the patient to 4B. It's a picture of a bed board, not
+a bed board.
+
+**Why it matters.** The bed board is the single most valuable screen
+in a hospital command center — operators live in it. If PULSE is
+going to displace TeleTracking or Epic's Bed Planning, it has to
+*be* the bed board, not render a snapshot of one.
+
+**What to do.** Extract `BedBoard.tsx` as its own surface. Every cell
+is clickable. Click opens a bottom sheet (mobile) or side panel
+(desktop) with the bed's current state, current patient (if any),
+and action buttons: *Assign patient*, *Discharge*, *Mark dirty*,
+*Mark ready*, *Transfer to...*, *Block*, *Unblock*. Every action
+mutates the zone state optimistically, broadcasts via Supabase,
+and writes an audit log entry. Patient assignment pulls from the
+unassigned patient queue. Mark-dirty auto-creates an EVS task.
+Visual state: green (ready), gray (occupied), yellow (dirty), red
+(blocked), blue (clean-in-progress), amber-striped (discharge
+pending).
+
+### T2.10 · EMS incoming board
+
+**Where.** ER_PERSONNEL role has `Ambulance ETA: 3 (<5m)` as a
+metric driver. That's the entire EMS surface.
+
+**Now.** When EMS calls ahead with a trauma, the information arrives
+by radio and lives in whoever answered the phone's head. PULSE has
+no way to capture or display inbound.
+
+**Why it matters.** Trauma activation is the highest-stakes
+time-sensitive workflow in any ED. "ETA 5 minutes, GSW to abdomen,
+BP 74/50, HR 136, Level 1 Trauma" requires the trauma team to be
+assembled and the bay prepared *before* the patient arrives. The
+ED that can read that off a board beats the ED that reads it off
+a radio transcript.
+
+**What to do.** `EMSIncomingBoard.tsx` — a queue of inbound
+patients sorted by ETA. Each row: ETA countdown, unit ID,
+chief complaint, field vitals, trauma activation level,
+destination bay, receiving team, transport method (ground/air).
+Rows pulse when ETA drops below 3 minutes. Tapping a row opens
+a prep checklist (trauma bay cleared, airway cart ready, blood
+bank notified, attending paged, imaging alerted, OR on standby
+if Level 1). When the patient arrives, the row converts to an
+encounter with the pre-arrival data as seed values. Data for
+demo comes from a synthetic feed with 3–5 rolling inbound entries
+that advance their ETA over time.
+
+### T2.11 · Vitals capture + trending view
+
+**Where.** `MobileView.tsx` `PatientDetailScreen` shows *current*
+vitals as labeled values. No history, no trend, no input.
+
+**Now.** You cannot enter a new vital set. You cannot see the last
+24 hours. You cannot spot a trend. A patient whose SpO2 dropped
+from 97% to 89% over 40 minutes looks identical to a patient who's
+been stable at 89% all shift.
+
+**Why it matters.** Vital-sign trending is the oldest and most
+reliable form of early warning in medicine. The MEWS/NEWS2
+scores ([T1.8](#t18--early-warning-scores--mews--news2--qsofa--sepsis-bundle))
+need the history to be meaningful. A single number at one point
+in time is almost useless.
+
+**What to do.** `VitalsPanel.tsx` — two parts:
+1. **Entry.** A mini form: systolic, diastolic, HR, RR, SpO2, temp,
+   pain, GCS. Tap each to inc/dec or open a numpad. Submit writes
+   a new `Vital` to the patient's vital history and refreshes the
+   score tile. Triggers MEWS recompute.
+2. **Trending.** Recharts sparkline per vital axis (or a combined
+   multi-axis chart with SpO2/HR/BP/RR). Last 24h by default, scrub
+   back 48h/72h. Horizontal bands on the chart for the danger
+   zones (HR > 130, SpO2 < 92, etc.). Tapping a point shows the
+   time, actor, and raw value. Computed scores plot alongside for
+   easy "was this patient trending toward sepsis before we caught
+   it?" review.
+
+### T2.12 · Flowsheet and I&O (intake/output)
+
+**Where.** Nowhere in the app. No I&O tracking, no fluid balance,
+no urine output log.
+
+**Now.** The single most labor-intensive nursing task during a shift
+is the flowsheet — hourly intake, hourly output, Q2 or Q4 turn and
+position, Q4 pain reassessment. Nurses chart this in Epic flowsheets
+or on paper.
+
+**Why it matters.** If PULSE wants to live on the bedside iPad, it
+has to own the flowsheet. Without it, the nurse is in two apps all
+shift and PULSE loses.
+
+**What to do.** `FlowsheetPanel.tsx` — grid with rows per measurement
+(intake: IV, PO, enteral; output: urine, emesis, drainage), columns
+per hour, cells are either a number or a dash. Tap any cell to edit.
+Running totals per column, running balance per row. Thresholds:
+`<30 mL/hr urine for 2 hours` triggers an amber cell + alert to
+the bedside nurse. Q2 turn/reposition is a checklist column with
+timestamps. Q4 pain reassessment rolls up to the patient header.
+
+### T2.13 · MAR (Medication Administration Record)
+
+**Where.** Nowhere.
+
+**Now.** PULSE doesn't know what meds a patient is on, when they
+were due, whether they were given, who gave them, or whether there
+was a BCMA mismatch.
+
+**Why it matters.** The MAR is the second-most-time-consuming
+surface for a bedside nurse. Med errors are the #1 cause of
+preventable inpatient harm — every serious hospital uses BCMA
+(barcoded medication administration) where the nurse scans the
+patient's wristband, scans the med, and confirms the five rights
+(right patient, right drug, right dose, right route, right time).
+Without this workflow, PULSE can't be the bedside surface.
+
+**What to do.** Two phases:
+1. **Phase 1 — the MAR, no scanning.** A timeline view of ordered
+   meds with due times, status chips (scheduled, due, overdue,
+   given, held, refused), administration history (who, when, dose
+   given, witness for high-alert meds). Tap to administer → modal
+   asks for verification (two-nurse for insulin/narcotics),
+   records the action.
+2. **Phase 2 — BCMA-lite via QR.** We already have a QR scanner
+   ([QRScannerModal.tsx](../components/QRScannerModal.tsx)).
+   Reuse it: patients get QR wristbands (display the patient QR on
+   their detail screen as a test target), meds get QR on the label.
+   The nurse scans the wristband, scans the med, and the app
+   verifies the match. Mismatch → red alert, blocks administration,
+   logs an audit event. Works identically in the iPhone shell and
+   the web preview.
+
+### T2.14 · Results inbox + orders panel
+
+**Where.** Nowhere in the app.
+
+**Now.** Labs, imaging, and pharmacy results are what the physician
+*works on* all shift. PULSE has zero surface for them.
+
+**Why it matters.** The "orders + results" surface is the primary
+workflow for ER and inpatient physicians. Epic's Results Inbox is
+the most-used screen in Epic outside the chart. Without it, PULSE
+is a dashboard for people who don't exist.
+
+**What to do.** Two panels on the patient detail:
+1. **Orders.** Active, on-hold, completed. Each row: order name,
+   type (lab/imaging/med/consult), requester, placed at, status,
+   result time (if applicable). Tap to see detail / discontinue /
+   modify.
+2. **Results.** New-since-last-login at the top with a `NEW`
+   chip. Each row: test name, LOINC code, result value, reference
+   range, abnormal flag (H/L/HH/LL with color), collected at,
+   resulted at. Critical results (HH/LL) stack at the very top
+   with a red left-border and a required-acknowledgment button
+   that logs the physician's review.
+
+For the demo: synthetic CBC, BMP, troponin, lactate, chest X-ray,
+CT head with plausible values and a couple of abnormals so the
+UI shows its range.
+
+### T2.15 · Problem list + active diagnoses + ICD-10
+
+**Where.** Nowhere.
+
+**Now.** The patient's active problem list — "CKD stage 3, type 2
+diabetes, AFib on eliquis, HFrEF EF 35%" — is invisible.
+
+**Why it matters.** Every clinical decision is made *in context of*
+the active problem list. A chest pain workup is different for a
+patient with known HFrEF. An abdominal pain workup is different
+for a patient on eliquis. Without the problem list visible,
+clinicians have to ask the patient, and the patient sometimes
+doesn't know.
+
+**What to do.** `ProblemListPanel.tsx` — a table of active problems
+with `{ icd10, display, onset, status, lastVisit }`. Each row is a
+`BracketLabel` chip with the ICD-10 code + display text. Inactive
+problems collapsed under a divider. Tap to add a new problem via
+ICD-10 search. Resolved problems roll down to a "past medical
+history" subsection. On the patient banner, the 3 highest-priority
+active problems surface as chips next to allergies.
+
+### T2.16 · SOAP / I-PASS handoff composer
+
+**Where.** `App.tsx` has `globalHandoverNotes` as a string blob.
+`ShiftHandoffModal` exists but takes freeform text.
+
+**Now.** Handoff is a freeform textarea. The nurse types whatever
+she wants, in whatever format she wants, and hopes the receiving
+nurse can parse it.
+
+**Why it matters.** I-PASS (Illness severity, Patient summary,
+Action list, Situation awareness, Synthesis by receiver) is the
+most-studied handoff structure in medicine with a proven 23%
+reduction in medical errors when adopted. Structured handoff is
+not optional for patient safety — it's a top-5 Joint Commission
+priority.
+
+**What to do.** Replace the freeform textarea with an I-PASS
+wizard:
+1. **Illness severity.** Three-pick: Stable / Watcher / Unstable.
+2. **Patient summary.** Gemini auto-drafts a one-paragraph
+   summary from the chart, nurse edits.
+3. **Action list.** Pulls from the active task list with
+   checkboxes; anything unchecked at handoff stays on the list.
+4. **Situation awareness.** Free text or voice, optional.
+5. **Synthesis.** Incoming nurse is required to read back the
+   action list to accept the handoff. Audit log records the
+   read-back timestamp and identity.
+
+Every handoff becomes a `Note` of type `I-PASS` attached to the
+encounter. Reviewable in the chart timeline.
+
+### T2.17 · Discharge readiness queue
+
+**Where.** Manager role has `Expedite Discharges (4 identified)`
+as an action item. That's a one-line string, not a workflow.
+
+**Now.** When the bed board is red, everyone wants to know which
+patients could be discharged *now*. The answer lives in a charge
+nurse's head.
+
+**Why it matters.** Discharge acceleration is the single most
+impactful throughput intervention in any hospital. A 30-minute
+reduction in discharge-to-bed-ready time is worth 2–3 additional
+admissions per bed per day.
+
+**What to do.** `DischargeQueue.tsx` — a filtered view of patients
+whose `dischargeReady` score ≥ 7/10. Score components:
+medically stable, final med rec done, scripts printed,
+follow-up booked, transport arranged, family present, bed secured
+at destination (if transfer), paperwork signed. Each component
+is a checkbox with an owner; unchecked blocks discharge. Complete
+all 10 → the patient's bed flips to `discharge-pending` on the
+bed board and a housekeeping task auto-generates with the expected
+discharge time.
+
+### T2.18 · Door-to-doc / LWBS / LOS throughput dashboard
+
+**Where.** Nowhere.
+
+**Now.** The Manager dashboard tells you current census. It doesn't
+tell you whether the ED is getting *faster* or *slower*. There's
+no door-to-doc, no left-without-being-seen, no length-of-stay
+trending.
+
+**Why it matters.** CMS reports door-to-doc and ED LOS publicly for
+every hospital in the US. These are the numbers the CEO asks
+about on every Monday meeting. They're also the numbers the
+regulators grade. PULSE can't pitch to a manager without them.
+
+**What to do.** `ThroughputDashboard.tsx` — four tiles with
+24h/7d/30d sparklines:
+- **Door-to-doc** (median + 90th percentile, with the CMS target
+  line at 25 minutes).
+- **LWBS rate** (percentage, with a trend arrow).
+- **ED LOS** (median, separated by disposition — discharged vs
+  admitted vs transferred).
+- **Boarding hours** (the total hours admitted patients spent
+  waiting for an inpatient bed).
+
+Each tile opens a detail drawer with histogram + outlier list +
+root-cause breakdown. Shipped as a new Manager-only view, plus a
+tile on the Manager dashboard as an at-a-glance summary.
+
+### T2.19 · Integration status dashboard
+
+**Where.** Nowhere.
+
+**Now.** In a real deployment, PULSE would bind to 8–12 upstream
+systems: Epic (FHIR R4), Cerner (FHIR R4), a lab (HL7 v2 ORU),
+an imaging PACS (HL7 v2 ORM/ORU + DICOM), pharmacy (HL7 v2 RDE),
+ADT feed (HL7 v2 A01/A02/A03/A08), telemetry (Philips IntelliVue
+via IP), bed tracking (TeleTracking), paging (TigerConnect/Vocera),
+nurse call (Rauland/Hill-Rom), RTLS (CenTrak), and push (APNs/FCM).
+Any of these going down creates a blind spot for the operator.
+
+**Why it matters.** Clinical ops teams need to know *right now*
+that the ADT feed has been down for 12 minutes, because that's why
+the patient who just rolled into bed 4 hasn't shown up on the
+board yet. Blind integration failures create data-trust collapse,
+and once trust collapses on a clinical product, it doesn't recover.
+
+**What to do.** `IntegrationHealth.tsx` — a grid of bound systems,
+each with a health indicator (green/yellow/red), last successful
+message timestamp, error rate over the last hour, and a detail
+drawer with recent failures. For demo, the grid is fed by a
+synthetic `lib/integrations.ts` that randomizes green with
+occasional yellow/red flashes and a reconnect animation. When
+real integrations exist, swap the backing store without touching
+the UI.
+
+### T2.20 · On-call directory + escalation
+
+**Where.** Nowhere.
+
+**Now.** When the bedside nurse needs the nephrologist on call at
+3am, she looks at a printed piece of paper taped to the charge
+nurse desk. Often it's outdated.
+
+**Why it matters.** On-call directory errors are one of the most
+common "why didn't the right person get paged" root causes in RCA
+reports. Digital, real-time, queryable on-call is the only way to
+fix it.
+
+**What to do.** `OnCallDirectory.tsx` — browsable by role,
+service, unit. Each row: name, credentials, primary contact
+method, secondary, tertiary, shift window. Tap a row to start a
+message through the messaging primitive ([T2.8](#t28--role-based-messaging-with-escalation-chains)).
+Attach an SLA to each role (e.g., cardiology 15min, nephrology
+30min) — if no ack within SLA, auto-escalate to the secondary and
+log the escalation.
+
+### T2.21 · Insurance / payer / encounter tile
+
+**Where.** Nowhere.
+
+**Now.** PULSE doesn't know whether the patient is Medicare,
+Medicaid, private, self-pay, or an out-of-network emergency
+visitor. All patients render identically.
+
+**Why it matters.** Payer drives network steering, pre-auth
+requirements, follow-up options, and (in the US) the difference
+between bankruptcy and a normal discharge for the patient. Case
+managers work this screen every hour.
+
+**What to do.** `InsuranceTile.tsx` on the patient detail —
+primary, secondary, tertiary coverage with carrier name, plan
+type, group ID (masked by default), copay status, pre-auth
+requirements for any pending orders. A red banner if the current
+admission is uncovered.
+
+### T2.22 · FHIR R4 contract definitions
+
+**Where.** Nowhere.
+
+**Now.** We're building clinical types ([T1.5](#t15--clinical-data-model-fhir-compatible))
+but we need to be explicit that they're FHIR-aligned, and we need
+to be able to serialize/deserialize against an actual FHIR
+endpoint the day one appears.
+
+**Why it matters.** Epic, Cerner, Meditech, and Allscripts all
+speak FHIR R4 now. Owning a small set of Patient/Encounter/
+Observation/Condition/MedicationRequest/DocumentReference types
+is the difference between "plug in a real endpoint in a week" and
+"rewrite half the app."
+
+**What to do.** `types/fhir.ts` — strict FHIR R4 resource shapes
+for the dozen resources we care about. `lib/fhirAdapter.ts` —
+pure functions that map FHIR → PULSE clinical types (one-way
+for now). Test against a couple of canned FHIR bundles to verify
+the mapping round-trips cleanly. This is an afternoon of work
+and it's the single biggest "enterprise-ready" signal we can
+send to a clinical IT team.
+
+### T2.23 · HL7 v2 ADT feed viewer
+
+**Where.** Nowhere.
+
+**Now.** The ADT feed is the oldest and most widely deployed
+clinical integration (A01 admit, A02 transfer, A03 discharge,
+A04 register, A08 update). Every hospital has one. It's how
+the bed board stays current.
+
+**Why it matters.** In most hospitals the canonical source of
+truth for "who is where right now" is the HL7 v2 ADT stream,
+*not* Epic's REST API (which lags the ADT stream by seconds).
+Operations teams watch the raw feed when things go wrong.
+
+**What to do.** `ADTFeedViewer.tsx` — a scrolling terminal-style
+feed of ADT messages, newest on top. Each message: timestamp,
+event type, patient MRN (masked when PHI mask is on), location.
+Tap a message to expand the raw pipe-delimited HL7 segment. For
+demo, feed is generated by a mock `lib/adtStream.ts` that fires
+a plausible mix of events per minute. Real deployment: swap the
+backing source for a websocket subscription to a Mirth Connect
+channel.
+
+### T2.24 · Charge Nurse assignment load balancer
+
+**Where.** Nowhere.
+
+**Now.** Nurse assignments happen on a whiteboard or a grease
+pencil on a laminated sheet. PULSE has no assignment view.
+
+**Why it matters.** Charge Nurse work is 80% assignment management.
+Every new admit requires deciding "which nurse takes this?" based
+on current load (patient count), acuity load (ESI-weighted), and
+skill match (cardiac-capable for a chest pain, etc.).
+
+**What to do.** `AssignmentBoard.tsx` — a grid with one column per
+RN on the shift, cells are assigned patients. Below each column:
+patient count, acuity sum, task-count, break status, estimated
+busy-minutes-per-hour. Drag-and-drop a patient between nurses
+(desktop) or long-press → pick-new-nurse (mobile). Audit every
+reassignment. Auto-suggest a nurse for new admits based on
+lowest acuity-weighted load + skill match.
+
+### T2.25 · ER Physician track board
+
+**Where.** Nowhere.
+
+**Now.** ER docs work off Epic ASAP's track board. PULSE has
+nothing equivalent.
+
+**Why it matters.** The ED track board is the ER physician's
+primary workspace — it shows every patient in the department,
+sorted by bed, with current status, pending results, time in
+department, and the current plan. Without it, an ER doc opening
+PULSE can't work.
+
+**What to do.** `TrackBoard.tsx` — one row per patient sorted by
+location. Columns: bed, patient (masked), age/sex, ESI, chief
+complaint, time in department, last vitals (mini sparkline), my
+pending (lab + imaging + consult counts with green/yellow/red by
+age), and disposition plan. Row click → jump to the full chart.
+Filter by zone (acute / fast track / trauma / CDU). Every physician
+gets a personalized "my patients" filter.
+
+### T2.26 · Trauma activation + MTP + mass casualty
+
+**Where.** The ER_PERSONNEL dashboard mentions "Trauma activation
+(Level 1) ETA 5 mins" as a narrative string. No structured workflow.
+
+**Now.** A trauma activation is a highly choreographed 20-person
+response. It has a checklist, a role card, a bay assignment, a
+blood bank protocol (massive transfusion), an OR standby, and
+(for a Level 1) an attending at the bedside within 15 minutes.
+PULSE doesn't model any of it.
+
+**Why it matters.** Trauma centers are graded on activation
+compliance by state trauma registries. A program that can show
+PULSE as the trauma team's operating surface is pitching to the
+center's highest-stakes workflow.
+
+**What to do.** `TraumaActivationScreen.tsx` — opens full-screen
+on activation with:
+1. **Primary survey checklist** (ABCDE — airway, breathing,
+   circulation, disability, exposure) with time stamps on each
+   item and the name of the person who cleared it.
+2. **Role assignments** — team leader, airway, circulation
+   (right), circulation (left), scribe, procedure, runner. Each
+   role card pulls from the on-call directory and pages the
+   assignee on activation.
+3. **MTP panel** — activate massive transfusion protocol with
+   a one-tap button; blood bank gets paged, the pack status is
+   tracked (1:1:1 ratio of PRBC:plasma:platelets), cooler ETAs
+   are shown.
+4. **Imaging request** — one tap triggers CT torso / pelvis
+   orders routed to the on-duty rad.
+
+Mass casualty variant: `MassCasualtyTriageScreen.tsx` using the
+START (Simple Triage And Rapid Treatment) algorithm to tag
+patients black/red/yellow/green.
+
+### T2.27 · Manager KPI cockpit
+
+**Where.** Manager dashboard has hardcoded `24 Admitted`,
+`45m Avg`, `-2 FTE`. No trend, no target, no drill-down.
+
+**Now.** The Ops Director opens PULSE and sees three strings.
+She can't tell whether today is better or worse than yesterday.
+She can't drill into the staffing gap to see which zone has it.
+She can't export for the Monday leadership meeting.
+
+**Why it matters.** The Manager role is who signs the check. If
+the dashboard doesn't answer her questions, she cancels the
+pilot. Her questions are specific: LWBS rate, 72h bounce-back
+rate, patient satisfaction (HCAHPS top-box), door-to-doc
+compliance, LOS by disposition, daily revenue per admit, staff
+turnover, incident rate, compliance (hand hygiene, line days,
+CAUTI, CLABSI).
+
+**What to do.** `ManagerCockpit.tsx` — a full desktop-optimized
+view with:
+- **Top strip.** 6 tiles: LWBS, door-to-doc, LOS, boarding hours,
+  bed capacity, staffing gap. Each with target + actual + delta +
+  30-day trend.
+- **Quality strip.** Hand hygiene compliance, medication errors
+  (7d), fall rate (30d), HAIs (30d).
+- **Regulatory strip.** CMS core measures (pneumonia, sepsis,
+  STEMI, stroke) with red/yellow/green on each.
+- **Financial strip.** Revenue per admit, contribution margin,
+  AR days, denial rate.
+- **Incidents panel.** Open RCA investigations with assignment,
+  due date, and status.
+
+Each tile drills down to a detail view with histogram, outlier
+list, and export-to-CSV button.
+
+### T2.28 · Predictive bed demand forecast
+
+**Where.** `PulseHorizon.tsx` has a forecast chart but it's
+hardcoded smoothstep synthetic data.
+
+**Now.** The forecast is decoration. It predicts nothing.
+
+**Why it matters.** Qventus and Epic's Bed Planning module both
+ship real predictive bed demand. A Charge Nurse uses the
+forecast to decide whether to open overflow at 2pm or wait until
+6pm. Without real prediction, the decision is guesswork.
+
+**What to do.** Three phases:
+1. **Phase 1 — rule-based.** `lib/bedForecast.ts` — simple
+   projection: current census + historical average arrivals per
+   hour for this DoW/hour + historical average discharges per
+   hour - bounded by capacity. Fit on 30d of synthetic data
+   (or real once we have it). Outputs a 12h forecast curve.
+2. **Phase 2 — ML.** Train a boosted tree on historical data
+   with features: census, inbound EMS count, weather, sports
+   calendar, day-of-week, holiday flag. Run inference on the
+   client via TensorFlow.js. Store model artifacts in `public/`.
+3. **Phase 3 — confidence bands.** Shade the forecast with
+   P10/P50/P90 bands so the operator sees uncertainty.
+
+The chart already supports the line; we're replacing the data
+source, not the rendering.
+
+### T2.29 · Staff supply/demand forecast
+
+**Where.** Nowhere.
+
+**Now.** The "staffing gap" metric is a hardcoded `-2 FTE` string.
+
+**Why it matters.** Staffing decisions drive more than half of
+hospital operating cost. Charge Nurses manually recalculate the
+ratio every time someone calls in sick.
+
+**What to do.** `StaffingBoard.tsx` — grid of scheduled-versus-
+actual staff by zone, by role, by shift. Red cell = understaffed.
+Projected need for the next 4h/8h/12h based on the bed demand
+forecast ([T2.28](#t228--predictive-bed-demand-forecast)). Call-out
+controls: page float pool, page agency, request OT. Each action
+records cost estimate for end-of-shift reporting.
+
+### T2.30 · Incident reporting + RCA workflow
+
+**Where.** Nowhere.
+
+**Now.** An incident (med error, fall, wrong-site near-miss) is
+captured in a paper form or a separate risk-management portal.
+PULSE doesn't see it.
+
+**Why it matters.** Incidents are the single highest-signal
+feedback loop a hospital has. Every serious hospital is required
+by Joint Commission to conduct RCA for sentinel events. If PULSE
+owns incident capture, it becomes part of the safety fabric.
+
+**What to do.** `IncidentReport.tsx` — a quick-capture form
+(patient, event type, severity, description, involved staff,
+witness) triggered from any patient view with a "report incident"
+action. Creates an `Incident` record with a unique ID, auto-tagged
+to the encounter. Manager-side `IncidentQueue.tsx` triages new
+reports, assigns to investigator, tracks RCA phases (immediate
+actions → fishbone → causal chain → corrective actions →
+verification → closure). Every state change audit-logged.
+
+### T2.31 · Nurse-call + alarm aggregation
+
+**Where.** Nowhere.
+
+**Now.** Nurse call bells live on the Rauland/Hill-Rom system,
+telemetry alarms live on Philips IntelliVue, bed exit alarms
+live on the bed itself, IV pump alarms live on the pump. A
+bedside nurse juggles four distinct alarm streams across four
+physical devices.
+
+**Why it matters.** Alarm fatigue kills patients. The Joint
+Commission has had "alarm management" as a National Patient
+Safety Goal since 2014. Aggregating and intelligently routing
+alarms is one of the most-requested hospital features.
+
+**What to do.** `AlarmStream.tsx` — a single unified inbox of
+alarms from all bound sources. Each alarm: source system,
+urgency, patient, bed, message, age, ack state. Ack-all, ack-
+by-type, snooze, escalate actions. Route alarms to the
+assigned nurse first, then escalate to charge if no ack in
+the configured window. Mute rules per source/severity (with
+audit and physician-order requirement for overrides).
+
+### T2.32 · Consent + advance directives
+
+**Where.** Nowhere.
+
+**Now.** Procedure consents, informed consent forms, POLST
+forms, and advance directives live on paper in the chart
+folder or in Epic's media tab.
+
+**Why it matters.** If PULSE can surface "this patient has a
+POLST, do not intubate" at the moment of decision, it can
+prevent the single most common end-of-life error in US
+hospitals — intubating a patient who explicitly refused
+intubation.
+
+**What to do.** `ConsentPanel.tsx` on the patient detail — a
+list of active consent documents with type, signed-by, date,
+expiration, and a "view document" button (surfaces a stored
+PDF if one exists). Advance directives prominently displayed
+at the top. Code status is derived from the POLST if present
+and matches with the code status on the patient banner.
+
+### T2.33 · Social determinants strip
+
+**Where.** Nowhere.
+
+**Now.** PULSE has no view of whether the patient has housing,
+food security, transportation, interpreter needs, or caregiver
+support.
+
+**Why it matters.** Social determinants of health drive more
+outcome variance than clinical factors in most populations. A
+discharge plan for an unhoused patient is completely different
+from one for a patient with stable housing. Case managers and
+social workers need this surface.
+
+**What to do.** `SDOHStrip.tsx` — a 6-chip row on the patient
+detail: housing (stable / unstable / unhoused), food security
+(yes / risk / no), transportation (yes / no), interpreter
+needed (language code), caregiver at home (yes / no), utilities
+secure (yes / no). Based on the Accountable Health Communities
+Screening Tool from CMMI. Tap any chip to update. Flagged
+items trigger a case-management referral task automatically.
+
 ---
 
 ## T3 · Polish — operators will feel these
@@ -487,6 +1337,82 @@ createdAt }`. Render up to 3 stacked in the corner, newest on top.
 Each auto-dismisses after 3s. Adding a 4th pushes the oldest out.
 Zustand slice makes this a 20-line implementation.
 
+### T3.7 · 24-hour clocks + explicit timezone labels
+
+**Where.** Multiple places in `MobileView.tsx` render `2:14 PM`.
+`ActionBoard` uses `14:05`. `ShiftHandoffModal` uses local time
+with no TZ label.
+
+**Now.** The app mixes 12h and 24h formats and never labels the
+timezone. A patient transfer at "14:05" reads as 2:05pm in one
+timezone and 3:05pm in another if the receiving device is on a
+different setting.
+
+**Why it matters.** 24-hour clocks are the clinical standard. Every
+paper chart, every Epic screen, every paging system uses 24h.
+Mixing formats breaks muscle memory and introduces one-hour errors.
+Not labeling the TZ introduces 1–24 hour errors across regions.
+
+**What to do.** Three pieces:
+1. **All clinical timestamps 24h.** `lib/clock.ts` wraps every
+   date-format call site: `formatClinicalTime(d) → '14:05'`,
+   `formatClinicalDateTime(d) → '2026-04-11 14:05 CDT'`. Grep
+   for every `toLocaleTimeString` and `getHours` — route them all
+   through one helper.
+2. **TZ label on every display.** The top HUD strip shows the
+   hospital's canonical TZ (`CDT`). Every timestamp in the UI
+   carries that TZ unless explicitly local.
+3. **Print template respects both.** The patient banner print
+   stylesheet renders timestamps with full `YYYY-MM-DD HH:mm TZ`
+   so a printed chart snippet is legible without context.
+
+### T3.8 · Coded chips (SNOMED / LOINC / RxNorm / ICD-10)
+
+**Where.** Problem list, results, orders, meds will render display
+strings ("Chest pain", "Troponin I", "Amoxicillin"). The
+underlying codes are invisible.
+
+**Now.** The codes are the interoperability handle. Without them,
+two instances of "Chest pain" from different sources can't be
+reliably linked. Clinicians also use the codes as a disambiguator
+("R07.9 unspecified chest pain" vs "I20.9 angina").
+
+**Why it matters.** Real interop lives on codes, not on strings.
+The day we plug into a FHIR endpoint, every clinical shape will
+come with a code alongside the display. Making the code visible
+from the start trains the eye and makes bugs obvious.
+
+**What to do.** Every clinical `BracketLabel` chip gets a
+`<Mono tone="dim" size="xs">` code suffix: `[CHEST PAIN] <R07.9>`,
+`[TROPONIN I] <LOINC 49563-0>`, `[AMOXICILLIN] <RXNORM 723>`. On
+a narrow mobile viewport the code hides; on tap the code reveals
+in a tooltip. Zero design cost, huge credibility signal to any
+clinician who reads the app.
+
+### T3.9 · Patient banner print template
+
+**Where.** Nowhere. No print stylesheet exists.
+
+**Now.** If someone hits cmd-P on the patient detail, they get the
+full tactical UI with dark backgrounds and tiny mono labels on
+white paper.
+
+**Why it matters.** Printing a patient banner is the single most
+common print operation in a hospital — it's stapled to paper
+forms, attached to EMS handoffs, clipped into the front of paper
+charts. A print output that looks terrible is a credibility hole.
+
+**What to do.** `@media print` stylesheet in the global CSS:
+- Force white background, black ink.
+- Hide all chrome (HUD strips, nav, tabs, modals).
+- Render the patient header strip + encounter info + code status
+  + allergies + current problem list + active meds in a legible
+  paper layout with sans serif.
+- Include the hospital logo, the MRN, the timestamp, and the
+  printer's user ID in the footer.
+- A "print banner" button in the patient header for explicit
+  triggering.
+
 ---
 
 ## T4 · Bets
@@ -626,6 +1552,133 @@ Attending gets loud alerts for, and vice versa. This is as much a
 design problem as a tech problem, but it's the single most empathetic
 thing we could do for the people who use this at 3am.
 
+### T4.7 · Patient-facing companion (portal + tele-visit)
+
+**Where.** Nowhere. PULSE is exclusively a clinician tool.
+
+**Now.** Patients have no visibility into their own care while
+admitted. They don't know their next scheduled med, their pending
+labs, their expected discharge time, or who their attending is.
+
+**Why it matters.** Hospital Consumer Assessment (HCAHPS) scores
+are tied to reimbursement. Patient experience is measured and
+graded. A patient-facing companion that answers "what's happening
+to me" is one of the highest-leverage HCAHPS interventions and is
+conspicuously missing from most EHRs.
+
+**What to do.** Separate mobile surface (`/patient` route or a
+separate Capacitor target) with read-only views: my care team, my
+next med, my schedule, my providers, my visitors list, secure
+messaging to the care team. No clinical inputs from the patient
+side — read-only + messaging — to keep liability surface minimal.
+Room-specific QR code on the bedside tablet logs the patient in
+with a signed short-lived token.
+
+### T4.8 · Tele-visit capability
+
+**Where.** Nowhere.
+
+**Now.** Specialist consults happen by phone or paging. Family
+conferences happen in person. Neither scales for a busy ED.
+
+**Why it matters.** Tele-consults have been the biggest growth
+area in EHR vendor roadmaps post-COVID. Epic, Cerner, and
+Allscripts all ship a tele-visit module.
+
+**What to do.** Integrate Twilio Video (or Daily.co) as a per-
+patient room. One-tap "start video consult" from the patient
+header. Consult participants join with a signed link. Session is
+logged (not recorded — PHI) and attached to the encounter as a
+`Note` of type `teleConsult`.
+
+### T4.9 · Localization for multi-language hospitals
+
+**Where.** Every string is English inline literal.
+
+**Now.** PULSE ships only in English. A hospital with a large
+Spanish-speaking or ASL-interpreter-dependent staff cannot deploy
+it.
+
+**Why it matters.** Most large US hospitals have bilingual staff
+and run parts of the patient-facing UI in ≥2 languages. Compliance
+with Title VI of the Civil Rights Act requires meaningful
+language access.
+
+**What to do.** `lib/i18n.ts` with `formatMessage(key, vars)`.
+Route every user-facing string through it. Default locale is
+`en-US`. Add `es-US` as a second locale, translated via a
+translator (not auto-MT) for clinical terminology. On login,
+pick locale from the user profile. Clinical codes stay in
+English even when the locale is Spanish (the LOINC code is
+the same in every language — only the display string
+translates).
+
+### T4.10 · Drug-drug and drug-allergy interaction engine
+
+**Where.** Nowhere.
+
+**Now.** If a physician orders an ACE inhibitor for a patient
+with a known angioedema history, PULSE doesn't warn. If a
+patient on warfarin is about to get a stat dose of ibuprofen,
+PULSE doesn't warn. These are the exact interactions that cause
+inpatient harm.
+
+**Why it matters.** Every serious EHR ships Epic Willow, Cerner
+Multum, or First Databank integration for interaction checking.
+It's a category-defining feature — you cannot be "the bedside
+surface" without it.
+
+**What to do.** License First Databank or RxNorm + NLM's
+RxNav API. When a new med order is placed, run the active med
+list + allergies through the interaction engine. Severity
+tiered: contraindication (hard block), major (override-with-
+reason), moderate (warn), minor (info). Every override is
+audit-logged with the reason. This is a 2–3 week integration
+but it's the single biggest clinical-safety upgrade on the list.
+
+### T4.11 · RTLS patient + staff location feed
+
+**Where.** Nowhere.
+
+**Now.** "Where is Dr. Rostova right now?" is answered by calling
+her cell phone. "Which patient just left bed 4?" is answered by
+a nurse walking down the hallway.
+
+**Why it matters.** CenTrak and Stanley STANLEY Healthcare ship
+RTLS badges that report location every 1–5 seconds. Hospitals
+that deploy RTLS get 20–30% throughput improvements. The app
+that surfaces the RTLS feed becomes the canonical "where is
+anything" tool.
+
+**What to do.** When (if) a hospital has RTLS, subscribe to the
+feed over websocket. Render a live facility map with dots for
+every badged asset. Patient dots, staff dots, equipment dots
+(crash cart, portable ultrasound, telemetry packs). Tap a dot
+for details. Filter by role. Alert on bed-exit events from
+patients flagged high-fall-risk.
+
+### T4.12 · IoT vitals streaming
+
+**Where.** Nowhere.
+
+**Now.** Vitals are entered manually. Philips IntelliVue
+monitors at the bedside are streaming continuously but PULSE
+never sees the stream.
+
+**Why it matters.** Continuous streaming vitals → continuous
+early warning score computation → alert 30–60 minutes earlier
+than spot checks alone. The literature is clear: continuous
+vital monitoring + automated EWS reduces rapid-response calls
+and saves lives.
+
+**What to do.** Philips IntelliBridge + Capsule Medical's
+integration platform both expose vitals as HL7 v2 over IP.
+Subscribe to the feed for each monitored patient, write each
+observation to the patient vitals history, recompute MEWS/NEWS2
+on each. Render a live breadcrumb trail on the patient chart
+so the clinician can see "SpO2 fell from 97% to 89% over the
+last 40 minutes" at a glance.
+
 ---
 
 ## Not doing (for now)
@@ -675,6 +1728,49 @@ requires backend work). 1 engineer on tests, 1 on auth.
 
 Everything in T3 can be slotted as intermission work between the
 bigger T1/T2 items. T4 bets are roadmap candidates, not sprint work.
+
+## Clinical-feature build order (gap-analysis wedges)
+
+Once infrastructure is stable, the clinical features (T1.5–T1.10,
+T2.8–T2.33) ship in waves by leverage:
+
+**Wave A — Patient identity and clinical data model.**
+T1.5 (clinical types), T1.7 (code status + allergies + isolation
+banner), T2.11 (vitals capture + trending), T1.8 (MEWS/NEWS2/qSOFA),
+T2.15 (problem list), T2.14 (results inbox + orders). This wave
+transforms the patient detail view from a decorative list into a
+working chart surface. Everything in subsequent waves depends on
+this being solid.
+
+**Wave B — Triage and flow.**
+T1.9 (ESI triage), T2.9 (mutable bed board), T2.10 (EMS incoming
+board), T2.17 (discharge queue), T2.18 (throughput dashboard).
+Turns PULSE into a command-surface for ED flow.
+
+**Wave C — Communication and audit.**
+T1.6 (immutable audit log), T2.8 (role-based messaging), T2.20
+(on-call directory), T2.31 (alarm aggregation), T2.16 (SOAP /
+I-PASS handoff). Safety and communication fabric.
+
+**Wave D — Role-specific surfaces.**
+T2.24 (Charge Nurse assignment), T2.25 (ER Physician track board),
+T2.26 (Trauma activation), T2.27 (Manager KPI cockpit). Each role
+gets a purpose-built operating surface.
+
+**Wave E — Compliance and integration.**
+T1.10 (PHI masking + session lock), T2.22 (FHIR adapter), T2.23
+(HL7 ADT viewer), T2.19 (integration health dashboard), T2.32
+(consent + advance directives). The "enterprise ready" wave.
+
+**Wave F — Operational intelligence.**
+T2.28 (bed demand forecast), T2.29 (staff supply/demand), T2.30
+(incident + RCA), T2.12 (flowsheet / I&O), T2.13 (MAR), T2.21
+(insurance), T2.33 (SDOH). The "now it's Epic" wave.
+
+**Backend-dependent items** (T1.1 auth, T4.2 push, T4.3 server
+replay, T4.10 drug interactions, T4.11 RTLS, T4.12 IoT vitals)
+ship only after the adapter layer (T1.2) lands and we have a
+real backend to bind against.
 
 ---
 

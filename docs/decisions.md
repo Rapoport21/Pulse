@@ -12,6 +12,46 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-11 · Commit to the full clinical gap (not just the short list)
+
+**Context.** After the QR scanner shipped, Nick asked for a gap
+analysis against Salesforce Health Cloud, Epic ASAP/Rover, Cerner
+PowerChart, TigerConnect, TeleTracking, and the rest of the
+enterprise hospital software landscape. The analysis produced 11
+categories (A–K) of missing surface area plus an 8-item short list.
+Nick's response: *"i think we need at implement all of those"* and
+then *"what i meant is not just the short list but all of the
+ideas"* — a commitment to closing the entire gap, not just the
+cherry-picked wedges.
+
+**Decision.** Fold the full gap analysis into
+`docs/improvement-ideas.md` as proper T-tier entries first (T1.5–
+T1.10, T2.8–T2.33, T3.7–T3.9, T4.7–T4.12), then ship wedges in
+leverage order wave-by-wave. Wave A (patient identity + clinical
+data model) is highest-leverage and ships first: `types/clinical.ts`
+with FHIR-aligned shapes, clinical mock data, MEWS/NEWS2/qSOFA
+score library, patient header strip with code status + allergies +
+isolation, vitals panel with 24h trending. Subsequent waves (B–F)
+ship as standalone features. Backend-dependent items (auth, push,
+drug-interaction engine, RTLS, IoT vitals) are flagged and
+deferred behind the adapter-layer work ([T1.2](./improvement-ideas.md)).
+
+**Rejected.** (a) Implement everything at once — physically
+impossible in a session, and several items depend on a real
+backend that doesn't exist yet (SSO, server-enforced RBAC, push
+notifications with APNs, FHIR bindings). (b) Implement only the
+8-item short list — user explicitly rejected this. (c) Start with
+the compliance items (audit log, PHI masking, session lock) —
+important but invisible; the wedges that make the app feel like
+clinical software to a clinician on first sight are the patient
+banner + vitals + scores, and they compound the value of
+everything that comes later. (d) Start with the role-specific
+surfaces (Charge Nurse / ER Physician / Manager) — they're the
+end state, but they each consume the patient/encounter data
+model, so the model has to land first.
+
+---
+
 ## 2026-04-11 · BracketLabel: glyph-center alignment (-0.035em transform)
 
 **Context.** User reported: "on mobile loading screen P in red box is
