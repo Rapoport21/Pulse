@@ -44,7 +44,7 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { ESITriageScreen, type TriageResult } from './clinical';
+import { ESITriageScreen, EmsInboundBoard, type TriageResult } from './clinical';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
@@ -871,6 +871,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
    */
   const [showTriage, setShowTriage] = useState(false);
   const [lastTriage, setLastTriage] = useState<TriageResult | null>(null);
+  /**
+   * EMS board fullscreen overlay state — every role can pop it open
+   * via a launcher card on the Patients tab. ER personnel also see
+   * the same board inline on the Dashboard tab as a tile.
+   */
+  const [showEmsBoard, setShowEmsBoard] = useState(false);
   const myDeviceId = getDeviceId();
 
   /**
@@ -1757,6 +1763,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
               })();
               return <StateHero {...heroProps} />;
             })()}
+
+            {/* EMS Inbound Board — only ER personnel see this on the
+                dashboard. Manager + nurse get a smaller launcher on
+                the patients tab so they can still glance at it
+                without it dominating the home screen. */}
+            {currentUser.role === UserRole.ER_PERSONNEL && <EmsInboundBoard display="card" />}
 
             {/* Live Ops Grid — house-wide KPIs, scannable at a glance.
                 Critical tiles now render their numeric at 40px so
@@ -2766,6 +2778,74 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </motion.button>
             )}
 
+            {/* EMS Inbound launcher — every floor role can pop the
+                fullscreen radio board to see what's coming through
+                the door. ER personnel also see the same surface
+                inline on the Dashboard tab. */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowEmsBoard(true);
+              }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background:
+                  'linear-gradient(90deg, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0.02) 100%)',
+                border: `1px solid ${COLORS.info}`,
+                borderLeft: `3px solid ${COLORS.info}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 56,
+              }}
+            >
+              <CornerBracket position="tl" color={COLORS.info} size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color={COLORS.info} size={6} thickness={1} inset={-1} />
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(59,130,246,0.18)',
+                  border: `1px solid ${COLORS.info}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.info,
+                }}
+              >
+                <Radio size={18} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel tone="info" size="xs">
+                  EMS · INBOUND
+                </BracketLabel>
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontFamily: FONTS.sans,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: COLORS.textPrimary,
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  Live radio · runs decrementing in real time
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+            </motion.button>
+
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -3604,6 +3684,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
           showToast={showToast}
         />
       )}
+
+      {/* EMS Inbound Board — fullscreen overlay variant. Same hook
+          source as the dashboard tile so any acknowledgement made
+          here propagates to that view in lockstep. */}
+      <EmsInboundBoard
+        display="full"
+        open={showEmsBoard}
+        onClose={() => setShowEmsBoard(false)}
+      />
 
       {/* ESI Triage wizard — fullscreen modal that walks the
           ENA/Gilboy v4 algorithm and emits a TriageResult on

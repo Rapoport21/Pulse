@@ -15,3 +15,5 @@ export { VitalsPanel } from './VitalsPanel';
 export type { VitalsPanelProps } from './VitalsPanel';
 export { ESITriageScreen } from './ESITriageScreen';
 export type { ESITriageScreenProps, TriageResult } from './ESITriageScreen';
+export { EmsInboundBoard } from './EmsInboundBoard';
+export type { EmsInboundBoardProps } from './EmsInboundBoard';
