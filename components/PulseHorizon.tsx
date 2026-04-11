@@ -1,10 +1,56 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  AreaChart,
+  Area,
 } from 'recharts';
-import { TrendingUp, TrendingDown, ShieldAlert, CheckCircle2, RefreshCw, Zap, Ambulance, ArrowRight, Sliders, Network, Building2, Wind, MapPin, AlertTriangle, X } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  ShieldAlert,
+  CheckCircle2,
+  RefreshCw,
+  Zap,
+  Ambulance,
+  ArrowRight,
+  Sliders,
+  Network,
+  Building2,
+  Wind,
+  MapPin,
+  AlertTriangle,
+  X,
+  Activity,
+  ChevronRight,
+} from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  MOTION,
+  SHADOW,
+  Mono,
+  BracketLabel,
+  StatusPill,
+  SectionTitle,
+  TacticalCard,
+  TacticalButton,
+  CornerBracket,
+  BracketFrame,
+  Divider,
+  ScanningLine,
+  MetricValue,
+} from './design';
 
 interface PulseHorizonProps {
   onActivatePlaybook: () => void;
@@ -17,90 +63,124 @@ interface PulseHorizonProps {
   loginCount?: number;
 }
 
+type SelectedDriver = {
+  id: string;
+  name: string;
+  value: string;
+  status: Status;
+  impact: number;
+  trend: string;
+};
+
 const nearbyHospitals = [
   { name: 'Memorial General', status: 'Open', time: '12m', load: 65 },
   { name: 'St. Mary Level 1', status: 'Divert', time: '25m', load: 98 },
   { name: 'County Trauma', status: 'Busy', time: '18m', load: 85 },
 ];
 
-export const PulseHorizon: React.FC<PulseHorizonProps> = ({ onActivatePlaybook, isSurgeActive, currentUser, systemStatus = 'normal', setSystemStatus, showToast, loginCount = 1 }) => {
-  // Simulation State
+const statusToTone = (s: Status): 'ok' | 'warn' | 'crit' => {
+  if (s === Status.CRITICAL) return 'crit';
+  if (s === Status.WARNING) return 'warn';
+  return 'ok';
+};
+
+const statusToColor = (s: Status): string => {
+  if (s === Status.CRITICAL) return COLORS.crit;
+  if (s === Status.WARNING) return COLORS.warn;
+  return COLORS.ok;
+};
+
+/**
+ * PulseHorizon — flagship predictive capacity horizon.
+ * Tactical theme: rose accent forecast, HUD strip header, bracket labels,
+ * tactical cards, status pills, scannable KPI band, modernized driver rail.
+ */
+export const PulseHorizon: React.FC<PulseHorizonProps> = ({
+  onActivatePlaybook,
+  isSurgeActive,
+  currentUser,
+  systemStatus = 'normal',
+  setSystemStatus,
+  showToast,
+  loginCount = 1,
+}) => {
   const [simState, setSimState] = useState({
     addedStaff: 0,
     openBeds: 0,
-    expeditedDischarges: 0
+    expeditedDischarges: 0,
   });
-
   const [isSimulating, setIsSimulating] = useState(false);
   const [showManualModal, setShowManualModal] = useState(false);
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
-  const [selectedDriverDetails, setSelectedDriverDetails] = useState<{ id: string, name: string, value: string, status: Status, impact: number, trend: string } | null>(null);
+  const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
     if (loginCount > 1) {
-      return baseDrivers.map(driver => {
+      return baseDrivers.map((driver) => {
         if (currentUser.role === UserRole.MANAGER) {
-          if (driver.id === '1') return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' };
-          if (driver.id === '2') return { ...driver, value: '15m Avg', status: Status.NORMAL, impact: 15, trend: 'down' };
-          if (driver.id === '3') return { ...driver, value: 'Fully Staffed', status: Status.NORMAL, impact: 5, trend: 'stable' };
+          if (driver.id === '1') return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' as const };
+          if (driver.id === '2') return { ...driver, value: '15m Avg', status: Status.NORMAL, impact: 15, trend: 'down' as const };
+          if (driver.id === '3') return { ...driver, value: 'Fully Staffed', status: Status.NORMAL, impact: 5, trend: 'stable' as const };
         }
         if (currentUser.role === UserRole.NURSE) {
-          if (driver.id === 'n1') return { ...driver, value: '0 Overdue', status: Status.NORMAL, impact: 10, trend: 'down' };
-          if (driver.id === 'n2') return { ...driver, value: '0 Patients', status: Status.NORMAL, impact: 5, trend: 'down' };
-          if (driver.id === 'n3') return { ...driver, value: '1 Waiting', status: Status.NORMAL, impact: 15, trend: 'stable' };
+          if (driver.id === 'n1') return { ...driver, value: '0 Overdue', status: Status.NORMAL, impact: 10, trend: 'down' as const };
+          if (driver.id === 'n2') return { ...driver, value: '0 Patients', status: Status.NORMAL, impact: 5, trend: 'down' as const };
+          if (driver.id === 'n3') return { ...driver, value: '1 Waiting', status: Status.NORMAL, impact: 15, trend: 'stable' as const };
         }
         if (currentUser.role === UserRole.ER_PERSONNEL) {
-          if (driver.id === 'e1') return { ...driver, value: '2 Available', status: Status.NORMAL, impact: 20, trend: 'stable' };
-          if (driver.id === 'e2') return { ...driver, value: '15 mins', status: Status.NORMAL, impact: 15, trend: 'down' };
-          if (driver.id === 'e3') return { ...driver, value: '0 Inbound', status: Status.NORMAL, impact: 5, trend: 'down' };
+          if (driver.id === 'e1') return { ...driver, value: '2 Available', status: Status.NORMAL, impact: 20, trend: 'stable' as const };
+          if (driver.id === 'e2') return { ...driver, value: '15 mins', status: Status.NORMAL, impact: 15, trend: 'down' as const };
+          if (driver.id === 'e3') return { ...driver, value: '0 Inbound', status: Status.NORMAL, impact: 5, trend: 'down' as const };
         }
-        return { ...driver, status: Status.NORMAL, impact: Math.floor(driver.impact * 0.3), trend: 'down' };
+        return { ...driver, status: Status.NORMAL, impact: Math.floor(driver.impact * 0.3), trend: 'down' as const };
       });
     }
     return baseDrivers;
   }, [currentUser.role, loginCount]);
 
-  // Calculate dynamic forecast based on simulation levers
   const chartData = useMemo(() => {
-    // Base load trajectory without intervention
     let baseLoad = { now: 92, plus30: 98, plus60: 105, plus90: 112 };
-    
     if (isSurgeActive) {
       baseLoad = { now: 32, plus30: 30, plus60: 28, plus90: 25 };
     } else if (loginCount > 1) {
       baseLoad = { now: 32, plus30: 34, plus60: 35, plus90: 38 };
     }
-    
-    // Impact factors
-    const staffImpact = simState.addedStaff * 2.5; // Each staff reduces load by 2.5%
-    const bedImpact = simState.openBeds * 1.5; // Each bed reduces load by 1.5%
-    const dischargeImpact = simState.expeditedDischarges * 3.0; // Big impact
-
+    const staffImpact = simState.addedStaff * 2.5;
+    const bedImpact = simState.openBeds * 1.5;
+    const dischargeImpact = simState.expeditedDischarges * 3.0;
     const totalReduction = staffImpact + bedImpact + dischargeImpact;
-
-    // Apply curve smoothing (impact takes time to realize)
     const r30 = totalReduction * 0.3;
     const r60 = totalReduction * 0.7;
     const r90 = totalReduction * 1.0;
 
     return [
-      { time: '-30m', load: isSurgeActive ? 85 : (loginCount > 1 ? 32 : 85), capacity: 100, safe: 100 },
-      { time: 'Now', load: systemStatus === 'manual' ? 85 : baseLoad.now, capacity: 100, safe: 100 },
-      { time: '+30m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus30 - r30), capacity: 100, safe: 100 },
-      { time: '+60m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus60 - r60), capacity: 100, safe: 100 },
-      { time: '+90m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus90 - r90), capacity: 100, safe: 100 },
+      { time: '-30m', load: isSurgeActive ? 85 : loginCount > 1 ? 32 : 85, capacity: 100 },
+      { time: 'NOW', load: systemStatus === 'manual' ? 85 : baseLoad.now, capacity: 100 },
+      { time: '+30m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus30 - r30), capacity: 100 },
+      { time: '+60m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus60 - r60), capacity: 100 },
+      { time: '+90m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus90 - r90), capacity: 100 },
     ];
   }, [simState, isSurgeActive, systemStatus, loginCount]);
 
+  const currentLoad = chartData[1].load;
   const projectedLoad = chartData[4].load;
   const isSafe = projectedLoad < 100;
+  const delta = projectedLoad - currentLoad;
+  const isRising = delta > 0;
+
+  // NEDOCS-style severity classification for the forecast number
+  const forecastTone: 'ok' | 'warn' | 'crit' =
+    projectedLoad >= 100 ? 'crit' : projectedLoad >= 85 ? 'warn' : 'ok';
 
   const getDriverTitle = () => {
     switch (currentUser.role) {
-      case UserRole.NURSE: return 'My Patient Alerts';
-      case UserRole.ER_PERSONNEL: return 'Trauma & Triage Status';
-      default: return 'Pressure Drivers';
+      case UserRole.NURSE:
+        return 'My Patient Alerts';
+      case UserRole.ER_PERSONNEL:
+        return 'Trauma & Triage Status';
+      default:
+        return 'Pressure Drivers';
     }
   };
 
@@ -109,547 +189,1555 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({ onActivatePlaybook, 
     setShowManualModal(false);
   };
 
+  // ─── Styles (reusable) ────────────────────────────────────────────────
+  const labelRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACE.sm,
+  };
+  const sliderStyle: React.CSSProperties = {
+    width: '100%',
+    height: 2,
+    background: COLORS.borderStrong,
+    outline: 'none',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    cursor: 'pointer',
+    accentColor: COLORS.accent,
+  };
+
   return (
-    <div className="h-full grid grid-cols-12 gap-6 p-6 overflow-y-auto">
-      
-      {/* LEFT COLUMN: FORECAST, SIMULATOR & NETWORK */}
-      <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-        
-        {/* Stale Data Banner */}
-        {systemStatus === 'stale' && (
-          <div 
-            className="bg-amber-500/10 border border-amber-500/50 rounded-lg p-3 flex items-center justify-between cursor-pointer hover:bg-amber-500/20 transition-colors shadow-[0_0_15px_rgba(245,158,11,0.2)]"
-            onClick={() => setShowManualModal(true)}
+    <div
+      style={{
+        height: '100%',
+        overflowY: 'auto',
+        background: COLORS.bg,
+        padding: SPACE['2xl'],
+        fontFamily: FONTS.sans,
+        color: COLORS.textPrimary,
+      }}
+    >
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
+          gap: SPACE.lg,
+          alignItems: 'start',
+        }}
+      >
+        {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg, minWidth: 0 }}>
+          {/* Page Header — HUD strip */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              gap: SPACE.lg,
+            }}
           >
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500" />
-              <span className="text-amber-500 font-bold text-sm">⚠️ Data Freshness Warning: EHR Sync delayed by 14 minutes. Confidence: Partial.</span>
+            <div style={{ minWidth: 0 }}>
+              <SectionTitle
+                id="HORIZON.4H"
+                label="Predictive Capacity Horizon"
+                divider={false}
+                style={{ marginBottom: 4 }}
+              />
+              <Mono tone="muted" size="xs">
+                // 4-hour forecast · Role view: {currentUser.role.replace('_', ' ')} ·{' '}
+                {isSimulating ? 'SIMULATION MODE' : 'Live telemetry'}
+              </Mono>
             </div>
-            <button className="text-xs bg-amber-500/20 text-amber-400 px-3 py-1.5 rounded border border-amber-500/30 hover:bg-amber-500/30 font-bold">
-              Switch to Manual Override
-            </button>
-          </div>
-        )}
-
-        {/* Manual Mode Banner */}
-        {systemStatus === 'manual' && (
-          <div className="bg-rose-500/10 border border-rose-500/50 rounded-lg p-3 flex items-center justify-between shadow-[0_0_15px_rgba(244,63,94,0.2)]">
-            <div className="flex items-center gap-3">
-              <ShieldAlert className="w-5 h-5 text-rose-500" />
-              <span className="text-rose-500 font-bold text-sm">MANUAL OVERRIDE ACTIVE. Forecast Disabled: Insufficient Data.</span>
-            </div>
-            <button 
-              onClick={() => {
-                if (setSystemStatus) setSystemStatus('normal');
-                if (showToast) showToast('EHR Sync Restored. Telemetry is live.', 'success');
-              }}
-              className="text-xs bg-rose-500/20 text-rose-400 px-3 py-1.5 rounded border border-rose-500/30 hover:bg-rose-500/30 font-bold"
-            >
-              Restore EHR Sync
-            </button>
-          </div>
-        )}
-
-        {/* Manual Modal */}
-        {showManualModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="bg-neutral-900 border border-amber-500/50 rounded-xl p-6 max-w-md w-full shadow-2xl">
-              <div className="flex items-center gap-3 mb-4 text-amber-500">
-                <AlertTriangle className="w-6 h-6" />
-                <h2 className="text-lg font-bold">EHR Connection Unstable</h2>
-              </div>
-              <p className="text-neutral-300 mb-6 text-sm leading-relaxed">
-                The HL7 feed from the EHR has not sent an update in 14 minutes. Predictive models may be inaccurate. Would you like to switch to Manual Override to manually update census and bed states?
-              </p>
-              <div className="flex justify-end gap-3">
-                <button 
-                  onClick={() => setShowManualModal(false)}
-                  className="px-4 py-2 rounded text-sm font-medium text-neutral-400 hover:text-white hover:bg-neutral-800"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => {
-                    handleSwitchToManual();
-                    if (showToast) showToast('Switched to Manual Override Mode', 'error');
-                  }}
-                  className="px-4 py-2 rounded text-sm font-bold bg-amber-500 hover:bg-amber-400 text-neutral-900"
-                >
-                  Switch to Manual Mode
-                </button>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
+              <StatusPill
+                label={
+                  systemStatus === 'manual'
+                    ? 'MANUAL'
+                    : systemStatus === 'stale'
+                    ? 'DEGRADED'
+                    : isSafe
+                    ? 'NOMINAL'
+                    : 'CRITICAL'
+                }
+                tone={
+                  systemStatus === 'manual'
+                    ? 'crit'
+                    : systemStatus === 'stale'
+                    ? 'warn'
+                    : isSafe
+                    ? 'ok'
+                    : 'crit'
+                }
+                pulse={systemStatus === 'normal' && !isSafe}
+              />
             </div>
           </div>
-        )}
 
-        {/* Main Forecast Card */}
-        <div className={`bg-neutral-900 border rounded-xl p-6 shadow-xl relative overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:border-neutral-600 ${systemStatus === 'manual' ? 'border-neutral-700 opacity-80' : 'border-neutral-800'}`}>
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-neutral-100 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
-                Predictive Risk Model
-                <span className="ml-2 text-xs font-mono font-normal text-blue-400 bg-blue-950/30 px-2 py-1 rounded border border-blue-900/50 uppercase tracking-widest">
-                  View: {currentUser.role.replace('_', ' ')}
-                </span>
-              </h2>
-              <p className="text-neutral-400 text-sm mt-1 font-mono">
-                {isSimulating ? 'SIMULATION MODE ACTIVE' : 'Live Telemetry Forecast'}
-              </p>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-neutral-500 font-mono">
-              <button 
-                onClick={() => {
-                  setIsSimulating(!isSimulating);
-                  if (isSimulating) setSimState({ addedStaff: 0, openBeds: 0, expeditedDischarges: 0 });
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all border ${
-                  isSimulating 
-                  ? 'bg-indigo-500/20 border-indigo-500 text-indigo-300' 
-                  : 'bg-neutral-800 border-neutral-700 hover:border-neutral-500'
-                }`}
+          {/* Stale Data Banner */}
+          <AnimatePresence>
+            {systemStatus === 'stale' && (
+              <motion.div
+                key="stale"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
               >
-                <Sliders className="w-3 h-3" />
-                {isSimulating ? 'Reset Simulation' : 'What-If Simulator'}
-              </button>
-            </div>
-          </div>
-
-          <div className="h-64 w-full relative">
-            {/* Background "Safe Zone" indicator */}
-            <div className="absolute inset-0 bg-gradient-to-b from-rose-900/5 to-transparent pointer-events-none"></div>
-            
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorLoad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={isSafe ? "#10b981" : "#f43f5e"} stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor={isSafe ? "#10b981" : "#f43f5e"} stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" vertical={false} />
-                <XAxis dataKey="time" stroke="#525252" tick={{fontSize: 12}} />
-                <YAxis stroke="#525252" tick={{fontSize: 12}} domain={[0, 100]} hide />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#171717', borderColor: '#404040', color: '#f5f5f5' }}
-                  itemStyle={{ color: '#f5f5f5' }}
-                  formatter={(value: number) => [`${value.toFixed(1)}%`, 'Saturation']}
-                />
-                <ReferenceLine y={100} stroke="#737373" strokeDasharray="3 3" label={{ value: 'Capacity Cap (100%)', position: 'insideTopRight', fill: '#737373', fontSize: 10 }} />
-                
-                {/* Visualizing the "Gap" if simulating */}
-                {isSimulating && (
-                   <Area 
-                    type="monotone" 
-                    dataKey="load" 
-                    strokeDasharray="5 5"
-                    stroke="#6366f1" 
-                    strokeWidth={2} 
-                    fill="none" 
-                    name="Simulated"
-                  />
-                )}
-
-                <Area 
-                  type="monotone" 
-                  dataKey="load" 
-                  stroke={isSafe ? "#10b981" : "#f43f5e"} 
-                  strokeWidth={3} 
-                  fillOpacity={1} 
-                  fill="url(#colorLoad)" 
-                  animationDuration={500}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* KPI Footer */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 border-t border-neutral-800 pt-6">
-            <div className="text-center border-r border-neutral-800">
-              <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-1">Current</p>
-              <p className="text-2xl font-mono font-bold text-neutral-200">{chartData[1].load.toFixed(0)}%</p>
-            </div>
-            <div className="text-center border-r border-neutral-800">
-              <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-1">Forecast (+90m)</p>
-              <p className={`text-2xl font-mono font-bold ${projectedLoad > 100 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                {projectedLoad.toFixed(0)}%
-              </p>
-            </div>
-            <div className="text-center border-r border-neutral-800">
-               <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-1">Trend</p>
-               <p className="text-xl font-mono text-neutral-300 flex items-center justify-center gap-1">
-                 {projectedLoad > chartData[1].load ? <TrendingUp className="w-4 h-4 text-rose-500"/> : <TrendingDown className="w-4 h-4 text-emerald-500"/>}
-                 {Math.abs(projectedLoad - chartData[1].load).toFixed(0)}%
-               </p>
-            </div>
-             <div className="text-center">
-               <p className="text-neutral-500 text-[10px] uppercase tracking-widest mb-1">Status</p>
-               <p className={`text-sm font-bold uppercase mt-1.5 px-2 py-0.5 rounded inline-block ${projectedLoad > 100 ? 'bg-rose-950/30 text-rose-500 border border-rose-500/20' : 'bg-emerald-950/30 text-emerald-500 border border-emerald-500/20'}`}>
-                 {projectedLoad > 100 ? 'Saturation' : 'Safe'}
-               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Action / Simulator Area */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* SIMULATOR CONTROLS */}
-          {isSimulating ? (
-             <div className="bg-neutral-900 border border-indigo-500/30 rounded-lg p-5 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
-                <div className="flex items-center gap-2 mb-4">
-                   <Zap className="w-5 h-5 text-indigo-400" />
-                   <h3 className="text-indigo-200 font-bold text-sm uppercase tracking-wide">Operational Levers</h3>
-                </div>
-                
-                <div className="space-y-5">
-                   {/* Staffing Slider */}
-                   <div>
-                      <div className="flex justify-between text-xs mb-2">
-                         <span className="text-neutral-400">Add Nursing Staff</span>
-                         <span className="text-indigo-400 font-mono">+{simState.addedStaff} FTE</span>
+                <TacticalCard
+                  padding="sm"
+                  onClick={() => setShowManualModal(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setShowManualModal(true)}
+                  style={{
+                    borderColor: COLORS.warn,
+                    cursor: 'pointer',
+                    boxShadow: `0 0 20px ${COLORS.warn}22`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: SPACE.md,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                      <AlertTriangle size={16} strokeWidth={2} color={COLORS.warn} />
+                      <div>
+                        <Mono tone="warn" size="sm">
+                          [ DATA FRESHNESS WARNING ]
+                        </Mono>
+                        <div
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 12,
+                            color: COLORS.textSecondary,
+                            marginTop: 2,
+                          }}
+                        >
+                          EHR sync delayed by 14 minutes · Confidence: Partial
+                        </div>
                       </div>
-                      <input 
-                        type="range" min="0" max="5" step="1"
-                        value={simState.addedStaff}
-                        onChange={(e) => setSimState({...simState, addedStaff: parseInt(e.target.value)})}
-                        className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
-                      />
-                   </div>
-                   
-                   {/* Beds Slider */}
-                   <div>
-                      <div className="flex justify-between text-xs mb-2">
-                         <span className="text-neutral-400">Open Surge Beds</span>
-                         <span className="text-indigo-400 font-mono">+{simState.openBeds} Beds</span>
-                      </div>
-                      <input 
-                        type="range" min="0" max="10" step="1"
-                        value={simState.openBeds}
-                        onChange={(e) => setSimState({...simState, openBeds: parseInt(e.target.value)})}
-                        className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
-                      />
-                   </div>
-
-                   {/* Discharges Slider */}
-                   <div>
-                      <div className="flex justify-between text-xs mb-2">
-                         <span className="text-neutral-400">Expedite Discharges</span>
-                         <span className="text-indigo-400 font-mono">+{simState.expeditedDischarges} Pts</span>
-                      </div>
-                      <input 
-                        type="range" min="0" max="8" step="1"
-                        value={simState.expeditedDischarges}
-                        onChange={(e) => setSimState({...simState, expeditedDischarges: parseInt(e.target.value)})}
-                        className="w-full h-1.5 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400"
-                      />
-                   </div>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-neutral-800 flex justify-between items-center">
-                   <span className="text-xs text-neutral-500 italic">Changes reflect in chart above</span>
-                   {isSafe && !isSurgeActive && (
-                      <button 
-                         onClick={onActivatePlaybook}
-                         className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded shadow transition-all"
-                      >
-                         Apply & Activate
-                      </button>
-                   )}
-                </div>
-             </div>
-          ) : (
-             /* STANDARD RECOMMENDATION VIEW */
-             <div className={`border rounded-lg p-5 flex flex-col justify-between transition-colors duration-500 ${
-               isSurgeActive 
-                 ? 'bg-emerald-950/10 border-emerald-900/30' 
-                 : (loginCount > 1 ? 'bg-neutral-900/50 border-neutral-800' : 'bg-rose-950/10 border-rose-900/30')
-             }`}>
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                     {isSurgeActive ? (
-                       <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                     ) : loginCount > 1 ? (
-                       <CheckCircle2 className="w-5 h-5 text-neutral-500" />
-                     ) : (
-                       <ShieldAlert className="w-5 h-5 text-rose-500" />
-                     )}
-                     <h3 className={`font-bold text-sm uppercase ${
-                       isSurgeActive 
-                         ? 'text-emerald-200' 
-                         : (loginCount > 1 ? 'text-neutral-400' : 'text-rose-200')
-                     }`}>
-                        {isSurgeActive 
-                          ? 'Protocol Active' 
-                          : (loginCount > 1 ? 'Intervention Not Required' : 'Intervention Required')}
-                     </h3>
+                    </div>
+                    <TacticalButton variant="secondary" size="sm">
+                      Switch to Manual
+                    </TacticalButton>
                   </div>
-                  <p className={`text-sm mb-4 ${
-                    isSurgeActive 
-                      ? 'text-emerald-400/80' 
-                      : (loginCount > 1 ? 'text-neutral-500' : 'text-rose-400/80')
-                  }`}>
-                     {isSurgeActive 
-                        ? "Surge Level 2 activated. Risk trajectory stabilizing. Monitor fast-track throughput." 
-                        : (loginCount > 1 
-                            ? "Capacity is stable. No active surge protocols required at this time." 
-                            : "Forecast exceeds safety thresholds. Activate Surge Protocol Level 2 immediately.")}
+                </TacticalCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Manual Mode Banner */}
+          <AnimatePresence>
+            {systemStatus === 'manual' && (
+              <motion.div
+                key="manual"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+              >
+                <TacticalCard
+                  padding="sm"
+                  style={{
+                    borderColor: COLORS.accent,
+                    boxShadow: `0 0 20px ${COLORS.accentGlow}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: SPACE.md,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                      <ShieldAlert size={16} strokeWidth={2} color={COLORS.accent} />
+                      <div>
+                        <Mono tone="accent" size="sm">
+                          [ MANUAL OVERRIDE ACTIVE ]
+                        </Mono>
+                        <div
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 12,
+                            color: COLORS.textSecondary,
+                            marginTop: 2,
+                          }}
+                        >
+                          Forecast disabled — insufficient telemetry
+                        </div>
+                      </div>
+                    </div>
+                    <TacticalButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        if (setSystemStatus) setSystemStatus('normal');
+                        if (showToast) showToast('EHR Sync Restored. Telemetry is live.', 'success');
+                      }}
+                    >
+                      Restore EHR
+                    </TacticalButton>
+                  </div>
+                </TacticalCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Main Forecast Card ── */}
+          <TacticalCard
+            padding="none"
+            highlight={!isSafe && systemStatus === 'normal'}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              opacity: systemStatus === 'manual' ? 0.75 : 1,
+              transition: `opacity ${MOTION.base}s ease`,
+            }}
+          >
+            {/* Chart header strip */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surfaceElev,
+                gap: SPACE.md,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                <Activity size={14} strokeWidth={2} color={COLORS.accent} />
+                <Mono tone="primary" size="sm">
+                  Saturation Forecast
+                </Mono>
+                <BracketLabel tone={isSimulating ? 'accent' : 'muted'} size="xs">
+                  {isSimulating ? 'SIM' : 'LIVE'}
+                </BracketLabel>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                <Mono tone="muted" size="xs">
+                  RANGE: -30M → +90M · RES: 30M
+                </Mono>
+                <TacticalButton
+                  variant={isSimulating ? 'primary' : 'secondary'}
+                  size="sm"
+                  icon={<Sliders size={12} strokeWidth={2} />}
+                  onClick={() => {
+                    setIsSimulating(!isSimulating);
+                    if (isSimulating) setSimState({ addedStaff: 0, openBeds: 0, expeditedDischarges: 0 });
+                  }}
+                >
+                  {isSimulating ? 'Reset Sim' : 'What-If Sim'}
+                </TacticalButton>
+              </div>
+            </div>
+
+            {/* Chart */}
+            <div
+              style={{
+                position: 'relative',
+                height: 280,
+                padding: SPACE.md,
+                overflow: 'hidden',
+              }}
+            >
+              <ScanningLine color={COLORS.accent} duration={18} />
+              <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={4} />
+              <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={4} />
+              <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={4} />
+              <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={4} />
+
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 12, right: 16, left: -12, bottom: 4 }}>
+                  <defs>
+                    <linearGradient id="horizonFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={COLORS.accent} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="horizonFillSim" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.25} />
+                      <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 4" stroke={COLORS.border} vertical={false} />
+                  <XAxis
+                    dataKey="time"
+                    stroke={COLORS.textMuted}
+                    fontSize={11}
+                    fontFamily={FONTS.mono}
+                    tickMargin={8}
+                    axisLine={{ stroke: COLORS.border }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    stroke={COLORS.textMuted}
+                    fontSize={11}
+                    fontFamily={FONTS.mono}
+                    domain={[0, 130]}
+                    ticks={[0, 50, 100]}
+                    axisLine={false}
+                    tickLine={false}
+                    width={32}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: COLORS.accent, strokeDasharray: '2 3' }}
+                    contentStyle={{
+                      backgroundColor: COLORS.surface,
+                      border: `1px solid ${COLORS.borderStrong}`,
+                      borderRadius: RADIUS.sm,
+                      color: COLORS.textPrimary,
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                    }}
+                    itemStyle={{ color: COLORS.accent }}
+                    labelStyle={{ color: COLORS.textMuted }}
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'LOAD']}
+                  />
+                  <ReferenceLine
+                    y={100}
+                    stroke={COLORS.crit}
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
+                    label={{
+                      value: 'CAPACITY 100%',
+                      position: 'insideTopRight',
+                      fill: COLORS.crit,
+                      fontSize: 9,
+                      fontFamily: FONTS.mono,
+                      letterSpacing: '0.14em',
+                    }}
+                  />
+                  <ReferenceLine
+                    y={85}
+                    stroke={COLORS.warn}
+                    strokeDasharray="2 4"
+                    strokeWidth={1}
+                    label={{
+                      value: 'WARN 85%',
+                      position: 'insideTopRight',
+                      fill: COLORS.warn,
+                      fontSize: 9,
+                      fontFamily: FONTS.mono,
+                      letterSpacing: '0.14em',
+                    }}
+                  />
+                  <ReferenceLine
+                    x="NOW"
+                    stroke={COLORS.accent}
+                    strokeDasharray="2 3"
+                    strokeWidth={1}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="load"
+                    stroke={COLORS.accent}
+                    strokeWidth={2}
+                    fill="url(#horizonFill)"
+                    isAnimationActive
+                    animationDuration={500}
+                  />
+                  {isSimulating && (
+                    <Area
+                      type="monotone"
+                      dataKey="load"
+                      strokeDasharray="4 4"
+                      stroke={COLORS.info}
+                      strokeWidth={1.5}
+                      fill="url(#horizonFillSim)"
+                      isAnimationActive={false}
+                    />
+                  )}
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* KPI footer band */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                borderTop: `1px solid ${COLORS.border}`,
+                background: COLORS.bgDeep,
+              }}
+            >
+              <KpiCell label="Current" value={`${currentLoad.toFixed(0)}%`} tone="primary" />
+              <KpiCell
+                label="Forecast +90m"
+                value={`${projectedLoad.toFixed(0)}%`}
+                tone={forecastTone}
+              />
+              <KpiCell
+                label={isRising ? 'Rising' : 'Falling'}
+                value={`${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%`}
+                tone={isRising ? 'crit' : 'ok'}
+                icon={
+                  isRising ? (
+                    <TrendingUp size={14} strokeWidth={2} color={COLORS.crit} />
+                  ) : (
+                    <TrendingDown size={14} strokeWidth={2} color={COLORS.ok} />
+                  )
+                }
+              />
+              <KpiCell
+                label="Status"
+                value={projectedLoad > 100 ? 'SAT' : 'SAFE'}
+                tone={projectedLoad > 100 ? 'crit' : 'ok'}
+                isLast
+              />
+            </div>
+          </TacticalCard>
+
+          {/* ── Simulator / Recommendation + Network ── */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+              gap: SPACE.lg,
+            }}
+          >
+            {/* Simulator controls OR recommendation */}
+            {isSimulating ? (
+              <TacticalCard padding="md" accentBar style={{ padding: SPACE.lg }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    marginBottom: SPACE.md,
+                  }}
+                >
+                  <Zap size={14} strokeWidth={2} color={COLORS.accent} />
+                  <Mono tone="primary" size="sm">
+                    Operational Levers
+                  </Mono>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg }}>
+                  <LeverSlider
+                    label="Add Nursing Staff"
+                    unit="FTE"
+                    value={simState.addedStaff}
+                    max={5}
+                    onChange={(v) => setSimState({ ...simState, addedStaff: v })}
+                  />
+                  <LeverSlider
+                    label="Open Surge Beds"
+                    unit="BEDS"
+                    value={simState.openBeds}
+                    max={10}
+                    onChange={(v) => setSimState({ ...simState, openBeds: v })}
+                  />
+                  <LeverSlider
+                    label="Expedite Discharges"
+                    unit="PTS"
+                    value={simState.expeditedDischarges}
+                    max={8}
+                    onChange={(v) => setSimState({ ...simState, expeditedDischarges: v })}
+                  />
+                </div>
+                <Divider variant="dashed" style={{ marginTop: SPACE.lg, marginBottom: SPACE.md }} />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: SPACE.md,
+                  }}
+                >
+                  <Mono tone="muted" size="xs">
+                    // Impact reflected in forecast
+                  </Mono>
+                  {isSafe && !isSurgeActive && (
+                    <TacticalButton
+                      variant="primary"
+                      size="sm"
+                      icon={<ArrowRight size={13} strokeWidth={2} />}
+                      onClick={onActivatePlaybook}
+                    >
+                      Apply & Activate
+                    </TacticalButton>
+                  )}
+                </div>
+              </TacticalCard>
+            ) : (
+              <TacticalCard
+                padding="md"
+                highlight={!isSurgeActive && loginCount <= 1}
+                accentBar={!isSurgeActive && loginCount <= 1}
+                style={{
+                  padding: SPACE.lg,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: 220,
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                      marginBottom: SPACE.sm,
+                    }}
+                  >
+                    {isSurgeActive ? (
+                      <CheckCircle2 size={14} strokeWidth={2} color={COLORS.ok} />
+                    ) : loginCount > 1 ? (
+                      <CheckCircle2 size={14} strokeWidth={2} color={COLORS.textMuted} />
+                    ) : (
+                      <ShieldAlert size={14} strokeWidth={2} color={COLORS.accent} />
+                    )}
+                    <Mono
+                      tone={isSurgeActive ? 'ok' : loginCount > 1 ? 'muted' : 'accent'}
+                      size="sm"
+                    >
+                      [{' '}
+                      {isSurgeActive
+                        ? 'PROTOCOL ACTIVE'
+                        : loginCount > 1
+                        ? 'NO ACTION REQ'
+                        : 'INTERVENTION REQ'}{' '}
+                      ]
+                    </Mono>
+                  </div>
+                  <p
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: 13,
+                      lineHeight: 1.55,
+                      color: COLORS.textSecondary,
+                      margin: 0,
+                    }}
+                  >
+                    {isSurgeActive
+                      ? 'Surge Level 2 activated. Risk trajectory stabilizing. Monitor fast-track throughput.'
+                      : loginCount > 1
+                      ? 'Capacity is stable. No active surge protocols required at this time.'
+                      : 'Forecast exceeds safety thresholds. Activate Surge Protocol Level 2 immediately.'}
                   </p>
                 </div>
                 {!isSurgeActive && loginCount <= 1 && (
-                  <button 
+                  <TacticalButton
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    icon={<ArrowRight size={14} strokeWidth={2} />}
                     onClick={onActivatePlaybook}
-                    className="w-full bg-rose-700 hover:bg-rose-600 text-white py-2 rounded font-bold shadow-lg shadow-rose-900/20 transition-all duration-200 hover:scale-[1.02] flex items-center justify-center gap-2 text-sm"
+                    style={{ marginTop: SPACE.md }}
                   >
-                    ACTIVATE SURGE PLAYBOOK <ArrowRight className="w-4 h-4" />
-                  </button>
+                    Activate Surge Playbook
+                  </TacticalButton>
                 )}
-             </div>
-          )}
+              </TacticalCard>
+            )}
 
-          {/* Regional Network Status Widget - Moved to Left Column for better context */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 shadow-lg transition-all duration-200 hover:scale-[1.02] hover:bg-neutral-800/80 hover:border-neutral-700">
-             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-                   <Network className="w-4 h-4 text-cyan-400" /> Regional Partner Hospitals
-                </h3>
-                <RefreshCw className="w-3 h-3 text-neutral-600" />
-             </div>
-             
-             <div className="space-y-3">
-                {nearbyHospitals.map((hospital, idx) => (
-                   <div key={idx} className="flex items-center justify-between p-2 rounded bg-neutral-950 border border-neutral-800 hover:border-neutral-700 transition-colors">
-                      <div className="flex items-center gap-3">
-                         <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hospital.status === 'Open' ? 'bg-emerald-500 text-emerald-500' : hospital.status === 'Divert' ? 'bg-rose-500 text-rose-500' : 'bg-amber-500 text-amber-500'}`}></div>
-                         <div>
-                            <p className="text-sm text-neutral-300 font-medium flex items-center gap-1">
-                               {hospital.name}
-                               {hospital.status === 'Divert' && <ShieldAlert className="w-3 h-3 text-rose-500" />}
+            {/* Regional Network */}
+            <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: SPACE.md,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                  <Network size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                  <Mono tone="primary" size="sm">
+                    Regional Network
+                  </Mono>
+                </div>
+                <RefreshCw size={11} strokeWidth={2} color={COLORS.textMuted} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                {nearbyHospitals.map((h, idx) => {
+                  const tone: 'ok' | 'warn' | 'crit' =
+                    h.status === 'Open' ? 'ok' : h.status === 'Divert' ? 'crit' : 'warn';
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: SPACE.sm,
+                        background: COLORS.bgDeep,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+                        <StatusPill label="" tone={tone} size="xs" />
+                        <div style={{ minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 13,
+                              color: COLORS.textPrimary,
+                              fontWeight: 500,
+                              letterSpacing: '-0.005em',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {h.name}
+                          </div>
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              marginTop: 2,
+                            }}
+                          >
+                            <MapPin size={9} strokeWidth={2} color={COLORS.textMuted} />
+                            <Mono tone="muted" size="xs">
+                              {h.time} TRANSFER
+                            </Mono>
+                          </div>
+                        </div>
+                      </div>
+                      <BracketLabel tone={tone === 'ok' ? 'muted' : tone === 'crit' ? 'accent' : 'secondary'} size="xs">
+                        {h.status.toUpperCase()}
+                      </BracketLabel>
+                    </div>
+                  );
+                })}
+              </div>
+            </TacticalCard>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════ RIGHT COLUMN ══════════════════════════════ */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: SPACE.lg,
+            minWidth: 0,
+          }}
+        >
+          {/* Inbound EMS */}
+          <TacticalCard padding="md" style={{ padding: SPACE.lg, overflow: 'hidden', position: 'relative' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: SPACE.md,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                <Ambulance size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                <Mono tone="primary" size="sm">
+                  Inbound EMS
+                </Mono>
+              </div>
+              <StatusPill label="LIVE FEED" tone="info" pulse size="xs" />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: SPACE.sm,
+                marginBottom: SPACE.md,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: FONTS.sans,
+                  fontSize: 48,
+                  fontWeight: 600,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 0.9,
+                  color: COLORS.textPrimary,
+                }}
+              >
+                {loginCount > 1 && !isSurgeActive ? '2' : '8'}
+              </span>
+              <Mono tone="muted" size="xs">
+                TOTAL EN ROUTE
+              </Mono>
+            </div>
+            {/* Progress rail */}
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                height: 3,
+                background: COLORS.borderStrong,
+                borderRadius: RADIUS.full,
+                overflow: 'hidden',
+                marginBottom: SPACE.md,
+              }}
+            >
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: loginCount > 1 && !isSurgeActive ? '10%' : '40%' }}
+                transition={{ duration: MOTION.slow, ease: MOTION.ease }}
+                style={{
+                  height: '100%',
+                  background:
+                    loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.accent,
+                  boxShadow: `0 0 8px ${
+                    loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.accent
+                  }`,
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {loginCount > 1 && !isSurgeActive ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CheckCircle2 size={11} strokeWidth={2} color={COLORS.ok} />
+                    <Mono tone="ok" size="xs">
+                      0 CRIT
+                    </Mono>
+                  </div>
+                  <Mono tone="muted" size="xs">
+                    2 STABLE
+                  </Mono>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ShieldAlert size={11} strokeWidth={2} color={COLORS.accent} />
+                    <Mono tone="accent" size="xs">
+                      3 CRIT {'<'} 5M
+                    </Mono>
+                  </div>
+                  <Mono tone="muted" size="xs">
+                    5 STABLE
+                  </Mono>
+                </>
+              )}
+            </div>
+          </TacticalCard>
+
+          {/* Drivers */}
+          <TacticalCard
+            padding="md"
+            style={{
+              padding: SPACE.lg,
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                marginBottom: SPACE.md,
+                flexShrink: 0,
+              }}
+            >
+              <Wind size={14} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono tone="primary" size="sm">
+                {getDriverTitle()}
+              </Mono>
+              <div
+                style={{
+                  flex: 1,
+                  height: 1,
+                  background: `linear-gradient(90deg, ${COLORS.border}, transparent)`,
+                }}
+              />
+              <Mono tone="muted" size="xs">
+                {drivers.length}
+              </Mono>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.md,
+                overflowY: 'auto',
+                paddingRight: 2,
+                flex: 1,
+              }}
+              className="pulse-horizon-drivers"
+            >
+              {drivers.map((driver, idx) => {
+                const isExpanded = expandedDriverId === driver.id;
+                const driverColor = statusToColor(driver.status);
+                return (
+                  <div
+                    key={driver.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() =>
+                      setExpandedDriverId(isExpanded ? null : driver.id)
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setExpandedDriverId(isExpanded ? null : driver.id);
+                      }
+                    }}
+                    style={{
+                      position: 'relative',
+                      padding: SPACE.sm,
+                      background: isExpanded ? COLORS.surfaceElev : 'transparent',
+                      border: `1px solid ${isExpanded ? COLORS.borderStrong : COLORS.border}`,
+                      borderLeft: `2px solid ${driverColor}`,
+                      borderRadius: RADIUS.sm,
+                      cursor: 'pointer',
+                      transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: SPACE.sm,
+                        marginBottom: SPACE.sm,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.sm,
+                          minWidth: 0,
+                        }}
+                      >
+                        <Mono tone="dim" size="xs" style={{ flexShrink: 0 }}>
+                          {String(idx + 1).padStart(2, '0')}
+                        </Mono>
+                        <span
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: COLORS.textPrimary,
+                            letterSpacing: '-0.005em',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {driver.name}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.sm,
+                          flexShrink: 0,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            letterSpacing: '0.08em',
+                            color: driverColor,
+                          }}
+                        >
+                          {driver.value}
+                        </span>
+                        <ChevronRight
+                          size={12}
+                          strokeWidth={2}
+                          color={COLORS.textMuted}
+                          style={{
+                            transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                            transition: `transform ${MOTION.fast}s ease`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {/* Impact bar */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: 'relative',
+                          flex: 1,
+                          height: 2,
+                          background: COLORS.borderStrong,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${driver.impact}%` }}
+                          transition={{ duration: MOTION.slow, ease: MOTION.ease }}
+                          style={{
+                            height: '100%',
+                            background: driverColor,
+                            boxShadow:
+                              driver.status === Status.CRITICAL
+                                ? `0 0 8px ${driverColor}`
+                                : 'none',
+                          }}
+                        />
+                      </div>
+                      <Mono
+                        tone={statusToTone(driver.status)}
+                        size="xs"
+                        style={{ width: 32, textAlign: 'right' }}
+                      >
+                        {driver.impact}%
+                      </Mono>
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          key="expanded"
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ overflow: 'hidden' }}
+                        >
+                          <div
+                            style={{
+                              marginTop: SPACE.md,
+                              padding: SPACE.md,
+                              background: COLORS.bgDeep,
+                              border: `1px solid ${COLORS.border}`,
+                              borderRadius: RADIUS.sm,
+                            }}
+                          >
+                            <p
+                              style={{
+                                fontFamily: FONTS.sans,
+                                fontSize: 12,
+                                lineHeight: 1.5,
+                                color: COLORS.textSecondary,
+                                margin: 0,
+                                marginBottom: SPACE.md,
+                              }}
+                            >
+                              {driver.status === Status.CRITICAL
+                                ? `Critical pressure detected. Immediate intervention required to stabilize ${driver.name.toLowerCase()} metrics.`
+                                : `Monitoring ${driver.name.toLowerCase()}. Current levels within acceptable thresholds — observation required.`}
                             </p>
-                            <div className="flex items-center gap-2 text-[10px] text-neutral-500">
-                               <MapPin className="w-3 h-3" />
-                               {hospital.time} transfer
+                            <div style={{ display: 'flex', gap: SPACE.sm }}>
+                              <TacticalButton
+                                variant="primary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedDriverDetails(driver);
+                                }}
+                                style={{ flex: 1 }}
+                              >
+                                View Details
+                              </TacticalButton>
+                              <TacticalButton
+                                variant="secondary"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (showToast) showToast('Driver acknowledged. Monitoring adjusted.', 'info');
+                                  setExpandedDriverId(null);
+                                }}
+                                style={{ flex: 1 }}
+                              >
+                                Acknowledge
+                              </TacticalButton>
                             </div>
-                         </div>
-                      </div>
-                      <div className="text-right">
-                         <span className={`text-xs font-mono px-2 py-0.5 rounded border ${
-                            hospital.status === 'Divert' ? 'bg-rose-950/30 text-rose-400 border-rose-500/20' : 'bg-neutral-800 text-neutral-400 border-neutral-700'
-                         }`}>
-                            {hospital.status}
-                         </span>
-                      </div>
-                   </div>
-                ))}
-             </div>
-          </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* House status */}
+            <div style={{ marginTop: SPACE.md, flexShrink: 0 }}>
+              <Divider variant="dashed" style={{ marginBottom: SPACE.md }} />
+              <div
+                style={{
+                  padding: SPACE.md,
+                  background: COLORS.bgDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    marginBottom: SPACE.sm,
+                  }}
+                >
+                  <Building2 size={11} strokeWidth={2} color={COLORS.accent} />
+                  <Mono tone="accent" size="xs">
+                    HOUSE STATUS
+                  </Mono>
+                </div>
+                <HouseRow label="Med/Surg Beds">
+                  {loginCount > 1 && !isSurgeActive ? (
+                    <Mono tone="ok" size="xs">4 AVAIL</Mono>
+                  ) : (
+                    <Mono tone="crit" size="xs">0 AVAIL</Mono>
+                  )}
+                </HouseRow>
+                <HouseRow label="ICU Beds">
+                  {loginCount > 1 && !isSurgeActive ? (
+                    <Mono tone="ok" size="xs">2 AVAIL</Mono>
+                  ) : (
+                    <Mono tone="warn" size="xs">1 AVAIL</Mono>
+                  )}
+                </HouseRow>
+                <HouseRow label="Psych Hold" last>
+                  <Mono tone="primary" size="xs">
+                    {loginCount > 1 && !isSurgeActive ? '1 PT' : '4 PTS'}
+                  </Mono>
+                </HouseRow>
+              </div>
+            </div>
+          </TacticalCard>
         </div>
       </div>
 
-      {/* RIGHT COLUMN: INBOUND EMS & DRIVERS */}
-      <div className="col-span-12 lg:col-span-4 flex flex-col h-full gap-6">
-        
-        {/* Inbound EMS Widget - Moved to Right Column as a Driver */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-5 shadow-lg relative overflow-hidden transition-all duration-200 hover:scale-[1.02] hover:bg-neutral-800/80 hover:border-neutral-700">
-             
-             <div className="flex justify-between items-start mb-4 relative z-10">
-                <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-                   <Ambulance className="w-4 h-4 text-blue-400" /> Inbound EMS
-                </h3>
-                <span className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-[10px] font-mono border border-blue-500/20 animate-pulse">Live Feed</span>
-             </div>
-             <div className="flex items-end gap-2 mb-2 relative z-10">
-                <span className="text-4xl font-mono font-bold text-white">{loginCount > 1 && !isSurgeActive ? '2' : '8'}</span>
-                <span className="text-neutral-500 text-sm mb-1">Total En Route</span>
-             </div>
-             <div className="w-full bg-neutral-800 h-1.5 rounded-full mb-3 overflow-hidden relative z-10">
-                <div className={`h-full shadow-[0_0_10px_currentColor] ${loginCount > 1 && !isSurgeActive ? 'bg-emerald-500 w-[10%]' : 'bg-rose-500 w-[40%]'}`}></div>
-             </div>
-             <div className="flex justify-between text-xs relative z-10">
-                {loginCount > 1 && !isSurgeActive ? (
-                  <>
-                    <span className="text-emerald-400 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 0 Critical</span>
-                    <span className="text-neutral-500">2 Stable</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-rose-400 font-medium flex items-center gap-1"><ShieldAlert className="w-3 h-3"/> 3 Critical (&lt; 5m)</span>
-                    <span className="text-neutral-500">5 Stable</span>
-                  </>
-                )}
-             </div>
-        </div>
-
-        {/* Drivers List */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-lg p-6 flex-1 shadow-xl flex flex-col transition-all duration-200 hover:scale-[1.02] hover:bg-neutral-800/80 hover:border-neutral-700">
-          <h2 className="text-lg font-bold text-neutral-100 mb-6 uppercase tracking-wider text-xs flex items-center gap-2 shrink-0">
-             <Wind className="w-4 h-4 text-neutral-500" /> {getDriverTitle()}
-          </h2>
-          
-          <div className="space-y-6 flex-1 overflow-y-auto custom-scrollbar pr-2">
-            {drivers.map((driver, idx) => (
-              <div 
-                key={driver.id} 
-                className="group cursor-pointer hover:bg-neutral-800/50 p-2 -mx-2 rounded transition-colors"
-                onClick={() => setExpandedDriverId(expandedDriverId === driver.id ? null : driver.id)}
+      {/* ── Manual Mode Modal ── */}
+      <AnimatePresence>
+        {showManualModal && (
+          <motion.div
+            key="manual-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: MOTION.fast }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(6px)',
+              padding: SPACE.lg,
+            }}
+            onClick={() => setShowManualModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: MOTION.base, ease: MOTION.ease }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 440, width: '100%' }}
+            >
+              <TacticalCard
+                padding="md"
+                style={{
+                  padding: SPACE.xl,
+                  borderColor: COLORS.warn,
+                  boxShadow: `0 16px 48px rgba(0,0,0,0.8), 0 0 24px ${COLORS.warn}33`,
+                }}
               >
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-neutral-600 font-mono text-sm">0{idx + 1}</span>
-                    <span className="text-neutral-300 font-medium group-hover:text-cyan-400 transition-colors">{driver.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-neutral-100 font-mono font-bold text-sm">{driver.value}</span>
-                    <ArrowRight className={`w-3 h-3 text-neutral-600 transition-all ${expandedDriverId === driver.id ? 'rotate-90 text-cyan-400 opacity-100' : 'opacity-0 group-hover:opacity-100 group-hover:text-cyan-400 -translate-x-2 group-hover:translate-x-0'}`} />
-                  </div>
+                <BracketFrame color={COLORS.warn} />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    marginBottom: SPACE.md,
+                  }}
+                >
+                  <AlertTriangle size={16} strokeWidth={2} color={COLORS.warn} />
+                  <Mono tone="warn" size="sm">
+                    [ EHR CONNECTION UNSTABLE ]
+                  </Mono>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <div className="h-1.5 flex-1 bg-neutral-800 rounded-full overflow-hidden relative">
-                    <div 
-                      className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ${
-                        driver.status === Status.CRITICAL ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : 
-                        driver.status === Status.WARNING ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${driver.impact}%` }}
-                    ></div>
+                <p
+                  style={{
+                    fontFamily: FONTS.sans,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: COLORS.textSecondary,
+                    marginBottom: SPACE.lg,
+                  }}
+                >
+                  The HL7 feed from the EHR has not sent an update in 14 minutes.
+                  Predictive models may be inaccurate. Switch to Manual Override
+                  to update census and bed states directly.
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  <TacticalButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowManualModal(false)}
+                  >
+                    Cancel
+                  </TacticalButton>
+                  <TacticalButton
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      handleSwitchToManual();
+                      if (showToast) showToast('Switched to Manual Override Mode', 'error');
+                    }}
+                  >
+                    Switch to Manual
+                  </TacticalButton>
+                </div>
+              </TacticalCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Driver Details Modal ── */}
+      <AnimatePresence>
+        {selectedDriverDetails && (
+          <motion.div
+            key="driver-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: MOTION.fast }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'rgba(0,0,0,0.8)',
+              backdropFilter: 'blur(6px)',
+              padding: SPACE.lg,
+            }}
+            onClick={() => setSelectedDriverDetails(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 8 }}
+              transition={{ duration: MOTION.base, ease: MOTION.ease }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: 680, width: '100%' }}
+            >
+              <TacticalCard
+                padding="none"
+                style={{
+                  boxShadow: SHADOW.modal,
+                  borderColor: statusToColor(selectedDriverDetails.status),
+                }}
+              >
+                <BracketFrame color={statusToColor(selectedDriverDetails.status)} />
+                {/* Header */}
+                <div
+                  style={{
+                    padding: SPACE.xl,
+                    borderBottom: `1px solid ${COLORS.border}`,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    gap: SPACE.md,
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        marginBottom: SPACE.xs,
+                      }}
+                    >
+                      <StatusPill
+                        label={selectedDriverDetails.status.toUpperCase()}
+                        tone={statusToTone(selectedDriverDetails.status)}
+                        pulse={selectedDriverDetails.status === Status.CRITICAL}
+                      />
+                      <Mono tone="muted" size="xs">
+                        // DRIVER.DETAIL
+                      </Mono>
+                    </div>
+                    <h2
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: TYPE.h2.size,
+                        fontWeight: TYPE.h2.weight,
+                        letterSpacing: TYPE.h2.tracking,
+                        color: COLORS.textPrimary,
+                        margin: 0,
+                        marginBottom: SPACE.xs,
+                      }}
+                    >
+                      {selectedDriverDetails.name}
+                    </h2>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: SPACE.lg,
+                      }}
+                    >
+                      <div>
+                        <Mono tone="muted" size="xs">
+                          CURRENT
+                        </Mono>
+                        <div
+                          style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 13,
+                            color: COLORS.textPrimary,
+                            fontWeight: 600,
+                            marginTop: 2,
+                          }}
+                        >
+                          {selectedDriverDetails.value}
+                        </div>
+                      </div>
+                      <div>
+                        <Mono tone="muted" size="xs">
+                          IMPACT
+                        </Mono>
+                        <div
+                          style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 13,
+                            color: statusToColor(selectedDriverDetails.status),
+                            fontWeight: 600,
+                            marginTop: 2,
+                          }}
+                        >
+                          {selectedDriverDetails.impact}%
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono text-neutral-500 w-8 text-right">{driver.impact}%</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDriverDetails(null)}
+                    aria-label="Close"
+                    style={{
+                      width: 28,
+                      height: 28,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'transparent',
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                      color: COLORS.textMuted,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <X size={14} strokeWidth={2} />
+                  </button>
                 </div>
 
-                {expandedDriverId === driver.id && (
-                  <div className="mt-4 p-3 bg-neutral-950 rounded border border-neutral-800 animate-in slide-in-from-top-2 fade-in duration-200 cursor-default" onClick={(e) => e.stopPropagation()}>
-                    <p className="text-xs text-neutral-400 mb-3 leading-relaxed">
-                      {driver.status === Status.CRITICAL 
-                        ? `Critical pressure detected. Immediate intervention required to stabilize ${driver.name.toLowerCase()} metrics.`
-                        : `Monitoring ${driver.name.toLowerCase()}. Current levels are within acceptable thresholds but require observation.`}
-                    </p>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => {
-                          setSelectedDriverDetails(driver);
+                {/* Body */}
+                <div
+                  style={{
+                    padding: SPACE.xl,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: SPACE.lg,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: SPACE.md,
+                    }}
+                  >
+                    <div
+                      style={{
+                        padding: SPACE.md,
+                        background: COLORS.bgDeep,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                        [ ROOT CAUSES ]
+                      </Mono>
+                      <ul
+                        style={{
+                          listStyle: 'none',
+                          padding: 0,
+                          margin: 0,
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          lineHeight: 1.6,
                         }}
-                        className="flex-1 py-1.5 bg-cyan-900/30 hover:bg-cyan-900/50 text-cyan-400 text-xs font-bold rounded border border-cyan-900/50 transition-colors"
                       >
-                        View Details
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (showToast) showToast('Driver acknowledged. Monitoring adjusted.', 'info');
-                          setExpandedDriverId(null);
+                        <li style={{ paddingLeft: 12, position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          High influx of trauma patients (last 2h)
+                        </li>
+                        <li style={{ paddingLeft: 12, position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          Delayed discharges from Med/Surg
+                        </li>
+                        <li style={{ paddingLeft: 12, position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          Staffing shortage in Triage
+                        </li>
+                      </ul>
+                    </div>
+                    <div
+                      style={{
+                        padding: SPACE.md,
+                        background: COLORS.bgDeep,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                        [ PREDICTED TRAJECTORY ]
+                      </Mono>
+                      <p
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          lineHeight: 1.6,
+                          margin: 0,
                         }}
-                        className="flex-1 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-bold rounded transition-colors"
                       >
-                        Acknowledge
-                      </button>
+                        Without intervention, metric is expected to worsen by{' '}
+                        <span style={{ color: COLORS.accent, fontWeight: 600 }}>+15%</span> in
+                        the next 45 minutes.
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
 
-          <div className="mt-6 pt-6 border-t border-neutral-800 shrink-0">
-             <div className="bg-neutral-950 rounded p-4 text-xs text-neutral-400 font-mono border border-neutral-800/50">
-                <div className="flex items-center gap-2 mb-2 text-cyan-500">
-                   <Building2 className="w-3 h-3" />
-                   <span className="font-bold">HOUSE STATUS</span>
-                </div>
-                {loginCount > 1 && !isSurgeActive ? (
-                  <>
-                    <p className="flex justify-between mb-1"><span>Med/Surg Beds:</span> <span className="text-emerald-400">4 Available</span></p>
-                    <p className="flex justify-between mb-1"><span>ICU Beds:</span> <span className="text-emerald-400">2 Available</span></p>
-                    <p className="flex justify-between"><span>Psych Hold:</span> <span className="text-white">1 Patient</span></p>
-                  </>
-                ) : (
-                  <>
-                    <p className="flex justify-between mb-1"><span>Med/Surg Beds:</span> <span className="text-rose-400">0 Available</span></p>
-                    <p className="flex justify-between mb-1"><span>ICU Beds:</span> <span className="text-amber-400">1 Available</span></p>
-                    <p className="flex justify-between"><span>Psych Hold:</span> <span className="text-white">4 Patients</span></p>
-                  </>
-                )}
-             </div>
-          </div>
-        </div>
-      </div>
-
-      {selectedDriverDetails && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-neutral-800 flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-3 h-3 rounded-full ${
-                    selectedDriverDetails.status === Status.CRITICAL ? 'bg-rose-500 shadow-[0_0_10px_#f43f5e]' : 
-                    selectedDriverDetails.status === Status.WARNING ? 'bg-amber-500' : 'bg-emerald-500'
-                  }`} />
-                  <h2 className="text-2xl font-bold text-white">{selectedDriverDetails.name}</h2>
-                </div>
-                <p className="text-neutral-400 text-sm font-mono">Current Value: <span className="text-white font-bold">{selectedDriverDetails.value}</span> | Impact: <span className="text-white font-bold">{selectedDriverDetails.impact}%</span></p>
-              </div>
-              <button 
-                onClick={() => setSelectedDriverDetails(null)}
-                className="text-neutral-500 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-                <span className="sr-only">Close</span>
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-neutral-950 p-4 rounded border border-neutral-800">
-                  <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Root Causes</h3>
-                  <ul className="list-disc list-inside text-sm text-neutral-300 space-y-1">
-                    <li>High influx of trauma patients (last 2h)</li>
-                    <li>Delayed discharges from Med/Surg</li>
-                    <li>Staffing shortage in Triage</li>
-                  </ul>
-                </div>
-                <div className="bg-neutral-950 p-4 rounded border border-neutral-800">
-                  <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Predicted Trajectory</h3>
-                  <p className="text-sm text-neutral-300">
-                    Without intervention, metric is expected to worsen by <span className="text-rose-400 font-bold">15%</span> in the next 45 minutes.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-wider mb-3">Recommended Actions</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between bg-neutral-800/50 p-3 rounded border border-neutral-700/50">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm text-neutral-200">Deploy float pool nurse to Triage</span>
+                  <div>
+                    <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                      [ RECOMMENDED ACTIONS ]
+                    </Mono>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                      {[
+                        'Deploy float pool nurse to Triage',
+                        'Escalate pending discharges to Attending',
+                      ].map((action) => (
+                        <div
+                          key={action}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: SPACE.sm,
+                            background: COLORS.bgDeep,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: RADIUS.sm,
+                            gap: SPACE.md,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                            <CheckCircle2 size={12} strokeWidth={2} color={COLORS.ok} />
+                            <span
+                              style={{
+                                fontFamily: FONTS.sans,
+                                fontSize: 12,
+                                color: COLORS.textPrimary,
+                                letterSpacing: '-0.005em',
+                              }}
+                            >
+                              {action}
+                            </span>
+                          </div>
+                          <TacticalButton variant="primary" size="sm">
+                            Execute
+                          </TacticalButton>
+                        </div>
+                      ))}
                     </div>
-                    <button className="text-xs bg-cyan-900/30 text-cyan-400 px-3 py-1 rounded border border-cyan-900/50 hover:bg-cyan-900/50 transition-colors">
-                      Execute
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between bg-neutral-800/50 p-3 rounded border border-neutral-700/50">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span className="text-sm text-neutral-200">Escalate pending discharges to Attending</span>
-                    </div>
-                    <button className="text-xs bg-cyan-900/30 text-cyan-400 px-3 py-1 rounded border border-cyan-900/50 hover:bg-cyan-900/50 transition-colors">
-                      Execute
-                    </button>
                   </div>
                 </div>
-              </div>
-            </div>
-            
-            <div className="p-4 border-t border-neutral-800 bg-neutral-950 flex justify-end">
-              <button 
-                onClick={() => setSelectedDriverDetails(null)}
-                className="px-6 py-2 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded transition-colors"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+                {/* Footer */}
+                <div
+                  style={{
+                    padding: SPACE.md,
+                    borderTop: `1px solid ${COLORS.border}`,
+                    background: COLORS.bgDeep,
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                  }}
+                >
+                  <TacticalButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setSelectedDriverDetails(null)}
+                  >
+                    Dismiss
+                  </TacticalButton>
+                </div>
+              </TacticalCard>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <style>
+        {`
+          .pulse-horizon-drivers::-webkit-scrollbar { width: 4px; }
+          .pulse-horizon-drivers::-webkit-scrollbar-track { background: transparent; }
+          .pulse-horizon-drivers::-webkit-scrollbar-thumb { background: ${COLORS.border}; border-radius: 2px; }
+          .pulse-horizon-drivers::-webkit-scrollbar-thumb:hover { background: ${COLORS.borderStrong}; }
+        `}
+      </style>
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// KpiCell — single cell of the chart footer KPI band
+// ─────────────────────────────────────────────────────────────────────────
+const KpiCell: React.FC<{
+  label: string;
+  value: string;
+  tone: 'primary' | 'ok' | 'warn' | 'crit';
+  icon?: React.ReactNode;
+  isLast?: boolean;
+}> = ({ label, value, tone, icon, isLast }) => {
+  const color =
+    tone === 'ok'
+      ? COLORS.ok
+      : tone === 'warn'
+      ? COLORS.warn
+      : tone === 'crit'
+      ? COLORS.crit
+      : COLORS.textPrimary;
+  return (
+    <div
+      style={{
+        padding: `${SPACE.md}px ${SPACE.lg}px`,
+        borderRight: isLast ? undefined : `1px solid ${COLORS.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      <Mono tone="muted" size="xs">
+        {label}
+      </Mono>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {icon}
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 22,
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+            color,
+            lineHeight: 1,
+          }}
+        >
+          {value}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// LeverSlider — mono-labeled range input used inside the simulator
+// ─────────────────────────────────────────────────────────────────────────
+const LeverSlider: React.FC<{
+  label: string;
+  unit: string;
+  value: number;
+  max: number;
+  onChange: (v: number) => void;
+}> = ({ label, unit, value, max, onChange }) => (
+  <div>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: SPACE.sm,
+      }}
+    >
+      <Mono tone="secondary" size="xs">
+        {label}
+      </Mono>
+      <Mono tone="accent" size="xs">
+        + {value} {unit}
+      </Mono>
+    </div>
+    <input
+      type="range"
+      min={0}
+      max={max}
+      step={1}
+      value={value}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+      style={{
+        width: '100%',
+        accentColor: COLORS.accent,
+        cursor: 'pointer',
+      }}
+    />
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// HouseRow — two-column row inside the house status panel
+// ─────────────────────────────────────────────────────────────────────────
+const HouseRow: React.FC<{
+  label: string;
+  children: React.ReactNode;
+  last?: boolean;
+}> = ({ label, children, last }) => (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingBottom: last ? 0 : 4,
+      marginBottom: last ? 0 : 4,
+      borderBottom: last ? undefined : `1px dashed ${COLORS.border}`,
+    }}
+  >
+    <span
+      style={{
+        fontFamily: FONTS.sans,
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        letterSpacing: '-0.005em',
+      }}
+    >
+      {label}
+    </span>
+    {children}
+  </div>
+);

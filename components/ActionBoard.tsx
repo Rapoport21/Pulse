@@ -1,12 +1,44 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ActionItem, UserProfile } from '../types';
-import { Plus, AlertCircle, Clock, Printer, MessageSquare, History, Send, X, Search, AlertOctagon } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+  Plus,
+  AlertCircle,
+  Clock,
+  Printer,
+  MessageSquare,
+  History,
+  Send,
+  X,
+  Search,
+  AlertOctagon,
+} from 'lucide-react';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'motion/react';
-import { ROLE_ACTIONS } from '../data/userProfiles';
+import { ROLE_ACTIONS, USERS } from '../data/userProfiles';
 import { PrintPreviewModal } from './PrintPreviewModal';
-
-import { USERS } from '../data/userProfiles';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  MOTION,
+  SHADOW,
+  Mono,
+  BracketLabel,
+  StatusPill,
+  StatusTone,
+  SectionTitle,
+  TacticalCard,
+  TacticalButton,
+  CornerBracket,
+  BracketFrame,
+} from './design';
 
 interface ActionBoardProps {
   currentUser: UserProfile;
@@ -16,105 +48,579 @@ interface ActionBoardProps {
   isSurgeActive?: boolean;
 }
 
-const PriorityBadge = ({ priority }: { priority: string }) => {
-  const styles = {
-    High: 'text-rose-400 bg-rose-400/10 border-rose-400/20 shadow-lg shadow-rose-500/20',
-    Medium: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-    Low: 'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  };
+// ─────────────────────────────────────────────────────────────────────────
+// Priority + Status styling helpers
+// ─────────────────────────────────────────────────────────────────────────
+type PriorityKey = 'High' | 'Medium' | 'Low' | 'Critical';
+
+const priorityTone = (
+  priority: string,
+): { color: string; bg: string; border: string; label: string } => {
+  switch (priority as PriorityKey) {
+    case 'Critical':
+      return {
+        color: COLORS.accentBright,
+        bg: COLORS.accentDim,
+        border: COLORS.accent,
+        label: 'P0',
+      };
+    case 'High':
+      return {
+        color: COLORS.accentBright,
+        bg: COLORS.accentDim,
+        border: `${COLORS.accent}55`,
+        label: 'P1',
+      };
+    case 'Medium':
+      return {
+        color: COLORS.warn,
+        bg: COLORS.warnDim,
+        border: `${COLORS.warn}55`,
+        label: 'P2',
+      };
+    case 'Low':
+    default:
+      return {
+        color: COLORS.info,
+        bg: COLORS.infoDim,
+        border: `${COLORS.info}55`,
+        label: 'P3',
+      };
+  }
+};
+
+const statusMeta = (
+  status: string,
+): { tone: StatusTone; label: string; id: string; color: string } => {
+  switch (status) {
+    case 'New':
+      return { tone: 'info', label: 'NEW', id: 'STS.01', color: COLORS.info };
+    case 'In Progress':
+      return {
+        tone: 'warn',
+        label: 'IN PROGRESS',
+        id: 'STS.02',
+        color: COLORS.warn,
+      };
+    case 'On Hold':
+      return {
+        tone: 'crit',
+        label: 'ON HOLD',
+        id: 'STS.03',
+        color: COLORS.crit,
+      };
+    case 'Completed':
+      return {
+        tone: 'ok',
+        label: 'COMPLETED',
+        id: 'STS.04',
+        color: COLORS.ok,
+      };
+    case 'Canceled':
+    default:
+      return {
+        tone: 'neutral',
+        label: 'CANCELED',
+        id: 'STS.05',
+        color: COLORS.textMuted,
+      };
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// PriorityPill — tactical priority pill with corner brackets
+// ─────────────────────────────────────────────────────────────────────────
+const PriorityPill: React.FC<{ priority: string }> = ({ priority }) => {
+  const p = priorityTone(priority);
   return (
-    <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border ${styles[priority as keyof typeof styles]}`}>
+    <span
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '3px 8px',
+        background: p.bg,
+        border: `1px solid ${p.border}`,
+        borderRadius: RADIUS.sm,
+        fontFamily: FONTS.mono,
+        fontSize: 9,
+        fontWeight: 600,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: p.color,
+        lineHeight: 1,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 8,
+          opacity: 0.7,
+          letterSpacing: '0.1em',
+        }}
+      >
+        {p.label}
+      </span>
+      <span
+        style={{
+          width: 1,
+          height: 8,
+          background: p.color,
+          opacity: 0.4,
+        }}
+      />
       {priority}
     </span>
   );
 };
 
-const ActionCard: React.FC<{ action: ActionItem, index: number, onClick: (action: ActionItem) => void, isSurgeActive?: boolean }> = ({ action, index, onClick, isSurgeActive }) => {
+// ─────────────────────────────────────────────────────────────────────────
+// OwnerBadge — avatar initial + name in mono
+// ─────────────────────────────────────────────────────────────────────────
+const OwnerBadge: React.FC<{ owner: string }> = ({ owner }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 6,
+      minWidth: 0,
+    }}
+  >
+    <span
+      style={{
+        width: 18,
+        height: 18,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: COLORS.surfaceElev,
+        border: `1px solid ${COLORS.borderStrong}`,
+        borderRadius: RADIUS.sm,
+        fontFamily: FONTS.mono,
+        fontSize: 9,
+        fontWeight: 600,
+        color: COLORS.textPrimary,
+        flexShrink: 0,
+      }}
+    >
+      {owner.charAt(0).toUpperCase()}
+    </span>
+    <Mono
+      tone="secondary"
+      size="xs"
+      style={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        minWidth: 0,
+        maxWidth: 120,
+      }}
+    >
+      {owner}
+    </Mono>
+  </span>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// ActionCard — individual draggable task card
+// ─────────────────────────────────────────────────────────────────────────
+const ActionCard: React.FC<{
+  action: ActionItem;
+  index: number;
+  onClick: (action: ActionItem) => void;
+  isSurgeActive?: boolean;
+}> = ({ action, index, onClick, isSurgeActive }) => {
   const isLowPriority = action.priority === 'Low';
-  const surgeDim = isSurgeActive && isLowPriority ? 'opacity-40 grayscale' : '';
+  const isDim = isSurgeActive && isLowPriority;
+  const isCritical =
+    (action.priority as string) === 'Critical' || action.priority === 'High';
+  const isHeld = action.status === 'On Hold';
+  const isCanceled = action.status === 'Canceled';
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Draggable draggableId={action.id} index={index}>
-      {(provided, snapshot) => (
-        <div 
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          onClick={() => onClick(action)}
-          className={`bg-neutral-800/80 backdrop-blur-sm border border-neutral-700/50 p-4 rounded-xl hover:border-neutral-500 transition-all hover:bg-neutral-800 group shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-200 relative cursor-pointer ${snapshot.isDragging ? 'shadow-2xl ring-2 ring-cyan-500/50 z-50 scale-105' : ''} ${surgeDim}`}
-          style={provided.draggableProps.style}
-        >
-          <div className="flex justify-between items-start mb-3">
-            <PriorityBadge priority={action.priority} />
-          </div>
-          <h4 className="text-sm font-medium text-neutral-100 mb-3 leading-snug">{action.title}</h4>
-          <div className="flex items-center justify-between text-xs text-neutral-400 border-t border-neutral-700/50 pt-3">
-            <span className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-300 border border-neutral-600">
-                 {action.owner.charAt(0)}
+      {(provided, snapshot) => {
+        const dragging = snapshot.isDragging;
+        return (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            onClick={() => onClick(action)}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+              position: 'relative',
+              background: dragging
+                ? COLORS.surfaceElev
+                : hovered
+                ? COLORS.surfaceElev
+                : COLORS.surface,
+              border: `1px solid ${
+                dragging
+                  ? COLORS.accent
+                  : hovered
+                  ? COLORS.borderStrong
+                  : COLORS.border
+              }`,
+              borderRadius: RADIUS.sm,
+              padding: SPACE.md,
+              cursor: 'pointer',
+              transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, opacity ${MOTION.fast}s ease`,
+              opacity: isDim ? 0.35 : isCanceled ? 0.55 : 1,
+              filter: isDim ? 'grayscale(1)' : undefined,
+              boxShadow: dragging
+                ? `0 12px 36px rgba(0,0,0,0.6), ${SHADOW.accentGlowSm}`
+                : undefined,
+              overflow: 'hidden',
+              ...provided.draggableProps.style,
+            }}
+          >
+            {/* Accent rail for critical / high priority */}
+            {isCritical && (
+              <span
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 2,
+                  background: COLORS.accent,
+                  boxShadow: `0 0 10px ${COLORS.accent}80`,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+
+            {/* Hover brackets */}
+            <BracketFrame
+              color={COLORS.accent}
+              size={8}
+              visible={hovered || dragging}
+              animate
+            />
+
+            {/* Top row: priority + index */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: SPACE.sm,
+                gap: SPACE.sm,
+              }}
+            >
+              <PriorityPill priority={action.priority} />
+              <Mono tone="dim" size="xs">
+                #{String(index + 1).padStart(2, '0')}
+              </Mono>
+            </div>
+
+            {/* Title */}
+            <h4
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: '-0.005em',
+                lineHeight: 1.4,
+                color: isCanceled ? COLORS.textSecondary : COLORS.textPrimary,
+                margin: 0,
+                marginBottom: SPACE.md,
+                textDecoration: isCanceled ? 'line-through' : undefined,
+                wordBreak: 'break-word',
+              }}
+            >
+              {action.title}
+            </h4>
+
+            {/* Footer meta row */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                paddingTop: SPACE.sm,
+                borderTop: `1px dashed ${COLORS.border}`,
+              }}
+            >
+              <OwnerBadge owner={action.owner} />
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: '0.1em',
+                  color: isHeld ? COLORS.crit : COLORS.textSecondary,
+                  flexShrink: 0,
+                }}
+              >
+                <Clock size={10} strokeWidth={2} />
+                {action.dueTime}
+              </span>
+            </div>
+
+            {/* On-hold banner */}
+            {isHeld && (
+              <div
+                style={{
+                  marginTop: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: COLORS.critDim,
+                  border: `1px solid ${COLORS.crit}55`,
+                  borderRadius: RADIUS.sm,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <AlertCircle
+                  size={10}
+                  strokeWidth={2}
+                  color={COLORS.crit}
+                />
+                <Mono tone="crit" size="xs">
+                  Waiting on approval
+                </Mono>
               </div>
-              {action.owner}
-            </span>
-            <span className={`flex items-center gap-1 font-mono ${action.status === 'On Hold' ? 'text-rose-400' : ''}`}>
-              <Clock className="w-3 h-3" />
-              {action.dueTime}
-            </span>
+            )}
+
+            {/* Canceled reason */}
+            {isCanceled && action.cancelReason && (
+              <div
+                style={{
+                  marginTop: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: COLORS.bgDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <AlertCircle
+                  size={10}
+                  strokeWidth={2}
+                  color={COLORS.textMuted}
+                />
+                <Mono tone="muted" size="xs">
+                  {action.cancelReason}
+                </Mono>
+              </div>
+            )}
           </div>
-          {action.status === 'On Hold' && (
-            <div className="mt-3 bg-rose-950/20 border border-rose-900/30 text-rose-400 text-xs p-2 rounded flex items-center gap-2">
-              <AlertCircle className="w-3 h-3" /> Waiting on approval
-            </div>
-          )}
-          {action.status === 'Canceled' && action.cancelReason && (
-            <div className="mt-3 bg-neutral-900/50 border border-neutral-700/50 text-neutral-400 text-xs p-2 rounded flex items-center gap-2">
-              <AlertCircle className="w-3 h-3" /> {action.cancelReason}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      }}
     </Draggable>
   );
 };
 
-const Column = ({ title, status, items, onActionClick, isSurgeActive }: { title: string, status: string, items: ActionItem[], onActionClick: (action: ActionItem) => void, isSurgeActive?: boolean }) => {
-  const borderColor = status === 'On Hold' || status === 'Canceled' ? 'border-rose-900/30' : 'border-neutral-800';
-  const bgGradient = status === 'On Hold' || status === 'Canceled' ? 'from-rose-950/10 to-transparent' : 'from-neutral-900 to-neutral-900/50';
+// ─────────────────────────────────────────────────────────────────────────
+// Column — kanban column with tactical chrome
+// ─────────────────────────────────────────────────────────────────────────
+const Column: React.FC<{
+  title: string;
+  status: string;
+  items: ActionItem[];
+  onActionClick: (action: ActionItem) => void;
+  isSurgeActive?: boolean;
+  columnIndex: number;
+}> = ({ title, status, items, onActionClick, isSurgeActive, columnIndex }) => {
+  const meta = statusMeta(status);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className={`bg-gradient-to-b ${bgGradient} border ${borderColor} rounded-lg flex flex-col h-full shadow-inner min-w-[280px]`}
+      transition={{
+        duration: MOTION.base,
+        delay: 0.05 + columnIndex * 0.04,
+        ease: MOTION.ease,
+      }}
+      style={{
+        position: 'relative',
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 288,
+        flex: '1 1 288px',
+        maxWidth: 360,
+        height: '100%',
+        overflow: 'hidden',
+      }}
     >
-      <div className="p-4 border-b border-neutral-800 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-           <span 
-             className={`w-2 h-2 rounded-full ${
-               status === 'New' ? 'bg-blue-500 text-blue-500' : 
-               status === 'In Progress' ? 'bg-amber-500 text-amber-500' :
-               status === 'On Hold' || status === 'Canceled' ? 'bg-rose-500 text-rose-500' : 'bg-emerald-500 text-emerald-500'
-             }`}
-             style={{ boxShadow: '0 0 8px currentColor' }}
-           ></span>
-           <h3 className="text-sm font-bold text-neutral-300 uppercase tracking-wide">{title}</h3>
+      {/* Column corner brackets */}
+      <CornerBracket
+        position="tl"
+        color={COLORS.borderStrong}
+        size={8}
+        thickness={1}
+      />
+      <CornerBracket
+        position="tr"
+        color={COLORS.borderStrong}
+        size={8}
+        thickness={1}
+      />
+      <CornerBracket
+        position="bl"
+        color={COLORS.borderStrong}
+        size={8}
+        thickness={1}
+      />
+      <CornerBracket
+        position="br"
+        color={COLORS.borderStrong}
+        size={8}
+        thickness={1}
+      />
+
+      {/* Column header */}
+      <div
+        style={{
+          padding: `${SPACE.md}px ${SPACE.base}px`,
+          borderBottom: `1px solid ${COLORS.border}`,
+          background: COLORS.bgDeep,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: SPACE.sm,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.sm,
+            minWidth: 0,
+          }}
+        >
+          <StatusPill
+            label={title}
+            tone={meta.tone}
+            pulse={status === 'In Progress'}
+            size="sm"
+          />
         </div>
-        <span className="bg-neutral-800 border border-neutral-700 text-neutral-400 text-xs px-2 py-0.5 rounded-full font-mono">{items.length}</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <Mono tone="dim" size="xs">
+            //
+          </Mono>
+          <span
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: 11,
+              fontWeight: 600,
+              color: COLORS.textPrimary,
+              letterSpacing: '0.08em',
+              minWidth: 18,
+              textAlign: 'right',
+            }}
+          >
+            {String(items.length).padStart(2, '0')}
+          </span>
+        </div>
       </div>
+
+      {/* Droppable area */}
       <Droppable droppableId={status}>
         {(provided, snapshot) => (
-          <div 
+          <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`p-3 flex-1 overflow-y-auto space-y-3 custom-scrollbar transition-colors ${snapshot.isDraggingOver ? 'bg-neutral-800/50' : ''}`}
+            className="custom-scrollbar"
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: SPACE.sm,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: SPACE.sm,
+              background: snapshot.isDraggingOver
+                ? COLORS.accentDim
+                : 'transparent',
+              transition: `background ${MOTION.fast}s ease`,
+              minHeight: 120,
+            }}
           >
+            {items.length === 0 && !snapshot.isDraggingOver && (
+              <div
+                style={{
+                  padding: SPACE.lg,
+                  textAlign: 'center',
+                  border: `1px dashed ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                }}
+              >
+                <Mono tone="dim" size="xs">
+                  No actions
+                </Mono>
+              </div>
+            )}
             {items.map((action, index) => (
-              <ActionCard key={action.id} action={action} index={index} onClick={onActionClick} isSurgeActive={isSurgeActive} />
+              <ActionCard
+                key={action.id}
+                action={action}
+                index={index}
+                onClick={onActionClick}
+                isSurgeActive={isSurgeActive}
+              />
             ))}
             {provided.placeholder}
             {status === 'New' && (
-              <button className="w-full py-4 border border-dashed border-neutral-700 rounded text-neutral-500 hover:text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800 transition-all text-xs font-medium flex items-center justify-center gap-2">
-                <Plus className="w-3 h-3" /> ADD ACTION
+              <button
+                type="button"
+                style={{
+                  width: '100%',
+                  padding: `${SPACE.md}px`,
+                  marginTop: items.length === 0 ? 0 : SPACE.xs,
+                  background: 'transparent',
+                  border: `1px dashed ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textMuted,
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, background ${MOTION.fast}s ease`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = COLORS.accent;
+                  e.currentTarget.style.borderColor = COLORS.accent;
+                  e.currentTarget.style.background = COLORS.accentDim;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = COLORS.textMuted;
+                  e.currentTarget.style.borderColor = COLORS.border;
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Plus size={12} strokeWidth={2} />
+                New Action
               </button>
             )}
           </div>
@@ -124,13 +630,106 @@ const Column = ({ title, status, items, onActionClick, isSurgeActive }: { title:
   );
 };
 
-export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemStatus = 'normal', showToast, initialFilter = '', isSurgeActive = false }) => {
-  const [actions, setActions] = useState<ActionItem[]>(ROLE_ACTIONS[currentUser.role]);
+// ─────────────────────────────────────────────────────────────────────────
+// TacticalInput — compact search input with tactical chrome
+// ─────────────────────────────────────────────────────────────────────────
+const TacticalInput: React.FC<{
+  icon?: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  onClear?: () => void;
+  placeholder?: string;
+  width?: number | string;
+}> = ({ icon, value, onChange, onClear, placeholder, width = 260 }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width,
+        height: 32,
+        padding: '0 10px',
+        background: COLORS.surface,
+        border: `1px solid ${focused ? COLORS.accent : COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        transition: `border-color ${MOTION.fast}s ease`,
+      }}
+    >
+      {icon && (
+        <span
+          style={{
+            color: focused ? COLORS.accent : COLORS.textMuted,
+            display: 'flex',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </span>
+      )}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder={placeholder}
+        style={{
+          flex: 1,
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: COLORS.textPrimary,
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          letterSpacing: '-0.005em',
+          minWidth: 0,
+        }}
+      />
+      {value && onClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            padding: 0,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.textPrimary)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.textMuted)}
+        >
+          <X size={12} strokeWidth={2} />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// ActionBoard — main component
+// ─────────────────────────────────────────────────────────────────────────
+export const ActionBoard: React.FC<ActionBoardProps> = ({
+  currentUser,
+  systemStatus = 'normal',
+  showToast,
+  initialFilter = '',
+  isSurgeActive = false,
+}) => {
+  const [actions, setActions] = useState<ActionItem[]>(
+    ROLE_ACTIONS[currentUser.role],
+  );
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [newComment, setNewComment] = useState('');
-  const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'history'>('details');
+  const [activeTab, setActiveTab] = useState<
+    'details' | 'comments' | 'history'
+  >('details');
   const [searchQuery, setSearchQuery] = useState(initialFilter);
 
   // Reset actions if user changes
@@ -146,18 +745,32 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
   // Add Surge Protocol action if surge is activated
   useEffect(() => {
     if (isSurgeActive) {
-      setActions(prev => {
-        if (prev.some(a => a.title === 'SURGE PROTOCOL ACTIVATED')) return prev;
-        return [{
-          id: `surge-${Date.now()}`,
-          title: 'SURGE PROTOCOL ACTIVATED',
-          description: 'System-wide surge protocol is active. All non-essential tasks are suspended. Focus on critical patient throughput and capacity management.',
-          status: 'New',
-          priority: 'Critical',
-          owner: 'System',
-          dueTime: 'IMMEDIATE',
-          history: [{ timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), action: 'Surge Protocol Auto-Generated', user: 'System' }]
-        }, ...prev];
+      setActions((prev) => {
+        if (prev.some((a) => a.title === 'SURGE PROTOCOL ACTIVATED'))
+          return prev;
+        return [
+          {
+            id: `surge-${Date.now()}`,
+            title: 'SURGE PROTOCOL ACTIVATED',
+            description:
+              'System-wide surge protocol is active. All non-essential tasks are suspended. Focus on critical patient throughput and capacity management.',
+            status: 'New',
+            priority: 'Critical' as ActionItem['priority'],
+            owner: 'System',
+            dueTime: 'IMMEDIATE',
+            history: [
+              {
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                action: 'Surge Protocol Auto-Generated',
+                user: 'System',
+              },
+            ],
+          },
+          ...prev,
+        ];
       });
     }
   }, [isSurgeActive]);
@@ -177,37 +790,42 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
     let movedToNewStatus = false;
     let newStatusName = '';
 
-    setActions(prev => {
+    setActions((prev) => {
       const next = Array.from(prev);
-      const draggedIndex = next.findIndex(a => a.id === draggableId);
+      const draggedIndex = next.findIndex((a) => a.id === draggableId);
       if (draggedIndex === -1) return prev;
-      
+
       const [removed] = next.splice(draggedIndex, 1);
       const newStatus = destination.droppableId as ActionItem['status'];
-      
+
       if (source.droppableId !== destination.droppableId) {
         removed.status = newStatus;
         removed.history = [
           ...(removed.history || []),
           {
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
             action: `Status changed to ${newStatus} (via drag)`,
-            user: currentUser.name
-          }
+            user: currentUser.name,
+          },
         ];
         movedToNewStatus = true;
         newStatusName = newStatus;
       }
 
-      const destItems = next.filter(a => a.status === destination.droppableId);
+      const destItems = next.filter(
+        (a) => a.status === destination.droppableId,
+      );
       if (destination.index >= destItems.length) {
         next.push(removed);
       } else {
         const targetItem = destItems[destination.index];
-        const targetIndex = next.findIndex(a => a.id === targetItem.id);
+        const targetIndex = next.findIndex((a) => a.id === targetItem.id);
         next.splice(targetIndex, 0, removed);
       }
-      
+
       return next;
     });
 
@@ -216,27 +834,38 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
     }
   };
 
-  const handleStatusChange = (id: string, newStatus: ActionItem['status'], reason?: string) => {
+  const handleStatusChange = (
+    id: string,
+    newStatus: ActionItem['status'],
+    reason?: string,
+  ) => {
     let updatedActionRef: ActionItem | null = null;
 
-    setActions(prev => prev.map(a => {
-      if (a.id === id) {
-        const historyEntry = {
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          action: `Status changed to ${newStatus}${reason ? ` (Reason: ${reason})` : ''}`,
-          user: currentUser.name
-        };
-        const updatedAction = { 
-          ...a, 
-          status: newStatus, 
-          cancelReason: reason,
-          history: [...(a.history || []), historyEntry]
-        };
-        updatedActionRef = updatedAction;
-        return updatedAction;
-      }
-      return a;
-    }));
+    setActions((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          const historyEntry = {
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            action: `Status changed to ${newStatus}${
+              reason ? ` (Reason: ${reason})` : ''
+            }`,
+            user: currentUser.name,
+          };
+          const updatedAction = {
+            ...a,
+            status: newStatus,
+            cancelReason: reason,
+            history: [...(a.history || []), historyEntry],
+          };
+          updatedActionRef = updatedAction;
+          return updatedAction;
+        }
+        return a;
+      }),
+    );
 
     if (selectedAction?.id === id && updatedActionRef) {
       setSelectedAction(updatedActionRef);
@@ -253,21 +882,26 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
 
   const handleAddComment = () => {
     if (!newComment.trim() || !selectedAction) return;
-    
+
     let updatedActionRef: ActionItem | null = null;
 
-    setActions(prev => prev.map(a => {
-      if (a.id === selectedAction.id) {
-        const commentEntry = `[${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}] ${currentUser.name}: ${newComment}`;
-        const updatedAction = {
-          ...a,
-          comments: [...(a.comments || []), commentEntry]
-        };
-        updatedActionRef = updatedAction;
-        return updatedAction;
-      }
-      return a;
-    }));
+    setActions((prev) =>
+      prev.map((a) => {
+        if (a.id === selectedAction.id) {
+          const commentEntry = `[${new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}] ${currentUser.name}: ${newComment}`;
+          const updatedAction = {
+            ...a,
+            comments: [...(a.comments || []), commentEntry],
+          };
+          updatedActionRef = updatedAction;
+          return updatedAction;
+        }
+        return a;
+      }),
+    );
 
     if (updatedActionRef) {
       setSelectedAction(updatedActionRef);
@@ -277,24 +911,33 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
 
   const handleReassign = (newOwner: string) => {
     if (!selectedAction) return;
-    
+
     let updatedActionRef: ActionItem | null = null;
 
-    setActions(prev => prev.map(a => {
-      if (a.id === selectedAction.id) {
-        const updatedAction = {
-          ...a,
-          owner: newOwner,
-          history: [
-            { timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), action: `Reassigned to ${newOwner}`, user: currentUser.name },
-            ...(a.history || [])
-          ]
-        };
-        updatedActionRef = updatedAction;
-        return updatedAction;
-      }
-      return a;
-    }));
+    setActions((prev) =>
+      prev.map((a) => {
+        if (a.id === selectedAction.id) {
+          const updatedAction = {
+            ...a,
+            owner: newOwner,
+            history: [
+              {
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                action: `Reassigned to ${newOwner}`,
+                user: currentUser.name,
+              },
+              ...(a.history || []),
+            ],
+          };
+          updatedActionRef = updatedAction;
+          return updatedAction;
+        }
+        return a;
+      }),
+    );
 
     if (updatedActionRef) {
       setSelectedAction(updatedActionRef);
@@ -305,288 +948,919 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
   const filteredActions = useMemo(() => {
     if (!searchQuery.trim()) return actions;
     const lowerQuery = searchQuery.toLowerCase();
-    return actions.filter(a => 
-      a.title.toLowerCase().includes(lowerQuery) || 
-      a.owner.toLowerCase().includes(lowerQuery) ||
-      a.description.toLowerCase().includes(lowerQuery)
+    return actions.filter(
+      (a) =>
+        a.title.toLowerCase().includes(lowerQuery) ||
+        a.owner.toLowerCase().includes(lowerQuery) ||
+        (a as unknown as { description?: string }).description
+          ?.toLowerCase()
+          .includes(lowerQuery),
     );
   }, [actions, searchQuery]);
 
-  const getActionsByStatus = (status: string) => filteredActions.filter(a => a.status === status);
+  const getActionsByStatus = (status: string) =>
+    filteredActions.filter((a) => a.status === status);
+
+  // Summary stats for the header
+  const stats = useMemo(() => {
+    const total = filteredActions.length;
+    const open = filteredActions.filter(
+      (a) => a.status !== 'Completed' && a.status !== 'Canceled',
+    ).length;
+    const critical = filteredActions.filter(
+      (a) =>
+        (a.priority === 'High' || (a.priority as string) === 'Critical') &&
+        a.status !== 'Completed' &&
+        a.status !== 'Canceled',
+    ).length;
+    const inProgress = filteredActions.filter(
+      (a) => a.status === 'In Progress',
+    ).length;
+    const onHold = filteredActions.filter((a) => a.status === 'On Hold').length;
+    return { total, open, critical, inProgress, onHold };
+  }, [filteredActions]);
 
   const printContent = (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold border-b pb-2">Action Board - {currentUser.role.replace('_', ' ')}</h2>
-      {['New', 'In Progress', 'On Hold', 'Completed', 'Canceled'].map(status => {
-        const statusActions = getActionsByStatus(status);
-        if (statusActions.length === 0) return null;
-        return (
-          <div key={status} className="mb-4">
-            <h3 className="text-lg font-bold bg-gray-100 p-2 rounded mb-2">{status}</h3>
-            <ul className="list-disc pl-5 space-y-2">
-              {statusActions.map(a => (
-                <li key={a.id}>
-                  <strong>{a.title}</strong> - {a.owner} (Due: {a.dueTime}) [{a.priority}]
-                  {a.status === 'Canceled' && a.cancelReason && ` - Reason: ${a.cancelReason}`}
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      })}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <h2
+        style={{
+          fontSize: 20,
+          fontWeight: 700,
+          borderBottom: '1px solid #000',
+          paddingBottom: 8,
+          margin: 0,
+        }}
+      >
+        Action Board - {currentUser.role.replace('_', ' ')}
+      </h2>
+      {['New', 'In Progress', 'On Hold', 'Completed', 'Canceled'].map(
+        (status) => {
+          const statusActions = getActionsByStatus(status);
+          if (statusActions.length === 0) return null;
+          return (
+            <div key={status} style={{ marginBottom: 16 }}>
+              <h3
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  background: '#F3F4F6',
+                  padding: 8,
+                  borderRadius: 2,
+                  marginBottom: 8,
+                }}
+              >
+                {status}
+              </h3>
+              <ul style={{ paddingLeft: 20, margin: 0, listStyle: 'disc' }}>
+                {statusActions.map((a) => (
+                  <li key={a.id} style={{ marginBottom: 8 }}>
+                    <strong>{a.title}</strong> - {a.owner} (Due: {a.dueTime}) [
+                    {a.priority}]
+                    {a.status === 'Canceled' &&
+                      a.cancelReason &&
+                      ` - Reason: ${a.cancelReason}`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        },
+      )}
     </div>
   );
 
+  const columns: Array<{ title: string; status: ActionItem['status'] }> = [
+    { title: 'New', status: 'New' },
+    { title: 'In Progress', status: 'In Progress' },
+    { title: 'On Hold', status: 'On Hold' },
+    { title: 'Completed', status: 'Completed' },
+    { title: 'Canceled', status: 'Canceled' },
+  ];
+
   return (
-    <div className="h-full flex flex-col p-6 gap-6 overflow-hidden">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
-        <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-3">
-          <div className="p-2 bg-neutral-800 rounded-lg border border-neutral-700">
-            <Clock className="w-5 h-5 text-neutral-400" />
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: SPACE.base,
+        padding: SPACE.xl,
+        background: COLORS.bg,
+        overflow: 'hidden',
+      }}
+    >
+      {/* ─── Section header ─── */}
+      <SectionTitle
+        id="ACT.BOARD"
+        label="Action Board"
+        meta={
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE.md,
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <BracketLabel tone="muted" size="xs">
+              VIEW · {currentUser.role.replace('_', ' ')}
+            </BracketLabel>
+            <StatusPill
+              label={`${stats.open} Open`}
+              tone={stats.critical > 0 ? 'crit' : 'info'}
+              pulse={stats.critical > 0}
+            />
           </div>
-          Action Board
-          <span className="text-xs font-mono font-normal text-neutral-500 bg-neutral-900 px-2 py-1 rounded border border-neutral-800 uppercase tracking-widest hidden sm:inline-block">
-            View: {currentUser.role.replace('_', ' ')}
-          </span>
-        </h2>
-        
-        <div className="flex flex-wrap gap-4 items-center w-full md:w-auto">
-          <div className="relative w-full md:w-auto">
-            <div className="flex items-center bg-neutral-900 border border-neutral-700 rounded-md px-3 py-1.5 w-full md:w-64">
-              <Search className="w-4 h-4 text-neutral-500 mr-2" />
-              <input 
-                type="text" 
-                placeholder="Filter actions..." 
-                className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-neutral-600"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-neutral-500 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
+        }
+      />
+
+      {/* ─── Control bar: stats + search + print ─── */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: SPACE.md,
+          flexShrink: 0,
+        }}
+      >
+        {/* Mini stat strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'stretch',
+            gap: 0,
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.sm,
+            overflow: 'hidden',
+          }}
+        >
+          <StatCell
+            label="Total"
+            value={stats.total}
+            tone={COLORS.textPrimary}
+          />
+          <StatCell
+            label="Critical"
+            value={stats.critical}
+            tone={stats.critical > 0 ? COLORS.accent : COLORS.textPrimary}
+          />
+          <StatCell
+            label="Active"
+            value={stats.inProgress}
+            tone={COLORS.warn}
+          />
+          <StatCell
+            label="Held"
+            value={stats.onHold}
+            tone={stats.onHold > 0 ? COLORS.crit : COLORS.textPrimary}
+            last
+          />
+        </div>
+
+        {/* Search + print */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.sm,
+            flexWrap: 'wrap',
+          }}
+        >
+          <TacticalInput
+            icon={<Search size={13} strokeWidth={2} />}
+            value={searchQuery}
+            onChange={setSearchQuery}
+            onClear={() => setSearchQuery('')}
+            placeholder="Filter actions..."
+          />
           {systemStatus === 'manual' && (
-            <button 
+            <TacticalButton
+              variant="primary"
+              size="md"
+              icon={<Printer size={13} strokeWidth={2} />}
               onClick={() => setShowPrintModal(true)}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold text-sm flex items-center gap-2 transition-colors shadow-lg shadow-amber-600/20 animate-in fade-in"
             >
-              <Printer className="w-4 h-4" />
-              Print Action Board
-            </button>
+              Print Board
+            </TacticalButton>
           )}
         </div>
       </div>
 
-      {isSurgeActive && (
-        <div className="bg-rose-950/40 border border-rose-500/50 rounded-lg p-3 flex items-center gap-3 animate-pulse shrink-0">
-          <AlertOctagon className="w-5 h-5 text-rose-500" />
-          <span className="text-rose-400 font-bold text-sm">SURGE PROTOCOL ACTIVE: Low priority actions have been visually deemphasized. Focus on critical tasks.</span>
-        </div>
-      )}
+      {/* ─── Surge banner ─── */}
+      <AnimatePresence>
+        {isSurgeActive && (
+          <motion.div
+            key="surge-banner"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            style={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE.md,
+              padding: `${SPACE.md}px ${SPACE.base}px`,
+              background: COLORS.accentDim,
+              border: `1px solid ${COLORS.accent}`,
+              borderRadius: RADIUS.sm,
+              boxShadow: SHADOW.accentGlowSm,
+              flexShrink: 0,
+              overflow: 'hidden',
+            }}
+          >
+            <CornerBracket position="tl" color={COLORS.accent} size={10} />
+            <CornerBracket position="tr" color={COLORS.accent} size={10} />
+            <CornerBracket position="bl" color={COLORS.accent} size={10} />
+            <CornerBracket position="br" color={COLORS.accent} size={10} />
+            <AlertOctagon
+              size={18}
+              strokeWidth={2}
+              color={COLORS.accentBright}
+            />
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                minWidth: 0,
+              }}
+            >
+              <Mono tone="accent" size="base">
+                Surge Protocol Active
+              </Mono>
+              <span
+                style={{
+                  fontFamily: FONTS.sans,
+                  fontSize: 12,
+                  color: COLORS.textSecondary,
+                  lineHeight: 1.4,
+                }}
+              >
+                Low priority actions have been visually deemphasized — focus
+                on critical tasks.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      {/* ─── Kanban columns ─── */}
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex-1 flex gap-4 min-h-0 overflow-x-auto custom-scrollbar pb-2">
-          <Column title="New" status="New" items={getActionsByStatus('New')} onActionClick={setSelectedAction} isSurgeActive={isSurgeActive} />
-          <Column title="In Progress" status="In Progress" items={getActionsByStatus('In Progress')} onActionClick={setSelectedAction} isSurgeActive={isSurgeActive} />
-          <Column title="On Hold" status="On Hold" items={getActionsByStatus('On Hold')} onActionClick={setSelectedAction} isSurgeActive={isSurgeActive} />
-          <Column title="Completed" status="Completed" items={getActionsByStatus('Completed')} onActionClick={setSelectedAction} isSurgeActive={isSurgeActive} />
-          <Column title="Canceled" status="Canceled" items={getActionsByStatus('Canceled')} onActionClick={setSelectedAction} isSurgeActive={isSurgeActive} />
+        <div
+          className="custom-scrollbar"
+          style={{
+            flex: 1,
+            display: 'flex',
+            gap: SPACE.md,
+            minHeight: 0,
+            overflowX: 'auto',
+            paddingBottom: SPACE.sm,
+          }}
+        >
+          {columns.map((col, idx) => (
+            <Column
+              key={col.status}
+              title={col.title}
+              status={col.status}
+              items={getActionsByStatus(col.status)}
+              onActionClick={setSelectedAction}
+              isSurgeActive={isSurgeActive}
+              columnIndex={idx}
+            />
+          ))}
         </div>
       </DragDropContext>
 
-      {/* Action Detail Modal */}
+      {/* ─── Action Detail Modal ─── */}
       <AnimatePresence>
         {selectedAction && (
-          <motion.div 
+          <motion.div
+            key="modal-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.85)',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              zIndex: 50,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: SPACE.md,
+            }}
+            onClick={() => setSelectedAction(null)}
           >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            <motion.div
+              key="modal-panel"
+              initial={{ scale: 0.96, opacity: 0, y: 12 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="bg-neutral-900 border border-neutral-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+              exit={{ scale: 0.96, opacity: 0, y: 12 }}
+              transition={{
+                type: 'spring',
+                damping: 28,
+                stiffness: 320,
+              }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: 560,
+                maxHeight: '90vh',
+                background: COLORS.surface,
+                border: `1px solid ${COLORS.borderStrong}`,
+                borderRadius: RADIUS.sm,
+                boxShadow: SHADOW.modal,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
             >
-            <div className="p-4 border-b border-neutral-800 flex justify-between items-start bg-neutral-950 shrink-0">
-              <div>
-                <PriorityBadge priority={selectedAction.priority} />
-                <h3 className="text-lg font-bold text-white mt-2">{selectedAction.title}</h3>
-              </div>
-              <button onClick={() => setSelectedAction(null)} className="text-neutral-500 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex border-b border-neutral-800 bg-neutral-900 shrink-0">
-              <button 
-                onClick={() => setActiveTab('details')}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'details' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
-              >
-                Details
-              </button>
-              <button 
-                onClick={() => setActiveTab('comments')}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'comments' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
-              >
-                <MessageSquare className="w-4 h-4" />
-                Comments ({selectedAction.comments?.length || 0})
-              </button>
-              <button 
-                onClick={() => setActiveTab('history')}
-                className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors flex items-center justify-center gap-2 ${activeTab === 'history' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
-              >
-                <History className="w-4 h-4" />
-                History
-              </button>
-            </div>
+              <CornerBracket
+                position="tl"
+                color={COLORS.accent}
+                size={12}
+                thickness={1.5}
+              />
+              <CornerBracket
+                position="tr"
+                color={COLORS.accent}
+                size={12}
+                thickness={1.5}
+              />
+              <CornerBracket
+                position="bl"
+                color={COLORS.accent}
+                size={12}
+                thickness={1.5}
+              />
+              <CornerBracket
+                position="br"
+                color={COLORS.accent}
+                size={12}
+                thickness={1.5}
+              />
 
-            <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
-              {activeTab === 'details' && (
-                <div className="space-y-6">
-                  <div className="flex justify-between text-sm text-neutral-400 bg-neutral-950 p-3 rounded-lg border border-neutral-800">
-                    <div className="flex items-center gap-2">
-                      <span>Owner:</span>
-                      <select 
-                        value={selectedAction.owner}
-                        onChange={(e) => handleReassign(e.target.value)}
-                        className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-sm rounded px-2 py-1 outline-none focus:border-cyan-500"
-                      >
-                        <option value={selectedAction.owner}>{selectedAction.owner}</option>
-                        {Object.values(USERS).filter(u => u.name !== selectedAction.owner).map(u => (
-                          <option key={u.name} value={u.name}>{u.name} ({u.role.replace('_', ' ')})</option>
-                        ))}
-                      </select>
-                    </div>
-                    <span className="flex items-center">Due: <strong className="text-neutral-200 ml-1">{selectedAction.dueTime}</strong></span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Update Status</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['New', 'In Progress', 'On Hold', 'Completed'].map(status => (
-                        <button
-                          key={status}
-                          onClick={() => handleStatusChange(selectedAction.id, status as ActionItem['status'])}
-                          className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
-                            selectedAction.status === status 
-                              ? 'bg-cyan-900/30 border-cyan-500/50 text-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.2)]' 
-                              : 'bg-neutral-800 border-neutral-700 text-neutral-300 hover:bg-neutral-700'
-                          }`}
-                        >
-                          {status}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-neutral-800">
-                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Cancel Action</label>
-                    <textarea
-                      placeholder="Reason for cancellation..."
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                      className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-rose-500/50 min-h-[80px]"
+              {/* Modal header */}
+              <div
+                style={{
+                  padding: SPACE.base,
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: COLORS.bgDeep,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: SPACE.md,
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                      marginBottom: SPACE.sm,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <BracketLabel tone="muted" size="xs">
+                      ACT.{selectedAction.id}
+                    </BracketLabel>
+                    <PriorityPill priority={selectedAction.priority} />
+                    <StatusPill
+                      label={statusMeta(selectedAction.status).label}
+                      tone={statusMeta(selectedAction.status).tone}
+                      size="xs"
                     />
-                    <button
-                      onClick={() => handleStatusChange(selectedAction.id, 'Canceled', cancelReason)}
-                      disabled={!cancelReason.trim()}
-                      className="w-full p-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Mark as Canceled
-                    </button>
                   </div>
+                  <h3
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: TYPE.h3.size,
+                      fontWeight: TYPE.h3.weight,
+                      letterSpacing: TYPE.h3.tracking,
+                      lineHeight: TYPE.h3.lineHeight,
+                      color: COLORS.textPrimary,
+                      margin: 0,
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {selectedAction.title}
+                  </h3>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedAction(null)}
+                  style={{
+                    background: 'transparent',
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textSecondary,
+                    cursor: 'pointer',
+                    padding: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = COLORS.accent;
+                    e.currentTarget.style.borderColor = COLORS.accent;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = COLORS.textSecondary;
+                    e.currentTarget.style.borderColor = COLORS.border;
+                  }}
+                >
+                  <X size={14} strokeWidth={2} />
+                </button>
+              </div>
 
-              {activeTab === 'comments' && (
-                <div className="space-y-4 h-full flex flex-col">
-                  <div className="flex-1 space-y-3 overflow-y-auto min-h-[200px]">
-                    {(!selectedAction.comments || selectedAction.comments.length === 0) ? (
-                      <div className="text-center text-neutral-500 py-8 text-sm">
-                        No comments yet.
+              {/* Tabs */}
+              <div
+                style={{
+                  display: 'flex',
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: COLORS.surface,
+                  flexShrink: 0,
+                }}
+              >
+                <TabButton
+                  active={activeTab === 'details'}
+                  onClick={() => setActiveTab('details')}
+                  label="Details"
+                />
+                <TabButton
+                  active={activeTab === 'comments'}
+                  onClick={() => setActiveTab('comments')}
+                  label={`Comments · ${selectedAction.comments?.length || 0}`}
+                  icon={<MessageSquare size={12} strokeWidth={2} />}
+                />
+                <TabButton
+                  active={activeTab === 'history'}
+                  onClick={() => setActiveTab('history')}
+                  label={`History · ${selectedAction.history?.length || 0}`}
+                  icon={<History size={12} strokeWidth={2} />}
+                />
+              </div>
+
+              {/* Tab content */}
+              <div
+                className="custom-scrollbar"
+                style={{
+                  padding: SPACE.base,
+                  overflowY: 'auto',
+                  flex: 1,
+                }}
+              >
+                {activeTab === 'details' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.lg,
+                    }}
+                  >
+                    {/* Owner + due time */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: SPACE.sm,
+                      }}
+                    >
+                      <DataReadout label="Owner">
+                        <select
+                          value={selectedAction.owner}
+                          onChange={(e) => handleReassign(e.target.value)}
+                          style={{
+                            width: '100%',
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            color: COLORS.textPrimary,
+                            fontFamily: FONTS.sans,
+                            fontSize: 12,
+                            padding: `6px ${SPACE.sm}px`,
+                            borderRadius: RADIUS.sm,
+                            outline: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value={selectedAction.owner}>
+                            {selectedAction.owner}
+                          </option>
+                          {Object.values(USERS)
+                            .filter((u) => u.name !== selectedAction.owner)
+                            .map((u) => (
+                              <option key={u.name} value={u.name}>
+                                {u.name} ({u.role.replace('_', ' ')})
+                              </option>
+                            ))}
+                        </select>
+                      </DataReadout>
+                      <DataReadout label="Due">
+                        <span
+                          style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: COLORS.textPrimary,
+                            letterSpacing: '0.04em',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: `6px ${SPACE.sm}px`,
+                          }}
+                        >
+                          <Clock
+                            size={12}
+                            strokeWidth={2}
+                            color={COLORS.textMuted}
+                          />
+                          {selectedAction.dueTime}
+                        </span>
+                      </DataReadout>
+                    </div>
+
+                    {/* Status controls */}
+                    <div>
+                      <div style={{ marginBottom: SPACE.sm }}>
+                        <Mono tone="muted" size="xs">
+                          Update Status
+                        </Mono>
                       </div>
-                    ) : (
-                      selectedAction.comments.map((comment, idx) => {
-                        const match = comment.match(/^\[(.*?)\] (.*?): (.*)$/);
-                        if (match) {
-                          const [, time, user, text] = match;
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gap: SPACE.sm,
+                        }}
+                      >
+                        {(
+                          ['New', 'In Progress', 'On Hold', 'Completed'] as const
+                        ).map((status) => {
+                          const isActive = selectedAction.status === status;
+                          const m = statusMeta(status);
                           return (
-                            <div key={idx} className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-xs font-bold text-cyan-400">{user}</span>
-                                <span className="text-[10px] text-neutral-500 font-mono">{time}</span>
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() =>
+                                handleStatusChange(
+                                  selectedAction.id,
+                                  status as ActionItem['status'],
+                                )
+                              }
+                              style={{
+                                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                                background: isActive
+                                  ? COLORS.accentDim
+                                  : COLORS.surface,
+                                border: `1px solid ${
+                                  isActive ? COLORS.accent : COLORS.border
+                                }`,
+                                borderRadius: RADIUS.sm,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: SPACE.sm,
+                                textAlign: 'left',
+                                transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                                boxShadow: isActive
+                                  ? SHADOW.accentGlowSm
+                                  : undefined,
+                              }}
+                              onMouseEnter={(e) => {
+                                if (!isActive) {
+                                  e.currentTarget.style.borderColor =
+                                    COLORS.borderStrong;
+                                  e.currentTarget.style.background =
+                                    COLORS.surfaceElev;
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (!isActive) {
+                                  e.currentTarget.style.borderColor =
+                                    COLORS.border;
+                                  e.currentTarget.style.background =
+                                    COLORS.surface;
+                                }
+                              }}
+                            >
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: RADIUS.full,
+                                  background: m.color,
+                                  boxShadow: `0 0 6px ${m.color}`,
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontFamily: FONTS.mono,
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  letterSpacing: '0.12em',
+                                  textTransform: 'uppercase',
+                                  color: isActive
+                                    ? COLORS.textPrimary
+                                    : COLORS.textSecondary,
+                                }}
+                              >
+                                {status}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Cancel section */}
+                    <div
+                      style={{
+                        paddingTop: SPACE.md,
+                        borderTop: `1px dashed ${COLORS.border}`,
+                      }}
+                    >
+                      <div style={{ marginBottom: SPACE.sm }}>
+                        <Mono tone="muted" size="xs">
+                          Cancel Action
+                        </Mono>
+                      </div>
+                      <textarea
+                        placeholder="Reason for cancellation..."
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                          padding: SPACE.md,
+                          color: COLORS.textPrimary,
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          outline: 'none',
+                          minHeight: 72,
+                          resize: 'vertical',
+                          marginBottom: SPACE.sm,
+                          transition: `border-color ${MOTION.fast}s ease`,
+                        }}
+                        onFocus={(e) =>
+                          (e.currentTarget.style.borderColor = COLORS.crit)
+                        }
+                        onBlur={(e) =>
+                          (e.currentTarget.style.borderColor = COLORS.border)
+                        }
+                      />
+                      <TacticalButton
+                        variant="danger"
+                        size="md"
+                        fullWidth
+                        disabled={!cancelReason.trim()}
+                        onClick={() =>
+                          handleStatusChange(
+                            selectedAction.id,
+                            'Canceled',
+                            cancelReason,
+                          )
+                        }
+                      >
+                        Mark as Canceled
+                      </TacticalButton>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'comments' && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.md,
+                      minHeight: 240,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: SPACE.sm,
+                        flex: 1,
+                      }}
+                    >
+                      {!selectedAction.comments ||
+                      selectedAction.comments.length === 0 ? (
+                        <EmptyState label="No comments recorded" />
+                      ) : (
+                        selectedAction.comments.map((comment, idx) => {
+                          const match = comment.match(/^\[(.*?)\] (.*?): (.*)$/);
+                          if (match) {
+                            const [, time, user, text] = match;
+                            return (
+                              <div
+                                key={idx}
+                                style={{
+                                  background: COLORS.bgDeep,
+                                  border: `1px solid ${COLORS.border}`,
+                                  borderRadius: RADIUS.sm,
+                                  padding: SPACE.md,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: 4,
+                                    gap: SPACE.sm,
+                                  }}
+                                >
+                                  <Mono tone="accent" size="xs">
+                                    {user}
+                                  </Mono>
+                                  <Mono tone="dim" size="xs">
+                                    {time}
+                                  </Mono>
+                                </div>
+                                <p
+                                  style={{
+                                    fontFamily: FONTS.sans,
+                                    fontSize: 13,
+                                    color: COLORS.textPrimary,
+                                    margin: 0,
+                                    lineHeight: 1.5,
+                                  }}
+                                >
+                                  {text}
+                                </p>
                               </div>
-                              <p className="text-sm text-neutral-300">{text}</p>
+                            );
+                          }
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                background: COLORS.bgDeep,
+                                border: `1px solid ${COLORS.border}`,
+                                borderRadius: RADIUS.sm,
+                                padding: SPACE.md,
+                                fontFamily: FONTS.sans,
+                                fontSize: 13,
+                                color: COLORS.textPrimary,
+                              }}
+                            >
+                              {comment}
                             </div>
                           );
+                        })
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: SPACE.sm,
+                        paddingTop: SPACE.sm,
+                        borderTop: `1px dashed ${COLORS.border}`,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && handleAddComment()
                         }
-                        return (
-                          <div key={idx} className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg text-sm text-neutral-300">
-                            {comment}
+                        style={{
+                          flex: 1,
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                          padding: `${SPACE.sm}px ${SPACE.md}px`,
+                          color: COLORS.textPrimary,
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          outline: 'none',
+                          minWidth: 0,
+                          transition: `border-color ${MOTION.fast}s ease`,
+                        }}
+                        onFocus={(e) =>
+                          (e.currentTarget.style.borderColor = COLORS.accent)
+                        }
+                        onBlur={(e) =>
+                          (e.currentTarget.style.borderColor = COLORS.border)
+                        }
+                      />
+                      <TacticalButton
+                        variant="primary"
+                        size="md"
+                        disabled={!newComment.trim()}
+                        onClick={handleAddComment}
+                        icon={<Send size={12} strokeWidth={2} />}
+                      >
+                        Send
+                      </TacticalButton>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'history' && (
+                  <div>
+                    {!selectedAction.history ||
+                    selectedAction.history.length === 0 ? (
+                      <EmptyState label="No history recorded" />
+                    ) : (
+                      <div
+                        style={{
+                          position: 'relative',
+                          borderLeft: `1px dashed ${COLORS.borderStrong}`,
+                          marginLeft: SPACE.sm,
+                          paddingBottom: SPACE.sm,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: SPACE.md,
+                        }}
+                      >
+                        {selectedAction.history.map((entry, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              position: 'relative',
+                              paddingLeft: SPACE.lg,
+                            }}
+                          >
+                            <span
+                              style={{
+                                position: 'absolute',
+                                left: -5,
+                                top: 6,
+                                width: 9,
+                                height: 9,
+                                background: COLORS.surface,
+                                border: `1.5px solid ${COLORS.accent}`,
+                                borderRadius: RADIUS.full,
+                                boxShadow: `0 0 6px ${COLORS.accent}60`,
+                              }}
+                            />
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                gap: SPACE.sm,
+                                marginBottom: 2,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: FONTS.sans,
+                                  fontSize: 13,
+                                  color: COLORS.textPrimary,
+                                  lineHeight: 1.4,
+                                  flex: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                {entry.action}
+                              </span>
+                              <Mono tone="dim" size="xs">
+                                {entry.timestamp}
+                              </Mono>
+                            </div>
+                            <Mono tone="muted" size="xs">
+                              BY {entry.user}
+                            </Mono>
                           </div>
-                        );
-                      })
+                        ))}
+                      </div>
                     )}
                   </div>
-                  <div className="flex gap-2 pt-4 border-t border-neutral-800 shrink-0">
-                    <input
-                      type="text"
-                      placeholder="Add a comment..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                      className="flex-1 bg-neutral-950 border border-neutral-800 rounded-lg p-2 text-sm text-white placeholder:text-neutral-600 focus:outline-none focus:border-cyan-500/50"
-                    />
-                    <button
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      className="p-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'history' && (
-                <div className="space-y-4">
-                  {(!selectedAction.history || selectedAction.history.length === 0) ? (
-                    <div className="text-center text-neutral-500 py-8 text-sm">
-                      No history recorded.
-                    </div>
-                  ) : (
-                    <div className="relative border-l border-neutral-800 ml-3 space-y-6 pb-4">
-                      {selectedAction.history.map((entry, idx) => (
-                        <div key={idx} className="relative pl-6">
-                          <div className="absolute -left-1.5 top-1.5 w-3 h-3 rounded-full bg-neutral-800 border-2 border-neutral-900"></div>
-                          <div className="flex justify-between items-start mb-1">
-                            <span className="text-sm font-medium text-neutral-200">{entry.action}</span>
-                            <span className="text-[10px] text-neutral-500 font-mono shrink-0 ml-4">{entry.timestamp}</span>
-                          </div>
-                          <div className="text-xs text-neutral-500">by {entry.user}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
       </AnimatePresence>
 
-      <PrintPreviewModal 
+      <PrintPreviewModal
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         onPrint={() => {
-          if (showToast) showToast('Print job sent to local printer.', 'success');
+          if (showToast)
+            showToast('Print job sent to local printer.', 'success');
         }}
         title="Manual Action Board"
         content={printContent}
@@ -594,3 +1868,135 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({ currentUser, systemSta
     </div>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// StatCell — a single mini stat in the header stat strip
+// ─────────────────────────────────────────────────────────────────────────
+const StatCell: React.FC<{
+  label: string;
+  value: number;
+  tone?: string;
+  last?: boolean;
+}> = ({ label, value, tone = COLORS.textPrimary, last }) => (
+  <div
+    style={{
+      padding: `${SPACE.sm}px ${SPACE.base}px`,
+      borderRight: last ? undefined : `1px solid ${COLORS.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      minWidth: 68,
+    }}
+  >
+    <Mono tone="dim" size="xs">
+      {label}
+    </Mono>
+    <span
+      style={{
+        fontFamily: FONTS.mono,
+        fontSize: 16,
+        fontWeight: 600,
+        color: tone,
+        letterSpacing: '0.02em',
+        lineHeight: 1,
+      }}
+    >
+      {String(value).padStart(2, '0')}
+    </span>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// TabButton — tactical tab for the detail modal
+// ─────────────────────────────────────────────────────────────────────────
+const TabButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  icon?: React.ReactNode;
+}> = ({ active, onClick, label, icon }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      flex: 1,
+      padding: `${SPACE.md}px ${SPACE.sm}px`,
+      background: active ? COLORS.bgDeep : 'transparent',
+      border: 'none',
+      borderBottom: `2px solid ${active ? COLORS.accent : 'transparent'}`,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      fontFamily: FONTS.mono,
+      fontSize: 10,
+      fontWeight: 500,
+      letterSpacing: '0.14em',
+      textTransform: 'uppercase',
+      color: active ? COLORS.accent : COLORS.textSecondary,
+      transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, background ${MOTION.fast}s ease`,
+      minWidth: 0,
+    }}
+    onMouseEnter={(e) => {
+      if (!active) e.currentTarget.style.color = COLORS.textPrimary;
+    }}
+    onMouseLeave={(e) => {
+      if (!active) e.currentTarget.style.color = COLORS.textSecondary;
+    }}
+  >
+    {icon}
+    <span
+      style={{
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  </button>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// DataReadout — labeled field wrapper used in the detail modal
+// ─────────────────────────────────────────────────────────────────────────
+const DataReadout: React.FC<{
+  label: string;
+  children: React.ReactNode;
+}> = ({ label, children }) => (
+  <div
+    style={{
+      background: COLORS.bgDeep,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      padding: SPACE.sm,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 4,
+    }}
+  >
+    <Mono tone="dim" size="xs">
+      {label}
+    </Mono>
+    {children}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// EmptyState — empty state placeholder
+// ─────────────────────────────────────────────────────────────────────────
+const EmptyState: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    style={{
+      padding: `${SPACE['2xl']}px ${SPACE.base}px`,
+      textAlign: 'center',
+      border: `1px dashed ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+    }}
+  >
+    <Mono tone="dim" size="xs">
+      {label}
+    </Mono>
+  </div>
+);

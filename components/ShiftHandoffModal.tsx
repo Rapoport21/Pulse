@@ -1,81 +1,421 @@
 import React, { useState } from 'react';
-import { motion } from 'motion/react';
-import { ClipboardList, CheckCircle, AlertOctagon } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  ClipboardList,
+  CheckCircle,
+  AlertOctagon,
+  X,
+  LogOut,
+  LogIn,
+} from 'lucide-react';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  MOTION,
+  Mono,
+  BracketLabel,
+  SectionTitle,
+  TacticalButton,
+  CornerBracket,
+  StatusPill,
+} from './design';
 
-export const ShiftHandoffModal = ({ type, role, onComplete, onCancel, loginCount = 1 }: { type: 'in' | 'out', role: string, onComplete: (notes?: string) => void, onCancel?: () => void, loginCount?: number }) => {
+interface ShiftHandoffModalProps {
+  type: 'in' | 'out';
+  role: string;
+  onComplete: (notes?: string) => void;
+  onCancel?: () => void;
+  loginCount?: number;
+}
+
+/**
+ * ShiftHandoffModal — tactical briefing ('in') or handoff ('out') dialog.
+ * Shows critical updates + inherited actions for in-briefing, or a note
+ * capture textarea for end-of-shift handoff.
+ */
+export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
+  type,
+  role,
+  onComplete,
+  onCancel,
+  loginCount = 1,
+}) => {
   const [note, setNote] = useState('');
+  const [noteFocused, setNoteFocused] = useState(false);
+
+  const isIn = type === 'in';
+  const displayRole = role.replace(/_/g, ' ');
+
+  const HeaderIcon = isIn ? ClipboardList : LogOut;
+  const surgeStable = loginCount > 1;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden"
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+        onClick={onCancel}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: SPACE.md,
+          background: 'rgba(0, 0, 0, 0.86)',
+          backdropFilter: 'blur(6px)',
+        }}
       >
-        <div className="p-6 border-b border-neutral-800 bg-neutral-950">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            {type === 'in' ? <ClipboardList className="text-blue-400" /> : <CheckCircle className="text-emerald-400" />}
-            {type === 'in' ? 'Shift Briefing' : 'End of Shift Handoff'}
-          </h2>
-          <p className="text-neutral-400 text-sm mt-1">Role: {role.replace('_', ' ')}</p>
-        </div>
-        
-        <div className="p-6 space-y-6">
-          {type === 'in' ? (
-            <>
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-neutral-300 uppercase">Critical Updates</h3>
-                {loginCount > 1 ? (
-                  <div className="bg-emerald-950/30 border border-emerald-900/50 p-3 rounded-lg flex gap-3 text-sm text-emerald-200">
-                    <CheckCircle className="w-5 h-5 shrink-0 text-emerald-500" />
-                    <p>Surge protocol successfully de-escalated. Capacity is stable. Monitor fast-track throughput.</p>
-                  </div>
-                ) : (
-                  <div className="bg-rose-950/30 border border-rose-900/50 p-3 rounded-lg flex gap-3 text-sm text-rose-200">
-                    <AlertOctagon className="w-5 h-5 shrink-0 text-rose-500" />
-                    <p>ER is currently holding 4 admitted patients. ICU capacity is at 95%. Expedite step-down transfers.</p>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-neutral-300 uppercase">Inherited Actions</h3>
-                <ul className="list-disc pl-5 text-sm text-neutral-400 space-y-1">
-                  <li>Review 3 pending discharge summaries.</li>
-                  <li>Follow up on Blood Bank inventory.</li>
-                </ul>
-              </div>
-            </>
-          ) : (
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold text-neutral-300 uppercase">Handoff Notes</h3>
-              <p className="text-xs text-neutral-400">Leave a note for the incoming {role.replace('_', ' ')}.</p>
-              <textarea 
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className="w-full h-32 bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-sm text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
-                placeholder="e.g., Follow up with Dr. Smith regarding Bed 4..."
-              />
-            </div>
-          )}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+          transition={{ duration: MOTION.base, ease: MOTION.ease }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: 560,
+            maxHeight: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.borderStrong}`,
+            borderRadius: RADIUS.sm,
+            boxShadow:
+              '0 40px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(225,29,72,0.08)',
+            overflow: 'hidden',
+          }}
+        >
+          <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+          <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+          <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+          <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={-1} />
 
-        <div className="p-4 border-t border-neutral-800 bg-neutral-950 flex justify-end gap-3">
-          {onCancel && (
-            <button 
-              onClick={onCancel}
-              className="px-6 py-2 text-neutral-400 hover:text-white font-medium rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-          )}
-          <button 
-            onClick={() => onComplete(type === 'out' ? note : undefined)}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors"
+          {/* Header */}
+          <div
+            style={{
+              padding: `${SPACE.lg}px ${SPACE.lg}px ${SPACE.md}px`,
+              borderBottom: `1px solid ${COLORS.border}`,
+              background: COLORS.surfaceElev,
+              position: 'relative',
+            }}
           >
-            {type === 'in' ? 'Acknowledge & Start Shift' : 'Submit & Logout'}
-          </button>
-        </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: SPACE.md,
+                marginBottom: SPACE.sm,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.accent}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.accent,
+                    flexShrink: 0,
+                  }}
+                >
+                  <HeaderIcon size={16} strokeWidth={2} />
+                  <CornerBracket position="tl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                  <CornerBracket position="br" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <BracketLabel tone="accent" size="xs">
+                    {isIn ? 'HANDOFF · IN' : 'HANDOFF · OUT'}
+                  </BracketLabel>
+                  <h2
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: TYPE.h3.size,
+                      fontWeight: TYPE.h3.weight,
+                      letterSpacing: TYPE.h3.tracking,
+                      lineHeight: 1.2,
+                      color: COLORS.textPrimary,
+                      margin: '4px 0 0',
+                    }}
+                  >
+                    {isIn ? 'Shift Briefing' : 'End of Shift Handoff'}
+                  </h2>
+                </div>
+              </div>
+
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  aria-label="Close"
+                  style={{
+                    width: 28,
+                    height: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'transparent',
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textMuted,
+                    cursor: 'pointer',
+                    transition: `all ${MOTION.fast}s ease`,
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.accent;
+                    e.currentTarget.style.color = COLORS.accent;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = COLORS.border;
+                    e.currentTarget.style.color = COLORS.textMuted;
+                  }}
+                >
+                  <X size={14} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            {/* Meta row */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Mono tone="muted" size="xs">
+                ROLE
+              </Mono>
+              <Mono tone="primary" size="xs" style={{ textTransform: 'uppercase' }}>
+                {displayRole}
+              </Mono>
+              <span style={{ color: COLORS.textDim }}>│</span>
+              <Mono tone="muted" size="xs">
+                {new Date().toISOString().slice(0, 16).replace('T', ' ')}Z
+              </Mono>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: SPACE.lg,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: SPACE.lg,
+            }}
+          >
+            {isIn ? (
+              <>
+                {/* Critical updates */}
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: SPACE.sm,
+                    }}
+                  >
+                    <BracketLabel tone="muted" size="xs">
+                      CRITICAL UPDATES
+                    </BracketLabel>
+                    <StatusPill
+                      label={surgeStable ? 'Stable' : 'Action Required'}
+                      tone={surgeStable ? 'ok' : 'crit'}
+                      pulse={!surgeStable}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      position: 'relative',
+                      display: 'flex',
+                      gap: SPACE.sm,
+                      padding: `${SPACE.base}px ${SPACE.md}px`,
+                      background: COLORS.bgDeep,
+                      border: `1px solid ${surgeStable ? COLORS.ok : COLORS.crit}`,
+                      borderLeft: `3px solid ${surgeStable ? COLORS.ok : COLORS.crit}`,
+                      borderRadius: RADIUS.sm,
+                    }}
+                  >
+                    {surgeStable ? (
+                      <CheckCircle
+                        size={16}
+                        strokeWidth={2}
+                        color={COLORS.ok}
+                        style={{ flexShrink: 0, marginTop: 1 }}
+                      />
+                    ) : (
+                      <AlertOctagon
+                        size={16}
+                        strokeWidth={2}
+                        color={COLORS.crit}
+                        style={{ flexShrink: 0, marginTop: 1 }}
+                      />
+                    )}
+                    <p
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 13,
+                        color: COLORS.textPrimary,
+                        lineHeight: 1.5,
+                        margin: 0,
+                      }}
+                    >
+                      {surgeStable
+                        ? 'Surge protocol successfully de-escalated. Capacity is stable. Monitor fast-track throughput.'
+                        : 'ER is currently holding 4 admitted patients. ICU capacity is at 95%. Expedite step-down transfers.'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Inherited actions */}
+                <div>
+                  <BracketLabel tone="muted" size="xs">
+                    INHERITED ACTIONS
+                  </BracketLabel>
+                  <div
+                    style={{
+                      marginTop: SPACE.sm,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.xs,
+                    }}
+                  >
+                    {[
+                      'Review 3 pending discharge summaries.',
+                      'Follow up on Blood Bank inventory.',
+                    ].map((action, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          gap: SPACE.sm,
+                          alignItems: 'flex-start',
+                          padding: `${SPACE.sm}px ${SPACE.md}px`,
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                        }}
+                      >
+                        <Mono
+                          tone="accent"
+                          size="xs"
+                          style={{ flexShrink: 0, marginTop: 1, minWidth: 18 }}
+                        >
+                          {String(i + 1).padStart(2, '0')}
+                        </Mono>
+                        <span
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 13,
+                            color: COLORS.textPrimary,
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          {action}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div>
+                <BracketLabel tone="muted" size="xs">
+                  HANDOFF NOTES
+                </BracketLabel>
+                <Mono
+                  tone="dim"
+                  size="xs"
+                  style={{ display: 'block', margin: `${SPACE.xs}px 0 ${SPACE.sm}px` }}
+                >
+                  {`// Leave a note for the incoming ${displayRole}`}
+                </Mono>
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  onFocus={() => setNoteFocused(true)}
+                  onBlur={() => setNoteFocused(false)}
+                  placeholder="e.g., Follow up with Dr. Smith regarding Bed 4…"
+                  style={{
+                    width: '100%',
+                    minHeight: 128,
+                    padding: SPACE.md,
+                    background: COLORS.bgDeep,
+                    border: `1px solid ${noteFocused ? COLORS.accent : COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textPrimary,
+                    fontFamily: FONTS.sans,
+                    fontSize: 13,
+                    lineHeight: 1.5,
+                    resize: 'vertical',
+                    outline: 'none',
+                    transition: `border-color ${MOTION.fast}s ease`,
+                    boxShadow: noteFocused ? `0 0 0 3px ${COLORS.accentGlow}` : 'none',
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: SPACE.md,
+              padding: `${SPACE.md}px ${SPACE.lg}px`,
+              borderTop: `1px solid ${COLORS.border}`,
+              background: COLORS.bgDeep,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Mono tone="dim" size="xs">
+              {isIn ? 'Acknowledge to start shift' : 'Submit to end shift'}
+            </Mono>
+            <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+              {onCancel && (
+                <TacticalButton variant="ghost" size="sm" onClick={onCancel}>
+                  Cancel
+                </TacticalButton>
+              )}
+              <TacticalButton
+                variant="primary"
+                size="sm"
+                onClick={() => onComplete(isIn ? undefined : note)}
+                icon={
+                  isIn ? (
+                    <LogIn size={13} strokeWidth={2} />
+                  ) : (
+                    <LogOut size={13} strokeWidth={2} />
+                  )
+                }
+              >
+                {isIn ? 'Acknowledge & Start' : 'Submit & Logout'}
+              </TacticalButton>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
-    </div>
+    </AnimatePresence>
   );
 };

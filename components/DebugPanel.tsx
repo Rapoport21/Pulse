@@ -11,10 +11,72 @@ import {
 } from '../lib/realtime';
 import type { SurgeModeState } from '../lib/surgeTaskTemplates';
 import type { UserProfile } from '../types';
+import {
+  COLORS,
+  FONTS,
+  SPACE,
+  RADIUS,
+  MOTION,
+  Mono,
+  CornerBracket,
+  TacticalButton,
+} from './design';
 
 interface DebugPanelProps {
   currentUser?: UserProfile | null;
 }
+
+const statusToColor = (status: string): string => {
+  if (status === 'connected') return COLORS.ok;
+  if (status === 'connecting') return COLORS.warn;
+  return COLORS.crit;
+};
+
+const DebugSection: React.FC<{
+  title: string;
+  children: React.ReactNode;
+}> = ({ title, children }) => (
+  <div
+    style={{
+      background: COLORS.surfaceElev,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      padding: SPACE.sm,
+      position: 'relative',
+    }}
+  >
+    <CornerBracket position="tl" color={COLORS.borderStrong} size={5} thickness={1} />
+    <CornerBracket position="br" color={COLORS.borderStrong} size={5} thickness={1} />
+    <Mono
+      tone="muted"
+      size="xs"
+      style={{ display: 'block', marginBottom: 6, fontSize: 9 }}
+    >
+      {title}
+    </Mono>
+    {children}
+  </div>
+);
+
+const KeyValueRow: React.FC<{
+  label: string;
+  value: React.ReactNode;
+  valueColor?: string;
+}> = ({ label, value, valueColor = COLORS.info }) => (
+  <div
+    style={{
+      display: 'flex',
+      gap: SPACE.xs,
+      fontSize: 11,
+      color: COLORS.textSecondary,
+      fontFamily: FONTS.mono,
+      letterSpacing: '0.03em',
+    }}
+  >
+    <span style={{ color: COLORS.textMuted }}>{label}:</span>
+    <span style={{ color: valueColor }}>{value}</span>
+  </div>
+);
 
 export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
   const status = useConnectionStatus();
@@ -27,97 +89,191 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
     activatedAt: null,
   };
 
-  const dotColor =
-    status === 'connected' ? 'bg-emerald-500' : status === 'connecting' ? 'bg-amber-500' : 'bg-rose-500';
+  const dotColor = statusToColor(status);
 
   return (
-    <div className="fixed bottom-4 right-4 z-[1000] font-mono text-[11px] text-neutral-200 max-w-md w-[420px] bg-black/90 backdrop-blur border border-neutral-700 rounded-lg shadow-2xl">
+    <div
+      style={{
+        position: 'fixed',
+        bottom: SPACE.base,
+        right: SPACE.base,
+        zIndex: 1000,
+        width: 420,
+        maxWidth: 'calc(100vw - 32px)',
+        fontFamily: FONTS.mono,
+        fontSize: 11,
+        color: COLORS.textSecondary,
+        background: 'rgba(2, 2, 2, 0.92)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        border: `1px solid ${COLORS.borderStrong}`,
+        borderRadius: RADIUS.sm,
+        boxShadow: '0 24px 60px rgba(0,0,0,0.85)',
+        overflow: 'hidden',
+      }}
+    >
+      <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} />
+      <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} />
+      <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} />
+      <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} />
+
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 py-2 border-b border-neutral-800 cursor-pointer select-none"
         onClick={() => setCollapsed((c) => !c)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: `${SPACE.sm}px ${SPACE.md}px`,
+          borderBottom: `1px solid ${COLORS.border}`,
+          cursor: 'pointer',
+          userSelect: 'none',
+          background: COLORS.surface,
+        }}
       >
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-2.5 h-2.5 rounded-full ${dotColor} shadow-[0_0_8px_currentColor]`}></span>
-          <span className="font-bold uppercase tracking-widest text-neutral-400">PULSE Debug</span>
-          <span className="text-neutral-500">{status}</span>
-          <span className="text-neutral-600">· {getLatencyMs()}ms</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: dotColor,
+              boxShadow: `0 0 8px ${dotColor}`,
+            }}
+          />
+          <Mono tone="primary" size="xs" style={{ fontWeight: 600 }}>
+            PULSE · DEBUG
+          </Mono>
+          <Mono tone="muted" size="xs">
+            {status.toUpperCase()}
+          </Mono>
+          <Mono tone="dim" size="xs">
+            · {getLatencyMs()}ms
+          </Mono>
         </div>
-        {collapsed ? <ChevronUp className="w-3 h-3 text-neutral-400" /> : <ChevronDown className="w-3 h-3 text-neutral-400" />}
+        {collapsed ? (
+          <ChevronUp size={12} strokeWidth={2} color={COLORS.textMuted} />
+        ) : (
+          <ChevronDown size={12} strokeWidth={2} color={COLORS.textMuted} />
+        )}
       </div>
 
       {!collapsed && (
-        <div className="p-3 space-y-3 max-h-[60vh] overflow-y-auto">
-          {/* Identity */}
-          <div className="bg-neutral-900/60 border border-neutral-800 rounded p-2">
-            <div className="text-neutral-500 uppercase tracking-widest text-[9px] mb-1">Identity</div>
-            <div>device: <span className="text-cyan-400">{getDeviceId().slice(0, 12)}…</span></div>
-            <div>role: <span className="text-cyan-400">{currentUser?.role || '—'}</span></div>
-            <div>user: <span className="text-cyan-400">{currentUser?.name || '—'}</span></div>
-          </div>
+        <div
+          style={{
+            padding: SPACE.md,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: SPACE.md,
+            maxHeight: '60vh',
+            overflowY: 'auto',
+          }}
+        >
+          <DebugSection title="IDENTITY">
+            <KeyValueRow label="device" value={`${getDeviceId().slice(0, 12)}…`} />
+            <KeyValueRow label="role" value={currentUser?.role || '—'} />
+            <KeyValueRow label="user" value={currentUser?.name || '—'} />
+          </DebugSection>
 
-          {/* Presence */}
-          <div className="bg-neutral-900/60 border border-neutral-800 rounded p-2">
-            <div className="text-neutral-500 uppercase tracking-widest text-[9px] mb-1">
-              Presence — {presence.length} peer{presence.length === 1 ? '' : 's'}
-            </div>
+          <DebugSection
+            title={`PRESENCE — ${presence.length} PEER${presence.length === 1 ? '' : 'S'}`}
+          >
             {presence.length === 0 ? (
-              <div className="text-neutral-600">no peers</div>
+              <div style={{ color: COLORS.textDim }}>no peers</div>
             ) : (
-              <ul className="space-y-0.5">
+              <ul
+                style={{
+                  margin: 0,
+                  padding: 0,
+                  listStyle: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 2,
+                }}
+              >
                 {presence.map((id) => (
-                  <li key={id} className="truncate">
-                    <span className={id === getDeviceId() ? 'text-emerald-400' : 'text-neutral-300'}>
-                      {id.slice(0, 12)}{id === getDeviceId() ? ' (you)' : ''}
-                    </span>
+                  <li
+                    key={id}
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: id === getDeviceId() ? COLORS.ok : COLORS.textSecondary,
+                    }}
+                  >
+                    {id.slice(0, 12)}
+                    {id === getDeviceId() ? ' (you)' : ''}
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </DebugSection>
 
-          {/* Surge snapshot */}
-          <div className="bg-neutral-900/60 border border-neutral-800 rounded p-2">
-            <div className="text-neutral-500 uppercase tracking-widest text-[9px] mb-1">Surge State</div>
-            <div>active: <span className={surge.active ? 'text-rose-400' : 'text-emerald-400'}>{String(surge.active)}</span></div>
+          <DebugSection title="SURGE STATE">
+            <KeyValueRow
+              label="active"
+              value={String(surge.active)}
+              valueColor={surge.active ? COLORS.accent : COLORS.ok}
+            />
             {surge.activatedAt && (
-              <div>activatedAt: <span className="text-neutral-400">{new Date(surge.activatedAt).toLocaleTimeString()}</span></div>
+              <KeyValueRow
+                label="activatedAt"
+                value={new Date(surge.activatedAt).toLocaleTimeString()}
+                valueColor={COLORS.textSecondary}
+              />
             )}
-          </div>
+          </DebugSection>
 
-          {/* Log */}
-          <div className="bg-neutral-900/60 border border-neutral-800 rounded p-2">
-            <div className="text-neutral-500 uppercase tracking-widest text-[9px] mb-1">
-              Live Log ({log.length})
-            </div>
-            <div className="space-y-0.5 max-h-48 overflow-y-auto">
-              {log.length === 0 && <div className="text-neutral-600">no events</div>}
+          <DebugSection title={`LIVE LOG (${log.length})`}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                maxHeight: 192,
+                overflowY: 'auto',
+              }}
+            >
+              {log.length === 0 && (
+                <div style={{ color: COLORS.textDim }}>no events</div>
+              )}
               {[...log].reverse().map((entry, i) => (
-                <div key={i} className="leading-snug">
-                  <span className="text-neutral-600">
+                <div key={i} style={{ lineHeight: 1.4 }}>
+                  <span style={{ color: COLORS.textDim }}>
                     {new Date(entry.ts).toLocaleTimeString().slice(0, 8)}
                   </span>{' '}
-                  <span className={entry.direction === 'in' ? 'text-cyan-400' : 'text-amber-400'}>
+                  <span
+                    style={{
+                      color: entry.direction === 'in' ? COLORS.info : COLORS.warn,
+                    }}
+                  >
                     {entry.direction === 'in' ? '←' : '→'}
                   </span>{' '}
-                  <span className="text-neutral-300">{entry.type}</span>
-                  {entry.key && <span className="text-purple-400"> [{entry.key}]</span>}
+                  <span style={{ color: COLORS.textSecondary }}>{entry.type}</span>
+                  {entry.key && (
+                    <span style={{ color: '#C084FC' }}> [{entry.key}]</span>
+                  )}
                   {entry.payloadPreview && (
-                    <span className="text-neutral-500"> {entry.payloadPreview}</span>
+                    <span style={{ color: COLORS.textMuted }}>
+                      {' '}
+                      {entry.payloadPreview}
+                    </span>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </DebugSection>
 
-          <button
-            onClick={() => {
-              broadcastReset();
-            }}
-            className="w-full flex items-center justify-center gap-1.5 py-2 bg-rose-700/30 hover:bg-rose-700/50 border border-rose-700/50 rounded text-rose-300 text-[11px] font-bold uppercase tracking-widest"
+          <TacticalButton
+            variant="danger"
+            size="sm"
+            fullWidth
+            icon={<RotateCcw size={12} strokeWidth={2} />}
+            onClick={() => broadcastReset()}
           >
-            <RotateCcw className="w-3 h-3" /> Reset demo state
-          </button>
+            Reset Demo State
+          </TacticalButton>
         </div>
       )}
     </div>
@@ -129,16 +285,39 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
  */
 export const ConnectionIndicator: React.FC = () => {
   const status = useConnectionStatus();
-  const dotColor =
-    status === 'connected'
-      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-      : status === 'connecting'
-        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-        : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]';
+  const dotColor = statusToColor(status);
   return (
-    <div className="fixed bottom-2 left-2 z-[999] flex items-center gap-1.5 px-2 py-1 bg-black/60 backdrop-blur border border-neutral-800 rounded-full pointer-events-none">
-      <span className={`w-2 h-2 rounded-full ${dotColor}`}></span>
-      <span className="text-[9px] font-mono uppercase tracking-widest text-neutral-400">{status}</span>
+    <div
+      style={{
+        position: 'fixed',
+        bottom: SPACE.sm,
+        left: SPACE.sm,
+        zIndex: 999,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: `${SPACE.xs}px ${SPACE.sm}px`,
+        background: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.full,
+        pointerEvents: 'none',
+        transition: `border-color ${MOTION.fast}s ease`,
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: dotColor,
+          boxShadow: `0 0 6px ${dotColor}`,
+        }}
+      />
+      <Mono tone="muted" size="xs" style={{ fontSize: 9 }}>
+        {status}
+      </Mono>
     </div>
   );
 };

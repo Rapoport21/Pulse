@@ -1,5 +1,18 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, Printer, FileText, AlertTriangle } from 'lucide-react';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  MOTION,
+  Mono,
+  BracketLabel,
+  TacticalButton,
+  CornerBracket,
+} from './design';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -9,72 +22,278 @@ interface PrintPreviewModalProps {
   content: React.ReactNode;
 }
 
+/**
+ * PrintPreviewModal — tactical chrome wrapping a white-paper print preview.
+ * The inner preview area stays white so it accurately reflects print output;
+ * everything else is tactical (bracket labels, mono meta, sharp corners).
+ */
 export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
   isOpen,
   onClose,
   onPrint,
   title,
-  content
+  content,
 }) => {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex justify-between items-center p-4 border-b border-neutral-800 bg-neutral-950 rounded-t-xl shrink-0">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-neutral-400" />
-            Print Preview: {title}
-          </h3>
-          <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors p-1 rounded hover:bg-neutral-800">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-8 bg-white text-black print-content">
-          <div className="max-w-2xl mx-auto">
-            <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-end">
-              <div>
-                <h1 className="text-3xl font-bold uppercase tracking-tight">{title}</h1>
-                <p className="text-sm text-gray-600 mt-1">Generated: {new Date().toLocaleString()}</p>
-              </div>
-              <div className="text-right">
-                <div className="font-bold text-xl">PULSE OPS</div>
-                <div className="text-xs text-gray-500">CONFIDENTIAL</div>
-              </div>
-            </div>
-            
-            <div className="prose prose-sm max-w-none text-black">
-              {content}
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4 border-t border-neutral-800 bg-neutral-950 rounded-b-xl flex justify-between items-center shrink-0">
-          <div className="flex items-center gap-2 text-amber-500 text-xs font-mono">
-            <AlertTriangle className="w-4 h-4" />
-            Ensure printer is online and loaded with paper.
-          </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={() => {
-                onPrint();
-                onClose();
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: SPACE.md,
+            background: 'rgba(0, 0, 0, 0.82)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 820,
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.borderStrong}`,
+              borderRadius: RADIUS.sm,
+              boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(225,29,72,0.08)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Corner brackets on the outer shell */}
+            <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+            <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+            <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+            <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surfaceElev,
+                flexShrink: 0,
               }}
-              className="px-6 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded font-bold text-sm flex items-center gap-2 transition-colors shadow-lg shadow-amber-600/20"
             >
-              <Printer className="w-4 h-4" />
-              Confirm Print
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.borderStrong}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textSecondary,
+                    flexShrink: 0,
+                  }}
+                >
+                  <FileText size={14} strokeWidth={2} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <BracketLabel tone="accent" size="xs">
+                    PRINT · PREVIEW
+                  </BracketLabel>
+                  <div
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.003em',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      marginTop: 2,
+                    }}
+                  >
+                    {title}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                style={{
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'transparent',
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textMuted,
+                  cursor: 'pointer',
+                  transition: `all ${MOTION.fast}s ease`,
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.accent;
+                  e.currentTarget.style.color = COLORS.accent;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = COLORS.border;
+                  e.currentTarget.style.color = COLORS.textMuted;
+                }}
+              >
+                <X size={14} strokeWidth={2} />
+              </button>
+            </div>
+
+            {/* White paper preview area — stays white so it matches real print output */}
+            <div
+              className="print-content"
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: `${SPACE['2xl']}px`,
+                background: '#FFFFFF',
+                color: '#000000',
+              }}
+            >
+              <div style={{ maxWidth: 640, margin: '0 auto' }}>
+                <div
+                  style={{
+                    borderBottom: '2px solid #000000',
+                    paddingBottom: 16,
+                    marginBottom: 24,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <h1
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 28,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '-0.01em',
+                        margin: 0,
+                        color: '#000000',
+                      }}
+                    >
+                      {title}
+                    </h1>
+                    <p
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 12,
+                        color: '#4B5563',
+                        margin: '4px 0 0',
+                      }}
+                    >
+                      Generated: {new Date().toLocaleString()}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: '#000000',
+                      }}
+                    >
+                      PULSE OPS
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 10,
+                        color: '#6B7280',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      CONFIDENTIAL
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONTS.sans,
+                    fontSize: 14,
+                    color: '#000000',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {content}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                borderTop: `1px solid ${COLORS.border}`,
+                background: COLORS.bgDeep,
+                flexShrink: 0,
+                flexWrap: 'wrap',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  color: COLORS.warn,
+                }}
+              >
+                <AlertTriangle size={12} strokeWidth={2} />
+                <Mono tone="warn" size="xs">
+                  Verify printer online · paper loaded
+                </Mono>
+              </div>
+              <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+                <TacticalButton variant="ghost" size="sm" onClick={onClose}>
+                  Cancel
+                </TacticalButton>
+                <TacticalButton
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    onPrint();
+                    onClose();
+                  }}
+                  icon={<Printer size={13} strokeWidth={2} />}
+                >
+                  Confirm Print
+                </TacticalButton>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

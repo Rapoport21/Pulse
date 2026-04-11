@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, BookOpen, Layout, PlayCircle, Radio, Archive, CloudRain, AlertOctagon, Signal, Bell, X, Users, MessageSquare, CheckCircle2, Clock, ShieldAlert } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Activity,
+  BookOpen,
+  Layout,
+  PlayCircle,
+  Radio,
+  Archive,
+  AlertOctagon,
+  Bell,
+  X,
+  Users,
+  MessageSquare,
+  CheckCircle2,
+  Clock,
+} from 'lucide-react';
 import { Tab, UserRole, UserProfile } from './types';
 import { USERS } from './data/userProfiles';
 import { PulseHorizon } from './components/PulseHorizon';
@@ -25,6 +40,23 @@ import {
 } from './lib/surgeTaskTemplates';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  SHADOW,
+  MOTION,
+  CHROME,
+  Mono,
+  BracketLabel,
+  StatusPill,
+  CornerBracket,
+  TacticalButton,
+  HudStrip,
+  ScanningLine,
+} from './components/design';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -53,12 +85,23 @@ function App() {
   const [isMobile, setIsMobile] = useState(false);
 
   // Toast System
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'info' | 'error'} | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
 
   // Handover System
   const [showHandoverModal, setShowHandoverModal] = useState(false);
   const [showShiftBriefing, setShowShiftBriefing] = useState(false);
-  const [globalHandoverNotes, setGlobalHandoverNotes] = useState<{ author: string, notes: string } | null>(null);
+  const [globalHandoverNotes, setGlobalHandoverNotes] = useState<{
+    author: string;
+    notes: string;
+  } | null>(null);
+
+  // Live clock for the header — ticks every second in HH:MM:SS UTC
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const clockStr = now.toUTCString().slice(17, 25);
 
   // Fire surge ping (one-shot fire-and-forget). On the receiving side we hook
   // into it via useEffect below to fire the browser notification.
@@ -87,7 +130,7 @@ function App() {
       const count = payload?.taskCount ?? 0;
       const outcome = fireSurgeNotification(count);
       if (outcome !== 'granted') {
-        setToast({ message: `🚨 SURGE MODE ACTIVATED — ${count} urgent tasks`, type: 'error' });
+        setToast({ message: `SURGE MODE ACTIVATED — ${count} urgent tasks`, type: 'error' });
       }
     });
   }, []);
@@ -99,16 +142,28 @@ function App() {
     }
   }, [toast]);
 
+  // Track window width so the shell can collapse labels on narrow desktops.
+  // `isMobile` swaps to the MobileView, `isCompactNav` keeps the desktop shell
+  // but tightens the header chrome.
+  const [windowWidth, setWindowWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 1440,
+  );
+  const isCompactNav = windowWidth < 1280;
+
   useEffect(() => {
-    const timer = setTimeout(() => setIsBooting(false), 2000);
-    
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
+    const timer = setTimeout(() => setIsBooting(false), 2400);
+
+    const handleResize = () => {
+      const w = window.innerWidth;
+      setWindowWidth(w);
+      setIsMobile(w < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
     return () => {
       clearTimeout(timer);
-      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
@@ -117,35 +172,55 @@ function App() {
   };
 
   const navItems = [
-    { id: Tab.HORIZON, icon: Activity, label: 'Horizon' },
-    { id: Tab.LIVE_OPS, icon: Radio, label: 'Live Ops' },
-    { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks' },
-    { id: Tab.ACTIONS, icon: Layout, label: 'Actions' },
-    { id: Tab.ROSTER, icon: Users, label: 'Roster' },
-    { id: Tab.BRIEF_ME, icon: Archive, label: 'Brief Me' },
-    { id: Tab.REPLAY, icon: PlayCircle, label: 'Replay' },
+    { id: Tab.HORIZON, icon: Activity, label: 'Horizon', code: 'H' },
+    { id: Tab.LIVE_OPS, icon: Radio, label: 'Live Ops', code: 'L' },
+    { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
+    { id: Tab.ACTIONS, icon: Layout, label: 'Actions', code: 'A' },
+    { id: Tab.ROSTER, icon: Users, label: 'Roster', code: 'R' },
+    { id: Tab.BRIEF_ME, icon: Archive, label: 'Brief Me', code: 'B' },
+    { id: Tab.REPLAY, icon: PlayCircle, label: 'Replay', code: 'Y' },
   ];
 
   const notifications = [
-    ...(globalHandoverNotes ? [{
-      id: 'handover',
-      title: 'Shift Handover Notes',
-      message: `From ${globalHandoverNotes.author}: ${globalHandoverNotes.notes}`,
-      time: 'Just now',
-      type: 'info',
-      isHandover: true
-    }] : []),
-    { id: 1, title: 'High Wait Time', message: 'Waiting room exceeds 2 hours.', time: '5m ago', type: 'warning' },
-    { id: 2, title: 'Staffing Shortage', message: 'ICU missing 1 RN for next shift.', time: '12m ago', type: 'critical' },
-    { id: 3, title: 'EMS Divert', message: 'St. Mary Level 1 is now on divert.', time: '1h ago', type: 'info' },
+    ...(globalHandoverNotes
+      ? [
+          {
+            id: 'handover',
+            title: 'Shift Handover Notes',
+            message: `From ${globalHandoverNotes.author}: ${globalHandoverNotes.notes}`,
+            time: 'Just now',
+            type: 'info' as const,
+            isHandover: true,
+          },
+        ]
+      : []),
+    {
+      id: 1,
+      title: 'High Wait Time',
+      message: 'Waiting room exceeds 2 hours.',
+      time: '5m ago',
+      type: 'warning' as const,
+    },
+    {
+      id: 2,
+      title: 'Staffing Shortage',
+      message: 'ICU missing 1 RN for next shift.',
+      time: '12m ago',
+      type: 'critical' as const,
+    },
+    {
+      id: 3,
+      title: 'EMS Divert',
+      message: 'St. Mary Level 1 is now on divert.',
+      time: '1h ago',
+      type: 'info' as const,
+    },
   ];
 
   const handleActivatePlaybook = () => {
     setShowPlaybookModal(true);
   };
 
-  // One-way: activates surge mode, populates urgent tasks, fires the ping.
-  // Idempotent — calling again is a no-op since surge is session-permanent.
   const activateSurge = () => {
     if (surgeState.active) return;
     const tasks = buildInitialUrgentTasks();
@@ -159,12 +234,10 @@ function App() {
     setShowPlaybookModal(false);
     activateSurge();
     if (activeTab !== Tab.HORIZON) {
-       setActiveTab(Tab.HORIZON);
+      setActiveTab(Tab.HORIZON);
     }
   };
 
-  // Nurses tap a task to acknowledge — the realtime store sync propagates
-  // back to admin automatically.
   const acknowledgeTask = (taskId: string, deviceId: string) => {
     setUrgentTasks((prev) =>
       prev.map((t) =>
@@ -190,7 +263,7 @@ function App() {
       }
     }
     setCurrentUser(user);
-    setLoginCount(prev => prev + 1);
+    setLoginCount((prev) => prev + 1);
     setShowShiftBriefing(true);
     showToast(`Logged in as ${user.name}`, 'info');
   };
@@ -198,9 +271,6 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setActiveTab(Tab.HORIZON);
-    // Note: surge state intentionally NOT cleared on logout — it's a
-    // shared session-level operational state that persists across role
-    // switches. Use the debug panel "Reset demo state" to clear it.
     setSystemStatus('normal');
     setShowHandoverModal(false);
     setShowShiftBriefing(false);
@@ -211,7 +281,7 @@ function App() {
     if (notes.trim() && currentUser) {
       setGlobalHandoverNotes({
         author: currentUser.name,
-        notes: notes
+        notes: notes,
       });
     }
     showToast('Shift handover complete. Logging out...', 'success');
@@ -225,54 +295,16 @@ function App() {
     setActiveTab(Tab.ACTIONS);
   };
 
+  // ══════════════════════════════════════════════════════════════════════
+  // BOOT SCREEN — Tactical system-init sequence
+  // ══════════════════════════════════════════════════════════════════════
   if (isBooting) {
-    return (
-      <div className="h-screen w-screen bg-[#050505] flex flex-col items-center justify-center font-mono text-neutral-400 overflow-hidden relative">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-[0.03] mix-blend-screen pointer-events-none"></div>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-rose-900/5 to-black pointer-events-none"></div>
-        
-        <div className="w-full max-w-2xl p-8 relative z-10">
-          <div className="flex items-center gap-6 mb-12">
-            <div className="w-16 h-16 bg-rose-600 flex items-center justify-center rounded font-bold text-white text-4xl shadow-[0_0_40px_rgba(225,29,72,0.4)] animate-pulse">
-               P
-            </div>
-            <div>
-              <h1 className="text-5xl font-bold tracking-[0.2em] text-white mb-2 font-sans">PULSE</h1>
-              <p className="text-xs text-neutral-500 tracking-[0.4em] uppercase">Predictive Unified Logistics & Surge Engine</p>
-            </div>
-          </div>
-
-          <div className="space-y-5 text-sm">
-            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100">
-              <span className="text-neutral-600 w-24">[SYSTEM]</span>
-              <span className="text-neutral-300">Initializing core predictive models...</span>
-              <span className="ml-auto text-emerald-500 font-bold tracking-widest">OK</span>
-            </div>
-            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300">
-              <span className="text-neutral-600 w-24">[NETWORK]</span>
-              <span className="text-neutral-300">Establishing secure EHR uplink...</span>
-              <span className="ml-auto text-emerald-500 font-bold tracking-widest">OK</span>
-            </div>
-            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-500">
-              <span className="text-neutral-600 w-24">[DATA]</span>
-              <span className="text-neutral-300">Synchronizing regional telemetry...</span>
-              <span className="ml-auto text-emerald-500 font-bold tracking-widest">OK</span>
-            </div>
-            <div className="flex items-center gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-700">
-              <span className="text-neutral-600 w-24">[AUTH]</span>
-              <span className="text-neutral-300">Verifying personnel credentials...</span>
-              <span className="ml-auto text-rose-500 font-bold tracking-widest animate-pulse">WAIT</span>
-            </div>
-          </div>
-
-          <div className="mt-16 h-[2px] w-full bg-neutral-900 rounded-full overflow-hidden relative">
-            <div className="absolute top-0 left-0 h-full bg-rose-500 w-full origin-left animate-scale-x shadow-[0_0_10px_rgba(225,29,72,0.8)]"></div>
-          </div>
-        </div>
-      </div>
-    );
+    return <TacticalBootScreen />;
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // LOGIN
+  // ══════════════════════════════════════════════════════════════════════
   if (!currentUser) {
     return (
       <>
@@ -283,50 +315,129 @@ function App() {
     );
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // AUTHENTICATED SHELL
+  // ══════════════════════════════════════════════════════════════════════
+  const liveStatusTone = systemStatus === 'normal' ? 'ok' : systemStatus === 'stale' ? 'warn' : 'crit';
+  const liveStatusLabel = systemStatus === 'normal' ? 'Live' : systemStatus === 'stale' ? 'Stale' : 'Manual';
+
   return (
     <>
-      {/* Always-visible connection indicator and optional debug panel */}
       <ConnectionIndicator />
       {debugMode && <DebugPanel currentUser={currentUser} />}
 
-      {/* Shared Modals & Overlays */}
       {showShiftBriefing && (
-        <ShiftHandoffModal 
-          type="in" 
-          role={currentUser.role} 
-          onComplete={() => setShowShiftBriefing(false)} 
+        <ShiftHandoffModal
+          type="in"
+          role={currentUser.role}
+          onComplete={() => setShowShiftBriefing(false)}
           loginCount={loginCount}
         />
       )}
 
       {showHandoverModal && (
-        <ShiftHandoffModal 
-          type="out" 
-          role={currentUser.role} 
-          onComplete={handleConfirmHandover} 
-          onCancel={() => setShowHandoverModal(false)} 
+        <ShiftHandoffModal
+          type="out"
+          role={currentUser.role}
+          onComplete={handleConfirmHandover}
+          onCancel={() => setShowHandoverModal(false)}
         />
       )}
 
-      {toast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-300">
-          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-2xl border ${
-            toast.type === 'success' ? 'bg-emerald-950/90 border-emerald-500/30 text-emerald-400' :
-            toast.type === 'error' ? 'bg-rose-950/90 border-rose-500/30 text-rose-400' :
-            'bg-blue-950/90 border-blue-500/30 text-blue-400'
-          }`}>
-            {toast.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : 
-             toast.type === 'error' ? <AlertOctagon className="w-5 h-5" /> : 
-             <Activity className="w-5 h-5" />}
-            <span className="font-medium">{toast.message}</span>
-          </div>
-        </div>
-      )}
+      {/* ── TACTICAL TOAST ───────────────────────────────────── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast.message}
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            style={{
+              position: 'fixed',
+              top: CHROME.headerHeight + 16,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 16px',
+              background: COLORS.surface,
+              border: `1px solid ${
+                toast.type === 'success'
+                  ? COLORS.ok
+                  : toast.type === 'error'
+                  ? COLORS.crit
+                  : COLORS.info
+              }`,
+              borderRadius: RADIUS.sm,
+              boxShadow: SHADOW.panel,
+              fontFamily: FONTS.mono,
+            }}
+          >
+            <CornerBracket
+              position="tl"
+              color={
+                toast.type === 'success'
+                  ? COLORS.ok
+                  : toast.type === 'error'
+                  ? COLORS.crit
+                  : COLORS.info
+              }
+            />
+            <CornerBracket
+              position="tr"
+              color={
+                toast.type === 'success'
+                  ? COLORS.ok
+                  : toast.type === 'error'
+                  ? COLORS.crit
+                  : COLORS.info
+              }
+            />
+            <CornerBracket
+              position="bl"
+              color={
+                toast.type === 'success'
+                  ? COLORS.ok
+                  : toast.type === 'error'
+                  ? COLORS.crit
+                  : COLORS.info
+              }
+            />
+            <CornerBracket
+              position="br"
+              color={
+                toast.type === 'success'
+                  ? COLORS.ok
+                  : toast.type === 'error'
+                  ? COLORS.crit
+                  : COLORS.info
+              }
+            />
+            {toast.type === 'success' ? (
+              <CheckCircle2 size={14} color={COLORS.ok} />
+            ) : toast.type === 'error' ? (
+              <AlertOctagon size={14} color={COLORS.crit} />
+            ) : (
+              <Activity size={14} color={COLORS.info} />
+            )}
+            <Mono
+              tone={toast.type === 'success' ? 'ok' : toast.type === 'error' ? 'crit' : 'secondary'}
+              size="base"
+              style={{ color: toast.type === 'success' ? COLORS.ok : toast.type === 'error' ? COLORS.crit : COLORS.info }}
+            >
+              {toast.message}
+            </Mono>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <ChatAssistant 
-        currentUser={currentUser} 
-        isOpen={showChat} 
-        onClose={() => setShowChat(false)} 
+      <ChatAssistant
+        currentUser={currentUser}
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
         initialQuery={chatQuery}
         loginCount={loginCount}
       />
@@ -334,7 +445,6 @@ function App() {
       {isMobile ? (
         <MobileView
           currentUser={currentUser}
-          systemStatus={systemStatus}
           isSurgeActive={isSurgeActive}
           surgeActivatedAt={surgeState.activatedAt}
           urgentTasks={urgentTasks}
@@ -342,201 +452,782 @@ function App() {
           onActivateSurge={activateSurge}
           onLogout={handleLogout}
           showToast={showToast}
-          loginCount={loginCount}
           onOpenChat={(query) => {
             setChatQuery(query || '');
             setShowChat(true);
           }}
         />
       ) : (
-        <div className={`flex flex-col h-screen bg-black text-neutral-200 font-sans overflow-hidden selection:bg-rose-500/30 ${systemStatus === 'manual' ? 'border-4 border-amber-500' : ''}`}>
-          
-          {/* Top Navigation Bar */}
-          <header className="h-16 border-b border-neutral-800 bg-black flex items-center justify-between px-6 shrink-0 z-40">
-        <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-rose-600 flex items-center justify-center rounded-sm font-bold text-white text-xl shadow-lg shadow-rose-600/30">
-               P
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">PULSE</h1>
-            <div className="h-6 w-px bg-neutral-800 mx-1"></div>
-            <div className="flex items-center gap-2 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-xs font-mono text-emerald-400">
-               <span className={`w-2 h-2 rounded-full animate-pulse ${systemStatus === 'normal' ? 'bg-emerald-500' : systemStatus === 'stale' ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
-               {systemStatus === 'normal' ? 'LIVE' : systemStatus === 'stale' ? 'STALE' : 'MANUAL'}
-            </div>
-          </div>
-          
-          <nav className="flex gap-1">
-            {navItems.map((item) => {
-              const isActive = activeTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 hover:scale-[1.02] ${
-                    isActive 
-                      ? 'bg-neutral-800 text-white shadow-sm ring-1 ring-neutral-700' 
-                      : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900'
-                  }`}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            background: COLORS.bg,
+            color: COLORS.textPrimary,
+            fontFamily: FONTS.sans,
+            overflow: 'hidden',
+            border: systemStatus === 'manual' ? `2px solid ${COLORS.warn}` : 'none',
+          }}
+        >
+          {/* ═══════════════════════════════════════════════════════
+              TOP HUD STRIP — header + nav
+              ═══════════════════════════════════════════════════════ */}
+          <header
+            style={{
+              height: CHROME.headerHeight,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: `0 ${SPACE.base}px`,
+              background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
+              borderBottom: `1px solid ${COLORS.border}`,
+              position: 'relative',
+              zIndex: 40,
+            }}
+          >
+            {/* ── Left cluster: brand + status + nav ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? SPACE.md : SPACE.lg, minWidth: 0 }}>
+              {/* Brand mark */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, flexShrink: 0 }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 24,
+                    height: 24,
+                    background: COLORS.accent,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: FONTS.sans,
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: COLORS.textPrimary,
+                    borderRadius: RADIUS.sm,
+                    boxShadow: `0 0 16px ${COLORS.accentGlow}`,
+                  }}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-rose-500' : ''}`} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <button 
-              onClick={() => {
-                setShowChat(!showChat);
-                if (showNotifications) setShowNotifications(false);
-              }}
-              className={`relative p-2 transition-all duration-200 hover:scale-110 rounded-full hover:bg-neutral-800 ${showChat ? 'text-rose-500 bg-rose-500/10' : 'text-neutral-400 hover:text-white'}`}
-            >
-              <MessageSquare className="w-5 h-5" />
-            </button>
-            <ChatAssistant currentUser={currentUser} isOpen={showChat} onClose={() => setShowChat(false)} initialQuery={chatQuery} loginCount={loginCount} isSurgeActive={isSurgeActive} />
-          </div>
-          <div className="relative">
-            <button 
-              onClick={() => {
-                setShowNotifications(!showNotifications);
-                if (showChat) setShowChat(false);
-              }}
-              className={`relative p-2 transition-all duration-200 hover:scale-110 rounded-full hover:bg-neutral-800 ${showNotifications ? 'text-rose-500 bg-rose-500/10' : 'text-neutral-400 hover:text-white'}`}
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.8)]"></span>
-            </button>
-            
-            {/* Notifications Dropdown */}
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="flex justify-between items-center p-3 border-b border-neutral-800 bg-neutral-950">
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">System Alerts</h3>
-                  <button onClick={() => setShowNotifications(false)} className="text-neutral-500 hover:text-white">
-                    <X className="w-4 h-4" />
-                  </button>
+                  P
+                  <CornerBracket position="tl" color={COLORS.textPrimary} size={4} thickness={1} inset={-2} />
+                  <CornerBracket position="br" color={COLORS.textPrimary} size={4} thickness={1} inset={-2} />
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.map(n => (
-                    <div 
-                      key={n.id} 
-                      onClick={() => {
-                        if (n.isHandover) {
-                          setChatQuery(`I am taking over the shift. Here are the handover notes from the previous shift: "${n.message}". What should I prioritize first based on these notes and current system vitals?`);
-                          setShowNotifications(false);
-                          setShowChat(true);
-                        }
-                      }}
-                      className="p-3 border-b border-neutral-800/50 hover:bg-neutral-800/50 transition-colors cursor-pointer"
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-xs font-bold uppercase ${n.type === 'critical' ? 'text-rose-400' : n.type === 'warning' ? 'text-amber-400' : 'text-blue-400'}`}>
-                          {n.title}
-                        </span>
-                        <span className="text-[10px] font-mono text-neutral-500">{n.time}</span>
-                      </div>
-                      <p className="text-sm text-neutral-300">{n.message}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-2 bg-neutral-950 border-t border-neutral-800 text-center">
-                  <button className="text-xs text-neutral-400 hover:text-white font-mono uppercase tracking-widest">View All Logs</button>
-                </div>
+                {!isCompactNav && (
+                  <BracketLabel tone="accent" size="base">
+                    PULSE
+                  </BracketLabel>
+                )}
+                <span style={{ color: COLORS.textDim, margin: '0 2px' }}>│</span>
+                <StatusPill label={liveStatusLabel} tone={liveStatusTone} pulse />
               </div>
-            )}
-          </div>
-          <div className="text-right hidden md:block">
-            <p className="text-xs text-neutral-500 uppercase tracking-widest">{currentUser.role}</p>
-            <p className="text-sm font-mono text-neutral-300">{currentUser.name}</p>
-          </div>
-          <div className="h-8 w-px bg-neutral-800"></div>
-          
-          {/* End Shift Button */}
-          <button 
-            onClick={() => setShowHandoverModal(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-neutral-700 transition-colors text-sm font-medium"
-          >
-            <Clock className="w-4 h-4" />
-            End Shift
-          </button>
 
-          <button 
-            onClick={() => setSystemStatus(s => s === 'normal' ? 'stale' : 'normal')}
-            className="p-2 text-neutral-500 hover:text-amber-500 transition-colors"
-            title="Simulate Outage"
-          >
-            <AlertOctagon className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
+              {/* Nav — bracket underline on active */}
+              <nav style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                {navItems.map((item) => {
+                  const isActive = activeTab === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <NavButton
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id)}
+                      active={isActive}
+                      compact={isCompactNav}
+                      title={isCompactNav ? item.label : undefined}
+                    >
+                      <Icon size={14} strokeWidth={2} />
+                      {!isCompactNav && <span style={{ fontSize: 12 }}>{item.label}</span>}
+                    </NavButton>
+                  );
+                })}
+              </nav>
+            </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        <main className="flex-1 overflow-hidden relative">
-          {activeTab === Tab.HORIZON && (
-            <PulseHorizon 
-              onActivatePlaybook={handleActivatePlaybook} 
-              isSurgeActive={isSurgeActive} 
-              currentUser={currentUser}
-              systemStatus={systemStatus}
-              setSystemStatus={setSystemStatus}
-              showToast={showToast}
-              onNavigateToActionBoard={navigateToActionBoard}
-              loginCount={loginCount}
+            {/* ── Right cluster: clock + chat + notifications + user + end shift ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? SPACE.sm : SPACE.md, flexShrink: 0 }}>
+              <Mono tone="accent" size={isCompactNav ? 'sm' : 'base'}>
+                {clockStr}{isCompactNav ? '' : ' UTC'}
+              </Mono>
+              <span style={{ color: COLORS.textDim }}>│</span>
+
+              {/* Chat */}
+              <IconButton
+                active={showChat}
+                onClick={() => {
+                  setShowChat(!showChat);
+                  if (showNotifications) setShowNotifications(false);
+                }}
+                label="Assistant"
+              >
+                <MessageSquare size={16} strokeWidth={2} />
+              </IconButton>
+
+              {/* Notifications */}
+              <div style={{ position: 'relative' }}>
+                <IconButton
+                  active={showNotifications}
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    if (showChat) setShowChat(false);
+                  }}
+                  label="Alerts"
+                  badge
+                >
+                  <Bell size={16} strokeWidth={2} />
+                </IconButton>
+
+                <AnimatePresence>
+                  {showNotifications && (
+                    <NotificationsDropdown
+                      notifications={notifications}
+                      onClose={() => setShowNotifications(false)}
+                      onHandoverClick={(message) => {
+                        setChatQuery(
+                          `I am taking over the shift. Here are the handover notes from the previous shift: "${message}". What should I prioritize first based on these notes and current system vitals?`,
+                        );
+                        setShowNotifications(false);
+                        setShowChat(true);
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+
+              <span style={{ color: COLORS.textDim }}>│</span>
+
+              {/* User info */}
+              {!isCompactNav && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: 2,
+                    lineHeight: 1,
+                  }}
+                >
+                  <Mono tone="muted" size="xs">
+                    {currentUser.role}
+                  </Mono>
+                  <span
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    {currentUser.name}
+                  </span>
+                </div>
+              )}
+              {isCompactNav && (
+                <div
+                  title={`${currentUser.name} · ${currentUser.role}`}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: COLORS.surfaceElev,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    fontFamily: FONTS.mono,
+                    fontSize: 10,
+                    letterSpacing: '0.08em',
+                    color: COLORS.textPrimary,
+                    fontWeight: 600,
+                  }}
+                >
+                  {currentUser.avatarInitials}
+                </div>
+              )}
+
+              {isCompactNav ? (
+                <IconButton
+                  onClick={() => setShowHandoverModal(true)}
+                  label="End Shift"
+                >
+                  <Clock size={14} strokeWidth={2} />
+                </IconButton>
+              ) : (
+                <TacticalButton
+                  variant="secondary"
+                  size="sm"
+                  icon={<Clock size={12} strokeWidth={2} />}
+                  onClick={() => setShowHandoverModal(true)}
+                >
+                  End Shift
+                </TacticalButton>
+              )}
+
+              {debugMode && (
+                <IconButton
+                  onClick={() => setSystemStatus((s) => (s === 'normal' ? 'stale' : 'normal'))}
+                  label="Simulate Outage"
+                >
+                  <AlertOctagon size={16} strokeWidth={2} />
+                </IconButton>
+              )}
+            </div>
+          </header>
+
+          {/* ═══════════════════════════════════════════════════════
+              MAIN CONTENT AREA
+              ═══════════════════════════════════════════════════════ */}
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
+            <main style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+              {activeTab === Tab.HORIZON && (
+                <PulseHorizon
+                  onActivatePlaybook={handleActivatePlaybook}
+                  isSurgeActive={isSurgeActive}
+                  currentUser={currentUser}
+                  systemStatus={systemStatus}
+                  setSystemStatus={setSystemStatus}
+                  showToast={showToast}
+                  onNavigateToActionBoard={navigateToActionBoard}
+                  loginCount={loginCount}
+                />
+              )}
+              {activeTab === Tab.LIVE_OPS && (
+                <LiveOps
+                  currentUser={currentUser}
+                  systemStatus={systemStatus}
+                  showToast={showToast}
+                  onNavigateToActionBoard={navigateToActionBoard}
+                  loginCount={loginCount}
+                  isSurgeActive={isSurgeActive}
+                />
+              )}
+              {activeTab === Tab.PLAYBOOKS && <Playbooks onActivate={handleActivatePlaybook} />}
+              {activeTab === Tab.ACTIONS && (
+                <ActionBoard
+                  currentUser={currentUser}
+                  systemStatus={systemStatus}
+                  showToast={showToast}
+                  initialFilter={actionFilter}
+                  isSurgeActive={isSurgeActive}
+                />
+              )}
+              {activeTab === Tab.ROSTER && <Roster currentUser={currentUser} showToast={showToast} />}
+              {activeTab === Tab.BRIEF_ME && (
+                <BriefMe isSurgeActive={isSurgeActive} currentUser={currentUser} showToast={showToast} />
+              )}
+              {activeTab === Tab.REPLAY && <Replay showToast={showToast} />}
+            </main>
+
+            <CommandSidebar
+              isSurgeActive={isSurgeActive}
+              surgeActivatedAt={surgeState.activatedAt}
+              urgentTasks={urgentTasks}
+              onActivateSurge={activateSurge}
+            />
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════
+              BOTTOM HUD STRIP — system ticker
+              ═══════════════════════════════════════════════════════ */}
+          <HudStrip side="bottom">
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
+              <StatusPill label="NEDOCS 185 · Dangerous" tone="crit" />
+              <span style={{ color: COLORS.textDim }}>│</span>
+              <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
+              <span style={{ color: COLORS.textDim }}>│</span>
+              <Mono tone="secondary">Active Surge Playbooks · 3</Mono>
+              {isSurgeActive && (
+                <>
+                  <span style={{ color: COLORS.textDim }}>│</span>
+                  <StatusPill label="SURGE MODE · ACTIVE" tone="crit" pulse />
+                </>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
+              <Mono tone="muted">Network</Mono>
+              <StatusPill label="Stable" tone="ok" />
+            </div>
+          </HudStrip>
+
+          {/* Modals */}
+          {showPlaybookModal && (
+            <PlaybookActivation
+              onClose={() => setShowPlaybookModal(false)}
+              onConfirm={handleConfirmPlaybook}
             />
           )}
-          {activeTab === Tab.LIVE_OPS && <LiveOps currentUser={currentUser} systemStatus={systemStatus} showToast={showToast} onNavigateToActionBoard={navigateToActionBoard} loginCount={loginCount} isSurgeActive={isSurgeActive} />}
-          {activeTab === Tab.PLAYBOOKS && <Playbooks onActivate={handleActivatePlaybook} />}
-          {activeTab === Tab.ACTIONS && <ActionBoard currentUser={currentUser} systemStatus={systemStatus} showToast={showToast} initialFilter={actionFilter} isSurgeActive={isSurgeActive} />}
-          {activeTab === Tab.ROSTER && <Roster currentUser={currentUser} showToast={showToast} />}
-          {activeTab === Tab.BRIEF_ME && <BriefMe isSurgeActive={isSurgeActive} currentUser={currentUser} showToast={showToast} />}
-          {activeTab === Tab.REPLAY && <Replay showToast={showToast} />}
-        </main>
-        
-        <CommandSidebar
-          isSurgeActive={isSurgeActive}
-          surgeActivatedAt={surgeState.activatedAt}
-          urgentTasks={urgentTasks}
-          onActivateSurge={activateSurge}
-        />
-      </div>
-
-      {/* Footer System Ticker */}
-      <footer className="h-8 bg-[#0a0a0a] border-t border-neutral-800 flex items-center px-4 gap-6 text-[10px] font-mono uppercase tracking-widest text-neutral-500 shrink-0 select-none">
-         <div className="flex items-center gap-2 text-rose-500">
-            <AlertOctagon className="w-3 h-3" />
-            <span>NEDOCS: 185 (Dangerous)</span>
-         </div>
-         <div className="w-px h-4 bg-neutral-800"></div>
-         <div className="flex items-center gap-2">
-            <CloudRain className="w-3 h-3" />
-            <span>Weather: Heavy Rain Warning (ETA 16:00)</span>
-         </div>
-         <div className="w-px h-4 bg-neutral-800"></div>
-         <div className="flex items-center gap-2 text-emerald-500">
-            <Signal className="w-3 h-3" />
-            <span>Network: Stable</span>
-         </div>
-      </footer>
-      
-      {/* Modals */}
-      {showPlaybookModal && (
-        <PlaybookActivation 
-          onClose={() => setShowPlaybookModal(false)} 
-          onConfirm={handleConfirmPlaybook} 
-        />
-      )}
-
-    </div>
+        </div>
       )}
     </>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// Tactical Boot Screen
+// ═══════════════════════════════════════════════════════════════════════
+const TacticalBootScreen: React.FC = () => {
+  const [now] = useState(() => new Date());
+  const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '.');
+
+  const lines = [
+    { tag: 'SYSTEM', msg: 'Initializing core predictive models', status: 'OK', delay: 0.1 },
+    { tag: 'NETWORK', msg: 'Establishing secure EHR uplink', status: 'OK', delay: 0.35 },
+    { tag: 'DATA', msg: 'Synchronizing regional telemetry', status: 'OK', delay: 0.6 },
+    { tag: 'AUTH', msg: 'Verifying personnel credentials', status: 'WAIT', delay: 0.85 },
+  ];
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: COLORS.bg,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: FONTS.mono,
+        color: COLORS.textSecondary,
+        overflow: 'hidden',
+      }}
+    >
+      {/* dot grid */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          opacity: 0.35,
+          maskImage:
+            'radial-gradient(ellipse 70% 50% at center, black 40%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 50% at center, black 40%, transparent 100%)',
+        }}
+      />
+      {/* rose glow */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse 60% 40% at 50% 110%, ${COLORS.accentDim}, transparent 60%)`,
+        }}
+      />
+      {/* scan line */}
+      <ScanningLine />
+
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 640,
+          padding: SPACE['2xl'],
+          position: 'relative',
+          zIndex: 10,
+        }}
+      >
+        {/* Brand block */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: MOTION.ease }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.lg,
+            marginBottom: SPACE['3xl'],
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+              width: 64,
+              height: 64,
+              background: COLORS.accent,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: FONTS.sans,
+              fontSize: 36,
+              fontWeight: 700,
+              color: COLORS.textPrimary,
+              borderRadius: RADIUS.sm,
+              boxShadow: `0 0 40px ${COLORS.accent}66`,
+              animation: 'accent-pulse 2s ease-in-out infinite',
+            }}
+          >
+            P
+            <CornerBracket position="tl" color={COLORS.textPrimary} size={8} thickness={1.5} inset={-3} />
+            <CornerBracket position="tr" color={COLORS.textPrimary} size={8} thickness={1.5} inset={-3} />
+            <CornerBracket position="bl" color={COLORS.textPrimary} size={8} thickness={1.5} inset={-3} />
+            <CornerBracket position="br" color={COLORS.textPrimary} size={8} thickness={1.5} inset={-3} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h1
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: TYPE.display.size,
+                fontWeight: TYPE.display.weight,
+                letterSpacing: '0.16em',
+                lineHeight: 0.95,
+                margin: 0,
+                marginBottom: 6,
+                color: COLORS.textPrimary,
+              }}
+            >
+              PULSE
+            </h1>
+            <Mono tone="muted" size="xs">
+              Predictive Unified Logistics &amp; Surge Engine
+            </Mono>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 4,
+            }}
+          >
+            <Mono tone="dim" size="xs">
+              BUILD {dateStr}
+            </Mono>
+            <Mono tone="dim" size="xs">
+              NODE ER-01
+            </Mono>
+          </div>
+        </motion.div>
+
+        {/* Boot log */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+          {lines.map((l) => (
+            <motion.div
+              key={l.tag}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: l.delay, duration: 0.4, ease: MOTION.ease }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.base,
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                background: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+              }}
+            >
+              <Mono tone="dim" size="xs" style={{ minWidth: 72 }}>
+                [ {l.tag} ]
+              </Mono>
+              <span
+                style={{
+                  flex: 1,
+                  fontFamily: FONTS.mono,
+                  fontSize: 12,
+                  color: COLORS.textSecondary,
+                  letterSpacing: '0.02em',
+                }}
+              >
+                {l.msg}…
+              </span>
+              <Mono
+                tone={l.status === 'OK' ? 'ok' : 'accent'}
+                size="xs"
+                style={{
+                  animation: l.status === 'WAIT' ? 'pulse-dot 1.4s ease-in-out infinite' : undefined,
+                }}
+              >
+                {l.status}
+              </Mono>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Progress bar */}
+        <div
+          style={{
+            marginTop: SPACE['3xl'],
+            height: 2,
+            width: '100%',
+            background: COLORS.border,
+            borderRadius: RADIUS.full,
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              background: COLORS.accent,
+              width: '100%',
+              transformOrigin: 'left',
+              animation: 'scale-x 2.2s ease-in-out forwards',
+              boxShadow: `0 0 10px ${COLORS.accentGlow}`,
+            }}
+          />
+        </div>
+
+        {/* Footer meta */}
+        <div
+          style={{
+            marginTop: SPACE.lg,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Mono tone="dim" size="xs">
+            // BIOMETRIC AUTH · TLS 1.3 · SESSION-BOUND
+          </Mono>
+          <StatusPill label="System Online" tone="ok" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// Small shell primitives — defined locally because they're shell-specific
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Top-nav button — tactical hover + active states */
+const NavButton: React.FC<{
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  compact?: boolean;
+  title?: string;
+}> = ({ active, onClick, children, compact, title }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={title}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: compact ? 'center' : 'flex-start',
+        gap: compact ? 0 : 7,
+        padding: compact ? '0' : '7px 11px',
+        width: compact ? 30 : undefined,
+        height: compact ? 30 : undefined,
+        background: active ? COLORS.surfaceElev : hovered ? COLORS.surface : 'transparent',
+        border: `1px solid ${active ? COLORS.border : 'transparent'}`,
+        borderRadius: RADIUS.sm,
+        color: active ? COLORS.textPrimary : hovered ? COLORS.textSecondary : COLORS.textMuted,
+        fontFamily: FONTS.sans,
+        fontSize: 12,
+        fontWeight: 500,
+        cursor: 'pointer',
+        letterSpacing: '-0.003em',
+        transition: 'all 160ms ease',
+      }}
+    >
+      {active && (
+        <>
+          <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} inset={-1} />
+          <CornerBracket position="tr" color={COLORS.accent} size={5} thickness={1} inset={-1} />
+          <CornerBracket position="bl" color={COLORS.accent} size={5} thickness={1} inset={-1} />
+          <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} inset={-1} />
+        </>
+      )}
+      {children}
+    </button>
+  );
+};
+
+/** Small icon button for chat/bell/etc */
+const IconButton: React.FC<{
+  active?: boolean;
+  onClick: () => void;
+  label: string;
+  badge?: boolean;
+  children: React.ReactNode;
+}> = ({ active, onClick, label, badge, children }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        width: 30,
+        height: 30,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: active ? COLORS.accentDim : hovered ? COLORS.surface : 'transparent',
+        border: `1px solid ${active ? COLORS.accent : hovered ? COLORS.border : 'transparent'}`,
+        borderRadius: RADIUS.sm,
+        color: active ? COLORS.accent : hovered ? COLORS.textPrimary : COLORS.textSecondary,
+        cursor: 'pointer',
+        transition: 'all 160ms ease',
+      }}
+    >
+      {children}
+      {badge && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 3,
+            right: 3,
+            width: 6,
+            height: 6,
+            borderRadius: RADIUS.full,
+            background: COLORS.accent,
+            boxShadow: `0 0 6px ${COLORS.accent}`,
+          }}
+        />
+      )}
+    </button>
+  );
+};
+
+/** Tactical notifications dropdown */
+const NotificationsDropdown: React.FC<{
+  notifications: Array<{
+    id: string | number;
+    title: string;
+    message: string;
+    time: string;
+    type: 'info' | 'warning' | 'critical';
+    isHandover?: boolean;
+  }>;
+  onClose: () => void;
+  onHandoverClick: (message: string) => void;
+}> = ({ notifications, onClose, onHandoverClick }) => (
+  <motion.div
+    initial={{ opacity: 0, y: -6 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -4 }}
+    transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+    style={{
+      position: 'absolute',
+      right: 0,
+      top: 'calc(100% + 8px)',
+      width: 340,
+      background: COLORS.surface,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      boxShadow: SHADOW.panel,
+      zIndex: 50,
+      overflow: 'hidden',
+    }}
+  >
+    <CornerBracket position="tl" color={COLORS.accent} size={8} />
+    <CornerBracket position="tr" color={COLORS.accent} size={8} />
+    <CornerBracket position="bl" color={COLORS.accent} size={8} />
+    <CornerBracket position="br" color={COLORS.accent} size={8} />
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: `${SPACE.sm}px ${SPACE.md}px`,
+        borderBottom: `1px solid ${COLORS.border}`,
+        background: COLORS.surfaceElev,
+      }}
+    >
+      <BracketLabel tone="accent" size="base">
+        SYSTEM ALERTS
+      </BracketLabel>
+      <button
+        onClick={onClose}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: COLORS.textMuted,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+      >
+        <X size={14} strokeWidth={2} />
+      </button>
+    </div>
+    <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+      {notifications.map((n) => (
+        <div
+          key={n.id}
+          onClick={() => {
+            if (n.isHandover) onHandoverClick(n.message);
+          }}
+          style={{
+            padding: `${SPACE.md}px ${SPACE.md}px`,
+            borderBottom: `1px solid ${COLORS.border}`,
+            cursor: n.isHandover ? 'pointer' : 'default',
+            transition: 'background 160ms ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.surfaceElev)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: 4,
+            }}
+          >
+            <Mono
+              tone={n.type === 'critical' ? 'crit' : n.type === 'warning' ? 'warn' : 'accent'}
+              size="xs"
+            >
+              {n.title}
+            </Mono>
+            <Mono tone="dim" size="xs">
+              {n.time}
+            </Mono>
+          </div>
+          <p
+            style={{
+              fontFamily: FONTS.sans,
+              fontSize: 12.5,
+              color: COLORS.textSecondary,
+              lineHeight: 1.4,
+              margin: 0,
+              letterSpacing: '-0.003em',
+            }}
+          >
+            {n.message}
+          </p>
+        </div>
+      ))}
+    </div>
+    <div
+      style={{
+        padding: SPACE.sm,
+        background: COLORS.surfaceElev,
+        borderTop: `1px solid ${COLORS.border}`,
+        textAlign: 'center',
+      }}
+    >
+      <button
+        style={{
+          background: 'transparent',
+          border: 'none',
+          color: COLORS.textMuted,
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+        }}
+      >
+        // View All Logs
+      </button>
+    </div>
+  </motion.div>
+);
 
 export default App;

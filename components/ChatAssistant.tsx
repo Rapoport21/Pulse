@@ -1,6 +1,22 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { X, Send, Bot, Sparkles, Activity, Network, AlertTriangle, Wind, Building2, MapPin, ShieldAlert, CheckCircle2, Trash2, UserCircle } from 'lucide-react';
-import { FunctionDeclaration, Type } from "@google/genai";
+import { AnimatePresence, motion } from 'motion/react';
+import {
+  X,
+  Send,
+  Bot,
+  Sparkles,
+  Activity,
+  Network,
+  AlertTriangle,
+  Wind,
+  Building2,
+  MapPin,
+  ShieldAlert,
+  CheckCircle2,
+  Trash2,
+  UserCircle,
+} from 'lucide-react';
+import { FunctionDeclaration, Type } from '@google/genai';
 import { UserProfile, UserRole, Status } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
 import Markdown from 'react-markdown';
@@ -8,25 +24,54 @@ import remarkGfm from 'remark-gfm';
 import { createGeminiClient } from '../lib/gemini';
 import { getRealtimeStateSnapshot, getDeviceCount } from '../lib/realtime';
 import type { SurgeModeState, UrgentTask } from '../lib/surgeTaskTemplates';
+import {
+  COLORS,
+  FONTS,
+  SPACE,
+  RADIUS,
+  MOTION,
+  Z,
+  SHADOW,
+  Mono,
+  BracketLabel,
+  CornerBracket,
+  StatusPill,
+  TacticalCard,
+  TacticalButton,
+  ScanningLine,
+} from './design';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Mock data + tool declarations (unchanged business logic)
+// ─────────────────────────────────────────────────────────────────────────
 
 const getMockDrivers = (loginCount: number, role?: UserRole) => {
   const baseDrivers = ROLE_METRICS[role || UserRole.MANAGER];
   if (loginCount > 1) {
-    return baseDrivers.map(driver => {
+    return baseDrivers.map((driver) => {
       if (role === UserRole.MANAGER) {
-        if (driver.id === '1') return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' };
-        if (driver.id === '2') return { ...driver, value: '15m Avg', status: Status.NORMAL, impact: 15, trend: 'down' };
-        if (driver.id === '3') return { ...driver, value: 'Fully Staffed', status: Status.NORMAL, impact: 5, trend: 'stable' };
+        if (driver.id === '1')
+          return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' };
+        if (driver.id === '2')
+          return { ...driver, value: '15m Avg', status: Status.NORMAL, impact: 15, trend: 'down' };
+        if (driver.id === '3')
+          return { ...driver, value: 'Fully Staffed', status: Status.NORMAL, impact: 5, trend: 'stable' };
       }
       if (role === UserRole.NURSE) {
-        if (driver.id === 'n1') return { ...driver, value: '0 Overdue', status: Status.NORMAL, impact: 10, trend: 'down' };
-        if (driver.id === 'n2') return { ...driver, value: '0 Patients', status: Status.NORMAL, impact: 5, trend: 'down' };
-        if (driver.id === 'n3') return { ...driver, value: '1 Waiting', status: Status.NORMAL, impact: 15, trend: 'stable' };
+        if (driver.id === 'n1')
+          return { ...driver, value: '0 Overdue', status: Status.NORMAL, impact: 10, trend: 'down' };
+        if (driver.id === 'n2')
+          return { ...driver, value: '0 Patients', status: Status.NORMAL, impact: 5, trend: 'down' };
+        if (driver.id === 'n3')
+          return { ...driver, value: '1 Waiting', status: Status.NORMAL, impact: 15, trend: 'stable' };
       }
       if (role === UserRole.ER_PERSONNEL) {
-        if (driver.id === 'e1') return { ...driver, value: '2 Available', status: Status.NORMAL, impact: 20, trend: 'stable' };
-        if (driver.id === 'e2') return { ...driver, value: '15 mins', status: Status.NORMAL, impact: 15, trend: 'down' };
-        if (driver.id === 'e3') return { ...driver, value: '0 Inbound', status: Status.NORMAL, impact: 5, trend: 'down' };
+        if (driver.id === 'e1')
+          return { ...driver, value: '2 Available', status: Status.NORMAL, impact: 20, trend: 'stable' };
+        if (driver.id === 'e2')
+          return { ...driver, value: '15 mins', status: Status.NORMAL, impact: 15, trend: 'down' };
+        if (driver.id === 'e3')
+          return { ...driver, value: '0 Inbound', status: Status.NORMAL, impact: 5, trend: 'down' };
       }
       return { ...driver, status: Status.NORMAL, impact: Math.floor(driver.impact * 0.3), trend: 'down' };
     });
@@ -44,39 +89,40 @@ const getMockVitals = (loginCount: number) => {
   if (loginCount > 1) {
     return {
       nedocs: 85,
-      weather: "Clear",
-      systemStatus: "Normal Operations",
-      currentLoad: "32% (Stable)",
-      projectedLoad: "35% (+90m)",
+      weather: 'Clear',
+      systemStatus: 'Normal Operations',
+      currentLoad: '32% (Stable)',
+      projectedLoad: '35% (+90m)',
       houseStatus: {
-        medSurg: "4 Beds Available",
-        icu: "2 Beds Available",
-        psych: "1 Patient Holding"
+        medSurg: '4 Beds Available',
+        icu: '2 Beds Available',
+        psych: '1 Patient Holding',
       },
-      inboundEMS: "2 Units En Route (0 Critical)",
-      waitingRoom: "12 Patients (25m Wait)"
+      inboundEMS: '2 Units En Route (0 Critical)',
+      waitingRoom: '12 Patients (25m Wait)',
     };
   }
   return {
     nedocs: 185,
-    weather: "Heavy Rain Warning (ETA 16:00)",
-    systemStatus: "Surge Level 2 Active",
-    currentLoad: "92% (Saturation Warning)",
-    projectedLoad: "112% (+90m)",
+    weather: 'Heavy Rain Warning (ETA 16:00)',
+    systemStatus: 'Surge Level 2 Active',
+    currentLoad: '92% (Saturation Warning)',
+    projectedLoad: '112% (+90m)',
     houseStatus: {
-      medSurg: "0 Beds Available",
-      icu: "1 Bed Available",
-      psych: "4 Patients Holding"
+      medSurg: '0 Beds Available',
+      icu: '1 Bed Available',
+      psych: '4 Patients Holding',
     },
-    inboundEMS: "8 Units En Route (3 Critical)",
-    waitingRoom: "38 Patients (2h 15m Wait)"
+    inboundEMS: '8 Units En Route (3 Critical)',
+    waitingRoom: '38 Patients (2h 15m Wait)',
   };
 };
 
 // Tool Definitions
 const getDriversTool: FunctionDeclaration = {
   name: 'get_pressure_drivers',
-  description: 'Get current key pressure drivers, bottlenecks, and operational load factors impacting the hospital.',
+  description:
+    'Get current key pressure drivers, bottlenecks, and operational load factors impacting the hospital.',
 };
 
 const getNetworkTool: FunctionDeclaration = {
@@ -86,25 +132,34 @@ const getNetworkTool: FunctionDeclaration = {
 
 const getVitalsTool: FunctionDeclaration = {
   name: 'get_system_vitals',
-  description: 'Get high-level system vitals including NEDOCS score, weather alerts, bed availability (house status), and census.',
+  description:
+    'Get high-level system vitals including NEDOCS score, weather alerts, bed availability (house status), and census.',
 };
 
 const getPatientInfoTool: FunctionDeclaration = {
   name: 'get_patient_info',
-  description: 'Get specific patient information based on location or status (e.g., patients with discharge orders, attending physician for a room).',
+  description:
+    'Get specific patient information based on location or status (e.g., patients with discharge orders, attending physician for a room).',
   parameters: {
     type: Type.OBJECT,
     properties: {
-      location: { type: Type.STRING, description: 'The ward or room number (e.g., L3, Trauma Bay 1)' },
-      queryType: { type: Type.STRING, description: 'What to look for (e.g., discharge_orders, attending_physician)' }
+      location: {
+        type: Type.STRING,
+        description: 'The ward or room number (e.g., L3, Trauma Bay 1)',
+      },
+      queryType: {
+        type: Type.STRING,
+        description: 'What to look for (e.g., discharge_orders, attending_physician)',
+      },
     },
-    required: ['location', 'queryType']
-  }
+    required: ['location', 'queryType'],
+  },
 };
 
 const generatePriorityMatrixTool: FunctionDeclaration = {
   name: 'generate_priority_matrix',
-  description: 'Generate a visually rich priority matrix based on handover notes and current system vitals.',
+  description:
+    'Generate a visually rich priority matrix based on handover notes and current system vitals.',
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -115,18 +170,27 @@ const generatePriorityMatrixTool: FunctionDeclaration = {
           type: Type.OBJECT,
           properties: {
             title: { type: Type.STRING, description: 'Short title of the priority' },
-            description: { type: Type.STRING, description: 'Detailed description of the priority' },
-            urgency: { type: Type.STRING, description: 'Urgency level: Critical, High, or Medium' },
-            action: { type: Type.STRING, description: 'Recommended action to take' }
+            description: {
+              type: Type.STRING,
+              description: 'Detailed description of the priority',
+            },
+            urgency: {
+              type: Type.STRING,
+              description: 'Urgency level: Critical, High, or Medium',
+            },
+            action: { type: Type.STRING, description: 'Recommended action to take' },
           },
-          required: ['title', 'description', 'urgency', 'action']
-        }
-      }
+          required: ['title', 'description', 'urgency', 'action'],
+        },
+      },
     },
-    required: ['priorities']
-  }
+    required: ['priorities'],
+  },
 };
 
+// ─────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
   role: 'user' | 'model' | 'system';
@@ -144,10 +208,252 @@ interface ChatAssistantProps {
   isSurgeActive?: boolean;
 }
 
-export const ChatAssistant: React.FC<ChatAssistantProps> = ({ currentUser, isOpen, onClose, initialQuery, loginCount = 0 }) => {
+// ─────────────────────────────────────────────────────────────────────────
+// Internal tactical helpers (visual cards)
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Frame used by every tool visual card — keeps headers and padding consistent. */
+const VisualFrame: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  tone?: 'accent' | 'info' | 'ok';
+  children: React.ReactNode;
+}> = ({ icon, label, tone = 'accent', children }) => {
+  const toneColor =
+    tone === 'info' ? COLORS.info : tone === 'ok' ? COLORS.ok : COLORS.accent;
+  return (
+    <TacticalCard padding="md" style={{ width: '100%', position: 'relative' }}>
+      <CornerBracket position="tl" color={toneColor} size={8} thickness={1} />
+      <CornerBracket position="tr" color={toneColor} size={8} thickness={1} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: SPACE.sm,
+          paddingBottom: SPACE.sm,
+          marginBottom: SPACE.md,
+          borderBottom: `1px solid ${COLORS.border}`,
+        }}
+      >
+        <div
+          style={{
+            width: 22,
+            height: 22,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: COLORS.bgDeep,
+            border: `1px solid ${toneColor}`,
+            borderRadius: RADIUS.sm,
+            color: toneColor,
+          }}
+        >
+          {icon}
+        </div>
+        <Mono
+          tone="secondary"
+          size="xs"
+          style={{ color: toneColor, letterSpacing: '0.18em', fontWeight: 600 }}
+        >
+          {label}
+        </Mono>
+      </div>
+      {children}
+    </TacticalCard>
+  );
+};
+
+const DriverBar: React.FC<{
+  name: string;
+  status: string;
+  value: string;
+  impact: number;
+}> = ({ name, status, value, impact }) => {
+  const color =
+    status === 'Critical'
+      ? COLORS.crit
+      : status === 'Warning'
+        ? COLORS.warn
+        : COLORS.ok;
+  return (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            color: COLORS.textSecondary,
+            fontSize: 12,
+            fontFamily: FONTS.sans,
+            fontWeight: 500,
+          }}
+        >
+          {name}
+        </span>
+        <span
+          style={{
+            color,
+            fontFamily: FONTS.mono,
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+          }}
+        >
+          {value}
+        </span>
+      </div>
+      <div
+        style={{
+          height: 4,
+          width: '100%',
+          background: COLORS.bgDeep,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: RADIUS.sm,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            width: `${Math.max(0, Math.min(100, impact))}%`,
+            background: color,
+            boxShadow: status === 'Critical' ? `0 0 8px ${color}` : 'none',
+            transition: `width ${MOTION.base}s ease`,
+          }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const VitalStatBox: React.FC<{
+  label: string;
+  value: string;
+  sub: string;
+  tone: 'crit' | 'warn' | 'ok' | 'info';
+}> = ({ label, value, sub, tone }) => {
+  const color =
+    tone === 'crit'
+      ? COLORS.crit
+      : tone === 'warn'
+        ? COLORS.warn
+        : tone === 'ok'
+          ? COLORS.ok
+          : COLORS.info;
+  return (
+    <div
+      style={{
+        position: 'relative',
+        padding: SPACE.md,
+        textAlign: 'center',
+        background: COLORS.bgDeep,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 2,
+          background: color,
+          boxShadow: `0 0 6px ${color}`,
+        }}
+      />
+      <Mono tone="muted" size="xs" style={{ display: 'block', marginBottom: 6 }}>
+        {label}
+      </Mono>
+      <div
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 24,
+          fontWeight: 600,
+          color,
+          letterSpacing: '-0.02em',
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          color,
+          opacity: 0.8,
+          marginTop: 6,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {sub}
+      </div>
+    </div>
+  );
+};
+
+const HouseRow: React.FC<{
+  label: string;
+  value: string;
+  tone: 'crit' | 'warn' | 'neutral';
+}> = ({ label, value, tone }) => {
+  const color =
+    tone === 'crit' ? COLORS.crit : tone === 'warn' ? COLORS.warn : COLORS.textPrimary;
+  const bg =
+    tone === 'crit' ? COLORS.critDim : tone === 'warn' ? COLORS.warnDim : COLORS.surfaceElev;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        fontSize: 12,
+      }}
+    >
+      <span style={{ color: COLORS.textSecondary }}>{label}</span>
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontWeight: 600,
+          color,
+          background: bg,
+          border: `1px solid ${tone === 'neutral' ? COLORS.border : color + '33'}`,
+          padding: '3px 8px',
+          borderRadius: RADIUS.sm,
+          fontSize: 10,
+          letterSpacing: '0.06em',
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Main component
+// ─────────────────────────────────────────────────────────────────────────
+
+export const ChatAssistant: React.FC<ChatAssistantProps> = ({
+  currentUser,
+  isOpen,
+  onClose,
+  initialQuery,
+  loginCount = 0,
+}) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -162,13 +468,17 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ currentUser, isOpe
         : `PULSE Assistant is **offline**. The Gemini API key is not configured for this build, so chat is disabled — but the rest of PULSE will continue to operate normally.`;
       setMessages([{ id: '0', role: 'model', content: welcome }]);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, ai]);
 
   const handleClearChat = () => {
     if (currentUser) {
       setMessages([
-        { id: Date.now().toString(), role: 'model', content: `Operations Command online. Hello ${currentUser.name}. I have access to real-time facility telemetry, bed status, and network load tailored for ${currentUser.role} view.` }
+        {
+          id: Date.now().toString(),
+          role: 'model',
+          content: `Operations Command online. Hello ${currentUser.name}. I have access to real-time facility telemetry, bed status, and network load tailored for ${currentUser.role} view.`,
+        },
       ]);
     }
   };
@@ -186,7 +496,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ currentUser, isOpe
     if (!textToSend.trim()) return;
 
     if (!ai) {
-      setMessages(prev => [
+      setMessages((prev) => [
         ...prev,
         { id: Date.now().toString(), role: 'user', content: textToSend },
         {
@@ -202,7 +512,7 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ currentUser, isOpe
     }
 
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setIsTyping(true);
 
@@ -217,9 +527,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({ currentUser, isOpe
       };
       const urgentTasks = getRealtimeStateSnapshot<UrgentTask[]>('urgent-tasks') || [];
       const deviceCount = getDeviceCount();
-      const surgeElapsedMin = surgeState.active && surgeState.activatedAt
-        ? Math.floor((Date.now() - surgeState.activatedAt) / 60000)
-        : 0;
+      const surgeElapsedMin =
+        surgeState.active && surgeState.activatedAt
+          ? Math.floor((Date.now() - surgeState.activatedAt) / 60000)
+          : 0;
       const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
       const liveContextBlock = `
@@ -237,7 +548,7 @@ ${urgentTasks
         t.acknowledged && t.acknowledgedBy
           ? ` — ack'd by device ${t.acknowledgedBy.slice(0, 8)}`
           : ''
-      }`
+      }`,
   )
   .join('\n')}`
     : '- No urgent tasks active.'
@@ -251,8 +562,8 @@ ${urgentTasks
 
       // Construct history for the API
       const history = messages
-        .filter(m => m.role !== 'system')
-        .map(m => ({
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({
           role: m.role,
           parts: [{ text: m.content || '' }],
         }));
@@ -261,8 +572,8 @@ ${urgentTasks
       const response = await ai.models.generateContent({
         model,
         contents: [
-            ...history,
-            { role: 'user', parts: [{ text: textToSend }] }
+          ...history,
+          { role: 'user', parts: [{ text: textToSend }] },
         ],
         config: {
           thinkingConfig: { thinkingBudget: 2048 }, // REQUIRED: Budget allows the model to generate the 'thought signature'
@@ -297,103 +608,148 @@ ${urgentTasks
           8. IMPORTANT: If the user asks what to prioritize based on handover notes, you MUST call the 'generate_priority_matrix' tool to display the priorities visually, rather than just listing them in text.
           9. Surge status questions: answer directly from the LIVE OPERATIONAL CONTEXT block above. Don't call any tool — that block is already ground truth.
           `,
-          tools: [{ functionDeclarations: [getDriversTool, getNetworkTool, getVitalsTool, getPatientInfoTool, generatePriorityMatrixTool] }],
-        }
+          tools: [
+            {
+              functionDeclarations: [
+                getDriversTool,
+                getNetworkTool,
+                getVitalsTool,
+                getPatientInfoTool,
+                generatePriorityMatrixTool,
+              ],
+            },
+          ],
+        },
       });
 
       // Handle Function Calls
       const functionCalls = response.functionCalls;
-      
+
       if (functionCalls && functionCalls.length > 0) {
-         // We have tools to execute
-         const toolResults = [];
-         
-         for (const call of functionCalls) {
-             let resultData;
-            let visualType: 'drivers' | 'network' | 'vitals' | 'patientInfo' | 'priorityMatrix' | undefined;
+        // We have tools to execute
+        const toolResults = [];
 
-            if (call.name === 'get_pressure_drivers') {
-               resultData = getMockDrivers(loginCount, currentUser?.role);
-               visualType = 'drivers';
-            } else if (call.name === 'get_network_status') {
-               resultData = MOCK_HOSPITALS;
-               visualType = 'network';
-            } else if (call.name === 'get_system_vitals') {
-               resultData = getMockVitals(loginCount);
-               visualType = 'vitals';
-            } else if (call.name === 'get_patient_info') {
-               const args = call.args as Record<string, string>;
-               if (args.queryType === 'discharge_orders' && args.location.includes('L3')) {
-                  resultData = { patients: ['MRN-4921 (Room 302)', 'MRN-8812 (Room 310)', 'MRN-1092 (Room 314)', 'MRN-5531 (Room 322)'], status: 'Waiting on Transport/Pharmacy' };
-               } else if (args.queryType === 'attending_physician' && args.location.includes('Trauma Bay 1')) {
-                  resultData = { attending: 'Dr. Sarah Jenkins (MICU)', status: 'Paged successfully to pull patient to ICU' };
-               } else {
-                  resultData = { info: 'No specific data found for this query.' };
-               }
-               visualType = 'patientInfo';
-            } else if (call.name === 'generate_priority_matrix') {
-               const args = call.args as { priorities: { task: string, urgency: string, assignee: string }[] };
-               resultData = args.priorities || [];
-               visualType = 'priorityMatrix';
+        for (const call of functionCalls) {
+          let resultData;
+          let visualType:
+            | 'drivers'
+            | 'network'
+            | 'vitals'
+            | 'patientInfo'
+            | 'priorityMatrix'
+            | undefined;
+
+          if (call.name === 'get_pressure_drivers') {
+            resultData = getMockDrivers(loginCount, currentUser?.role);
+            visualType = 'drivers';
+          } else if (call.name === 'get_network_status') {
+            resultData = MOCK_HOSPITALS;
+            visualType = 'network';
+          } else if (call.name === 'get_system_vitals') {
+            resultData = getMockVitals(loginCount);
+            visualType = 'vitals';
+          } else if (call.name === 'get_patient_info') {
+            const args = call.args as Record<string, string>;
+            if (args.queryType === 'discharge_orders' && args.location.includes('L3')) {
+              resultData = {
+                patients: [
+                  'MRN-4921 (Room 302)',
+                  'MRN-8812 (Room 310)',
+                  'MRN-1092 (Room 314)',
+                  'MRN-5531 (Room 322)',
+                ],
+                status: 'Waiting on Transport/Pharmacy',
+              };
+            } else if (
+              args.queryType === 'attending_physician' &&
+              args.location.includes('Trauma Bay 1')
+            ) {
+              resultData = {
+                attending: 'Dr. Sarah Jenkins (MICU)',
+                status: 'Paged successfully to pull patient to ICU',
+              };
+            } else {
+              resultData = { info: 'No specific data found for this query.' };
             }
+            visualType = 'patientInfo';
+          } else if (call.name === 'generate_priority_matrix') {
+            const args = call.args as {
+              priorities: { task: string; urgency: string; assignee: string }[];
+            };
+            resultData = args.priorities || [];
+            visualType = 'priorityMatrix';
+          }
 
-            // Add the visual card to the chat immediately
-            if (visualType && resultData) {
-               setMessages(prev => [...prev, {
-                  id: Date.now().toString() + 'viz',
-                  role: 'system', // Internal type for UI rendering
-                  visualType,
-                  visualData: resultData
-               }]);
-            }
+          // Add the visual card to the chat immediately
+          if (visualType && resultData) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: Date.now().toString() + 'viz',
+                role: 'system', // Internal type for UI rendering
+                visualType,
+                visualData: resultData,
+              },
+            ]);
+          }
 
-            toolResults.push({
-               id: call.id,
-               name: call.name,
-               response: { result: resultData }
-            });
-         }
+          toolResults.push({
+            id: call.id,
+            name: call.name,
+            response: { result: resultData },
+          });
+        }
 
-         // CRITICAL FIX: Extract the full parts (thoughts + function calls) from the first response
-         // to include in the history. Without thoughts, the model sees a broken chain of reasoning.
-         const modelParts = response.candidates?.[0]?.content?.parts || [];
+        // CRITICAL FIX: Extract the full parts (thoughts + function calls) from the first response
+        // to include in the history. Without thoughts, the model sees a broken chain of reasoning.
+        const modelParts = response.candidates?.[0]?.content?.parts || [];
 
-         // Send result back to model to get final text response
-         const secondResponse = await ai.models.generateContent({
-            model,
-            contents: [
-               ...history,
-               { role: 'user', parts: [{ text: textToSend }] },
-               { role: 'model', parts: modelParts }, // Must include original thoughts + function call
-               { role: 'tool', parts: toolResults.map(tr => ({ functionResponse: tr })) } // Include the result with role: 'tool'
-            ],
-            config: {
-               thinkingConfig: { thinkingBudget: 2048 }, // Enable thinking for the follow-up response too
-            }
-         });
-         
-         setMessages(prev => [...prev, {
+        // Send result back to model to get final text response
+        const secondResponse = await ai.models.generateContent({
+          model,
+          contents: [
+            ...history,
+            { role: 'user', parts: [{ text: textToSend }] },
+            { role: 'model', parts: modelParts }, // Must include original thoughts + function call
+            {
+              role: 'tool',
+              parts: toolResults.map((tr) => ({ functionResponse: tr })),
+            }, // Include the result with role: 'tool'
+          ],
+          config: {
+            thinkingConfig: { thinkingBudget: 2048 }, // Enable thinking for the follow-up response too
+          },
+        });
+
+        setMessages((prev) => [
+          ...prev,
+          {
             id: Date.now().toString(),
             role: 'model',
-            content: secondResponse.text
-         }]);
-
+            content: secondResponse.text,
+          },
+        ]);
       } else {
-         // No tools called, just text
-         setMessages(prev => [...prev, {
+        // No tools called, just text
+        setMessages((prev) => [
+          ...prev,
+          {
             id: Date.now().toString(),
             role: 'model',
-            content: response.text
-         }]);
+            content: response.text,
+          },
+        ]);
       }
-
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'model',
-        content: "System Alert: Telemetry link unstable. Retrying connection..."
-      }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'model',
+          content: 'System Alert: Telemetry link unstable. Retrying connection...',
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -402,316 +758,965 @@ ${urgentTasks
   useEffect(() => {
     if (initialQuery && isOpen && messages.length > 0) {
       // Only send if it's not already the last user message
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+      const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user');
       if (lastUserMsg?.content !== initialQuery) {
         handleSend(initialQuery);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuery, isOpen]);
 
+  // ─────────────────────────────────────────────────────────────────────
+  // Visual card renderer
+  // ─────────────────────────────────────────────────────────────────────
   const renderVisual = (msg: Message) => {
-      if (msg.visualType === 'priorityMatrix') {
-         const priorities = msg.visualData as Array<{title: string, description: string, urgency: string, action: string}>;
-         return (
-            <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 my-2 shadow-lg w-full">
-               <div className="flex items-center gap-2 mb-3 border-b border-neutral-800 pb-2">
-                 <AlertTriangle className="w-4 h-4 text-rose-400" />
-                 <span className="text-xs uppercase text-neutral-300 font-bold tracking-widest">Immediate Priority Matrix</span>
-               </div>
-               <div className="space-y-3">
-                 {priorities.map((p, idx) => (
-                    <div key={idx} className={`p-3 rounded-lg border ${p.urgency.toLowerCase() === 'critical' ? 'bg-rose-950/20 border-rose-900/50' : p.urgency.toLowerCase() === 'high' ? 'bg-amber-950/20 border-amber-900/50' : 'bg-neutral-800/50 border-neutral-700'}`}>
-                      <div className="flex justify-between items-start mb-1">
-                         <span className="text-sm font-bold text-white">{p.title}</span>
-                         <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${p.urgency.toLowerCase() === 'critical' ? 'bg-rose-500/20 text-rose-400' : p.urgency.toLowerCase() === 'high' ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-700 text-neutral-300'}`}>{p.urgency}</span>
-                      </div>
-                      <p className="text-xs text-neutral-400 mb-2">{p.description}</p>
-                      <div className="flex items-center gap-2 text-xs font-mono text-cyan-400 bg-cyan-950/20 p-2 rounded border border-cyan-900/30">
-                         <Sparkles className="w-3 h-3" />
-                         <span>{p.action}</span>
-                      </div>
-                    </div>
-                 ))}
-               </div>
-            </div>
-         );
-      }
-      if (msg.visualType === 'drivers') {
-         return (
-            <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 my-2 shadow-lg w-full">
-               <div className="flex items-center gap-2 mb-3 border-b border-neutral-800 pb-2">
-                 <Wind className="w-4 h-4 text-rose-400" />
-                 <span className="text-xs uppercase text-neutral-300 font-bold tracking-widest">Pressure Drivers</span>
-               </div>
-               <div className="space-y-3">
-                 {(msg.visualData as Array<{id: string, name: string, status: string, value: string, impact: number}>).map((d) => (
-                    <div key={d.id} className="group">
-                      <div className="flex justify-between items-center text-xs mb-1">
-                         <span className="text-neutral-300 font-medium">{d.name}</span>
-                         <span className={`font-mono font-bold ${d.status === 'Critical' ? 'text-rose-500' : d.status === 'Warning' ? 'text-amber-500' : 'text-emerald-500'}`}>{d.value}</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${d.status === 'Critical' ? 'bg-rose-500 shadow-[0_0_8px_#f43f5e]' : d.status === 'Warning' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                          style={{ width: `${d.impact}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                 ))}
-               </div>
-            </div>
-         );
-      }
-      if (msg.visualType === 'network') {
-         return (
-            <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 my-2 shadow-lg w-full">
-               <div className="flex items-center gap-2 mb-3 border-b border-neutral-800 pb-2">
-                 <Network className="w-4 h-4 text-cyan-400" />
-                 <span className="text-xs uppercase text-neutral-300 font-bold tracking-widest">Network Status</span>
-               </div>
-               <div className="space-y-2">
-                 {(msg.visualData as Array<{name: string, status: string, time: string, load: number}>).map((h, i) => (
-                    <div key={i} className="flex items-center justify-between p-2 rounded bg-neutral-950 border border-neutral-800">
-                       <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${h.status === 'Open' ? 'bg-emerald-500 text-emerald-500' : h.status === 'Divert' ? 'bg-rose-500 text-rose-500' : 'bg-amber-500 text-amber-500'}`}></div>
-                          <div>
-                             <p className="text-xs text-neutral-300 font-medium flex items-center gap-1">
-                                {h.name}
-                                {h.status === 'Divert' && <ShieldAlert className="w-3 h-3 text-rose-500" />}
-                             </p>
-                             <div className="flex items-center gap-2 text-[10px] text-neutral-500">
-                                <MapPin className="w-3 h-3" />
-                                {h.time}
-                             </div>
-                          </div>
-                       </div>
-                       <div className="text-right">
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border uppercase font-bold ${
-                             h.status === 'Divert' ? 'bg-rose-950/30 text-rose-400 border-rose-500/20' : 'bg-neutral-800 text-neutral-400 border-neutral-700'
-                          }`}>
-                             {h.status}
-                          </span>
-                       </div>
-                    </div>
-                 ))}
-               </div>
-            </div>
-         );
-      }
-      if (msg.visualType === 'vitals') {
-         return (
-            <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 my-2 shadow-lg w-full flex flex-col gap-3">
-               <div className="flex items-center gap-2 border-b border-neutral-800 pb-2">
-                 <Activity className="w-4 h-4 text-emerald-400" />
-                 <span className="text-xs uppercase text-neutral-300 font-bold tracking-widest">System Vitals</span>
-               </div>
-               
-               <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-3 bg-neutral-950 border border-neutral-800 rounded-lg relative overflow-hidden">
-                     <div className="absolute top-0 left-0 w-full h-1 bg-rose-500"></div>
-                     <div className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">NEDOCS Score</div>
-                     <div className="text-2xl font-mono font-bold text-rose-500">{msg.visualData.nedocs}</div>
-                     <div className="text-[10px] text-rose-400 mt-1">Disaster Level</div>
+    if (msg.visualType === 'priorityMatrix') {
+      const priorities = msg.visualData as Array<{
+        title: string;
+        description: string;
+        urgency: string;
+        action: string;
+      }>;
+      return (
+        <VisualFrame
+          icon={<AlertTriangle size={12} strokeWidth={2} />}
+          label="IMMEDIATE · PRIORITY MATRIX"
+          tone="accent"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+            {priorities.map((p, idx) => {
+              const urgency = p.urgency.toLowerCase();
+              const tone: 'crit' | 'warn' | 'neutral' =
+                urgency === 'critical' ? 'crit' : urgency === 'high' ? 'warn' : 'neutral';
+              const toneColor =
+                tone === 'crit'
+                  ? COLORS.crit
+                  : tone === 'warn'
+                    ? COLORS.warn
+                    : COLORS.borderStrong;
+              const toneBg =
+                tone === 'crit'
+                  ? COLORS.critDim
+                  : tone === 'warn'
+                    ? COLORS.warnDim
+                    : COLORS.surfaceElev;
+              const pillTone: 'crit' | 'warn' | 'neutral' =
+                tone === 'crit' ? 'crit' : tone === 'warn' ? 'warn' : 'neutral';
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    padding: SPACE.md,
+                    background: toneBg,
+                    border: `1px solid ${toneColor}`,
+                    borderRadius: RADIUS.sm,
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: SPACE.sm,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: COLORS.textPrimary,
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      {p.title}
+                    </span>
+                    <StatusPill tone={pillTone} label={p.urgency} />
                   </div>
-                  <div className="text-center p-3 bg-neutral-950 border border-neutral-800 rounded-lg relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-full h-1 bg-amber-500"></div>
-                      <div className="text-[10px] text-neutral-500 uppercase tracking-widest mb-1">Current Load</div>
-                      <div className="text-2xl font-mono font-bold text-amber-500">{msg.visualData.currentLoad.split('%')[0]}%</div>
-                      <div className="text-[10px] text-amber-400 mt-1">Saturation</div>
-                  </div>
-               </div>
-               
-               <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg text-xs space-y-2">
-                  <div className="flex items-center gap-2 text-cyan-500 mb-2">
-                     <Building2 className="w-3 h-3" />
-                     <span className="font-bold text-[10px] uppercase tracking-widest">House Status</span>
-                  </div>
-                  <div className="flex justify-between items-center"><span className="text-neutral-400">Med/Surg Beds</span> <span className="text-rose-400 font-mono font-bold bg-rose-950/30 px-2 py-0.5 rounded">{msg.visualData.houseStatus.medSurg}</span></div>
-                  <div className="flex justify-between items-center"><span className="text-neutral-400">ICU Beds</span> <span className="text-amber-400 font-mono font-bold bg-amber-950/30 px-2 py-0.5 rounded">{msg.visualData.houseStatus.icu}</span></div>
-                  <div className="flex justify-between items-center"><span className="text-neutral-400">Waiting Room</span> <span className="text-white font-mono font-bold bg-neutral-800 px-2 py-0.5 rounded">{msg.visualData.waitingRoom.split(' ')[0]}</span></div>
-               </div>
-               
-               <div className="bg-blue-950/20 border border-blue-900/30 p-2 rounded text-xs flex items-center gap-2 text-blue-400">
-                 <AlertTriangle className="w-3 h-3 shrink-0" />
-                 <span>{msg.visualData.inboundEMS}</span>
-               </div>
-            </div>
-         );
-      }
-      if (msg.visualType === 'patientInfo') {
-         return (
-            <div className="bg-neutral-900 border border-neutral-700 rounded-lg p-4 my-2 shadow-lg w-full">
-               <div className="flex items-center gap-2 mb-3 border-b border-neutral-800 pb-2">
-                 <UserCircle className="w-4 h-4 text-indigo-400" />
-                 <span className="text-xs uppercase text-neutral-300 font-bold tracking-widest">Patient Information</span>
-               </div>
-               <div className="space-y-2">
-                 {msg.visualData.patients && (
-                    <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg text-xs space-y-2">
-                       <span className="text-neutral-400 font-bold">Patients:</span>
-                       <ul className="list-disc pl-4 text-neutral-300">
-                          {msg.visualData.patients.map((p: string, i: number) => <li key={i}>{p}</li>)}
-                       </ul>
-                       <div className="text-amber-400 mt-2 font-mono">{msg.visualData.status}</div>
-                       <button 
-                         onClick={() => handleSend(`Escalate transport and pharmacy for these patients`)}
-                         className="mt-2 w-full bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded transition-colors flex items-center justify-center gap-2"
-                       >
-                         <AlertTriangle className="w-3 h-3" /> Escalate Discharges
-                       </button>
-                    </div>
-                 )}
-                 {msg.visualData.attending && (
-                    <div className="bg-neutral-950 border border-neutral-800 p-3 rounded-lg text-xs space-y-2">
-                       <span className="text-neutral-400 font-bold">Attending:</span>
-                       <div className="text-neutral-300">{msg.visualData.attending}</div>
-                       <div className="text-emerald-400 mt-2 font-mono flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> {msg.visualData.status}</div>
-                       <button 
-                         onClick={() => handleSend(`Page ${msg.visualData.attending} to pull patient to ICU`)}
-                         className="mt-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white py-1.5 rounded transition-colors flex items-center justify-center gap-2"
-                       >
-                         <Send className="w-3 h-3" /> Page Attending
-                       </button>
-                    </div>
-                 )}
-                 {msg.visualData.info && (
-                    <div className="text-neutral-400 text-xs italic">{msg.visualData.info}</div>
-                 )}
-               </div>
-            </div>
-         );
-      }
-      return null;
-  };
-
-  if (!currentUser || !isOpen) return null;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in duration-300"
-        onClick={onClose}
-      />
-      
-      {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-[600px] bg-[#0a0a0a] border-l border-neutral-800/50 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col animate-in slide-in-from-right duration-500 z-50">
-        
-        {/* Header */}
-        <div className="h-16 border-b border-neutral-800/60 flex items-center justify-between px-6 bg-neutral-900/40 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center border border-rose-500/20 shadow-[0_0_15px_rgba(225,29,72,0.15)]">
-              <Sparkles className="w-5 h-5 text-rose-500" />
-            </div>
-            <div>
-              <div className="font-bold text-base text-neutral-100 flex items-center gap-2 tracking-wide">
-                PULSE Assistant
-                <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest font-bold">Online</span>
-              </div>
-              <div className="text-xs text-neutral-500 font-mono tracking-tight">Tactical Support • {currentUser.role.replace('_', ' ')}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={handleClearChat} className="text-neutral-500 hover:text-rose-400 p-2 hover:bg-neutral-800/80 rounded-lg transition-all duration-200" title="Clear Chat">
-              <Trash2 className="w-4 h-4" />
-            </button>
-            <button onClick={onClose} className="text-neutral-500 hover:text-white p-2 hover:bg-neutral-800/80 rounded-lg transition-all duration-200" title="Close">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-gradient-to-b from-[#0a0a0a] to-[#050505]">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-            
-            {msg.role === 'system' ? (
-               <div className="w-full max-w-[90%] self-start animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  {renderVisual(msg)}
-               </div>
-            ) : (
-              <div className={`flex gap-3 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                {msg.role === 'model' && (
-                  <div className="w-8 h-8 rounded-full bg-neutral-800/80 border border-neutral-700 flex items-center justify-center shrink-0 shadow-sm mt-1">
-                    <Bot className="w-4 h-4 text-neutral-400" />
-                  </div>
-                )}
-                <div className={`rounded-2xl p-4 text-sm leading-relaxed shadow-md animate-in fade-in slide-in-from-bottom-2 duration-300 ${
-                  msg.role === 'user' 
-                    ? 'bg-rose-600 text-white rounded-tr-sm shadow-[0_4px_14px_0_rgba(225,29,72,0.2)]' 
-                    : 'bg-neutral-900/80 text-neutral-200 rounded-tl-sm border border-neutral-800 backdrop-blur-sm'
-                }`}>
-                  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50 prose-pre:border prose-pre:border-neutral-800">
-                    <Markdown remarkPlugins={[remarkGfm]}>{msg.content || ''}</Markdown>
+                  <p
+                    style={{
+                      fontSize: 12,
+                      color: COLORS.textSecondary,
+                      margin: 0,
+                      marginBottom: SPACE.sm,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {p.description}
+                  </p>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                      padding: `${SPACE.xs + 2}px ${SPACE.sm}px`,
+                      background: COLORS.infoDim,
+                      border: `1px solid ${COLORS.info}33`,
+                      borderRadius: RADIUS.sm,
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      color: COLORS.info,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    <Sparkles size={11} strokeWidth={2} />
+                    <span>{p.action}</span>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </VisualFrame>
+      );
+    }
+
+    if (msg.visualType === 'drivers') {
+      const drivers = msg.visualData as Array<{
+        id: string;
+        name: string;
+        status: string;
+        value: string;
+        impact: number;
+      }>;
+      return (
+        <VisualFrame
+          icon={<Wind size={12} strokeWidth={2} />}
+          label="PRESSURE · DRIVERS"
+          tone="accent"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+            {drivers.map((d) => (
+              <DriverBar
+                key={d.id}
+                name={d.name}
+                status={d.status}
+                value={d.value}
+                impact={d.impact}
+              />
+            ))}
+          </div>
+        </VisualFrame>
+      );
+    }
+
+    if (msg.visualType === 'network') {
+      const hospitals = msg.visualData as Array<{
+        name: string;
+        status: string;
+        time: string;
+        load: number;
+      }>;
+      return (
+        <VisualFrame
+          icon={<Network size={12} strokeWidth={2} />}
+          label="NETWORK · STATUS"
+          tone="info"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+            {hospitals.map((h, i) => {
+              const statusColor =
+                h.status === 'Open'
+                  ? COLORS.ok
+                  : h.status === 'Divert'
+                    ? COLORS.crit
+                    : COLORS.warn;
+              const pillTone: 'ok' | 'crit' | 'warn' =
+                h.status === 'Open' ? 'ok' : h.status === 'Divert' ? 'crit' : 'warn';
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: `${SPACE.sm}px ${SPACE.md}px`,
+                    background: COLORS.bgDeep,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.md,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: statusColor,
+                        boxShadow: `0 0 6px ${statusColor}`,
+                      }}
+                    />
+                    <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.xs + 2,
+                          color: COLORS.textPrimary,
+                          fontSize: 12,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {h.name}
+                        {h.status === 'Divert' && (
+                          <ShieldAlert size={11} strokeWidth={2} color={COLORS.crit} />
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontFamily: FONTS.mono,
+                          fontSize: 10,
+                          color: COLORS.textMuted,
+                          marginTop: 2,
+                          letterSpacing: '0.08em',
+                        }}
+                      >
+                        <MapPin size={10} strokeWidth={2} />
+                        {h.time}
+                      </div>
+                    </div>
+                  </div>
+                  <StatusPill tone={pillTone} label={h.status} />
+                </div>
+              );
+            })}
+          </div>
+        </VisualFrame>
+      );
+    }
+
+    if (msg.visualType === 'vitals') {
+      const v = msg.visualData as {
+        nedocs: number;
+        currentLoad: string;
+        houseStatus: { medSurg: string; icu: string; psych: string };
+        waitingRoom: string;
+        inboundEMS: string;
+      };
+      return (
+        <VisualFrame
+          icon={<Activity size={12} strokeWidth={2} />}
+          label="SYSTEM · VITALS"
+          tone="ok"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: SPACE.sm,
+              }}
+            >
+              <VitalStatBox
+                label="NEDOCS"
+                value={String(v.nedocs)}
+                sub="Disaster Level"
+                tone="crit"
+              />
+              <VitalStatBox
+                label="Current Load"
+                value={v.currentLoad.split('%')[0] + '%'}
+                sub="Saturation"
+                tone="warn"
+              />
+            </div>
+            <div
+              style={{
+                background: COLORS.bgDeep,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+                padding: SPACE.md,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.sm,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  paddingBottom: SPACE.xs,
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  marginBottom: SPACE.xs,
+                }}
+              >
+                <Building2 size={11} strokeWidth={2} color={COLORS.info} />
+                <Mono tone="secondary" size="xs" style={{ color: COLORS.info }}>
+                  HOUSE STATUS
+                </Mono>
+              </div>
+              <HouseRow label="Med/Surg Beds" value={v.houseStatus.medSurg} tone="crit" />
+              <HouseRow label="ICU Beds" value={v.houseStatus.icu} tone="warn" />
+              <HouseRow
+                label="Waiting Room"
+                value={v.waitingRoom.split(' ')[0] + ' Patients'}
+                tone="neutral"
+              />
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                padding: `${SPACE.xs + 2}px ${SPACE.sm}px`,
+                background: COLORS.infoDim,
+                border: `1px solid ${COLORS.info}33`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.info,
+                fontSize: 11,
+                fontFamily: FONTS.mono,
+                letterSpacing: '0.04em',
+              }}
+            >
+              <AlertTriangle size={11} strokeWidth={2} style={{ flexShrink: 0 }} />
+              <span>{v.inboundEMS}</span>
+            </div>
+          </div>
+        </VisualFrame>
+      );
+    }
+
+    if (msg.visualType === 'patientInfo') {
+      const data = msg.visualData as {
+        patients?: string[];
+        attending?: string;
+        status?: string;
+        info?: string;
+      };
+      return (
+        <VisualFrame
+          icon={<UserCircle size={12} strokeWidth={2} />}
+          label="PATIENT · INFORMATION"
+          tone="info"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+            {data.patients && (
+              <div
+                style={{
+                  background: COLORS.bgDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  padding: SPACE.md,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: SPACE.sm,
+                }}
+              >
+                <Mono tone="muted" size="xs">
+                  PATIENTS
+                </Mono>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: 18,
+                    color: COLORS.textSecondary,
+                    fontSize: 12,
+                    fontFamily: FONTS.mono,
+                    letterSpacing: '0.04em',
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {data.patients.map((p, i) => (
+                    <li key={i}>{p}</li>
+                  ))}
+                </ul>
+                {data.status && (
+                  <div
+                    style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      color: COLORS.warn,
+                      letterSpacing: '0.08em',
+                    }}
+                  >
+                    {data.status}
+                  </div>
+                )}
+                <TacticalButton
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  icon={<AlertTriangle size={12} strokeWidth={2} />}
+                  onClick={() => handleSend('Escalate transport and pharmacy for these patients')}
+                >
+                  Escalate Discharges
+                </TacticalButton>
+              </div>
+            )}
+            {data.attending && (
+              <div
+                style={{
+                  background: COLORS.bgDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  padding: SPACE.md,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: SPACE.sm,
+                }}
+              >
+                <Mono tone="muted" size="xs">
+                  ATTENDING
+                </Mono>
+                <div style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 500 }}>
+                  {data.attending}
+                </div>
+                {data.status && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.xs,
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      color: COLORS.ok,
+                      letterSpacing: '0.06em',
+                    }}
+                  >
+                    <CheckCircle2 size={11} strokeWidth={2} />
+                    {data.status}
+                  </div>
+                )}
+                <TacticalButton
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  icon={<Send size={12} strokeWidth={2} />}
+                  onClick={() => handleSend(`Page ${data.attending} to pull patient to ICU`)}
+                >
+                  Page Attending
+                </TacticalButton>
+              </div>
+            )}
+            {data.info && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: COLORS.textMuted,
+                  fontStyle: 'italic',
+                  padding: SPACE.sm,
+                }}
+              >
+                {data.info}
               </div>
             )}
           </div>
-        ))}
-        {isTyping && (
-          <div className="flex justify-start animate-in fade-in duration-200">
-             <div className="flex gap-3 max-w-[85%]">
-               <div className="w-8 h-8 rounded-full bg-neutral-800/80 border border-neutral-700 flex items-center justify-center shrink-0 shadow-sm mt-1">
-                 <Bot className="w-4 h-4 text-neutral-400" />
-               </div>
-               <div className="bg-neutral-900/80 backdrop-blur-sm rounded-2xl p-4 rounded-tl-sm border border-neutral-800 flex gap-2 items-center shadow-md">
-                  <div className="flex gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-rose-500/80 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="w-1.5 h-1.5 bg-rose-500/80 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="w-1.5 h-1.5 bg-rose-500/80 rounded-full animate-bounce"></span>
-                  </div>
-               </div>
-             </div>
-          </div>
-        )}
-        <div ref={chatEndRef} />
-      </div>
+        </VisualFrame>
+      );
+    }
 
-      {/* Quick Actions */}
-      {messages.length < 3 && !isTyping && (
-        <div className="px-6 pb-3 bg-[#050505] shrink-0 flex gap-2 overflow-x-auto custom-scrollbar pt-2">
-          <button onClick={() => handleSend("What are the current system vitals?")} className="whitespace-nowrap text-xs bg-neutral-900 hover:bg-neutral-800 text-neutral-300 px-4 py-2 rounded-full border border-neutral-800 transition-all duration-200 hover:border-neutral-700 shadow-sm">
-            Check Vitals
-          </button>
-          <button onClick={() => handleSend("Show me the pressure drivers")} className="whitespace-nowrap text-xs bg-neutral-900 hover:bg-neutral-800 text-neutral-300 px-4 py-2 rounded-full border border-neutral-800 transition-all duration-200 hover:border-neutral-700 shadow-sm">
-            Pressure Drivers
-          </button>
-          <button onClick={() => handleSend("What is the regional network status?")} className="whitespace-nowrap text-xs bg-neutral-900 hover:bg-neutral-800 text-neutral-300 px-4 py-2 rounded-full border border-neutral-800 transition-all duration-200 hover:border-neutral-700 shadow-sm">
-            Network Status
-          </button>
-        </div>
-      )}
+    return null;
+  };
 
-      {/* Input */}
-      <div className="p-4 border-t border-neutral-800/60 bg-[#050505] shrink-0">
-        {!ai && (
-          <div className="mb-2 text-[11px] text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-3 py-2">
-            Assistant disabled — VITE_GEMINI_API_KEY is not set in this build.
-          </div>
-        )}
-        <div className="relative flex items-center group">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={ai ? 'Ask PULSE...' : 'Assistant offline'}
-            disabled={!ai}
-            className="w-full bg-neutral-900/50 border border-neutral-800 rounded-xl pl-4 pr-12 py-3.5 text-sm text-white focus:outline-none focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/50 transition-all placeholder:text-neutral-600 shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
+  if (!currentUser) return null;
+
+  // ─────────────────────────────────────────────────────────────────────
+  // Drawer layout
+  // ─────────────────────────────────────────────────────────────────────
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: MOTION.fast }}
+            onClick={onClose}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              zIndex: Z.modal - 1,
+            }}
           />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isTyping || !ai}
-            className="absolute right-2 p-2 bg-rose-600 text-white rounded-lg hover:bg-rose-500 disabled:opacity-50 disabled:hover:bg-rose-600 transition-all duration-200 hover:scale-105 shadow-md disabled:hover:scale-100"
+
+          {/* Drawer */}
+          <motion.div
+            key="chat-drawer"
+            initial={{ x: 40, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 40, opacity: 0 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              maxWidth: 600,
+              background: COLORS.bg,
+              borderLeft: `1px solid ${COLORS.border}`,
+              boxShadow: SHADOW.modal,
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: Z.modal,
+              fontFamily: FONTS.sans,
+              color: COLORS.textPrimary,
+              overflow: 'hidden',
+            }}
           >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      </div>
-    </>
+            {/* Corner brackets */}
+            <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1} />
+
+            {/* Scanning line */}
+            <ScanningLine />
+
+            {/* Header */}
+            <div
+              style={{
+                position: 'relative',
+                height: 64,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: `0 ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surface,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 40,
+                    height: 40,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: COLORS.bgDeep,
+                    border: `1px solid ${COLORS.accent}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.accent,
+                    boxShadow: SHADOW.accentGlowSm,
+                  }}
+                >
+                  <Sparkles size={18} strokeWidth={2} />
+                  <CornerBracket position="tl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                  <CornerBracket position="tr" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                  <CornerBracket position="bl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                  <CornerBracket position="br" color={COLORS.accent} size={4} thickness={1} inset={-1} />
+                </div>
+                <div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                    }}
+                  >
+                    <BracketLabel tone="accent">PULSE · ASSISTANT</BracketLabel>
+                    {ai ? (
+                      <StatusPill tone="ok" pulse label="ONLINE" />
+                    ) : (
+                      <StatusPill tone="warn" label="OFFLINE" />
+                    )}
+                  </div>
+                  <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>
+                    TACTICAL SUPPORT · {currentUser.role.replace('_', ' ')}
+                  </Mono>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+                <TacticalButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearChat}
+                  icon={<Trash2 size={14} strokeWidth={2} />}
+                  title="Clear chat"
+                >
+                  CLEAR
+                </TacticalButton>
+                <TacticalButton
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  icon={<X size={14} strokeWidth={2} />}
+                  title="Close"
+                >
+                  CLOSE
+                </TacticalButton>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: SPACE.lg,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.lg,
+                background: `linear-gradient(to bottom, ${COLORS.bg} 0%, ${COLORS.bgDeep} 100%)`,
+              }}
+              className="custom-scrollbar"
+            >
+              {messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  {msg.role === 'system' ? (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: MOTION.base, ease: MOTION.ease }}
+                      style={{ width: '100%', maxWidth: '92%', alignSelf: 'flex-start' }}
+                    >
+                      {renderVisual(msg)}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: MOTION.base, ease: MOTION.ease }}
+                      style={{
+                        display: 'flex',
+                        gap: SPACE.sm + 2,
+                        maxWidth: '88%',
+                        flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                      }}
+                    >
+                      {msg.role === 'model' && (
+                        <div
+                          style={{
+                            width: 30,
+                            height: 30,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: RADIUS.sm,
+                            color: COLORS.accent,
+                            marginTop: 2,
+                          }}
+                        >
+                          <Bot size={14} strokeWidth={2} />
+                        </div>
+                      )}
+                      <div
+                        style={{
+                          position: 'relative',
+                          padding: `${SPACE.sm + 2}px ${SPACE.md}px`,
+                          background:
+                            msg.role === 'user' ? COLORS.accentDim : COLORS.surface,
+                          border: `1px solid ${
+                            msg.role === 'user' ? COLORS.accent : COLORS.border
+                          }`,
+                          borderRadius: RADIUS.sm,
+                          color: COLORS.textPrimary,
+                          fontSize: 13,
+                          lineHeight: 1.55,
+                          boxShadow:
+                            msg.role === 'user'
+                              ? `0 0 12px ${COLORS.accentGlow}`
+                              : '0 2px 8px rgba(0,0,0,0.4)',
+                        }}
+                      >
+                        {msg.role === 'user' && (
+                          <>
+                            <CornerBracket
+                              position="tl"
+                              color={COLORS.accent}
+                              size={5}
+                              thickness={1}
+                            />
+                            <CornerBracket
+                              position="br"
+                              color={COLORS.accent}
+                              size={5}
+                              thickness={1}
+                            />
+                          </>
+                        )}
+                        <div
+                          style={{
+                            display: 'block',
+                          }}
+                          className="chat-markdown"
+                        >
+                          <Markdown remarkPlugins={[remarkGfm]}>{msg.content || ''}</Markdown>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              ))}
+
+              {/* Typing indicator */}
+              {isTyping && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ display: 'flex', justifyContent: 'flex-start' }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: SPACE.sm + 2,
+                      alignItems: 'flex-start',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 30,
+                        height: 30,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: COLORS.surface,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.accent,
+                      }}
+                    >
+                      <Bot size={14} strokeWidth={2} />
+                    </div>
+                    <div
+                      style={{
+                        padding: `${SPACE.sm + 2}px ${SPACE.md}px`,
+                        background: COLORS.surface,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Mono tone="muted" size="xs" style={{ marginRight: SPACE.sm }}>
+                        THINKING
+                      </Mono>
+                      {[0, 0.15, 0.3].map((delay, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            width: 5,
+                            height: 5,
+                            background: COLORS.accent,
+                            borderRadius: '50%',
+                            animation: `chat-bounce 1s ease-in-out ${delay}s infinite`,
+                            boxShadow: `0 0 4px ${COLORS.accentGlow}`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Quick Actions */}
+            {messages.length < 3 && !isTyping && (
+              <div
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.lg}px 0`,
+                  background: COLORS.bg,
+                  overflowX: 'auto',
+                }}
+                className="custom-scrollbar"
+              >
+                {[
+                  { label: 'CHECK VITALS', query: 'What are the current system vitals?' },
+                  { label: 'PRESSURE DRIVERS', query: 'Show me the pressure drivers' },
+                  { label: 'NETWORK STATUS', query: 'What is the regional network status?' },
+                ].map((q) => (
+                  <TacticalButton
+                    key={q.label}
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleSend(q.query)}
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    {q.label}
+                  </TacticalButton>
+                ))}
+              </div>
+            )}
+
+            {/* Input */}
+            <div
+              style={{
+                flexShrink: 0,
+                padding: SPACE.md,
+                borderTop: `1px solid ${COLORS.border}`,
+                background: COLORS.bg,
+              }}
+            >
+              {!ai && (
+                <div
+                  style={{
+                    marginBottom: SPACE.sm,
+                    padding: `${SPACE.xs + 2}px ${SPACE.sm}px`,
+                    background: COLORS.warnDim,
+                    border: `1px solid ${COLORS.warn}33`,
+                    borderRadius: RADIUS.sm,
+                    fontSize: 11,
+                    fontFamily: FONTS.mono,
+                    color: COLORS.warn,
+                    letterSpacing: '0.06em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.xs,
+                  }}
+                >
+                  <AlertTriangle size={11} strokeWidth={2} />
+                  ASSISTANT DISABLED — VITE_GEMINI_API_KEY NOT SET
+                </div>
+              )}
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: COLORS.surface,
+                  border: `1px solid ${inputFocused ? COLORS.accent : COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  boxShadow: inputFocused ? `0 0 12px ${COLORS.accentGlow}` : 'none',
+                  transition: `border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease`,
+                }}
+              >
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  placeholder={ai ? 'Query PULSE Assistant…' : 'ASSISTANT OFFLINE'}
+                  disabled={!ai}
+                  style={{
+                    width: '100%',
+                    padding: `${SPACE.sm + 2}px ${SPACE.md}px`,
+                    paddingRight: 52,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: COLORS.textPrimary,
+                    fontSize: 13,
+                    fontFamily: FONTS.sans,
+                    letterSpacing: '-0.003em',
+                  }}
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isTyping || !ai}
+                  aria-label="Send message"
+                  style={{
+                    position: 'absolute',
+                    right: 6,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      !input.trim() || isTyping || !ai ? COLORS.surfaceElev : COLORS.accent,
+                    border: `1px solid ${
+                      !input.trim() || isTyping || !ai ? COLORS.border : COLORS.accent
+                    }`,
+                    borderRadius: RADIUS.sm,
+                    color:
+                      !input.trim() || isTyping || !ai ? COLORS.textMuted : COLORS.textPrimary,
+                    cursor:
+                      !input.trim() || isTyping || !ai ? 'not-allowed' : 'pointer',
+                    transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                    boxShadow:
+                      !input.trim() || isTyping || !ai ? 'none' : SHADOW.accentGlowSm,
+                  }}
+                >
+                  <Send size={14} strokeWidth={2} />
+                </button>
+              </div>
+              <div
+                style={{
+                  marginTop: SPACE.xs + 2,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Mono tone="muted" size="xs">
+                  ENTER · SEND
+                </Mono>
+                <Mono tone="dim" size="xs">
+                  SECURE · TLS 1.3
+                </Mono>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Local styles for chat-specific effects */}
+          <style>
+            {`
+              @keyframes chat-bounce {
+                0%, 100% { transform: translateY(0); opacity: 0.5; }
+                50% { transform: translateY(-3px); opacity: 1; }
+              }
+              .chat-markdown p { margin: 0 0 6px 0; }
+              .chat-markdown p:last-child { margin-bottom: 0; }
+              .chat-markdown ul, .chat-markdown ol { margin: 4px 0; padding-left: 18px; }
+              .chat-markdown li { margin: 2px 0; }
+              .chat-markdown code {
+                font-family: ${FONTS.mono};
+                font-size: 11px;
+                background: ${COLORS.bgDeep};
+                padding: 1px 5px;
+                border-radius: 2px;
+                border: 1px solid ${COLORS.border};
+              }
+              .chat-markdown pre {
+                font-family: ${FONTS.mono};
+                font-size: 11px;
+                background: ${COLORS.bgDeep};
+                padding: 8px 10px;
+                border-radius: 2px;
+                border: 1px solid ${COLORS.border};
+                overflow-x: auto;
+                margin: 6px 0;
+              }
+              .chat-markdown pre code {
+                background: transparent;
+                border: none;
+                padding: 0;
+              }
+              .chat-markdown strong { color: ${COLORS.textPrimary}; font-weight: 600; }
+              .chat-markdown a { color: ${COLORS.accent}; text-decoration: underline; }
+            `}
+          </style>
+        </>
+      )}
+    </AnimatePresence>
   );
 };

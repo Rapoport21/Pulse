@@ -1,6 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Radio, ShieldAlert, PhoneCall, PhoneOff, Bot, Activity, User, CheckCircle2, Clock } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Radio,
+  ShieldAlert,
+  PhoneCall,
+  PhoneOff,
+  Bot,
+  Activity,
+  User,
+  CheckCircle2,
+  Clock,
+  Siren,
+} from 'lucide-react';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
+import {
+  COLORS,
+  FONTS,
+  SPACE,
+  RADIUS,
+  MOTION,
+  CHROME,
+  Mono,
+  BracketLabel,
+  StatusPill,
+  CornerBracket,
+  TacticalCard,
+  TacticalButton,
+  KbdKey,
+  ScanningLine,
+  Divider,
+} from './design';
 
 interface TranscriptLine {
   speaker: 'me' | 'them' | 'ai';
@@ -22,7 +51,289 @@ interface CommandSidebarProps {
 const formatActivatedTime = (ts: number | null) => {
   if (!ts) return '—';
   const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return d.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Category header — "// SECTION · ID" mono row
+// ─────────────────────────────────────────────────────────────────────────
+const CategoryHeader: React.FC<{
+  id: string;
+  label: string;
+  meta?: React.ReactNode;
+}> = ({ id, label, meta }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: SPACE.sm,
+      padding: `${SPACE.sm}px ${SPACE.md}px`,
+      borderBottom: `1px solid ${COLORS.border}`,
+      background: COLORS.bgDeep,
+    }}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+      <Mono tone="dim" size="xs">
+        //
+      </Mono>
+      <BracketLabel tone="secondary" size="xs">
+        {id}
+      </BracketLabel>
+      <Mono tone="secondary" size="xs" style={{ whiteSpace: 'nowrap' }}>
+        {label}
+      </Mono>
+    </div>
+    {meta && <div style={{ flexShrink: 0 }}>{meta}</div>}
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// Quick command row — hoverable tactical tree entry with keybinding hint
+// ─────────────────────────────────────────────────────────────────────────
+const CommandRow: React.FC<{
+  icon: React.ReactNode;
+  iconColor: string;
+  label: string;
+  code: string;
+  hint: string;
+  onClick: () => void;
+}> = ({ icon, iconColor, label, code, hint, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.sm,
+        padding: `${SPACE.sm}px ${SPACE.md}px`,
+        background: hovered ? COLORS.surfaceElev : 'transparent',
+        borderLeft: `2px solid ${hovered ? COLORS.accent : 'transparent'}`,
+        cursor: 'pointer',
+        transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+        outline: 'none',
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: 22,
+          height: 22,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: `${iconColor}1a`,
+          border: `1px solid ${iconColor}55`,
+          borderRadius: RADIUS.sm,
+          color: iconColor,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span
+          style={{
+            fontFamily: FONTS.sans,
+            fontSize: 12,
+            fontWeight: 500,
+            color: hovered ? COLORS.textPrimary : COLORS.textSecondary,
+            letterSpacing: '-0.005em',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {label}
+        </span>
+        <Mono tone="dim" size="xs">
+          {code}
+        </Mono>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+        {hint.split('+').map((k, i, arr) => (
+          <React.Fragment key={i}>
+            <KbdKey>{k}</KbdKey>
+            {i < arr.length - 1 && (
+              <Mono tone="dim" size="xs">
+                +
+              </Mono>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Feed entry — compact tactical packet for the live feed
+// ─────────────────────────────────────────────────────────────────────────
+const FeedEntry: React.FC<{
+  sourceId: string;
+  source: string;
+  sourceTone: 'info' | 'warn' | 'crit' | 'ok';
+  text: string;
+  time: string;
+  critical?: boolean;
+}> = ({ sourceId, source, sourceTone, text, time, critical }) => {
+  const sourceColor =
+    sourceTone === 'info'
+      ? COLORS.info
+      : sourceTone === 'warn'
+      ? COLORS.warn
+      : sourceTone === 'crit'
+      ? COLORS.crit
+      : COLORS.ok;
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        padding: `${SPACE.sm}px ${SPACE.md}px`,
+        background: critical ? `${COLORS.accent}0f` : COLORS.surface,
+        border: `1px solid ${critical ? COLORS.accent : COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        overflow: 'hidden',
+      }}
+    >
+      {critical && (
+        <>
+          <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} />
+          <CornerBracket position="tr" color={COLORS.accent} size={6} thickness={1} />
+          <CornerBracket position="bl" color={COLORS.accent} size={6} thickness={1} />
+          <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} />
+        </>
+      )}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: SPACE.sm,
+          marginBottom: 4,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, minWidth: 0 }}>
+          <span
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: RADIUS.full,
+              background: sourceColor,
+              boxShadow: `0 0 6px ${sourceColor}`,
+              flexShrink: 0,
+            }}
+          />
+          <Mono tone="dim" size="xs">
+            {sourceId}
+          </Mono>
+          <Mono
+            size="xs"
+            style={{
+              color: sourceColor,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {source}
+          </Mono>
+        </div>
+        <Mono tone="dim" size="xs" style={{ flexShrink: 0 }}>
+          {time}
+        </Mono>
+      </div>
+      <div
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          color: critical ? COLORS.textPrimary : COLORS.textSecondary,
+          lineHeight: 1.4,
+          letterSpacing: '-0.003em',
+        }}
+      >
+        {text}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Transcript line — tactical data packet styling
+// ─────────────────────────────────────────────────────────────────────────
+const TranscriptPacket: React.FC<{
+  line: TranscriptLine;
+  index: number;
+}> = ({ line, index }) => {
+  const isMe = line.speaker === 'me';
+  const isAi = line.speaker === 'ai';
+
+  const speakerLabel = isMe ? 'OPERATOR' : isAi ? 'PULSE.AI' : 'REMOTE';
+  const speakerColor = isMe ? COLORS.info : isAi ? COLORS.accent : COLORS.ok;
+  const borderColor = isAi ? COLORS.accent : COLORS.border;
+  const bg = isAi ? `${COLORS.accent}0f` : COLORS.surface;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+      style={{
+        position: 'relative',
+        padding: `${SPACE.sm}px ${SPACE.md}px`,
+        background: bg,
+        border: `1px solid ${borderColor}`,
+        borderRadius: RADIUS.sm,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+          <Mono tone="dim" size="xs">
+            #{String(index).padStart(3, '0')}
+          </Mono>
+          {isAi && <Bot size={10} color={speakerColor} strokeWidth={2} />}
+          <Mono size="xs" style={{ color: speakerColor }}>
+            {speakerLabel}
+          </Mono>
+        </div>
+      </div>
+      <div
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          color: COLORS.textPrimary,
+          lineHeight: 1.45,
+          letterSpacing: '-0.003em',
+        }}
+      >
+        {line.text}
+      </div>
+    </motion.div>
+  );
 };
 
 export const CommandSidebar = ({
@@ -32,7 +343,9 @@ export const CommandSidebar = ({
   onActivateSurge,
 }: CommandSidebarProps) => {
   const [activeCall, setActiveCall] = useState<'nurse' | 'blood_bank' | null>(null);
-  const [callState, setCallState] = useState<'calling' | 'connected' | 'ai_speaking' | 'ended'>('ended');
+  const [callState, setCallState] = useState<
+    'calling' | 'connected' | 'ai_speaking' | 'ended'
+  >('ended');
   const [callDuration, setCallDuration] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [actionTasks, setActionTasks] = useState<ActionTask[]>([]);
@@ -41,7 +354,7 @@ export const CommandSidebar = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (callState === 'connected' || callState === 'ai_speaking') {
-      interval = setInterval(() => setCallDuration(d => d + 1), 1000);
+      interval = setInterval(() => setCallDuration((d) => d + 1), 1000);
     }
     return () => clearInterval(interval);
   }, [callState]);
@@ -56,37 +369,96 @@ export const CommandSidebar = ({
   // Mock call simulation
   useEffect(() => {
     if (callState === 'connected') {
-      let sequence: { t: number, speaker: 'me' | 'them' | 'ai', text: string, task?: { task: string, assignee: string } }[] = [];
-      
+      let sequence: {
+        t: number;
+        speaker: 'me' | 'them' | 'ai';
+        text: string;
+        task?: { task: string; assignee: string };
+      }[] = [];
+
       if (activeCall === 'nurse') {
         sequence = [
           { t: 1000, speaker: 'them', text: 'ER Charge Nurse, go ahead.' },
-          { t: 3000, speaker: 'me', text: 'We have 4 criticals inbound. Need 2 beds in Med/Surg immediately.' },
-          { t: 6000, speaker: 'them', text: 'Understood. I will expedite discharges for room 204 and 206.' },
-          { t: 9000, speaker: 'ai', text: '[AI Note] Action identified: Expedite discharges for rooms 204, 206.', task: { task: 'Expedite discharges (204, 206)', assignee: 'ER Charge Nurse' } },
-          { t: 12000, speaker: 'me', text: 'Also need respiratory therapy down here.' },
+          {
+            t: 3000,
+            speaker: 'me',
+            text: 'We have 4 criticals inbound. Need 2 beds in Med/Surg immediately.',
+          },
+          {
+            t: 6000,
+            speaker: 'them',
+            text: 'Understood. I will expedite discharges for room 204 and 206.',
+          },
+          {
+            t: 9000,
+            speaker: 'ai',
+            text: '[AI Note] Action identified: Expedite discharges for rooms 204, 206.',
+            task: {
+              task: 'Expedite discharges (204, 206)',
+              assignee: 'ER Charge Nurse',
+            },
+          },
+          {
+            t: 12000,
+            speaker: 'me',
+            text: 'Also need respiratory therapy down here.',
+          },
           { t: 15000, speaker: 'them', text: 'Paging RT now.' },
-          { t: 17000, speaker: 'ai', text: '[AI Note] Action identified: Page Respiratory Therapy to ER.', task: { task: 'Page RT to ER', assignee: 'ER Charge Nurse' } },
+          {
+            t: 17000,
+            speaker: 'ai',
+            text: '[AI Note] Action identified: Page Respiratory Therapy to ER.',
+            task: { task: 'Page RT to ER', assignee: 'ER Charge Nurse' },
+          },
         ];
       } else if (activeCall === 'blood_bank') {
         sequence = [
           { t: 1000, speaker: 'them', text: 'Blood Bank, this is Sarah.' },
-          { t: 3000, speaker: 'me', text: 'Sarah, we have a massive transfusion protocol initiating in Trauma 1.' },
-          { t: 6000, speaker: 'them', text: 'Copy that. MTP for Trauma 1. Preparing first cooler now.' },
-          { t: 9000, speaker: 'ai', text: '[AI Note] Action identified: Prepare MTP cooler for Trauma 1.', task: { task: 'Prepare MTP cooler (Trauma 1)', assignee: 'Blood Bank' } },
-          { t: 12000, speaker: 'me', text: 'We also need 4 units of O-negative sent down immediately.' },
-          { t: 15000, speaker: 'them', text: 'Sending 4 units O-negative via pneumatic tube.' },
-          { t: 17000, speaker: 'ai', text: '[AI Note] Action identified: Send 4 units O-negative via tube.', task: { task: 'Send 4 units O-negative', assignee: 'Blood Bank' } },
+          {
+            t: 3000,
+            speaker: 'me',
+            text: 'Sarah, we have a massive transfusion protocol initiating in Trauma 1.',
+          },
+          {
+            t: 6000,
+            speaker: 'them',
+            text: 'Copy that. MTP for Trauma 1. Preparing first cooler now.',
+          },
+          {
+            t: 9000,
+            speaker: 'ai',
+            text: '[AI Note] Action identified: Prepare MTP cooler for Trauma 1.',
+            task: {
+              task: 'Prepare MTP cooler (Trauma 1)',
+              assignee: 'Blood Bank',
+            },
+          },
+          {
+            t: 12000,
+            speaker: 'me',
+            text: 'We also need 4 units of O-negative sent down immediately.',
+          },
+          {
+            t: 15000,
+            speaker: 'them',
+            text: 'Sending 4 units O-negative via pneumatic tube.',
+          },
+          {
+            t: 17000,
+            speaker: 'ai',
+            text: '[AI Note] Action identified: Send 4 units O-negative via tube.',
+            task: { task: 'Send 4 units O-negative', assignee: 'Blood Bank' },
+          },
         ];
       }
 
-      const timeouts = sequence.map(step => 
+      const timeouts = sequence.map((step) =>
         setTimeout(() => {
-          setTranscript(prev => [...prev, { speaker: step.speaker, text: step.text }]);
+          setTranscript((prev) => [...prev, { speaker: step.speaker, text: step.text }]);
           if (step.task) {
-            setActionTasks(prev => [...prev, step.task!]);
+            setActionTasks((prev) => [...prev, step.task!]);
           }
-        }, step.t)
+        }, step.t),
       );
 
       return () => timeouts.forEach(clearTimeout);
@@ -125,210 +497,717 @@ export const CommandSidebar = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
+
   return (
-    <div className={`w-full md:w-80 border-l flex flex-col h-full shrink-0 transition-colors duration-500 ${isSurgeActive ? 'bg-rose-950/40 border-rose-900/50' : 'bg-neutral-900/80 border-neutral-800'}`}>
-      <div className={`p-4 border-b ${isSurgeActive ? 'border-rose-900/50' : 'border-neutral-800'}`}>
-        <h3 className={`text-xs font-bold uppercase tracking-wider flex items-center gap-2 ${isSurgeActive ? 'text-rose-400' : 'text-neutral-500'}`}>
-          <Radio className="w-4 h-4" /> Command Net
-        </h3>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-        <div className="p-4 space-y-4">
-          {!isSurgeActive ? (
-            <button
-              onClick={onActivateSurge}
-              className="w-full py-4 px-4 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] bg-neutral-800 text-rose-500 hover:bg-neutral-700 border border-rose-900/50"
-            >
-              <ShieldAlert className="w-5 h-5" />
-              ACTIVATE SURGE MODE
-            </button>
-          ) : (
-            <div
-              aria-disabled
-              className="w-full py-3 px-4 rounded-lg font-bold text-sm flex flex-col items-center justify-center gap-1 bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.5)] animate-pulse cursor-not-allowed"
-            >
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4" />
-                🚨 SURGE MODE ACTIVE
-              </div>
-              <div className="text-[10px] font-mono opacity-80">
-                Activated at {formatActivatedTime(surgeActivatedAt)}
-              </div>
-            </div>
-          )}
+    <aside
+      style={{
+        width: '100%',
+        maxWidth: CHROME.sidebarWidth,
+        borderLeft: `1px solid ${isSurgeActive ? COLORS.accent : COLORS.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        flexShrink: 0,
+        background: isSurgeActive
+          ? `linear-gradient(180deg, ${COLORS.accent}0a 0%, ${COLORS.bg} 100%)`
+          : COLORS.bg,
+        transition: `background ${MOTION.base}s ease, border-color ${MOTION.base}s ease`,
+        fontFamily: FONTS.sans,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {isSurgeActive && <ScanningLine />}
 
-          {/* Urgent Tasks Acknowledgment Feed (admin view) */}
-          {isSurgeActive && urgentTasks.length > 0 && (
-            <div className="rounded-lg border border-rose-900/40 bg-rose-950/20 p-3 space-y-2">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-rose-400 flex items-center gap-1.5">
-                <Activity className="w-3 h-3" /> Urgent Tasks ({urgentTasks.filter(t => t.acknowledged).length}/{urgentTasks.length})
-              </div>
-              <div className="space-y-1.5">
-                {urgentTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`text-[11px] p-2 rounded border flex flex-col gap-0.5 ${
-                      t.acknowledged
-                        ? 'bg-emerald-950/30 border-emerald-900/40'
-                        : 'bg-neutral-950 border-neutral-800'
-                    }`}
-                  >
-                    <div className="flex items-start gap-1.5">
-                      {t.acknowledged ? (
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
-                      ) : (
-                        <Clock className="w-3 h-3 text-amber-400 shrink-0 mt-0.5" />
-                      )}
-                      <span className={t.acknowledged ? 'text-emerald-200 line-through' : 'text-neutral-200'}>
-                        {t.title}
-                      </span>
-                    </div>
-                    {t.acknowledged && t.acknowledgedBy && (
-                      <div className="text-[9px] text-emerald-400/80 font-mono pl-4">
-                        ack'd · {t.acknowledgedBy.slice(0, 8)}{' '}
-                        {t.acknowledgedAt && (
-                          <span className="text-emerald-400/50">
-                            @ {new Date(t.acknowledgedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {!activeCall && (
-            <div className={`space-y-2 pt-4 border-t ${isSurgeActive ? 'border-rose-900/30' : 'border-neutral-800'}`}>
-              <h4 className="text-xs font-semibold text-neutral-400">Quick Comms</h4>
-              <button 
-                onClick={() => handleCall('nurse')}
-                className="w-full text-left px-3 py-2 rounded bg-neutral-800/50 hover:bg-neutral-800 text-sm text-neutral-300 flex items-center gap-2 border border-neutral-700/50 transition-all duration-200 hover:scale-[1.02]"
-              >
-                <PhoneCall className="w-3 h-3 text-blue-400" /> Page Charge Nurse
-              </button>
-              <button 
-                onClick={() => handleCall('blood_bank')}
-                className="w-full text-left px-3 py-2 rounded bg-neutral-800/50 hover:bg-neutral-800 text-sm text-neutral-300 flex items-center gap-2 border border-neutral-700/50 transition-all duration-200 hover:scale-[1.02]"
-              >
-                <PhoneCall className="w-3 h-3 text-emerald-400" /> Call Blood Bank
-              </button>
-            </div>
-          )}
-
-          {!activeCall && (
-            <div className={`space-y-3 pt-4 border-t ${isSurgeActive ? 'border-rose-900/30' : 'border-neutral-800'}`}>
-              <h4 className="text-xs font-semibold text-neutral-400">Live Feed</h4>
-              <div className="text-xs space-y-2">
-                <div className={`p-2 rounded border ${isSurgeActive ? 'bg-rose-950/20 border-rose-900/30' : 'bg-neutral-950 border-neutral-800'}`}>
-                  <span className="text-blue-400 font-bold">ER Charge:</span> Holding 4 admissions. Need beds.
-                  <div className="text-[10px] text-neutral-500 mt-1">2m ago</div>
-                </div>
-                <div className={`p-2 rounded border ${isSurgeActive ? 'bg-rose-950/20 border-rose-900/30' : 'bg-neutral-950 border-neutral-800'}`}>
-                  <span className="text-purple-400 font-bold">Lab:</span> Analyzer 2 back online.
-                  <div className="text-[10px] text-neutral-500 mt-1">15m ago</div>
-                </div>
-                {isSurgeActive && (
-                  <div className="p-2 rounded border bg-rose-950/40 border-rose-500/50 animate-pulse">
-                    <span className="text-rose-400 font-bold">SYSTEM:</span> Surge Protocol Activated. All non-essential actions suspended.
-                    <div className="text-[10px] text-rose-500/70 mt-1">Just now</div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+      {/* ── Header strip ─────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: SPACE.sm,
+          padding: `${SPACE.md}px ${SPACE.md}px`,
+          borderBottom: `1px solid ${COLORS.border}`,
+          background: COLORS.surface,
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+          <Radio
+            size={12}
+            strokeWidth={2}
+            color={isSurgeActive ? COLORS.accent : COLORS.textMuted}
+          />
+          <BracketLabel tone={isSurgeActive ? 'accent' : 'secondary'} size="xs">
+            CMD.NET
+          </BracketLabel>
         </div>
+        <StatusPill
+          label={isSurgeActive ? 'Active' : 'Standby'}
+          tone={isSurgeActive ? 'crit' : 'ok'}
+          pulse={isSurgeActive}
+          size="xs"
+        />
+      </div>
 
-        {/* Inline Call UI */}
-        {activeCall && (
-          <div className="flex-1 flex flex-col border-t border-neutral-800 bg-neutral-950/50 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="p-4 border-b border-neutral-800 bg-neutral-900/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${callState === 'calling' ? 'bg-cyan-900/50 text-cyan-400' : callState === 'ai_speaking' ? 'bg-rose-900/50 text-rose-400' : 'bg-emerald-900/50 text-emerald-400'}`}>
-                    {callState === 'ai_speaking' ? <Bot className="w-5 h-5" /> : <PhoneCall className="w-5 h-5" />}
-                  </div>
-                  {callState === 'calling' && <div className="absolute inset-0 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin" />}
-                  {callState === 'connected' && <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-neutral-900 animate-pulse" />}
+      {/* ── Scrollable body ───────────────────────────────────── */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {!activeCall && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              padding: SPACE.md,
+              gap: SPACE.md,
+            }}
+          >
+            {/* ═══ Surge activation trigger ═══ */}
+            {!isSurgeActive ? (
+              <TacticalCard
+                interactive
+                role="button"
+                tabIndex={0}
+                onClick={onActivateSurge}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onActivateSurge();
+                  }
+                }}
+                padding="none"
+                style={{
+                  cursor: 'pointer',
+                  padding: `${SPACE.md}px ${SPACE.md}px`,
+                  borderColor: `${COLORS.accent}55`,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 6,
+                  }}
+                >
+                  <Mono tone="dim" size="xs">
+                    // TRIGGER.SURGE_L2
+                  </Mono>
+                  <BracketLabel tone="accent" size="xs">
+                    ARM
+                  </BracketLabel>
                 </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    {activeCall === 'nurse' ? 'Charge Nurse (ER)' : 'Blood Bank'}
-                  </h4>
-                  <div className="text-xs font-mono flex items-center gap-1">
-                    {callState === 'calling' && <span className="text-cyan-400 animate-pulse">Connecting...</span>}
-                    {callState === 'connected' && <span className="text-emerald-400">{formatTime(callDuration)}</span>}
-                    {callState === 'ai_speaking' && <span className="text-rose-400">AI Active - {formatTime(callDuration)}</span>}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: `${COLORS.accent}14`,
+                      border: `1px solid ${COLORS.accent}`,
+                      borderRadius: RADIUS.sm,
+                      color: COLORS.accent,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ShieldAlert size={16} strokeWidth={2} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: COLORS.accent,
+                        letterSpacing: '-0.01em',
+                        marginBottom: 2,
+                      }}
+                    >
+                      Activate Surge Mode
+                    </div>
+                    <Mono tone="muted" size="xs">
+                      Protocol Level 2 · All hands
+                    </Mono>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Transcript Area */}
-            {(callState === 'connected' || callState === 'ai_speaking') && (
-              <div className="flex-1 p-4 overflow-y-auto custom-scrollbar space-y-3" ref={transcriptRef}>
-                {transcript.map((line, i) => (
-                  <div key={i} className={`flex flex-col ${line.speaker === 'me' ? 'items-end' : 'items-start'}`}>
-                    <div className={`max-w-[85%] p-2.5 rounded-lg text-xs ${
-                      line.speaker === 'me' ? 'bg-neutral-800 text-neutral-200 rounded-tr-none' : 
-                      line.speaker === 'ai' ? 'bg-rose-950/30 border border-rose-900/50 text-rose-300 w-full' :
-                      'bg-emerald-950/30 border border-emerald-900/50 text-emerald-300 rounded-tl-none'
-                    }`}>
-                      {line.speaker === 'ai' && <Bot className="w-3 h-3 inline mr-1.5 -mt-0.5" />}
-                      {line.text}
+              </TacticalCard>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: MOTION.base, ease: MOTION.ease }}
+              >
+                <TacticalCard
+                  highlight
+                  padding="none"
+                  style={{
+                    padding: `${SPACE.md}px ${SPACE.md}px`,
+                    borderColor: COLORS.accent,
+                    background: `${COLORS.accent}12`,
+                    boxShadow: `0 0 24px ${COLORS.accent}33`,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 6,
+                    }}
+                  >
+                    <Mono tone="dim" size="xs">
+                      // STATE.SURGE_L2
+                    </Mono>
+                    <StatusPill label="Armed" tone="crit" pulse size="xs" />
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                    }}
+                  >
+                    <motion.div
+                      animate={{ opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 1.8, repeat: Infinity }}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: COLORS.accent,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.textPrimary,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Siren size={16} strokeWidth={2.5} />
+                    </motion.div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: COLORS.textPrimary,
+                          letterSpacing: '-0.01em',
+                          marginBottom: 2,
+                        }}
+                      >
+                        Surge Mode Active
+                      </div>
+                      <Mono tone="accent" size="xs">
+                        T+ {formatActivatedTime(surgeActivatedAt)}
+                      </Mono>
                     </div>
                   </div>
-                ))}
-                {callState === 'ai_speaking' && (
-                  <div className="bg-rose-950/20 border border-rose-900/30 rounded-lg p-3 text-xs text-rose-300 animate-pulse">
-                    <Bot className="w-4 h-4 mb-1" />
-                    Taking over call... "I am the AI assistant for Command. I have logged the requested actions. You may disconnect. Thank you."
-                  </div>
-                )}
-              </div>
+                </TacticalCard>
+              </motion.div>
             )}
 
-            {/* AI Action Extraction */}
-            {actionTasks.length > 0 && (
-              <div className="p-3 bg-neutral-900 border-t border-neutral-800">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-2 flex items-center gap-1.5">
-                  <Activity className="w-3 h-3 text-rose-400" /> Extracted Tasks
-                </div>
-                <div className="space-y-2">
-                  {actionTasks.map((task, i) => (
-                    <div key={i} className="bg-neutral-950 border border-neutral-800 rounded p-2 text-xs flex flex-col gap-1">
-                      <span className="text-neutral-300 font-medium">{task.task}</span>
-                      <span className="text-neutral-500 flex items-center gap-1 text-[10px]">
-                        <User className="w-3 h-3" /> @{task.assignee}
-                      </span>
+            {/* ═══ Urgent tasks feed ═══ */}
+            {isSurgeActive && urgentTasks.length > 0 && (
+              <div
+                style={{
+                  border: `1px solid ${COLORS.accent}55`,
+                  borderRadius: RADIUS.sm,
+                  background: `${COLORS.accent}0a`,
+                  overflow: 'hidden',
+                }}
+              >
+                <CategoryHeader
+                  id="TASKS"
+                  label="Urgent Ops"
+                  meta={
+                    <Mono tone="accent" size="xs">
+                      {ackedCount}/{urgentTasks.length}
+                    </Mono>
+                  }
+                />
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: SPACE.sm,
+                    gap: SPACE.xs,
+                  }}
+                >
+                  {urgentTasks.map((t) => (
+                    <div
+                      key={t.id}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2,
+                        padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                        background: t.acknowledged
+                          ? `${COLORS.ok}0f`
+                          : COLORS.surface,
+                        border: `1px solid ${
+                          t.acknowledged ? `${COLORS.ok}4d` : COLORS.border
+                        }`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 6,
+                        }}
+                      >
+                        {t.acknowledged ? (
+                          <CheckCircle2
+                            size={12}
+                            strokeWidth={2}
+                            color={COLORS.ok}
+                            style={{ marginTop: 2, flexShrink: 0 }}
+                          />
+                        ) : (
+                          <Clock
+                            size={12}
+                            strokeWidth={2}
+                            color={COLORS.warn}
+                            style={{ marginTop: 2, flexShrink: 0 }}
+                          />
+                        )}
+                        <span
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 11,
+                            color: t.acknowledged
+                              ? COLORS.textMuted
+                              : COLORS.textPrimary,
+                            textDecoration: t.acknowledged
+                              ? 'line-through'
+                              : undefined,
+                            lineHeight: 1.4,
+                            letterSpacing: '-0.003em',
+                          }}
+                        >
+                          {t.title}
+                        </span>
+                      </div>
+                      {t.acknowledged && t.acknowledgedBy && (
+                        <div style={{ paddingLeft: 18 }}>
+                          <Mono tone="ok" size="xs">
+                            ACK · {t.acknowledgedBy.slice(0, 8)}
+                            {t.acknowledgedAt && (
+                              <span style={{ color: `${COLORS.ok}80` }}>
+                                {' '}
+                                @{' '}
+                                {new Date(t.acknowledgedAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                })}
+                              </span>
+                            )}
+                          </Mono>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Call Controls */}
-            <div className="p-4 border-t border-neutral-800 bg-neutral-900/80 flex gap-2 shrink-0">
-              {callState === 'connected' && (
-                <button 
-                  onClick={() => setCallState('ai_speaking')}
-                  className="flex-1 py-2 bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-600/50 rounded text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Bot className="w-4 h-4" /> Hand over to AI
-                </button>
-              )}
-              <button 
-                onClick={endCall}
-                className="flex-1 py-2 bg-red-900/50 hover:bg-red-900/80 text-red-400 border border-red-900/50 rounded text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+            {/* ═══ Quick comms ═══ */}
+            <div
+              style={{
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+                background: COLORS.surface,
+                overflow: 'hidden',
+              }}
+            >
+              <CategoryHeader
+                id="COMMS"
+                label="Quick Paging"
+                meta={
+                  <Mono tone="dim" size="xs">
+                    2 targets
+                  </Mono>
+                }
+              />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <CommandRow
+                  icon={<PhoneCall size={11} strokeWidth={2} />}
+                  iconColor={COLORS.info}
+                  label="Page Charge Nurse"
+                  code="CMD.PAGE.NURSE"
+                  hint="G+N"
+                  onClick={() => handleCall('nurse')}
+                />
+                <Divider color={COLORS.border} />
+                <CommandRow
+                  icon={<PhoneCall size={11} strokeWidth={2} />}
+                  iconColor={COLORS.ok}
+                  label="Call Blood Bank"
+                  code="CMD.PAGE.BLOOD"
+                  hint="G+B"
+                  onClick={() => handleCall('blood_bank')}
+                />
+              </div>
+            </div>
+
+            {/* ═══ Live feed ═══ */}
+            <div
+              style={{
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+                background: COLORS.surface,
+                overflow: 'hidden',
+              }}
+            >
+              <CategoryHeader
+                id="FEED"
+                label="Live Telemetry"
+                meta={<StatusPill label="Live" tone="ok" pulse size="xs" />}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: SPACE.xs,
+                  padding: SPACE.sm,
+                }}
               >
-                <PhoneOff className="w-4 h-4" /> End Call
-              </button>
+                <FeedEntry
+                  sourceId="ER-01"
+                  source="ER Charge"
+                  sourceTone="info"
+                  text="Holding 4 admissions. Need beds."
+                  time="T-2m"
+                />
+                <FeedEntry
+                  sourceId="LAB-02"
+                  source="Lab"
+                  sourceTone="warn"
+                  text="Analyzer 2 back online."
+                  time="T-15m"
+                />
+                {isSurgeActive && (
+                  <FeedEntry
+                    sourceId="SYS-00"
+                    source="System"
+                    sourceTone="crit"
+                    text="Surge Protocol Activated. All non-essential actions suspended."
+                    time="T-0s"
+                    critical
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
+
+        {/* ═══ Inline call UI ═══ */}
+        <AnimatePresence>
+          {activeCall && (
+            <motion.div
+              key="call"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: MOTION.base, ease: MOTION.ease }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+                minHeight: 0,
+                borderTop: `1px solid ${COLORS.border}`,
+                background: COLORS.bgDeep,
+              }}
+            >
+              {/* Call header */}
+              <div
+                style={{
+                  padding: `${SPACE.md}px ${SPACE.md}px`,
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: COLORS.surface,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  flexShrink: 0,
+                }}
+              >
+                <div
+                  style={{
+                    position: 'relative',
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      callState === 'ai_speaking'
+                        ? `${COLORS.accent}14`
+                        : callState === 'calling'
+                        ? `${COLORS.info}14`
+                        : `${COLORS.ok}14`,
+                    border: `1px solid ${
+                      callState === 'ai_speaking'
+                        ? COLORS.accent
+                        : callState === 'calling'
+                        ? COLORS.info
+                        : COLORS.ok
+                    }`,
+                    borderRadius: RADIUS.sm,
+                    flexShrink: 0,
+                  }}
+                >
+                  {callState === 'ai_speaking' ? (
+                    <Bot size={16} color={COLORS.accent} strokeWidth={2} />
+                  ) : (
+                    <PhoneCall
+                      size={16}
+                      color={callState === 'calling' ? COLORS.info : COLORS.ok}
+                      strokeWidth={2}
+                    />
+                  )}
+                  <CornerBracket
+                    position="tl"
+                    color={
+                      callState === 'ai_speaking'
+                        ? COLORS.accent
+                        : callState === 'calling'
+                        ? COLORS.info
+                        : COLORS.ok
+                    }
+                    size={4}
+                    thickness={1}
+                  />
+                  <CornerBracket
+                    position="br"
+                    color={
+                      callState === 'ai_speaking'
+                        ? COLORS.accent
+                        : callState === 'calling'
+                        ? COLORS.info
+                        : COLORS.ok
+                    }
+                    size={4}
+                    thickness={1}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Mono tone="dim" size="xs">
+                    // LINK.{activeCall === 'nurse' ? 'NURSE' : 'BLOOD_BANK'}
+                  </Mono>
+                  <div
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.01em',
+                      marginTop: 2,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {activeCall === 'nurse' ? 'Charge Nurse · ER' : 'Blood Bank'}
+                  </div>
+                </div>
+                {callState === 'calling' && (
+                  <StatusPill label="Connecting" tone="info" pulse size="xs" />
+                )}
+                {callState === 'connected' && (
+                  <Mono tone="ok" size="xs">
+                    {formatTime(callDuration)}
+                  </Mono>
+                )}
+                {callState === 'ai_speaking' && (
+                  <Mono tone="accent" size="xs">
+                    AI · {formatTime(callDuration)}
+                  </Mono>
+                )}
+              </div>
+
+              {/* Transcript */}
+              {(callState === 'connected' || callState === 'ai_speaking') && (
+                <div
+                  ref={transcriptRef}
+                  style={{
+                    flex: 1,
+                    padding: SPACE.md,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: SPACE.sm,
+                    minHeight: 0,
+                  }}
+                >
+                  {transcript.map((line, i) => (
+                    <TranscriptPacket key={i} line={line} index={i + 1} />
+                  ))}
+                  {callState === 'ai_speaking' && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 1.8, repeat: Infinity }}
+                      style={{
+                        padding: `${SPACE.sm}px ${SPACE.md}px`,
+                        background: `${COLORS.accent}14`,
+                        border: `1px solid ${COLORS.accent}`,
+                        borderRadius: RADIUS.sm,
+                        display: 'flex',
+                        gap: SPACE.sm,
+                        alignItems: 'flex-start',
+                      }}
+                    >
+                      <Bot
+                        size={14}
+                        color={COLORS.accent}
+                        strokeWidth={2}
+                        style={{ marginTop: 2, flexShrink: 0 }}
+                      />
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 11,
+                          color: COLORS.textPrimary,
+                          lineHeight: 1.45,
+                          letterSpacing: '-0.003em',
+                        }}
+                      >
+                        AI is taking over. "I have logged the requested actions.
+                        You may disconnect. Thank you."
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              )}
+
+              {/* Extracted tasks */}
+              {actionTasks.length > 0 && (
+                <div
+                  style={{
+                    padding: SPACE.md,
+                    background: COLORS.surface,
+                    borderTop: `1px solid ${COLORS.border}`,
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.xs,
+                      marginBottom: SPACE.sm,
+                    }}
+                  >
+                    <Activity size={10} strokeWidth={2} color={COLORS.accent} />
+                    <BracketLabel tone="accent" size="xs">
+                      EXTRACTED
+                    </BracketLabel>
+                    <Mono tone="dim" size="xs">
+                      {actionTasks.length} task{actionTasks.length === 1 ? '' : 's'}
+                    </Mono>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.xs,
+                    }}
+                  >
+                    {actionTasks.map((task, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 2,
+                          padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 11,
+                            fontWeight: 500,
+                            color: COLORS.textPrimary,
+                            letterSpacing: '-0.003em',
+                          }}
+                        >
+                          {task.task}
+                        </span>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <User size={9} strokeWidth={2} color={COLORS.textMuted} />
+                          <Mono tone="muted" size="xs">
+                            @{task.assignee}
+                          </Mono>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Call controls */}
+              <div
+                style={{
+                  padding: SPACE.md,
+                  borderTop: `1px solid ${COLORS.border}`,
+                  background: COLORS.surface,
+                  display: 'flex',
+                  gap: SPACE.sm,
+                  flexShrink: 0,
+                }}
+              >
+                {callState === 'connected' && (
+                  <TacticalButton
+                    variant="primary"
+                    size="sm"
+                    fullWidth
+                    icon={<Bot size={12} strokeWidth={2} />}
+                    onClick={() => setCallState('ai_speaking')}
+                  >
+                    Hand to AI
+                  </TacticalButton>
+                )}
+                <TacticalButton
+                  variant="danger"
+                  size="sm"
+                  fullWidth
+                  icon={<PhoneOff size={12} strokeWidth={2} />}
+                  onClick={endCall}
+                >
+                  End Call
+                </TacticalButton>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </aside>
   );
 };

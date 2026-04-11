@@ -1,6 +1,31 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import {
+  Users,
+  PhoneCall,
+  ShieldAlert,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Search,
+  Filter,
+  MessageSquare,
+} from 'lucide-react';
 import { UserProfile } from '../types';
-import { Users, PhoneCall, ShieldAlert, CheckCircle2, Clock, MapPin, Search, Filter, MessageSquare } from 'lucide-react';
+import {
+  COLORS,
+  FONTS,
+  TYPE,
+  SPACE,
+  RADIUS,
+  MOTION,
+  Mono,
+  BracketLabel,
+  StatusPill,
+  SectionTitle,
+  TacticalCard,
+  CornerBracket,
+} from './design';
 
 interface StaffMember {
   id: string;
@@ -29,160 +54,582 @@ interface RosterProps {
   showToast?: (message: string, type?: 'success' | 'info' | 'error') => void;
 }
 
+type StatusTone = 'ok' | 'warn' | 'info' | 'neutral';
+const statusToTone: Record<StaffMember['status'], StatusTone> = {
+  'On Shift': 'ok',
+  'On Break': 'warn',
+  'On Call': 'info',
+  'Off Duty': 'neutral',
+};
+
+/**
+ * Roster — real-time personnel tracking.
+ * Four KPI cards + tactical table with inline search / department filter.
+ */
 export const Roster: React.FC<RosterProps> = ({ showToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('All');
 
-  const departments = ['All', ...Array.from(new Set(mockStaff.map(s => s.department)))];
+  const departments = ['All', ...Array.from(new Set(mockStaff.map((s) => s.department)))];
 
-  const filteredStaff = mockStaff.filter(staff => {
-    const matchesSearch = staff.name.toLowerCase().includes(searchQuery.toLowerCase()) || staff.role.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDept = departmentFilter === 'All' || staff.department === departmentFilter;
+  const filteredStaff = mockStaff.filter((staff) => {
+    const q = searchQuery.toLowerCase();
+    const matchesSearch =
+      staff.name.toLowerCase().includes(q) ||
+      staff.role.toLowerCase().includes(q) ||
+      staff.id.toLowerCase().includes(q);
+    const matchesDept =
+      departmentFilter === 'All' || staff.department === departmentFilter;
     return matchesSearch && matchesDept;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'On Shift': return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-      case 'On Break': return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-      case 'On Call': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
-      default: return 'text-neutral-400 bg-neutral-500/10 border-neutral-500/20';
-    }
-  };
+  const onShiftCount = mockStaff.filter((s) => s.status === 'On Shift').length;
+  const onBreakCount = mockStaff.filter((s) => s.status === 'On Break').length;
+  const onCallCount = mockStaff.filter((s) => s.status === 'On Call').length;
 
   return (
-    <div className="h-full flex flex-col p-6 bg-black">
-      <div className="flex justify-between items-end mb-6">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: SPACE['2xl'],
+        background: COLORS.bg,
+        gap: SPACE.xl,
+        overflowY: 'auto',
+      }}
+    >
+      {/* Header with inline search + filter */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          gap: SPACE.lg,
+          flexWrap: 'wrap',
+        }}
+      >
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight flex items-center gap-3">
-            <Users className="w-6 h-6 text-purple-400" />
-            Staffing & Roster
-          </h2>
-          <p className="text-neutral-400 text-sm mt-1">Real-time personnel tracking and deployment</p>
+          <SectionTitle
+            id="PERS.ROSTER"
+            label="Staffing & Roster"
+            divider={false}
+            style={{ marginBottom: SPACE.xs }}
+          />
+          <Mono tone="muted" size="xs">
+            // Real-time personnel tracking and deployment
+          </Mono>
         </div>
-        
-        <div className="flex gap-4">
-          <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded px-3 py-2 w-64">
-            <Search className="w-4 h-4 text-neutral-500 mr-2" />
-            <input 
-              type="text" 
-              placeholder="Search staff..." 
-              className="bg-transparent border-none outline-none text-sm text-white w-full placeholder:text-neutral-600"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded px-3 py-2">
-            <Filter className="w-4 h-4 text-neutral-500 mr-2" />
-            <select 
-              className="bg-transparent border-none outline-none text-sm text-white cursor-pointer"
-              value={departmentFilter}
-              onChange={(e) => setDepartmentFilter(e.target.value)}
+        <div style={{ display: 'flex', gap: SPACE.md, alignItems: 'center' }}>
+          <TacticalInput
+            icon={<Search size={13} strokeWidth={2} />}
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search personnel…"
+            width={240}
+          />
+          <TacticalSelect
+            icon={<Filter size={13} strokeWidth={2} />}
+            value={departmentFilter}
+            onChange={setDepartmentFilter}
+            options={departments}
+          />
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: SPACE.md,
+        }}
+      >
+        <KpiCard
+          label="Total On Shift"
+          value={onShiftCount}
+          tone="ok"
+          Icon={CheckCircle2}
+        />
+        <KpiCard
+          label="On Break"
+          value={onBreakCount}
+          tone="warn"
+          Icon={Clock}
+        />
+        <KpiCard
+          label="On Call (Available)"
+          value={onCallCount}
+          tone="info"
+          Icon={PhoneCall}
+        />
+        <KpiCard
+          label="Critical Shortage"
+          value="ICU RN -1"
+          tone="crit"
+          Icon={ShieldAlert}
+          highlight
+        />
+      </div>
+
+      {/* Personnel table */}
+      <TacticalCard
+        padding="none"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          flex: 1,
+          minHeight: 260,
+        }}
+      >
+        {/* Table header row */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '3fr 1.6fr 1.4fr 1.8fr 0.8fr 1.6fr',
+            gap: SPACE.md,
+            padding: `${SPACE.md}px ${SPACE.lg}px`,
+            borderBottom: `1px solid ${COLORS.border}`,
+            background: COLORS.surfaceElev,
+          }}
+        >
+          <Mono tone="muted" size="xs">
+            Personnel
+          </Mono>
+          <Mono tone="muted" size="xs">
+            Department
+          </Mono>
+          <Mono tone="muted" size="xs">
+            Status
+          </Mono>
+          <Mono tone="muted" size="xs">
+            Location
+          </Mono>
+          <Mono tone="muted" size="xs" style={{ textAlign: 'center' }}>
+            Hours
+          </Mono>
+          <Mono tone="muted" size="xs" style={{ textAlign: 'right' }}>
+            Contact
+          </Mono>
+        </div>
+
+        {/* Table body */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {filteredStaff.length === 0 ? (
+            <div
+              style={{
+                padding: SPACE['2xl'],
+                textAlign: 'center',
+                color: COLORS.textMuted,
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+              }}
             >
-              {departments.map(d => (
-                <option key={d} value={d} className="bg-neutral-900">{d}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">Total On Shift</p>
-            <p className="text-2xl font-bold text-white">{mockStaff.filter(s => s.status === 'On Shift').length}</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          </div>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">On Break</p>
-            <p className="text-2xl font-bold text-white">{mockStaff.filter(s => s.status === 'On Break').length}</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-            <Clock className="w-5 h-5 text-amber-500" />
-          </div>
-        </div>
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 flex items-center justify-between">
-          <div>
-            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-1">On Call (Available)</p>
-            <p className="text-2xl font-bold text-white">{mockStaff.filter(s => s.status === 'On Call').length}</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-            <PhoneCall className="w-5 h-5 text-blue-500" />
-          </div>
-        </div>
-        <div className="bg-neutral-900 border border-rose-900/50 rounded-xl p-4 flex items-center justify-between relative overflow-hidden group cursor-pointer hover:border-rose-500/50 transition-colors">
-          <div className="absolute inset-0 bg-rose-500/5 group-hover:bg-rose-500/10 transition-colors"></div>
-          <div className="relative z-10">
-            <p className="text-xs text-rose-400 uppercase tracking-widest mb-1 font-bold">Critical Shortage</p>
-            <p className="text-sm text-neutral-300">ICU RN (-1)</p>
-          </div>
-          <div className="relative z-10 w-10 h-10 rounded-full bg-rose-500/20 flex items-center justify-center">
-            <ShieldAlert className="w-5 h-5 text-rose-500" />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden flex flex-col">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-neutral-800 bg-neutral-950 text-xs font-bold text-neutral-500 uppercase tracking-widest">
-          <div className="col-span-3">Personnel</div>
-          <div className="col-span-2">Department</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-2">Location</div>
-          <div className="col-span-1 text-center">Hours</div>
-          <div className="col-span-2 text-right">Contact</div>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto">
-          {filteredStaff.map(staff => (
-            <div key={staff.id} className="grid grid-cols-12 gap-4 p-4 border-b border-neutral-800/50 hover:bg-neutral-800/30 transition-colors items-center group">
-              <div className="col-span-3 flex items-center gap-3">
-                <div className="w-8 h-8 rounded bg-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-300">
-                  {staff.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <div className="font-bold text-white text-sm">{staff.name}</div>
-                  <div className="text-xs text-neutral-500">{staff.role}</div>
-                </div>
-              </div>
-              <div className="col-span-2 text-sm text-neutral-300">{staff.department}</div>
-              <div className="col-span-2">
-                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${getStatusColor(staff.status)}`}>
-                  {staff.status}
-                </span>
-              </div>
-              <div className="col-span-2 flex items-center gap-1 text-sm text-neutral-400">
-                <MapPin className="w-3 h-3" /> {staff.location}
-              </div>
-              <div className="col-span-1 text-center text-sm font-mono text-neutral-300">
-                {staff.hoursWorked > 0 ? `${staff.hoursWorked}h` : '-'}
-              </div>
-              <div className="col-span-2 flex items-center justify-end gap-3">
-                <span className="text-sm font-mono text-neutral-400">{staff.contact}</span>
-                <button 
-                  onClick={() => {
-                    if (showToast) showToast(`Message sent to ${staff.name}`, 'success');
-                  }}
-                  className="p-1.5 text-neutral-500 hover:text-white hover:bg-neutral-700 rounded transition-colors opacity-0 group-hover:opacity-100" 
-                  title="Send Message"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                </button>
-              </div>
+              // No personnel found
             </div>
-          ))}
-          {filteredStaff.length === 0 && (
-            <div className="p-8 text-center text-neutral-500">
-              No personnel found matching your criteria.
-            </div>
+          ) : (
+            filteredStaff.map((staff, i) => (
+              <StaffRow
+                key={staff.id}
+                staff={staff}
+                index={i}
+                onMessage={() => {
+                  if (showToast) showToast(`Message sent to ${staff.name}`, 'success');
+                }}
+              />
+            ))
           )}
         </div>
+      </TacticalCard>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// KPI card
+// ─────────────────────────────────────────────────────────────────────────
+const KpiCard: React.FC<{
+  label: string;
+  value: string | number;
+  tone: 'ok' | 'warn' | 'info' | 'crit';
+  Icon: React.ComponentType<{ size?: number; strokeWidth?: number; color?: string }>;
+  highlight?: boolean;
+}> = ({ label, value, tone, Icon, highlight }) => {
+  const toneColor =
+    tone === 'ok'
+      ? COLORS.ok
+      : tone === 'warn'
+      ? COLORS.warn
+      : tone === 'info'
+      ? COLORS.info
+      : COLORS.crit;
+
+  return (
+    <TacticalCard
+      padding="md"
+      accentBar={highlight}
+      highlight={highlight}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: SPACE.lg,
+        gap: SPACE.md,
+        minHeight: 88,
+      }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <Mono tone={highlight ? 'accent' : 'muted'} size="xs">
+          {label}
+        </Mono>
+        <span
+          style={{
+            fontFamily: FONTS.sans,
+            fontSize: highlight ? 18 : 28,
+            fontWeight: 600,
+            letterSpacing: '-0.03em',
+            lineHeight: 0.95,
+            color: highlight ? COLORS.textPrimary : toneColor,
+          }}
+        >
+          {value}
+        </span>
       </div>
+      <div
+        style={{
+          position: 'relative',
+          width: 40,
+          height: 40,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: `${toneColor}1a`,
+          border: `1px solid ${toneColor}`,
+          borderRadius: RADIUS.sm,
+          flexShrink: 0,
+        }}
+      >
+        <Icon size={18} strokeWidth={2} color={toneColor} />
+        <CornerBracket position="tl" color={toneColor} size={4} thickness={1} inset={-1} />
+        <CornerBracket position="br" color={toneColor} size={4} thickness={1} inset={-1} />
+      </div>
+    </TacticalCard>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Staff row — the main table element
+// ─────────────────────────────────────────────────────────────────────────
+const StaffRow: React.FC<{
+  staff: StaffMember;
+  index: number;
+  onMessage: () => void;
+}> = ({ staff, index, onMessage }) => {
+  const [hovered, setHovered] = useState(false);
+  const tone = statusToTone[staff.status];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.02, duration: MOTION.base, ease: MOTION.ease }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '3fr 1.6fr 1.4fr 1.8fr 0.8fr 1.6fr',
+        gap: SPACE.md,
+        padding: `${SPACE.md}px ${SPACE.lg}px`,
+        borderBottom: `1px solid ${COLORS.border}`,
+        alignItems: 'center',
+        background: hovered ? COLORS.surfaceHover : 'transparent',
+        transition: `background ${MOTION.fast}s ease`,
+      }}
+    >
+      {/* Personnel */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, minWidth: 0 }}>
+        <div
+          style={{
+            position: 'relative',
+            width: 32,
+            height: 32,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: COLORS.surfaceElev,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.sm,
+            fontFamily: FONTS.mono,
+            fontSize: 10,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            color: COLORS.textPrimary,
+            flexShrink: 0,
+          }}
+        >
+          {staff.name.split(' ').map((n) => n[0]).join('')}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: FONTS.sans,
+              fontSize: 13,
+              fontWeight: 500,
+              color: COLORS.textPrimary,
+              letterSpacing: '-0.005em',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {staff.name}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              gap: SPACE.sm,
+              alignItems: 'center',
+              marginTop: 2,
+            }}
+          >
+            <Mono tone="muted" size="xs">
+              {staff.id}
+            </Mono>
+            <span style={{ color: COLORS.textDim }}>·</span>
+            <span
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: 11,
+                color: COLORS.textSecondary,
+              }}
+            >
+              {staff.role}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Department */}
+      <span
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          color: COLORS.textSecondary,
+        }}
+      >
+        {staff.department}
+      </span>
+
+      {/* Status */}
+      <div>
+        <StatusPill label={staff.status} tone={tone} />
+      </div>
+
+      {/* Location */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          color: COLORS.textSecondary,
+          minWidth: 0,
+        }}
+      >
+        <MapPin size={11} strokeWidth={2} color={COLORS.textMuted} />
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {staff.location}
+        </span>
+      </div>
+
+      {/* Hours */}
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 12,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+          letterSpacing: '0.04em',
+        }}
+      >
+        {staff.hoursWorked > 0 ? `${staff.hoursWorked}h` : '—'}
+      </span>
+
+      {/* Contact + message button */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: SPACE.md,
+          minWidth: 0,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 11,
+            color: COLORS.textSecondary,
+            letterSpacing: '0.04em',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {staff.contact}
+        </span>
+        <button
+          type="button"
+          onClick={onMessage}
+          title="Send Message"
+          style={{
+            width: 26,
+            height: 26,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: hovered ? COLORS.surface : 'transparent',
+            border: `1px solid ${hovered ? COLORS.border : 'transparent'}`,
+            borderRadius: RADIUS.sm,
+            color: hovered ? COLORS.accent : COLORS.textMuted,
+            cursor: 'pointer',
+            opacity: hovered ? 1 : 0.4,
+            transition: `all ${MOTION.fast}s ease`,
+            flexShrink: 0,
+          }}
+        >
+          <MessageSquare size={13} strokeWidth={2} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Tactical input + select — tactical chrome for the header filters
+// ─────────────────────────────────────────────────────────────────────────
+const TacticalInput: React.FC<{
+  icon?: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  width?: number;
+}> = ({ icon, value, onChange, placeholder, width = 220 }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        width,
+        height: 32,
+        padding: '0 10px',
+        background: COLORS.surface,
+        border: `1px solid ${focused ? COLORS.accent : COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        transition: `border-color ${MOTION.fast}s ease`,
+      }}
+    >
+      {icon && (
+        <span
+          style={{
+            color: focused ? COLORS.accent : COLORS.textMuted,
+            display: 'flex',
+          }}
+        >
+          {icon}
+        </span>
+      )}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder={placeholder}
+        style={{
+          flex: 1,
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: COLORS.textPrimary,
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          letterSpacing: '-0.005em',
+          minWidth: 0,
+        }}
+      />
+    </div>
+  );
+};
+
+const TacticalSelect: React.FC<{
+  icon?: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}> = ({ icon, value, onChange, options }) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        height: 32,
+        padding: '0 10px',
+        background: COLORS.surface,
+        border: `1px solid ${focused ? COLORS.accent : COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        transition: `border-color ${MOTION.fast}s ease`,
+      }}
+    >
+      {icon && (
+        <span
+          style={{
+            color: focused ? COLORS.accent : COLORS.textMuted,
+            display: 'flex',
+          }}
+        >
+          {icon}
+        </span>
+      )}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: COLORS.textPrimary,
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          letterSpacing: '-0.005em',
+          cursor: 'pointer',
+          appearance: 'none',
+          paddingRight: 4,
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt} style={{ background: COLORS.surface }}>
+            {opt}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
