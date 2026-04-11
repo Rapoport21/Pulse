@@ -224,9 +224,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
   ] as const;
 
   return (
-    <div 
+    <div
       className="flex flex-col h-screen bg-[#000000] text-white overflow-hidden selection:bg-white/20 antialiased relative"
-      style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif' }}
+      style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif',
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
     >
       {/* Ultra-Realistic Background Textures */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.04] via-black to-black pointer-events-none z-0"></div>
@@ -248,7 +251,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
       )}
 
       {/* iOS Header (Ultra-Translucent Glass) */}
-      <header className="flex items-center justify-between px-5 pt-6 pb-3 shrink-0 z-30 bg-black/40 backdrop-blur-[50px] backdrop-saturate-[180%] border-b border-white/[0.08] sticky top-0 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+      <header className="flex items-center justify-between px-5 pt-3 pb-3 shrink-0 z-30 bg-black/40 backdrop-blur-[50px] backdrop-saturate-[180%] border-b border-white/[0.08] sticky top-0 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-3.5">
           <div className="relative group cursor-pointer">
             <div className="w-12 h-12 rounded-full bg-gradient-to-b from-white/[0.15] to-white/[0.05] border border-white/[0.15] flex items-center justify-center text-[17px] font-bold text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.2),0_4px_10px_rgba(0,0,0,0.3)] group-active:scale-95 transition-transform duration-300">
@@ -815,7 +818,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
       </main>
       
       {/* Ultra-High Fidelity iOS Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-[50px] backdrop-saturate-[180%] border-t border-white/[0.1] pb-8 pt-3 px-2 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <nav
+        className="fixed bottom-0 left-0 right-0 bg-black/60 backdrop-blur-[50px] backdrop-saturate-[180%] border-t border-white/[0.1] pt-3 px-2 z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
+      >
         <div className="flex items-center justify-between max-w-md mx-auto">
           {navItems.map(item => (
             <button 
