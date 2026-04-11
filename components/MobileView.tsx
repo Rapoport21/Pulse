@@ -36,7 +36,7 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { UserProfile, UserRole } from '../types';
-import { ROLE_ACTIONS } from '../data/userProfiles';
+import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { PatientDetailScreen } from './PatientDetailScreen';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
@@ -372,6 +372,11 @@ const MetricTile: React.FC<MetricTileProps> = ({
       : accent === 'info'
       ? COLORS.info
       : undefined;
+  // Severity drives the numeric size. Critical tiles shout loudest,
+  // warn tiles get a half-step, everything else stays at the base 30px.
+  // The tile footprint is unchanged so the 2×2 grid never reflows.
+  const valueFontSize =
+    accent === 'crit' ? 40 : accent === 'warn' ? 34 : 30;
   return (
     <TacticalCard padding="none" highlight={accent === 'crit'}>
       <div
@@ -411,12 +416,13 @@ const MetricTile: React.FC<MetricTileProps> = ({
           <span
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 30,
+              fontSize: valueFontSize,
               fontWeight: 600,
               letterSpacing: '-0.03em',
               lineHeight: 0.95,
               color: accentColor ?? COLORS.textPrimary,
               fontVariantNumeric: 'tabular-nums',
+              transition: `font-size ${MOTION.base}s ${MOTION.ease}`,
             }}
           >
             {value}
@@ -452,6 +458,230 @@ const MetricTile: React.FC<MetricTileProps> = ({
             />
           </div>
         )}
+      </div>
+    </TacticalCard>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// StateHero — the ONE unambiguous answer to "what state is the hospital
+// in RIGHT NOW?". Renders as the first card on the mobile dashboard so
+// operators don't have to synthesize state from four scattered signals.
+//
+// The hero owns the largest numeric on mobile (42px displaySm) because
+// numbers draw the eye faster than words. The state word sits above as
+// a tone-colored label — "Nominal", "Strained", "Surge Active". Trend
+// arrow + context line anchor the forecast.
+// ─────────────────────────────────────────────────────────────────────────
+type HeroState = 'nominal' | 'strained' | 'surge';
+
+const STATE_LABEL: Record<HeroState, string> = {
+  nominal: 'Nominal',
+  strained: 'Strained',
+  surge: 'Surge Active',
+};
+
+const StateHero: React.FC<{
+  state: HeroState;
+  dominantValue: string;
+  dominantUnit?: string;
+  dominantLabel: string;
+  trendDirection: 'up' | 'down' | 'flat';
+  trendMagnitude: string;
+  trendWindow: string;
+  timerText?: string;
+  /**
+   * Role-specific override for the state word. A Charge Nurse reads
+   * "Behind" faster than "Strained"; a Trauma Attending reads "Trauma
+   * Active" faster than "Surge Active". Falls back to the default
+   * STATE_LABEL mapping when omitted.
+   */
+  stateLabelOverride?: Record<HeroState, string>;
+}> = ({
+  state,
+  dominantValue,
+  dominantUnit,
+  dominantLabel,
+  trendDirection,
+  trendMagnitude,
+  trendWindow,
+  timerText,
+  stateLabelOverride,
+}) => {
+  const toneColor =
+    state === 'surge'
+      ? COLORS.crit
+      : state === 'strained'
+      ? COLORS.warn
+      : COLORS.ok;
+
+  // Trend arrow: up = rising load (bad when state is strained/surge,
+  // neutral context when nominal). We use directional glyphs because
+  // they read instantly without parsing a word.
+  const trendGlyph =
+    trendDirection === 'up' ? '▲' : trendDirection === 'down' ? '▼' : '▬';
+
+  return (
+    <TacticalCard padding="none" highlight={state !== 'nominal'}>
+      <div
+        style={{
+          position: 'relative',
+          padding: SPACE.base,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: SPACE.md,
+        }}
+      >
+        {/* Top row: state label + optional timer */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: SPACE.sm,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE.sm,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: RADIUS.full,
+                background: toneColor,
+                boxShadow: `0 0 8px ${toneColor}`,
+                animation:
+                  state !== 'nominal'
+                    ? 'pulse-dot 1.4s ease-in-out infinite'
+                    : undefined,
+              }}
+            />
+            <Mono tone="muted" size="xs">
+              SHIFT STATUS
+            </Mono>
+          </div>
+          {timerText && (
+            <Mono
+              size="xs"
+              style={{
+                color: toneColor,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {timerText}
+            </Mono>
+          )}
+        </div>
+
+        {/* State label — large tone-colored word */}
+        <h2
+          style={{
+            margin: 0,
+            fontFamily: FONTS.sans,
+            fontSize: 30,
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+            color: toneColor,
+          }}
+        >
+          {stateLabelOverride?.[state] ?? STATE_LABEL[state]}
+        </h2>
+
+        {/* Dominant KPI row — biggest number on the mobile screen */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: SPACE.base,
+            justifyContent: 'space-between',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 4,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: TYPE.displaySm.size,
+                fontWeight: TYPE.displaySm.weight,
+                letterSpacing: TYPE.displaySm.tracking,
+                lineHeight: 0.9,
+                color: COLORS.textPrimary,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {dominantValue}
+            </span>
+            {dominantUnit && (
+              <span
+                style={{
+                  fontFamily: FONTS.sans,
+                  fontSize: 22,
+                  fontWeight: 500,
+                  color: COLORS.textMuted,
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                {dominantUnit}
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              gap: 2,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+                fontFamily: FONTS.mono,
+                fontSize: 13,
+                fontWeight: 600,
+                color: toneColor,
+                letterSpacing: '0.04em',
+              }}
+            >
+              <span aria-hidden>{trendGlyph}</span>
+              <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {trendMagnitude}
+              </span>
+            </div>
+            <Mono tone="dim" size="xs">
+              {trendWindow}
+            </Mono>
+          </div>
+        </div>
+
+        {/* Context strip */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.sm,
+            paddingTop: SPACE.sm,
+            borderTop: `1px dashed ${COLORS.border}`,
+          }}
+        >
+          <Mono tone="muted" size="xs">
+            {dominantLabel}
+          </Mono>
+        </div>
       </div>
     </TacticalCard>
   );
@@ -1255,203 +1485,115 @@ export const MobileView: React.FC<MobileViewProps> = ({
               gap: SPACE.lg,
             }}
           >
-            {/* Page title */}
+            {/* Breadcrumb — operator context, not the state answer.
+                The state answer lives in the StateHero card below.
+                H1 has been removed because it was the word "Overview",
+                which wasted the most prominent slot on the page on a
+                label that said nothing. The card hierarchy itself is
+                now the navigation. */}
             <div
               style={{
                 display: 'flex',
-                alignItems: 'flex-end',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: SPACE.sm,
                 marginTop: SPACE.xs,
               }}
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Mono tone="dim" size="xs">
-                  // PULSE / MOBILE / OVERVIEW
-                </Mono>
-                <h1
-                  style={{
-                    fontFamily: FONTS.sans,
-                    fontSize: TYPE.h1.size,
-                    fontWeight: TYPE.h1.weight,
-                    letterSpacing: TYPE.h1.tracking,
-                    lineHeight: TYPE.h1.lineHeight,
-                    color: COLORS.textPrimary,
-                    margin: 0,
-                  }}
-                >
-                  Overview
-                </h1>
-              </div>
+              <Mono tone="dim" size="xs">
+                // PULSE / {currentUser.role.toUpperCase()} / SHIFT
+              </Mono>
               <StatusPill label="Live" tone="ok" pulse />
             </div>
 
-            {/* AI Shift Brief — informational (AI content, not urgent).
-                The former accentBar + ScanningLine + red label were visual
-                noise that diluted the accent elsewhere in the shell. Icon
-                carries the info tone (blue) so AI content is visually
-                distinct from the accent-only urgency lane. */}
-            <TacticalCard padding="none">
-              <div
-                style={{
-                  position: 'relative',
-                  padding: SPACE.base,
-                  overflow: 'hidden',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE.sm,
-                    marginBottom: SPACE.sm,
-                  }}
-                >
-                  <BrainCircuit size={14} strokeWidth={1.75} color={COLORS.info} />
-                  <BracketLabel tone="secondary">AI SHIFT BRIEF</BracketLabel>
-                </div>
-                <p
-                  style={{
-                    fontFamily: FONTS.sans,
-                    fontSize: TYPE.body.size,
-                    fontWeight: 400,
-                    lineHeight: 1.55,
-                    color: COLORS.textPrimary,
-                    margin: 0,
-                    letterSpacing: '-0.005em',
-                  }}
-                >
-                  {isSurgeActive
-                    ? `Surge protocol active for ${formatElapsed(
-                        surgeActivatedAt,
-                        time.getTime(),
-                      )}. ${
-                        urgentTasks.filter((t) => !t.acknowledgedBy).length
-                      } of ${urgentTasks.length} urgent tasks pending. ER capacity at 115%. Divert status recommended.`
-                    : 'Normal operations. ER wait time is 45m. ICU has 2 beds available. Staffing is optimal for current census.'}
-                </p>
-                <div
-                  style={{
-                    marginTop: SPACE.md,
-                    paddingTop: SPACE.sm,
-                    borderTop: `1px dashed ${COLORS.border}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: SPACE.sm,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={10} color={COLORS.textMuted} />
-                    <Mono tone="dim">
-                      SYNC {time.toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })}
-                    </Mono>
-                  </div>
-                  <Mono tone="dim">CONF · 94%</Mono>
-                </div>
-              </div>
-            </TacticalCard>
+            {/* ── STATE HERO (biggest numeric on the screen) ──
+                Role-aware: each role has a different "what matters
+                right now" answer. Ops director cares about bed
+                capacity. Charge nurse cares about overdue bedside
+                tasks. Trauma attending cares about available bays.
+                The state label itself is also per-role because
+                "Nominal / Strained / Surge" reads different to a
+                nurse than it does to an ops director — for a
+                trauma doc, "Surge" isn't an exception, it's Tuesday.
+                Everything else in the dashboard stacks below in
+                order of urgency: state → live ops → horizon →
+                actions → narrative. */}
+            {(() => {
+              const heroProps = (() => {
+                switch (currentUser.role) {
+                  case UserRole.MANAGER:
+                    return {
+                      state: (isSurgeActive ? 'surge' : 'nominal') as HeroState,
+                      dominantValue: isSurgeActive ? '98' : '82',
+                      dominantUnit: '%',
+                      dominantLabel: isSurgeActive
+                        ? 'BED CAPACITY · 12 ER HOLDS WAITING ON FLOOR'
+                        : 'BED CAPACITY · 232 / 284 OCCUPIED',
+                      trendDirection: (isSurgeActive ? 'up' : 'down') as
+                        | 'up'
+                        | 'down'
+                        | 'flat',
+                      trendMagnitude: isSurgeActive ? '+6%' : '-2%',
+                      trendWindow: 'NEXT 2H',
+                      timerText:
+                        isSurgeActive && surgeActivatedAt
+                          ? `T+${formatElapsed(surgeActivatedAt, time.getTime())}`
+                          : undefined,
+                      // Manager-specific state labels
+                      stateLabelOverride: {
+                        nominal: 'Nominal',
+                        strained: 'Strained',
+                        surge: 'Surge Active',
+                      },
+                    };
+                  case UserRole.NURSE:
+                    return {
+                      state: (isSurgeActive ? 'strained' : 'nominal') as HeroState,
+                      dominantValue: isSurgeActive ? '6' : '4',
+                      dominantUnit: undefined,
+                      dominantLabel:
+                        'OVERDUE REASSESSMENTS · 2 FALL RISK · 3 DISCHARGES PENDING',
+                      trendDirection: 'up' as 'up' | 'down' | 'flat',
+                      trendMagnitude: '+1',
+                      trendWindow: 'LAST 30M',
+                      timerText: undefined,
+                      // Nurse-specific: "behind on tasks" not "surge"
+                      stateLabelOverride: {
+                        nominal: 'On Pace',
+                        strained: 'Behind',
+                        surge: 'Critical',
+                      },
+                    };
+                  case UserRole.ER_PERSONNEL:
+                    // Trauma is baseline busy. Bays at 0 is normal
+                    // for this role; surge escalates to trauma active.
+                    return {
+                      state: (isSurgeActive ? 'surge' : 'strained') as HeroState,
+                      dominantValue: '0',
+                      dominantUnit: 'bays',
+                      dominantLabel:
+                        'TRAUMA BAYS OPEN · 3 EMS INBOUND <5MIN · 125M TRIAGE WAIT',
+                      trendDirection: 'flat' as 'up' | 'down' | 'flat',
+                      trendMagnitude: 'HOT',
+                      trendWindow: 'LIVE',
+                      timerText:
+                        isSurgeActive && surgeActivatedAt
+                          ? `T+${formatElapsed(surgeActivatedAt, time.getTime())}`
+                          : undefined,
+                      stateLabelOverride: {
+                        nominal: 'Ready',
+                        strained: 'Busy',
+                        surge: 'Trauma Active',
+                      },
+                    };
+                }
+              })();
+              return <StateHero {...heroProps} />;
+            })()}
 
-            {/* Quick Actions */}
-            <div>
-              <SectionHeader id="QA" label="QUICK ACTIONS" />
-              <div
-                style={{
-                  display: 'flex',
-                  gap: SPACE.sm,
-                  overflowX: 'auto',
-                  scrollSnapType: 'x mandatory',
-                  paddingBottom: SPACE.xs,
-                  scrollbarWidth: 'none',
-                }}
-              >
-                {[
-                  {
-                    icon: PhoneCall,
-                    label: 'PAGE ON-CALL',
-                    tone: 'info' as const,
-                    haptic: 'light' as const,
-                    action: () => showToast('Paging On-Call Physician...', 'info'),
-                  },
-                  {
-                    icon: Flame,
-                    label: 'CODE BLUE',
-                    tone: 'crit' as const,
-                    haptic: 'heavy' as const,
-                    action: () => showToast('Code Blue Initiated', 'error'),
-                  },
-                  {
-                    icon: ShieldAlert,
-                    label: 'DIVERT STATUS',
-                    tone: 'warn' as const,
-                    haptic: 'medium' as const,
-                    action: () => showToast('Divert status requested', 'info'),
-                  },
-                ].map((btn, qIdx) => {
-                  const color =
-                    btn.tone === 'info'
-                      ? COLORS.info
-                      : btn.tone === 'crit'
-                      ? COLORS.crit
-                      : COLORS.warn;
-                  return (
-                    <motion.button
-                      key={btn.label}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{
-                        delay: 0.15 + qIdx * 0.05,
-                        duration: MOTION.base,
-                        ease: MOTION.ease,
-                      }}
-                      whileTap={{ scale: 0.95 }}
-                      whileHover={{
-                        background: COLORS.surfaceElev,
-                        borderColor: color,
-                      }}
-                      onClick={() => {
-                        triggerHaptic(btn.haptic);
-                        btn.action();
-                      }}
-                      style={{
-                        flexShrink: 0,
-                        scrollSnapAlign: 'start',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: SPACE.sm,
-                        minHeight: 44,
-                        padding: `${SPACE.sm}px ${SPACE.md}px`,
-                        background: COLORS.surface,
-                        border: `1px solid ${color}`,
-                        borderRadius: RADIUS.sm,
-                        cursor: 'pointer',
-                        fontFamily: FONTS.mono,
-                        color,
-                      }}
-                    >
-                      <btn.icon size={13} />
-                      <span
-                        style={{
-                          fontFamily: FONTS.mono,
-                          fontSize: 11,
-                          fontWeight: 500,
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {btn.label}
-                      </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Live Ops Grid */}
+            {/* Live Ops Grid — house-wide KPIs, scannable at a glance.
+                Critical tiles now render their numeric at 40px so
+                severity is encoded in size, not just color. */}
             <div>
               <SectionHeader
                 id="LO"
@@ -1694,6 +1836,192 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 </div>
               </TacticalCard>
             </div>
+
+            {/* Quick Actions — horizontal scroll-snap row.
+                Positioned AFTER Pulse Horizon and BEFORE the AI
+                narrative because actions are higher-urgency than
+                a paragraph but lower-urgency than the numeric
+                state cards above. Swipe reveals the rest; this
+                keeps buttons big instead of squishing them into
+                a 3-col grid that wraps. */}
+            <div>
+              <SectionHeader id="QA" label="QUICK ACTIONS" />
+              <div
+                style={{
+                  display: 'flex',
+                  gap: SPACE.sm,
+                  overflowX: 'auto',
+                  scrollSnapType: 'x mandatory',
+                  paddingBottom: SPACE.xs,
+                  scrollbarWidth: 'none',
+                }}
+              >
+                {[
+                  {
+                    icon: PhoneCall,
+                    label: 'PAGE ON-CALL',
+                    tone: 'info' as const,
+                    haptic: 'light' as const,
+                    action: () =>
+                      showToast('Paging On-Call Physician...', 'info'),
+                  },
+                  {
+                    icon: Flame,
+                    label: 'CODE BLUE',
+                    tone: 'crit' as const,
+                    haptic: 'heavy' as const,
+                    action: () => showToast('Code Blue Initiated', 'error'),
+                  },
+                  {
+                    icon: ShieldAlert,
+                    label: 'DIVERT STATUS',
+                    tone: 'warn' as const,
+                    haptic: 'medium' as const,
+                    action: () =>
+                      showToast('Divert status requested', 'info'),
+                  },
+                ].map((btn, qIdx) => {
+                  const color =
+                    btn.tone === 'info'
+                      ? COLORS.info
+                      : btn.tone === 'crit'
+                      ? COLORS.crit
+                      : COLORS.warn;
+                  return (
+                    <motion.button
+                      key={btn.label}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        delay: 0.15 + qIdx * 0.05,
+                        duration: MOTION.base,
+                        ease: MOTION.ease,
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                      whileHover={{
+                        background: COLORS.surfaceElev,
+                        borderColor: color,
+                      }}
+                      onClick={() => {
+                        triggerHaptic(btn.haptic);
+                        btn.action();
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        scrollSnapAlign: 'start',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        minHeight: 44,
+                        padding: `${SPACE.sm}px ${SPACE.md}px`,
+                        background: COLORS.surface,
+                        border: `1px solid ${color}`,
+                        borderRadius: RADIUS.sm,
+                        cursor: 'pointer',
+                        fontFamily: FONTS.mono,
+                        color,
+                      }}
+                    >
+                      <btn.icon size={13} />
+                      <span
+                        style={{
+                          fontFamily: FONTS.mono,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {btn.label}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* AI Shift Brief — narrative summary of the above.
+                Positioned LAST on the dashboard because narrative is
+                always less scannable than raw state. By the time an
+                operator has read the state hero, live ops, horizon
+                chart, and action buttons above, the brief is context,
+                not answer. CONF · 94% removed — it was never plumbed
+                to real confidence telemetry and just consumed real
+                estate. */}
+            <TacticalCard padding="none">
+              <div
+                style={{
+                  position: 'relative',
+                  padding: SPACE.base,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    marginBottom: SPACE.sm,
+                  }}
+                >
+                  <BrainCircuit
+                    size={14}
+                    strokeWidth={1.75}
+                    color={COLORS.info}
+                  />
+                  <BracketLabel tone="secondary">AI SHIFT BRIEF</BracketLabel>
+                </div>
+                <p
+                  style={{
+                    fontFamily: FONTS.sans,
+                    fontSize: TYPE.body.size,
+                    fontWeight: 400,
+                    lineHeight: 1.55,
+                    color: COLORS.textPrimary,
+                    margin: 0,
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  {isSurgeActive
+                    ? `Surge protocol active for ${formatElapsed(
+                        surgeActivatedAt,
+                        time.getTime(),
+                      )}. ${
+                        urgentTasks.filter((t) => !t.acknowledgedBy).length
+                      } of ${urgentTasks.length} urgent tasks pending. ER capacity at 115%. Divert status recommended.`
+                    : 'Normal operations. ER wait time is 45m. ICU has 2 beds available. Staffing is optimal for current census.'}
+                </p>
+                <div
+                  style={{
+                    marginTop: SPACE.md,
+                    paddingTop: SPACE.sm,
+                    borderTop: `1px dashed ${COLORS.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <Clock size={10} color={COLORS.textMuted} />
+                    <Mono tone="dim">
+                      SYNC{' '}
+                      {time.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                      })}
+                    </Mono>
+                  </div>
+                </div>
+              </div>
+            </TacticalCard>
           </motion.div>
         )}
 
