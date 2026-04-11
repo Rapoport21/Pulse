@@ -33,6 +33,10 @@ jobs:
       - name: Build
         run: npm run build
         env:
+          # GitHub Pages is served from /Pulse/ — force absolute base so that
+          # asset URLs resolve correctly. Capacitor + other targets default to
+          # relative base (./) set in vite.config.ts.
+          VITE_BASE: /Pulse/
           VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

@@ -4,8 +4,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
-    // Allow overriding base for GH Pages (production) vs. local dev / Capacitor (relative).
-    const base = process.env.VITE_BASE ?? '/Pulse/';
+    // Default to relative so the bundle works for Capacitor (WKWebView) and
+    // any static host. GH Pages CI explicitly sets VITE_BASE=/Pulse/ to keep
+    // deployment absolute at https://rapoport21.github.io/Pulse/.
+    const base = process.env.VITE_BASE ?? './';
     return {
       base,
       server: {
