@@ -25,6 +25,7 @@ import {
   BrainCircuit,
   QrCode,
   Radio,
+  ClipboardList,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -43,6 +44,7 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
+import { ESITriageScreen, type TriageResult } from './clinical';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
@@ -860,6 +862,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [showTestQR, setShowTestQR] = useState(false);
+  /**
+   * ESI Triage wizard modal — opens fullscreen over MobileView so a
+   * triage nurse can walk through the Gilboy/ENA ESI v4 algorithm and
+   * produce an acuity assignment + suggested bay + handoff line.
+   * Last completed result is held briefly so the next time the wizard
+   * opens we can show a "PREVIOUS · ESI X" affordance (future).
+   */
+  const [showTriage, setShowTriage] = useState(false);
+  const [lastTriage, setLastTriage] = useState<TriageResult | null>(null);
   const myDeviceId = getDeviceId();
 
   /**
@@ -2683,6 +2694,78 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </h1>
             </div>
 
+            {/* New ESI Triage launcher — only floor staff who actually
+                triage patients see this. Manager view is dashboard-only
+                so the button would be noise. */}
+            {(currentUser.role === UserRole.ER_PERSONNEL ||
+              currentUser.role === UserRole.NURSE) && (
+              <motion.button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowTriage(true);
+                }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.md,
+                  padding: `${SPACE.md}px ${SPACE.base}px`,
+                  background:
+                    'linear-gradient(90deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.02) 100%)',
+                  border: `1px solid ${COLORS.accent}`,
+                  borderLeft: `3px solid ${COLORS.accent}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 56,
+                }}
+              >
+                <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} inset={-1} />
+                <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} inset={-1} />
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(225,29,72,0.18)',
+                    border: `1px solid ${COLORS.accent}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.accent,
+                  }}
+                >
+                  <ClipboardList size={18} strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <BracketLabel tone="accent" size="xs">
+                    ESI · TRIAGE
+                  </BracketLabel>
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontFamily: FONTS.sans,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    {lastTriage
+                      ? `Last assigned · ESI ${lastTriage.esi} · ${lastTriage.suggestedBay}`
+                      : 'Start a new triage assessment'}
+                  </div>
+                </div>
+                <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              </motion.button>
+            )}
+
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -3521,6 +3604,29 @@ export const MobileView: React.FC<MobileViewProps> = ({
           showToast={showToast}
         />
       )}
+
+      {/* ESI Triage wizard — fullscreen modal that walks the
+          ENA/Gilboy v4 algorithm and emits a TriageResult on
+          completion. We persist the last result so the launcher
+          card can show "previous" context next time. */}
+      <AnimatePresence>
+        {showTriage && (
+          <ESITriageScreen
+            open={showTriage}
+            onClose={() => setShowTriage(false)}
+            onComplete={(result) => {
+              setLastTriage(result);
+              // ESI 1 / 2 are immediate-life-threat or high-risk —
+              // strong haptic + error tone so the operator notices.
+              triggerHaptic(result.esi <= 2 ? 'heavy' : 'medium');
+              showToast(
+                `ESI ${result.esi} ASSIGNED · ROUTE TO ${result.suggestedBay.toUpperCase()}`,
+                result.esi <= 2 ? 'error' : result.esi === 3 ? 'info' : 'success',
+              );
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* QR Scanner — fullscreen camera view. Animates in/out via
           AnimatePresence so the unmount transition completes before

@@ -13,3 +13,5 @@ export { PatientHeaderStrip } from './PatientHeaderStrip';
 export type { PatientHeaderStripProps } from './PatientHeaderStrip';
 export { VitalsPanel } from './VitalsPanel';
 export type { VitalsPanelProps } from './VitalsPanel';
+export { ESITriageScreen } from './ESITriageScreen';
+export type { ESITriageScreenProps, TriageResult } from './ESITriageScreen';
