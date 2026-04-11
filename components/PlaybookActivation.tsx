@@ -23,7 +23,6 @@ import {
   StatusPill,
   TacticalButton,
   CornerBracket,
-  ScanningLine,
 } from './design';
 
 interface PlaybookActivationProps {
@@ -168,9 +167,6 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
           <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1} inset={-1} />
           <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1} inset={-1} />
 
-          {/* Scanning line for that high-stakes tactical feel */}
-          {!isSubmitting && <ScanningLine />}
-
           {/* Header */}
           <div
             style={{
@@ -267,8 +263,8 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                   flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.accent;
-                  e.currentTarget.style.color = COLORS.accent;
+                  e.currentTarget.style.borderColor = COLORS.borderStrong;
+                  e.currentTarget.style.color = COLORS.textPrimary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = COLORS.border;

@@ -48,7 +48,6 @@ import {
   CornerBracket,
   BracketFrame,
   Divider,
-  ScanningLine,
   MetricValue,
 } from './design';
 
@@ -414,11 +413,11 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-                <Activity size={14} strokeWidth={2} color={COLORS.accent} />
+                <Activity size={14} strokeWidth={2} color={COLORS.textSecondary} />
                 <Mono tone="primary" size="sm">
                   Saturation Forecast
                 </Mono>
-                <BracketLabel tone={isSimulating ? 'accent' : 'muted'} size="xs">
+                <BracketLabel tone={isSimulating ? 'info' : 'ok'} size="xs">
                   {isSimulating ? 'SIM' : 'LIVE'}
                 </BracketLabel>
               </div>
@@ -449,18 +448,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 overflow: 'hidden',
               }}
             >
-              <ScanningLine color={COLORS.accent} duration={18} />
-              <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={4} />
-              <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={4} />
-              <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={4} />
-              <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={4} />
-
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ top: 12, right: 16, left: -12, bottom: 4 }}>
                   <defs>
                     <linearGradient id="horizonFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={COLORS.accent} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0} />
+                      <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="horizonFillSim" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.25} />
@@ -488,7 +481,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     width={32}
                   />
                   <Tooltip
-                    cursor={{ stroke: COLORS.accent, strokeDasharray: '2 3' }}
+                    cursor={{ stroke: COLORS.borderStrong, strokeDasharray: '2 3' }}
                     contentStyle={{
                       backgroundColor: COLORS.surface,
                       border: `1px solid ${COLORS.borderStrong}`,
@@ -499,7 +492,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                     }}
-                    itemStyle={{ color: COLORS.accent }}
+                    itemStyle={{ color: COLORS.info }}
                     labelStyle={{ color: COLORS.textMuted }}
                     formatter={(value: number) => [`${value.toFixed(1)}%`, 'LOAD']}
                   />
@@ -533,14 +526,14 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   />
                   <ReferenceLine
                     x="NOW"
-                    stroke={COLORS.accent}
+                    stroke={COLORS.textSecondary}
                     strokeDasharray="2 3"
                     strokeWidth={1}
                   />
                   <Area
                     type="monotone"
                     dataKey="load"
-                    stroke={COLORS.accent}
+                    stroke={COLORS.info}
                     strokeWidth={2}
                     fill="url(#horizonFill)"
                     isAnimationActive
@@ -616,7 +609,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     marginBottom: SPACE.md,
                   }}
                 >
-                  <Zap size={14} strokeWidth={2} color={COLORS.accent} />
+                  <Zap size={14} strokeWidth={2} color={COLORS.info} />
                   <Mono tone="primary" size="sm">
                     Operational Levers
                   </Mono>
@@ -1192,8 +1185,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     marginBottom: SPACE.sm,
                   }}
                 >
-                  <Building2 size={11} strokeWidth={2} color={COLORS.accent} />
-                  <Mono tone="accent" size="xs">
+                  <Building2 size={11} strokeWidth={2} color={COLORS.textSecondary} />
+                  <Mono tone="secondary" size="xs">
                     HOUSE STATUS
                   </Mono>
                 </div>
@@ -1498,15 +1491,15 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         }}
                       >
                         <li style={{ paddingLeft: 12, position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.textMuted }}>›</span>
                           High influx of trauma patients (last 2h)
                         </li>
                         <li style={{ paddingLeft: 12, position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.textMuted }}>›</span>
                           Delayed discharges from Med/Surg
                         </li>
                         <li style={{ paddingLeft: 12, position: 'relative' }}>
-                          <span style={{ position: 'absolute', left: 0, color: COLORS.accent }}>›</span>
+                          <span style={{ position: 'absolute', left: 0, color: COLORS.textMuted }}>›</span>
                           Staffing shortage in Triage
                         </li>
                       </ul>
@@ -1532,7 +1525,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         }}
                       >
                         Without intervention, metric is expected to worsen by{' '}
-                        <span style={{ color: COLORS.accent, fontWeight: 600 }}>+15%</span> in
+                        <span style={{ color: COLORS.crit, fontWeight: 600 }}>+15%</span> in
                         the next 45 minutes.
                       </p>
                     </div>
@@ -1690,7 +1683,7 @@ const LeverSlider: React.FC<{
       <Mono tone="secondary" size="xs">
         {label}
       </Mono>
-      <Mono tone="accent" size="xs">
+      <Mono tone="info" size="xs">
         + {value} {unit}
       </Mono>
     </div>

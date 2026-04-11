@@ -124,7 +124,7 @@ const CommandRow: React.FC<{
         gap: SPACE.sm,
         padding: `${SPACE.sm}px ${SPACE.md}px`,
         background: hovered ? COLORS.surfaceElev : 'transparent',
-        borderLeft: `2px solid ${hovered ? COLORS.accent : 'transparent'}`,
+        borderLeft: `2px solid ${hovered ? COLORS.borderStrong : 'transparent'}`,
         cursor: 'pointer',
         transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
         outline: 'none',
@@ -213,14 +213,6 @@ const FeedEntry: React.FC<{
         overflow: 'hidden',
       }}
     >
-      {critical && (
-        <>
-          <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} />
-          <CornerBracket position="tr" color={COLORS.accent} size={6} thickness={1} />
-          <CornerBracket position="bl" color={COLORS.accent} size={6} thickness={1} />
-          <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} />
-        </>
-      )}
       <div
         style={{
           display: 'flex',
@@ -286,9 +278,9 @@ const TranscriptPacket: React.FC<{
   const isAi = line.speaker === 'ai';
 
   const speakerLabel = isMe ? 'OPERATOR' : isAi ? 'PULSE.AI' : 'REMOTE';
-  const speakerColor = isMe ? COLORS.info : isAi ? COLORS.accent : COLORS.ok;
-  const borderColor = isAi ? COLORS.accent : COLORS.border;
-  const bg = isAi ? `${COLORS.accent}0f` : COLORS.surface;
+  const speakerColor = isMe ? COLORS.info : isAi ? COLORS.info : COLORS.ok;
+  const borderColor = isAi ? COLORS.borderStrong : COLORS.border;
+  const bg = isAi ? COLORS.surfaceElev : COLORS.surface;
 
   return (
     <motion.div
@@ -633,7 +625,7 @@ export const CommandSidebar = ({
                         fontFamily: FONTS.sans,
                         fontSize: 13,
                         fontWeight: 600,
-                        color: COLORS.accent,
+                        color: COLORS.textPrimary,
                         letterSpacing: '-0.01em',
                         marginBottom: 2,
                       }}
@@ -958,13 +950,13 @@ export const CommandSidebar = ({
                     justifyContent: 'center',
                     background:
                       callState === 'ai_speaking'
-                        ? `${COLORS.accent}14`
+                        ? `${COLORS.warn}14`
                         : callState === 'calling'
                         ? `${COLORS.info}14`
                         : `${COLORS.ok}14`,
                     border: `1px solid ${
                       callState === 'ai_speaking'
-                        ? COLORS.accent
+                        ? COLORS.warn
                         : callState === 'calling'
                         ? COLORS.info
                         : COLORS.ok
@@ -974,7 +966,7 @@ export const CommandSidebar = ({
                   }}
                 >
                   {callState === 'ai_speaking' ? (
-                    <Bot size={16} color={COLORS.accent} strokeWidth={2} />
+                    <Bot size={16} color={COLORS.warn} strokeWidth={2} />
                   ) : (
                     <PhoneCall
                       size={16}
@@ -986,7 +978,7 @@ export const CommandSidebar = ({
                     position="tl"
                     color={
                       callState === 'ai_speaking'
-                        ? COLORS.accent
+                        ? COLORS.warn
                         : callState === 'calling'
                         ? COLORS.info
                         : COLORS.ok
@@ -998,7 +990,7 @@ export const CommandSidebar = ({
                     position="br"
                     color={
                       callState === 'ai_speaking'
-                        ? COLORS.accent
+                        ? COLORS.warn
                         : callState === 'calling'
                         ? COLORS.info
                         : COLORS.ok
@@ -1036,7 +1028,7 @@ export const CommandSidebar = ({
                   </Mono>
                 )}
                 {callState === 'ai_speaking' && (
-                  <Mono tone="accent" size="xs">
+                  <Mono tone="warn" size="xs">
                     AI · {formatTime(callDuration)}
                   </Mono>
                 )}
@@ -1066,8 +1058,8 @@ export const CommandSidebar = ({
                       transition={{ duration: 1.8, repeat: Infinity }}
                       style={{
                         padding: `${SPACE.sm}px ${SPACE.md}px`,
-                        background: `${COLORS.accent}14`,
-                        border: `1px solid ${COLORS.accent}`,
+                        background: `${COLORS.warn}14`,
+                        border: `1px solid ${COLORS.warn}`,
                         borderRadius: RADIUS.sm,
                         display: 'flex',
                         gap: SPACE.sm,
@@ -1076,7 +1068,7 @@ export const CommandSidebar = ({
                     >
                       <Bot
                         size={14}
-                        color={COLORS.accent}
+                        color={COLORS.warn}
                         strokeWidth={2}
                         style={{ marginTop: 2, flexShrink: 0 }}
                       />
@@ -1115,8 +1107,8 @@ export const CommandSidebar = ({
                       marginBottom: SPACE.sm,
                     }}
                   >
-                    <Activity size={10} strokeWidth={2} color={COLORS.accent} />
-                    <BracketLabel tone="accent" size="xs">
+                    <Activity size={10} strokeWidth={2} color={COLORS.textSecondary} />
+                    <BracketLabel tone="secondary" size="xs">
                       EXTRACTED
                     </BracketLabel>
                     <Mono tone="dim" size="xs">

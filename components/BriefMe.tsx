@@ -17,7 +17,6 @@ import {
   TacticalCard,
   TacticalButton,
   ScanningLine,
-  CornerBracket,
 } from './design';
 
 interface BriefMeProps {
@@ -105,7 +104,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
           label="Operational Handoff"
           divider={false}
           meta={
-            <BracketLabel tone="accent" size="xs">
+            <BracketLabel tone="info" size="xs">
               SYNTH · SBAR
             </BracketLabel>
           }
@@ -186,10 +185,9 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                     gap: SPACE.base,
                   }}
                 >
-                  <ScanningLine />
                   <RefreshCw
                     size={22}
-                    color={COLORS.accent}
+                    color={COLORS.info}
                     strokeWidth={2}
                     style={{ animation: 'spin 1.4s linear infinite' }}
                   />
@@ -239,9 +237,9 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           background: COLORS.surface,
-                          border: `1px solid ${COLORS.accent}`,
+                          border: `1px solid ${COLORS.borderStrong}`,
                           borderRadius: RADIUS.sm,
-                          color: COLORS.accent,
+                          color: COLORS.info,
                           fontFamily: FONTS.mono,
                           fontWeight: 600,
                           fontSize: 12,
@@ -250,11 +248,9 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                         }}
                       >
                         {s.key}
-                        <CornerBracket position="tl" color={COLORS.accent} size={3} thickness={1} inset={-1} />
-                        <CornerBracket position="br" color={COLORS.accent} size={3} thickness={1} inset={-1} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Mono tone="accent" size="xs">
+                        <Mono tone="info" size="xs">
                           {SECTION_NAMES[s.key]}
                         </Mono>
                         <p

@@ -95,7 +95,7 @@ export const Roster: React.FC<RosterProps> = ({ showToast }) => {
         flexDirection: 'column',
         padding: SPACE['2xl'],
         background: COLORS.bg,
-        gap: SPACE.xl,
+        gap: SPACE.lg,
         overflowY: 'auto',
       }}
     >
@@ -502,7 +502,7 @@ const StaffRow: React.FC<{
             background: hovered ? COLORS.surface : 'transparent',
             border: `1px solid ${hovered ? COLORS.border : 'transparent'}`,
             borderRadius: RADIUS.sm,
-            color: hovered ? COLORS.accent : COLORS.textMuted,
+            color: hovered ? COLORS.textPrimary : COLORS.textMuted,
             cursor: 'pointer',
             opacity: hovered ? 1 : 0.4,
             transition: `all ${MOTION.fast}s ease`,

@@ -176,7 +176,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-            <Activity size={14} strokeWidth={2} color={COLORS.accent} />
+            <Activity size={14} strokeWidth={2} color={COLORS.textSecondary} />
             <Mono tone="primary" size="sm">
               System Saturation
             </Mono>
@@ -196,8 +196,8 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               >
                 <defs>
                   <linearGradient id="saturationFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.accent} stopOpacity={0.35} />
-                    <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0} />
+                    <stop offset="5%" stopColor={COLORS.info} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="2 4" stroke={COLORS.border} vertical={false} />
@@ -223,18 +223,18 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
                     fontFamily: FONTS.mono,
                     fontSize: 11,
                   }}
-                  itemStyle={{ color: COLORS.accent }}
+                  itemStyle={{ color: COLORS.info }}
                   labelStyle={{ color: COLORS.textMuted }}
                 />
                 <ReferenceLine
                   x={currentDataPoint?.time}
-                  stroke={COLORS.accent}
+                  stroke={COLORS.textSecondary}
                   strokeDasharray="2 3"
                 />
                 <Area
                   type="monotone"
                   dataKey="saturation"
-                  stroke={COLORS.accent}
+                  stroke={COLORS.info}
                   strokeWidth={1.5}
                   fill="url(#saturationFill)"
                   isAnimationActive={false}
@@ -274,14 +274,14 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               <span
                 style={{
                   fontSize: 22,
-                  color: COLORS.accent,
+                  color: COLORS.info,
                   marginLeft: 4,
                 }}
               >
                 %
               </span>
             </div>
-            <Mono tone="accent" size="sm">
+            <Mono tone="info" size="sm">
               {currentDataPoint?.time}
             </Mono>
           </div>
@@ -443,8 +443,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               transform: 'translateY(-50%)',
               height: 2,
               width: `${sliderValue}%`,
-              background: COLORS.accent,
-              boxShadow: `0 0 10px ${COLORS.accentGlow}`,
+              background: COLORS.info,
               transition: 'width 75ms linear',
             }}
           />
@@ -568,36 +567,35 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               transform: 'translate(-50%, -50%)',
               width: 2,
               height: 28,
-              background: COLORS.accent,
-              boxShadow: `0 0 10px ${COLORS.accent}`,
+              background: COLORS.info,
               pointerEvents: 'none',
               transition: 'left 75ms linear',
             }}
           />
           <CornerBracket
             position="tl"
-            color={COLORS.accent}
+            color={COLORS.borderStrong}
             size={6}
             thickness={1}
             inset={0}
           />
           <CornerBracket
             position="bl"
-            color={COLORS.accent}
+            color={COLORS.borderStrong}
             size={6}
             thickness={1}
             inset={0}
           />
           <CornerBracket
             position="tr"
-            color={COLORS.accent}
+            color={COLORS.borderStrong}
             size={6}
             thickness={1}
             inset={0}
           />
           <CornerBracket
             position="br"
-            color={COLORS.accent}
+            color={COLORS.borderStrong}
             size={6}
             thickness={1}
             inset={0}

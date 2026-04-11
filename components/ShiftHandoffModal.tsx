@@ -93,10 +93,8 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
             overflow: 'hidden',
           }}
         >
-          <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-          <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-          <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-          <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+          <CornerBracket position="tl" color={COLORS.borderStrong} size={8} thickness={1} inset={-1} />
+          <CornerBracket position="br" color={COLORS.borderStrong} size={8} thickness={1} inset={-1} />
 
           {/* Header */}
           <div
@@ -126,18 +124,16 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: COLORS.surface,
-                    border: `1px solid ${COLORS.accent}`,
+                    border: `1px solid ${COLORS.borderStrong}`,
                     borderRadius: RADIUS.sm,
-                    color: COLORS.accent,
+                    color: COLORS.textSecondary,
                     flexShrink: 0,
                   }}
                 >
                   <HeaderIcon size={16} strokeWidth={2} />
-                  <CornerBracket position="tl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
-                  <CornerBracket position="br" color={COLORS.accent} size={4} thickness={1} inset={-1} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <BracketLabel tone="accent" size="xs">
+                  <BracketLabel tone="secondary" size="xs">
                     {isIn ? 'HANDOFF · IN' : 'HANDOFF · OUT'}
                   </BracketLabel>
                   <h2
@@ -176,8 +172,8 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     flexShrink: 0,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = COLORS.accent;
-                    e.currentTarget.style.color = COLORS.accent;
+                    e.currentTarget.style.borderColor = COLORS.borderStrong;
+                    e.currentTarget.style.color = COLORS.textPrimary;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.borderColor = COLORS.border;
@@ -316,7 +312,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                         }}
                       >
                         <Mono
-                          tone="accent"
+                          tone="secondary"
                           size="xs"
                           style={{ flexShrink: 0, marginTop: 1, minWidth: 18 }}
                         >

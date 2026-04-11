@@ -33,7 +33,6 @@ import {
   CornerBracket,
   HudStrip,
   DotGridBg,
-  ScanningLine,
   Divider,
 } from './design';
 
@@ -76,15 +75,13 @@ const Section: React.FC<{
             alignItems: 'center',
             justifyContent: 'center',
             background: COLORS.surface,
-            border: `1px solid ${COLORS.accent}`,
+            border: `1px solid ${COLORS.borderStrong}`,
             borderRadius: RADIUS.sm,
-            color: COLORS.accent,
+            color: COLORS.textSecondary,
             flexShrink: 0,
           }}
         >
           <Icon size={12} strokeWidth={2} />
-          <CornerBracket position="tl" color={COLORS.accent} size={3} thickness={1} inset={-1} />
-          <CornerBracket position="br" color={COLORS.accent} size={3} thickness={1} inset={-1} />
         </div>
         <div style={{ minWidth: 0 }}>
           <Mono tone="muted" size="xs">
@@ -308,7 +305,6 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       }}
     >
       <DotGridBg />
-      <ScanningLine />
 
       {/* Top HUD strip — tactical header with back + save */}
       <HudStrip side="top" fixed={false} height={52}>
@@ -325,7 +321,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               background: 'transparent',
               border: `1px solid ${COLORS.border}`,
               borderRadius: RADIUS.sm,
-              color: COLORS.accent,
+              color: COLORS.textSecondary,
               cursor: 'pointer',
               fontFamily: FONTS.mono,
               fontSize: 11,
@@ -336,12 +332,12 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = COLORS.accent;
-              e.currentTarget.style.boxShadow = `0 0 0 3px ${COLORS.accentGlow}`;
+              e.currentTarget.style.borderColor = COLORS.borderStrong;
+              e.currentTarget.style.color = COLORS.textPrimary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.borderColor = COLORS.border;
-              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.color = COLORS.textSecondary;
             }}
           >
             <ChevronLeft size={13} strokeWidth={2} />
@@ -356,7 +352,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               flex: 1,
             }}
           >
-            <BracketLabel tone="accent" size="xs">
+            <BracketLabel tone="secondary" size="xs">
               PATIENT · DETAIL
             </BracketLabel>
             <div
@@ -661,7 +657,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     padding: '4px 8px',
                     background: 'transparent',
                     border: 'none',
-                    color: COLORS.accent,
+                    color: COLORS.textSecondary,
                     cursor: 'pointer',
                     fontFamily: FONTS.mono,
                     fontSize: 10,

@@ -38,7 +38,6 @@ import {
   StatusPill,
   TacticalCard,
   TacticalButton,
-  ScanningLine,
 } from './design';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1275,14 +1274,11 @@ ${urgentTasks
               paddingRight: 'env(safe-area-inset-right)',
             }}
           >
-            {/* Corner brackets */}
-            <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={1} />
-            <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={1} />
-            <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1} />
-            <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1} />
-
-            {/* Scanning line */}
-            <ScanningLine />
+            {/* Corner brackets — neutral frame, drawer isn't urgent */}
+            <CornerBracket position="tl" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="tr" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="bl" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="br" color={COLORS.borderStrong} size={10} thickness={1} />
 
             {/* Header */}
             <div
@@ -1308,17 +1304,12 @@ ${urgentTasks
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: COLORS.bgDeep,
-                    border: `1px solid ${COLORS.accent}`,
+                    border: `1px solid ${COLORS.info}`,
                     borderRadius: RADIUS.sm,
-                    color: COLORS.accent,
-                    boxShadow: SHADOW.accentGlowSm,
+                    color: COLORS.info,
                   }}
                 >
                   <Sparkles size={18} strokeWidth={2} />
-                  <CornerBracket position="tl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
-                  <CornerBracket position="tr" color={COLORS.accent} size={4} thickness={1} inset={-1} />
-                  <CornerBracket position="bl" color={COLORS.accent} size={4} thickness={1} inset={-1} />
-                  <CornerBracket position="br" color={COLORS.accent} size={4} thickness={1} inset={-1} />
                 </div>
                 <div>
                   <div
@@ -1328,7 +1319,7 @@ ${urgentTasks
                       gap: SPACE.sm,
                     }}
                   >
-                    <BracketLabel tone="accent">PULSE · ASSISTANT</BracketLabel>
+                    <BracketLabel tone="info">PULSE · ASSISTANT</BracketLabel>
                     {ai ? (
                       <StatusPill tone="ok" pulse label="ONLINE" />
                     ) : (
@@ -1417,7 +1408,7 @@ ${urgentTasks
                             background: COLORS.surface,
                             border: `1px solid ${COLORS.border}`,
                             borderRadius: RADIUS.sm,
-                            color: COLORS.accent,
+                            color: COLORS.info,
                             marginTop: 2,
                           }}
                         >
@@ -1429,36 +1420,17 @@ ${urgentTasks
                           position: 'relative',
                           padding: `${SPACE.sm + 2}px ${SPACE.md}px`,
                           background:
-                            msg.role === 'user' ? COLORS.accentDim : COLORS.surface,
+                            msg.role === 'user' ? COLORS.surfaceElev : COLORS.surface,
                           border: `1px solid ${
-                            msg.role === 'user' ? COLORS.accent : COLORS.border
+                            msg.role === 'user' ? COLORS.borderStrong : COLORS.border
                           }`,
                           borderRadius: RADIUS.sm,
                           color: COLORS.textPrimary,
                           fontSize: 13,
                           lineHeight: 1.55,
-                          boxShadow:
-                            msg.role === 'user'
-                              ? `0 0 12px ${COLORS.accentGlow}`
-                              : '0 2px 8px rgba(0,0,0,0.4)',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                         }}
                       >
-                        {msg.role === 'user' && (
-                          <>
-                            <CornerBracket
-                              position="tl"
-                              color={COLORS.accent}
-                              size={5}
-                              thickness={1}
-                            />
-                            <CornerBracket
-                              position="br"
-                              color={COLORS.accent}
-                              size={5}
-                              thickness={1}
-                            />
-                          </>
-                        )}
                         <div
                           style={{
                             display: 'block',
@@ -1497,7 +1469,7 @@ ${urgentTasks
                         background: COLORS.surface,
                         border: `1px solid ${COLORS.border}`,
                         borderRadius: RADIUS.sm,
-                        color: COLORS.accent,
+                        color: COLORS.info,
                       }}
                     >
                       <Bot size={14} strokeWidth={2} />
@@ -1522,10 +1494,9 @@ ${urgentTasks
                           style={{
                             width: 5,
                             height: 5,
-                            background: COLORS.accent,
+                            background: COLORS.textSecondary,
                             borderRadius: '50%',
                             animation: `chat-bounce 1s ease-in-out ${delay}s infinite`,
-                            boxShadow: `0 0 4px ${COLORS.accentGlow}`,
                           }}
                         />
                       ))}
@@ -1717,7 +1688,7 @@ ${urgentTasks
                 padding: 0;
               }
               .chat-markdown strong { color: ${COLORS.textPrimary}; font-weight: 600; }
-              .chat-markdown a { color: ${COLORS.accent}; text-decoration: underline; }
+              .chat-markdown a { color: ${COLORS.info}; text-decoration: underline; }
             `}
           </style>
         </>

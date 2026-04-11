@@ -238,7 +238,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
         flexDirection: 'column',
         padding: SPACE['2xl'],
         background: COLORS.bg,
-        gap: SPACE.xl,
+        gap: SPACE.lg,
         overflowY: 'auto',
         fontFamily: FONTS.sans,
       }}
@@ -414,7 +414,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-              <Radio size={13} strokeWidth={2} color={COLORS.accent} />
+              <Radio size={13} strokeWidth={2} color={COLORS.textSecondary} />
               <Mono tone="primary" size="sm">
                 ZONE GRID
               </Mono>
@@ -507,7 +507,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Activity size={12} strokeWidth={2} color={COLORS.accent} />
+                <Activity size={12} strokeWidth={2} color={COLORS.textSecondary} />
                 <Mono tone="primary" size="sm">
                   ZONE TELEMETRY
                 </Mono>
@@ -713,7 +713,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               onClick={(e) => e.stopPropagation()}
               style={{ width: '100%', maxWidth: 440 }}
             >
-              <TacticalCard padding="none" accentBar highlight>
+              <TacticalCard padding="none">
                 <div
                   style={{
                     display: 'flex',
@@ -725,7 +725,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                    <UserCheck size={13} strokeWidth={2} color={COLORS.accent} />
+                    <UserCheck size={13} strokeWidth={2} color={COLORS.textSecondary} />
                     <Mono tone="primary" size="sm">
                       PATIENT RECORD
                     </Mono>
@@ -933,7 +933,7 @@ const FloorTabs: React.FC<{
             padding: `${SPACE.md}px ${SPACE.lg}px`,
             background: 'transparent',
             border: 'none',
-            borderBottom: `2px solid ${active ? COLORS.accent : 'transparent'}`,
+            borderBottom: `2px solid ${active ? COLORS.borderHover : 'transparent'}`,
             cursor: 'pointer',
             marginBottom: -1,
             transition: `border-color ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
@@ -942,12 +942,12 @@ const FloorTabs: React.FC<{
           <Layers
             size={13}
             strokeWidth={2}
-            color={active ? COLORS.accent : COLORS.textMuted}
+            color={active ? COLORS.textPrimary : COLORS.textMuted}
           />
           <Mono tone={active ? 'primary' : 'muted'} size="sm">
             {f.short}
           </Mono>
-          <Mono tone={active ? 'accent' : 'dim'} size="xs">
+          <Mono tone={active ? 'secondary' : 'dim'} size="xs">
             {f.code}
           </Mono>
         </button>
@@ -968,7 +968,7 @@ const ZoneCell: React.FC<{
   const [hovered, setHovered] = useState(false);
   const color = statusToColor(zone.status);
   const tone = statusToTone(zone.status);
-  const borderColor = active ? COLORS.accent : hovered ? COLORS.borderHover : COLORS.border;
+  const borderColor = active ? COLORS.borderHover : hovered ? COLORS.borderHover : COLORS.border;
   const bg = active ? COLORS.surfaceElev : hovered ? COLORS.surfaceHover : COLORS.surface;
 
   // Bed map: filled cells = patients, empty = available
@@ -1012,7 +1012,7 @@ const ZoneCell: React.FC<{
         // do not overflow, so clipping isn't needed.
       }}
     >
-      {/* Accent left rail for active */}
+      {/* Accent left rail for active — neutral selection */}
       {active && (
         <span
           aria-hidden
@@ -1022,8 +1022,7 @@ const ZoneCell: React.FC<{
             top: 0,
             bottom: 0,
             width: 3,
-            background: COLORS.accent,
-            boxShadow: `0 0 12px ${COLORS.accent}80`,
+            background: COLORS.borderHover,
           }}
         />
       )}
@@ -1031,10 +1030,8 @@ const ZoneCell: React.FC<{
       {/* Corner brackets on hover or active */}
       {(hovered || active) && (
         <>
-          <CornerBracket position="tl" color={active ? COLORS.accent : color} size={8} thickness={1.5} />
-          <CornerBracket position="tr" color={active ? COLORS.accent : color} size={8} thickness={1.5} />
-          <CornerBracket position="bl" color={active ? COLORS.accent : color} size={8} thickness={1.5} />
-          <CornerBracket position="br" color={active ? COLORS.accent : color} size={8} thickness={1.5} />
+          <CornerBracket position="tl" color={active ? COLORS.borderHover : color} size={8} thickness={1.5} />
+          <CornerBracket position="br" color={active ? COLORS.borderHover : color} size={8} thickness={1.5} />
         </>
       )}
 
@@ -1330,7 +1327,7 @@ const ZoneTelemetry: React.FC<{
             padding: SPACE.md,
             background: COLORS.surfaceElev,
             border: `1px solid ${COLORS.border}`,
-            borderLeft: `2px solid ${COLORS.accent}`,
+            borderLeft: `2px solid ${COLORS.borderHover}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
             fontSize: 12,

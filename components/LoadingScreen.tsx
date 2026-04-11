@@ -83,10 +83,12 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
         overflow: 'hidden',
       }}
     >
-      {/* Background layers */}
+      {/* Background layers — the boot screen already has a radar
+          animation and animated progress bar carrying the "activity"
+          signal, so the decorative ScanningLine was redundant visual
+          noise and has been removed. */}
       <DotGridBg />
       <GlowBg origin="bottom" />
-      <ScanningLine />
 
       {/* Top HUD */}
       <HudStrip side="top" fixed height={36}>

@@ -112,10 +112,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
         overflow: 'hidden',
       }}
     >
-      <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} />
-      <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} />
-      <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} />
-      <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} />
+      <CornerBracket position="tl" color={COLORS.borderStrong} size={8} thickness={1} />
+      <CornerBracket position="br" color={COLORS.borderStrong} size={8} thickness={1} />
 
       {/* Header */}
       <div

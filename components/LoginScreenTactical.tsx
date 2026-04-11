@@ -244,10 +244,11 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
         overflow: 'hidden',
       }}
     >
-      {/* Background layers */}
+      {/* Background layers — login is a stationary surface, so the
+          decorative ScanningLine was removed to let the role cards
+          breathe. */}
       <DotGridBg />
-      <GlowBg origin="bottom" />
-      <ScanningLine />
+      <GlowBg origin="bottom" color={COLORS.info + '08'} intensity={0.5} />
 
       {/* ── TOP HUD ─────────────────────────────────────────── */}
       <HudStrip side="top" fixed height={36}>

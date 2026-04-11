@@ -222,7 +222,8 @@ const VitalBox: React.FC<VitalBoxProps> = ({
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// ProgressRing — tactical ring for shift progress
+// ProgressRing — tactical ring for shift progress (neutral / ok tone —
+// accent is reserved for urgent states, not routine progress readouts)
 // ─────────────────────────────────────────────────────────────────────────
 const ProgressRing: React.FC<{ progress: number }> = ({ progress }) => {
   const size = 76;
@@ -261,14 +262,13 @@ const ProgressRing: React.FC<{ progress: number }> = ({ progress }) => {
           cx={center}
           cy={center}
           r={radius}
-          stroke={COLORS.accent}
+          stroke={COLORS.ok}
           strokeWidth={stroke}
           fill="transparent"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           style={{
             transition: 'stroke-dashoffset 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-            filter: `drop-shadow(0 0 6px ${COLORS.accent}80)`,
           }}
         />
       </svg>
@@ -440,8 +440,10 @@ const MetricTile: React.FC<MetricTileProps> = ({
               style={{
                 height: '100%',
                 width: `${Math.min(100, Math.max(0, progressPct))}%`,
-                background: accentColor ?? COLORS.accent,
-                boxShadow: `0 0 8px ${accentColor ?? COLORS.accent}80`,
+                // Neutral fallback — the tile only glows when a
+                // caller explicitly passes a status colour (ok, warn,
+                // crit, info). Accent is no longer a default decoration.
+                background: accentColor ?? COLORS.textSecondary,
                 transition: `width ${MOTION.slow}s ${MOTION.ease}`,
               }}
             />
@@ -677,13 +679,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
         paddingRight: 'env(safe-area-inset-right)',
       }}
     >
-      {/* Ambient background layers */}
+      {/* Ambient background layers — the rose glow now only appears
+          during surge protocol. Idle sessions get a neutral dark glow
+          so the shell doesn't read as "critical" by default. */}
       <DotGridBg opacity={0.22} />
-      <GlowBg
-        origin="bottom"
-        color={isSurgeActive ? COLORS.accentGlow : COLORS.accentDim}
-        intensity={isSurgeActive ? 1 : 0.75}
-      />
+      {isSurgeActive && (
+        <GlowBg
+          origin="bottom"
+          color={COLORS.accentGlow}
+          intensity={1}
+        />
+      )}
 
       {/* ── SURGE BANNER ──────────────────────────────────────── */}
       {isSurgeActive && (
@@ -754,8 +760,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
               color: COLORS.textPrimary,
             }}
           >
-            <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} />
-            <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} />
+            <CornerBracket position="tl" color={COLORS.borderStrong} size={5} thickness={1} />
+            <CornerBracket position="br" color={COLORS.borderStrong} size={5} thickness={1} />
             {currentUser.avatarInitials}
             <span
               aria-hidden
@@ -824,7 +830,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               background: COLORS.surface,
               border: `1px solid ${COLORS.border}`,
               borderRadius: RADIUS.sm,
-              color: COLORS.accent,
+              color: COLORS.info,
               cursor: 'pointer',
               transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
             }}
@@ -841,9 +847,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               background: showMenu ? COLORS.surfaceElev : COLORS.surface,
-              border: `1px solid ${showMenu ? COLORS.accent : COLORS.border}`,
+              border: `1px solid ${showMenu ? COLORS.borderHover : COLORS.border}`,
               borderRadius: RADIUS.sm,
-              color: showMenu ? COLORS.accent : COLORS.textSecondary,
+              color: showMenu ? COLORS.textPrimary : COLORS.textSecondary,
               cursor: 'pointer',
               transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
             }}
@@ -889,7 +895,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 zIndex: 1,
               }}
             >
-              <BracketLabel tone="accent">OPERATOR MENU</BracketLabel>
+              <BracketLabel tone="secondary">OPERATOR MENU</BracketLabel>
               <Mono tone="dim">// SEC-LVL 2</Mono>
             </div>
 
@@ -1106,7 +1112,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               paddingBottom: NAV_HEIGHT + SPACE['2xl'],
               display: 'flex',
               flexDirection: 'column',
-              gap: SPACE.xl,
+              gap: SPACE.lg,
             }}
           >
             {/* Page title */}
@@ -1140,8 +1146,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <StatusPill label="Live" tone="ok" pulse />
             </div>
 
-            {/* AI Shift Brief */}
-            <TacticalCard padding="none" accentBar>
+            {/* AI Shift Brief — informational (AI content, not urgent),
+                so only the Sparkles icon carries the brand accent. The
+                former accentBar + ScanningLine + red label were visual
+                noise that diluted the accent elsewhere in the shell. */}
+            <TacticalCard padding="none">
               <div
                 style={{
                   position: 'relative',
@@ -1149,7 +1158,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   overflow: 'hidden',
                 }}
               >
-                <ScanningLine color={COLORS.accent} duration={8} />
                 <div
                   style={{
                     display: 'flex',
@@ -1158,8 +1166,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     marginBottom: SPACE.sm,
                   }}
                 >
-                  <Sparkles size={14} color={COLORS.accent} />
-                  <BracketLabel tone="accent">AI SHIFT BRIEF</BracketLabel>
+                  <Sparkles size={14} color={COLORS.info} />
+                  <BracketLabel tone="secondary">AI SHIFT BRIEF</BracketLabel>
                 </div>
                 <p
                   style={{
@@ -1443,7 +1451,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             'Saturation',
                           ]}
                           cursor={{
-                            stroke: COLORS.accent,
+                            stroke: COLORS.borderStrong,
                             strokeWidth: 1,
                             strokeDasharray: '2 4',
                           }}
@@ -1668,7 +1676,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             )}
 
             {/* Shift Progress */}
-            <TacticalCard padding="none" accentBar>
+            <TacticalCard padding="none">
               <div
                 style={{
                   padding: SPACE.base,
@@ -1739,7 +1747,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       minHeight: 40,
                       padding: `0 ${SPACE.md}px`,
                       background: active ? COLORS.surfaceElev : 'transparent',
-                      border: `1px solid ${active ? COLORS.accent : 'transparent'}`,
+                      border: `1px solid ${active ? COLORS.borderHover : 'transparent'}`,
                       borderRadius: RADIUS.sm,
                       cursor: 'pointer',
                       fontFamily: FONTS.mono,
@@ -1747,7 +1755,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       fontWeight: 500,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
-                      color: active ? COLORS.accent : COLORS.textSecondary,
+                      color: active ? COLORS.textPrimary : COLORS.textSecondary,
                       transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
                     }}
                   >
@@ -2054,9 +2062,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             {critical && (
                               <Flame
                                 size={14}
-                                color={COLORS.accent}
+                                color={COLORS.crit}
                                 style={{
-                                  filter: `drop-shadow(0 0 6px ${COLORS.accent})`,
+                                  filter: `drop-shadow(0 0 6px ${COLORS.crit})`,
                                 }}
                               />
                             )}
@@ -2337,7 +2345,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               paddingBottom: NAV_HEIGHT + SPACE['2xl'],
               display: 'flex',
               flexDirection: 'column',
-              gap: SPACE.xl,
+              gap: SPACE.lg,
             }}
           >
             <div
@@ -2366,7 +2374,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </h1>
             </div>
 
-            {/* Active Threads */}
+            {/* Active Threads — unread state reduced to a single dot
+                marker on the right. Icon box now reflects the thread
+                category (crit for trauma) instead of stacking brand
+                accent on top of a critical icon. */}
             <div>
               <SectionHeader id="CH" label="ACTIVE THREADS" />
               <TacticalCard padding="none">
@@ -2378,7 +2389,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     alignItems: 'center',
                     gap: SPACE.md,
                     borderBottom: `1px solid ${COLORS.border}`,
-                    background: `linear-gradient(90deg, ${COLORS.accent}08 0%, transparent 50%)`,
                     cursor: 'pointer',
                   }}
                 >
@@ -2391,24 +2401,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       alignItems: 'center',
                       justifyContent: 'center',
                       background: COLORS.surfaceElev,
-                      border: `1px solid ${COLORS.accent}`,
+                      border: `1px solid ${COLORS.crit}`,
                       borderRadius: RADIUS.sm,
-                      color: COLORS.accent,
+                      color: COLORS.crit,
                       position: 'relative',
                     }}
                   >
-                    <CornerBracket
-                      position="tl"
-                      color={COLORS.accent}
-                      size={5}
-                      thickness={1}
-                    />
-                    <CornerBracket
-                      position="br"
-                      color={COLORS.accent}
-                      size={5}
-                      thickness={1}
-                    />
                     <AlertCircle size={16} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -2455,12 +2453,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   </div>
                   <div
                     aria-hidden
+                    title="Unread"
                     style={{
                       width: 8,
                       height: 8,
                       borderRadius: RADIUS.full,
-                      background: COLORS.accent,
-                      boxShadow: `0 0 8px ${COLORS.accent}`,
+                      background: COLORS.info,
                       flexShrink: 0,
                     }}
                   />
@@ -2660,16 +2658,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   gap: 4,
                   padding: `${SPACE.xs}px ${SPACE.xs}px`,
                   background: active ? COLORS.surfaceElev : 'transparent',
-                  border: `1px solid ${active ? COLORS.accent : 'transparent'}`,
+                  border: `1px solid ${active ? COLORS.borderHover : 'transparent'}`,
                   borderRadius: RADIUS.sm,
                   cursor: 'pointer',
-                  color: active ? COLORS.accent : COLORS.textMuted,
+                  color: active ? COLORS.textPrimary : COLORS.textMuted,
                   transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
                 }}
               >
                 {active && (
                   <BracketFrame
-                    color={COLORS.accent}
+                    color={COLORS.borderHover}
                     size={5}
                     visible
                   />
@@ -2677,9 +2675,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <div style={{ position: 'relative' }}>
                   <Icon
                     size={18}
-                    style={{
-                      filter: active ? `drop-shadow(0 0 6px ${COLORS.accent})` : 'none',
-                    }}
                   />
                   {hasBadge && (
                     <span

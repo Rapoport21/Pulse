@@ -544,7 +544,7 @@ function App() {
 
             {/* ── Right cluster: clock + chat + notifications + user + end shift ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? SPACE.sm : SPACE.md, flexShrink: 0 }}>
-              <Mono tone="accent" size={isCompactNav ? 'sm' : 'base'}>
+              <Mono tone="secondary" size={isCompactNav ? 'sm' : 'base'}>
                 {clockStr}{isCompactNav ? '' : ' UTC'}
               </Mono>
               <span style={{ color: COLORS.textDim }}>│</span>
@@ -1031,10 +1031,8 @@ const NavButton: React.FC<{
     >
       {active && (
         <>
-          <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} inset={-1} />
-          <CornerBracket position="tr" color={COLORS.accent} size={5} thickness={1} inset={-1} />
-          <CornerBracket position="bl" color={COLORS.accent} size={5} thickness={1} inset={-1} />
-          <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} inset={-1} />
+          <CornerBracket position="tl" color={COLORS.borderHover} size={5} thickness={1} inset={-1} />
+          <CornerBracket position="br" color={COLORS.borderHover} size={5} thickness={1} inset={-1} />
         </>
       )}
       {children}
@@ -1065,10 +1063,10 @@ const IconButton: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: active ? COLORS.accentDim : hovered ? COLORS.surface : 'transparent',
-        border: `1px solid ${active ? COLORS.accent : hovered ? COLORS.border : 'transparent'}`,
+        background: active ? COLORS.surfaceElev : hovered ? COLORS.surface : 'transparent',
+        border: `1px solid ${active ? COLORS.borderHover : hovered ? COLORS.border : 'transparent'}`,
         borderRadius: RADIUS.sm,
-        color: active ? COLORS.accent : hovered ? COLORS.textPrimary : COLORS.textSecondary,
+        color: active ? COLORS.textPrimary : hovered ? COLORS.textPrimary : COLORS.textSecondary,
         cursor: 'pointer',
         transition: 'all 160ms ease',
       }}
@@ -1123,10 +1121,8 @@ const NotificationsDropdown: React.FC<{
       overflow: 'hidden',
     }}
   >
-    <CornerBracket position="tl" color={COLORS.accent} size={8} />
-    <CornerBracket position="tr" color={COLORS.accent} size={8} />
-    <CornerBracket position="bl" color={COLORS.accent} size={8} />
-    <CornerBracket position="br" color={COLORS.accent} size={8} />
+    <CornerBracket position="tl" color={COLORS.borderStrong} size={8} />
+    <CornerBracket position="br" color={COLORS.borderStrong} size={8} />
     <div
       style={{
         display: 'flex',
@@ -1137,7 +1133,7 @@ const NotificationsDropdown: React.FC<{
         background: COLORS.surfaceElev,
       }}
     >
-      <BracketLabel tone="accent" size="base">
+      <BracketLabel tone="warn" size="base">
         SYSTEM ALERTS
       </BracketLabel>
       <button

@@ -295,9 +295,9 @@ const ActionCard: React.FC<{
               />
             )}
 
-            {/* Hover brackets */}
+            {/* Hover brackets — neutral; cards hover on every row, shouldn't shout */}
             <BracketFrame
-              color={COLORS.accent}
+              color={COLORS.borderStrong}
               size={8}
               visible={hovered || dragging}
               animate
@@ -609,9 +609,9 @@ const Column: React.FC<{
                   transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, background ${MOTION.fast}s ease`,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.color = COLORS.accent;
-                  e.currentTarget.style.borderColor = COLORS.accent;
-                  e.currentTarget.style.background = COLORS.accentDim;
+                  e.currentTarget.style.color = COLORS.textPrimary;
+                  e.currentTarget.style.borderColor = COLORS.borderStrong;
+                  e.currentTarget.style.background = COLORS.surfaceElev;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = COLORS.textMuted;
@@ -1043,8 +1043,8 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: SPACE.base,
-        padding: SPACE.xl,
+        gap: SPACE.lg,
+        padding: SPACE['2xl'],
         background: COLORS.bg,
         overflow: 'hidden',
       }}
@@ -1173,10 +1173,6 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
               overflow: 'hidden',
             }}
           >
-            <CornerBracket position="tl" color={COLORS.accent} size={10} />
-            <CornerBracket position="tr" color={COLORS.accent} size={10} />
-            <CornerBracket position="bl" color={COLORS.accent} size={10} />
-            <CornerBracket position="br" color={COLORS.accent} size={10} />
             <AlertOctagon
               size={18}
               strokeWidth={2}
@@ -1285,25 +1281,25 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
             >
               <CornerBracket
                 position="tl"
-                color={COLORS.accent}
+                color={COLORS.borderStrong}
                 size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="tr"
-                color={COLORS.accent}
+                color={COLORS.borderStrong}
                 size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="bl"
-                color={COLORS.accent}
+                color={COLORS.borderStrong}
                 size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="br"
-                color={COLORS.accent}
+                color={COLORS.borderStrong}
                 size={12}
                 thickness={1.5}
               />
@@ -1373,8 +1369,8 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                     flexShrink: 0,
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = COLORS.accent;
-                    e.currentTarget.style.borderColor = COLORS.accent;
+                    e.currentTarget.style.color = COLORS.textPrimary;
+                    e.currentTarget.style.borderColor = COLORS.borderStrong;
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = COLORS.textSecondary;
@@ -1523,10 +1519,10 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                               style={{
                                 padding: `${SPACE.sm}px ${SPACE.md}px`,
                                 background: isActive
-                                  ? COLORS.accentDim
+                                  ? COLORS.surfaceElev
                                   : COLORS.surface,
                                 border: `1px solid ${
-                                  isActive ? COLORS.accent : COLORS.border
+                                  isActive ? COLORS.borderHover : COLORS.border
                                 }`,
                                 borderRadius: RADIUS.sm,
                                 cursor: 'pointer',
@@ -1535,9 +1531,6 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                                 gap: SPACE.sm,
                                 textAlign: 'left',
                                 transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
-                                boxShadow: isActive
-                                  ? SHADOW.accentGlowSm
-                                  : undefined,
                               }}
                               onMouseEnter={(e) => {
                                 if (!isActive) {
@@ -1687,7 +1680,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                                     gap: SPACE.sm,
                                   }}
                                 >
-                                  <Mono tone="accent" size="xs">
+                                  <Mono tone="primary" size="xs">
                                     {user}
                                   </Mono>
                                   <Mono tone="dim" size="xs">
@@ -1810,9 +1803,8 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                                 width: 9,
                                 height: 9,
                                 background: COLORS.surface,
-                                border: `1.5px solid ${COLORS.accent}`,
+                                border: `1.5px solid ${COLORS.borderHover}`,
                                 borderRadius: RADIUS.full,
-                                boxShadow: `0 0 6px ${COLORS.accent}60`,
                               }}
                             />
                             <div
@@ -1923,7 +1915,7 @@ const TabButton: React.FC<{
       padding: `${SPACE.md}px ${SPACE.sm}px`,
       background: active ? COLORS.bgDeep : 'transparent',
       border: 'none',
-      borderBottom: `2px solid ${active ? COLORS.accent : 'transparent'}`,
+      borderBottom: `2px solid ${active ? COLORS.borderHover : 'transparent'}`,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
@@ -1934,7 +1926,7 @@ const TabButton: React.FC<{
       fontWeight: 500,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
-      color: active ? COLORS.accent : COLORS.textSecondary,
+      color: active ? COLORS.textPrimary : COLORS.textSecondary,
       transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, background ${MOTION.fast}s ease`,
       minWidth: 0,
     }}

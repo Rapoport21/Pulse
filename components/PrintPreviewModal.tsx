@@ -76,10 +76,8 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
             }}
           >
             {/* Corner brackets on the outer shell */}
-            <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-            <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-            <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1} inset={-1} />
-            <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1} inset={-1} />
+            <CornerBracket position="tl" color={COLORS.borderStrong} size={8} thickness={1} inset={-1} />
+            <CornerBracket position="br" color={COLORS.borderStrong} size={8} thickness={1} inset={-1} />
 
             {/* Header */}
             <div
@@ -112,7 +110,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   <FileText size={14} strokeWidth={2} />
                 </div>
                 <div style={{ minWidth: 0 }}>
-                  <BracketLabel tone="accent" size="xs">
+                  <BracketLabel tone="secondary" size="xs">
                     PRINT · PREVIEW
                   </BracketLabel>
                   <div
@@ -151,8 +149,8 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = COLORS.accent;
-                  e.currentTarget.style.color = COLORS.accent;
+                  e.currentTarget.style.borderColor = COLORS.borderStrong;
+                  e.currentTarget.style.color = COLORS.textPrimary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = COLORS.border;
