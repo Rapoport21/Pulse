@@ -406,7 +406,15 @@ export const Divider: React.FC<{
 );
 
 // ─────────────────────────────────────────────────────────────────────────
-// HudStrip — fixed horizontal bar, top or bottom
+// HudStrip — horizontal bar at the top or bottom of a screen.
+//
+// When `fixed` is true the strip is anchored to the viewport via
+// position:fixed. On iPhone this means the strip would otherwise sit
+// directly under the dynamic island (top) or behind the home indicator
+// (bottom), so we expand the box height by the matching safe-area
+// inset and push the visible content into a padding edge — the strip
+// stays the right colour edge-to-edge while the controls hug the
+// content area.
 // ─────────────────────────────────────────────────────────────────────────
 export const HudStrip: React.FC<{
   side: 'top' | 'bottom';
@@ -415,6 +423,7 @@ export const HudStrip: React.FC<{
   height?: number;
 }> = ({ side, fixed = false, children, height }) => {
   const h = height ?? (side === 'top' ? CHROME.headerHeight : CHROME.footerHeight);
+  const safeInset = side === 'top' ? 'env(safe-area-inset-top)' : 'env(safe-area-inset-bottom)';
   return (
     <div
       style={{
@@ -422,10 +431,18 @@ export const HudStrip: React.FC<{
         left: fixed ? 0 : undefined,
         right: fixed ? 0 : undefined,
         [side]: fixed ? 0 : undefined,
-        height: h,
+        // Reserve safe-area space when the strip is anchored to the
+        // viewport edge. With box-sizing:border-box (set globally),
+        // the visible content remains `h` tall.
+        height: fixed ? `calc(${h}px + ${safeInset})` : h,
+        paddingTop: fixed && side === 'top' ? safeInset : undefined,
+        paddingBottom: fixed && side === 'bottom' ? safeInset : undefined,
         display: 'flex',
         alignItems: 'center',
-        padding: `0 ${SPACE.base}px`,
+        // Horizontal padding still respects landscape safe areas so
+        // controls don't disappear under rounded corners.
+        paddingLeft: `max(${SPACE.base}px, env(safe-area-inset-left))`,
+        paddingRight: `max(${SPACE.base}px, env(safe-area-inset-right))`,
         borderTop: side === 'bottom' ? `1px solid ${COLORS.border}` : undefined,
         borderBottom: side === 'top' ? `1px solid ${COLORS.border}` : undefined,
         background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,

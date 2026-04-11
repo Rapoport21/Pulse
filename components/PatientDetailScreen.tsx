@@ -298,6 +298,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
         display: 'flex',
         flexDirection: 'column',
         fontFamily: FONTS.sans,
+        // Honour iPhone safe areas — fixed elements don't inherit
+        // padding from the parent shell, so the dynamic island and
+        // home indicator would otherwise clip the chrome.
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
       }}
     >
       <DotGridBg />

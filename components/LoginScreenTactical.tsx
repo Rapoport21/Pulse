@@ -309,7 +309,22 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: isMobile ? 'flex-start' : 'center',
-          padding: isMobile ? '68px 20px 68px' : '72px 24px',
+          // Top/bottom HudStrips are 36px + safe-area inset each.
+          // Use max() so we always clear the strips on iPhone but
+          // still get the original 68/72 px breathing room on
+          // wide screens with no insets.
+          paddingTop: isMobile
+            ? `max(68px, calc(env(safe-area-inset-top) + 56px))`
+            : `max(72px, calc(env(safe-area-inset-top) + 56px))`,
+          paddingBottom: isMobile
+            ? `max(68px, calc(env(safe-area-inset-bottom) + 56px))`
+            : `max(72px, calc(env(safe-area-inset-bottom) + 56px))`,
+          paddingLeft: isMobile
+            ? `max(20px, env(safe-area-inset-left))`
+            : `max(24px, env(safe-area-inset-left))`,
+          paddingRight: isMobile
+            ? `max(20px, env(safe-area-inset-right))`
+            : `max(24px, env(safe-area-inset-right))`,
           zIndex: 10,
           overflowY: isMobile ? 'auto' : 'hidden',
         }}

@@ -1268,6 +1268,11 @@ ${urgentTasks
               fontFamily: FONTS.sans,
               color: COLORS.textPrimary,
               overflow: 'hidden',
+              // iPhone safe areas — keep header below the dynamic
+              // island and the input above the home indicator.
+              paddingTop: 'env(safe-area-inset-top)',
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              paddingRight: 'env(safe-area-inset-right)',
             }}
           >
             {/* Corner brackets */}

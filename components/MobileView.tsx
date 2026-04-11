@@ -658,13 +658,23 @@ export const MobileView: React.FC<MobileViewProps> = ({
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        // Dynamic viewport height — always equals the visible WebView
+        // even when iOS toolbars or the dynamic island change the
+        // available height. Supported on iOS Safari 15.4+ (Capacitor
+        // ships with WKWebView so we get the modern behaviour).
+        height: '100dvh',
         width: '100%',
         background: COLORS.bg,
         color: COLORS.textPrimary,
         fontFamily: FONTS.sans,
         overflow: 'hidden',
+        // Push content below the dynamic island / status bar. With
+        // box-sizing:border-box (set globally in index.css) the
+        // padding is included inside the 100dvh box, so the bottom
+        // nav stays inside the visible area.
         paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
       }}
     >
       {/* Ambient background layers */}
@@ -1070,8 +1080,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
       <main
         style={{
           flex: 1,
+          // minHeight:0 is required so this flex child can shrink
+          // below its intrinsic content size — without it the long
+          // scrollable lists below would push the bottom nav off
+          // screen on iPhone widths.
+          minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
+          // Smooth iOS-native momentum scrolling inside the WebView.
+          WebkitOverflowScrolling: 'touch',
           position: 'relative',
           zIndex: 1,
           scrollBehavior: 'smooth',

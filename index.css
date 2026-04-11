@@ -1,9 +1,41 @@
-/* PULSE — additional styles. Tailwind is loaded via CDN in index.html. */
+/* PULSE — global styles. Self-contained (no Tailwind dependency). */
 
 /* ─────────────────────────────────────────────────────────────────────
-   Tactical design system — global base
+   Modern CSS reset — replaces Tailwind preflight that we used to rely
+   on via the CDN. Everything in the app uses inline styles + design
+   tokens, so we only need a minimal reset that:
+     • Forces border-box on every element so width/height includes
+       padding (critical for mobile layouts that use padding for
+       safe-area insets).
+     • Zeros default margins on the body and headings.
+     • Locks html/body to the full viewport so 100vh / 100dvh anchor
+       to the WebView size on iOS.
+     • Disables iOS rubber-band scrolling on the document so the
+       Capacitor WebView feels native.
    ───────────────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+html {
+  /* Lock the document to the WebView; the app handles its own scroll
+     containers so the page itself never bounces under the dynamic
+     island or home indicator. */
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: #050505;
   color: #fafafa;
@@ -16,6 +48,45 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Stop iOS from over-scrolling the body when nested scrollers reach
+     their edges. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
