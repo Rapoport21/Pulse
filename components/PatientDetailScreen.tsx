@@ -35,13 +35,49 @@ import {
   DotGridBg,
   Divider,
 } from './design';
+import { PatientHeaderStrip, VitalsPanel } from './clinical';
+import type { Patient } from '../types';
+
+/**
+ * Minimal legacy shape that the MobileView list used to pass in —
+ * `name`, `age`, `mrn`, `code`, `notes`, `vitals` etc. The new FHIR-
+ * aligned clinical data lives under `clinical` when the caller has
+ * upgraded to MOCK_PATIENTS. Both shapes are accepted so the wedge
+ * can ship without MobileView refactoring in the same commit.
+ */
+interface LegacyPatientShape {
+  id?: string;
+  name?: string;
+  age?: string;
+  mrn?: string;
+  code?: string;
+  notes?: string;
+  loc?: string;
+  status?: string;
+  vitals?: { hr?: string; bp?: string; o2?: string };
+  clinical?: Patient;
+}
+
+type PatientLike = LegacyPatientShape | Patient;
 
 interface PatientDetailScreenProps {
-  patient: any;
+  patient: PatientLike;
   onClose: () => void;
   onSave: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
 }
+
+/** Return the FHIR Patient when the caller provided one, else undefined. */
+const extractClinicalPatient = (p: PatientLike | undefined | null): Patient | undefined => {
+  if (!p) return undefined;
+  // Duck-type on `vitalsHistory` + `codeStatus` — the two fields a
+  // legacy object never has.
+  if ('vitalsHistory' in p && 'codeStatus' in p && Array.isArray((p as Patient).vitalsHistory)) {
+    return p as Patient;
+  }
+  if ('clinical' in p && p.clinical) return p.clinical;
+  return undefined;
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Section — a TacticalCard with a bracketed header row
@@ -277,7 +313,21 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
     }, 800);
   };
 
-  const isDnr = String(patient?.code || '').includes('DNR');
+  // When the caller has upgraded to FHIR-aligned data, `clinical` is a
+  // real `Patient`. Otherwise we fall back to the legacy strings so the
+  // existing MobileView wiring keeps working during the migration.
+  const clinical: Patient | undefined = extractClinicalPatient(patient);
+  const legacyCode = (patient as LegacyPatientShape)?.code ?? '';
+  const isDnr = clinical
+    ? clinical.codeStatus === 'DNR' ||
+      clinical.codeStatus === 'DNI' ||
+      clinical.codeStatus === 'DNR/DNI'
+    : String(legacyCode).includes('DNR');
+  const displayName =
+    clinical != null
+      ? `${clinical.name.family}, ${clinical.name.given}`
+      : ((patient as LegacyPatientShape)?.name ?? 'Unknown');
+  const displayMrn = clinical?.mrn ?? (patient as LegacyPatientShape)?.mrn ?? 'MRN —';
 
   return (
     <motion.div
@@ -365,10 +415,10 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   textOverflow: 'ellipsis',
                 }}
               >
-                {patient?.name ?? 'Unknown'}
+                {displayName}
               </span>
               <Mono tone="muted" size="xs">
-                {patient?.mrn ?? 'MRN —'}
+                {displayMrn}
               </Mono>
             </div>
           </div>
@@ -406,22 +456,32 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
         }}
       >
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          {/* Patient banner */}
-          <div
-            style={{
-              display: 'flex',
-              gap: SPACE.sm,
-              marginBottom: SPACE.lg,
-            }}
-          >
-            <StatBox label="Age / Sex" value={patient?.age ?? '—'} />
-            <StatBox
-              label="Code Status"
-              value={patient?.code ?? '—'}
-              tone={isDnr ? 'info' : 'default'}
-            />
-            <StatBox label="Acuity" value="ESI 2" tone="crit" />
-          </div>
+          {/* Patient banner — tactical FHIR-aligned header strip with
+              code status, isolation, allergies, and the dominant early
+              warning score. Falls back to the legacy 3-box banner for
+              any caller that hasn't migrated to Patient yet. */}
+          {clinical ? (
+            <>
+              <PatientHeaderStrip patient={clinical} />
+              <VitalsPanel patient={clinical} />
+            </>
+          ) : (
+            <div
+              style={{
+                display: 'flex',
+                gap: SPACE.sm,
+                marginBottom: SPACE.lg,
+              }}
+            >
+              <StatBox label="Age / Sex" value={(patient as LegacyPatientShape)?.age ?? '—'} />
+              <StatBox
+                label="Code Status"
+                value={(patient as LegacyPatientShape)?.code ?? '—'}
+                tone={isDnr ? 'info' : 'default'}
+              />
+              <StatBox label="Acuity" value="ESI 2" tone="crit" />
+            </div>
+          )}
 
           {/* Intake & Measurements */}
           <Section id="PT.INTAKE" title="Intake & Measurements" icon={Scale}>
@@ -433,8 +493,22 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 flexWrap: 'wrap',
               }}
             >
-              <Field label="Height" defaultValue="178" unit="cm" type="number" />
-              <Field label="Weight" defaultValue="82.5" unit="kg" type="number" />
+              <Field
+                label="Height"
+                defaultValue={
+                  clinical?.heightCm != null ? String(clinical.heightCm) : '178'
+                }
+                unit="cm"
+                type="number"
+              />
+              <Field
+                label="Weight"
+                defaultValue={
+                  clinical?.weightKg != null ? String(clinical.weightKg) : '82.5'
+                }
+                unit="kg"
+                type="number"
+              />
               <div style={{ flex: 1, minWidth: 120 }}>
                 <BracketLabel tone="muted" size="xs">
                   BMI
@@ -597,7 +671,11 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 CHIEF COMPLAINT
               </BracketLabel>
               <textarea
-                defaultValue={patient?.notes ?? ''}
+                defaultValue={
+                  clinical?.currentEncounter?.chiefComplaint ??
+                  (patient as LegacyPatientShape)?.notes ??
+                  ''
+                }
                 onFocus={() => setChiefComplaintFocused(true)}
                 onBlur={() => setChiefComplaintFocused(false)}
                 style={{
@@ -660,8 +738,22 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                <AllergyChip label="Penicillin" critical />
-                <AllergyChip label="Latex" />
+                {clinical && clinical.allergies.length > 0 ? (
+                  clinical.allergies.map((a) => (
+                    <AllergyChip
+                      key={a.id}
+                      label={`${a.substance} · ${a.reaction}`}
+                      critical={a.severity === 'high'}
+                    />
+                  ))
+                ) : clinical ? (
+                  <AllergyChip label="NKA · No Known Allergies" />
+                ) : (
+                  <>
+                    <AllergyChip label="Penicillin" critical />
+                    <AllergyChip label="Latex" />
+                  </>
+                )}
               </div>
             </div>
           </Section>
@@ -804,7 +896,12 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
           {/* Admin & Insurance */}
           <Section id="PT.ADMIN" title="Admin & Insurance" icon={CreditCard}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
-              <Field label="Primary Insurance" defaultValue="BlueCross BlueShield" />
+              <Field
+                label="Primary Insurance"
+                defaultValue={
+                  clinical?.currentEncounter?.payer?.primary ?? 'BlueCross BlueShield'
+                }
+              />
               <div
                 style={{
                   display: 'grid',
@@ -812,8 +909,18 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   gap: SPACE.sm,
                 }}
               >
-                <Field label="Member ID" defaultValue="XYZ123456789" />
-                <Field label="Group Number" defaultValue="98765" />
+                <Field
+                  label="Member ID"
+                  defaultValue={
+                    clinical?.currentEncounter?.payer?.memberId ?? 'XYZ123456789'
+                  }
+                />
+                <Field
+                  label="Group Number"
+                  defaultValue={
+                    clinical?.currentEncounter?.payer?.groupId ?? '98765'
+                  }
+                />
               </div>
               <Divider />
               <div

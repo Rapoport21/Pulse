@@ -38,7 +38,10 @@ import {
 } from 'recharts';
 import QRCode from 'qrcode';
 import { UserProfile, UserRole } from '../types';
+import type { Patient } from '../types';
 import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
+import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
+import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
@@ -918,94 +921,69 @@ export const MobileView: React.FC<MobileViewProps> = ({
       (ROLE_ACTIONS[currentUser.role]?.length || 1)) *
     100;
 
+  // Adapter — takes a canonical FHIR-aligned Patient and projects it
+  // into the shape the mobile patient-list card expects. We keep the
+  // legacy display fields (name/age/mrn/loc/code/notes/vitals/trends)
+  // for drop-in compatibility, AND attach the full `Patient` as
+  // `clinical` so PatientDetailScreen can render the new
+  // PatientHeaderStrip + VitalsPanel when the user taps in.
+  //
+  // Status bucketing uses the latest MEWS — the nurse's eye is on
+  // "how sick is this patient right now", and MEWS is a pragmatic
+  // bedside proxy that the existing tile rendering can key off.
+  const adaptPatientForList = (p: Patient) => {
+    const latest = p.vitalsHistory[p.vitalsHistory.length - 1];
+    const trendWindow = p.vitalsHistory.slice(-6);
+    const mews = latest ? computeMEWS(latest) : null;
+    const status =
+      !mews ? 'normal' : mews.risk === 'critical' || mews.risk === 'high' ? 'critical' : mews.risk === 'moderate' ? 'warning' : 'normal';
+
+    const age = ageInYears(p.birthDate);
+    const encounter = p.currentEncounter;
+    const loc = encounter?.location?.bed
+      ? encounter.location.bed
+      : encounter?.location?.zone ?? '—';
+
+    return {
+      id: p.id,
+      name: `${p.name.family}, ${p.name.given}`,
+      age: `${age}${p.sex}`,
+      mrn: p.mrn,
+      loc,
+      status,
+      code: p.codeStatus === 'FULL' ? 'FULL CODE' : p.codeStatus,
+      notes: encounter?.chiefComplaint ?? '—',
+      vitals: {
+        hr: latest?.heartRate != null ? String(latest.heartRate) : '—',
+        bp:
+          latest?.systolic != null && latest?.diastolic != null
+            ? `${latest.systolic}/${latest.diastolic}`
+            : '—',
+        o2: latest?.spO2 != null ? String(latest.spO2) : '—',
+      },
+      trends: {
+        hr: trendWindow.map((v) => v.heartRate ?? 0),
+        bp: trendWindow.map((v) => v.systolic ?? 0),
+        o2: trendWindow.map((v) => v.spO2 ?? 0),
+      },
+      /** Canonical FHIR-aligned patient — PatientDetailScreen reads this. */
+      clinical: p,
+    };
+  };
+
   const getMyPatients = () => {
-    if (currentUser.role === UserRole.ER_PERSONNEL) {
-      return [
-        {
-          id: '1',
-          name: 'Doe, John',
-          age: '45M',
-          mrn: 'MRN-8821',
-          loc: 'Trauma 1',
-          status: 'critical',
-          code: 'FULL CODE',
-          notes: 'MVA, awaiting CT. Intubated.',
-          vitals: { hr: '135', bp: '85/50', o2: '92' },
-          trends: {
-            hr: [80, 85, 90, 110, 125, 135],
-            bp: [120, 115, 100, 90, 85, 85],
-            o2: [98, 97, 95, 94, 92, 92],
-          },
-        },
-        {
-          id: '2',
-          name: 'Smith, Jane',
-          age: '62F',
-          mrn: 'MRN-9912',
-          loc: 'Bed 4',
-          status: 'warning',
-          code: 'DNR/DNI',
-          notes: 'Chest pain, troponin pending. IV access established.',
-          vitals: { hr: '98', bp: '145/90', o2: '96' },
-          trends: {
-            hr: [75, 78, 85, 92, 95, 98],
-            bp: [130, 135, 140, 142, 145, 145],
-            o2: [99, 98, 98, 97, 96, 96],
-          },
-        },
-        {
-          id: '3',
-          name: 'Fox, Robert',
-          age: '28M',
-          mrn: 'MRN-1102',
-          loc: 'Bed 7',
-          status: 'normal',
-          code: 'FULL CODE',
-          notes: 'Laceration repair complete. Awaiting discharge papers.',
-          vitals: { hr: '72', bp: '120/80', o2: '99' },
-          trends: {
-            hr: [70, 71, 72, 71, 72, 72],
-            bp: [118, 120, 119, 121, 120, 120],
-            o2: [98, 99, 99, 99, 99, 99],
-          },
-        },
-      ];
-    } else {
-      return [
-        {
-          id: '4',
-          name: 'Wong, Alice',
-          age: '34F',
-          mrn: 'MRN-3321',
-          loc: 'Room 201',
-          status: 'normal',
-          code: 'FULL CODE',
-          notes: 'Post-op appendectomy. Pain well managed.',
-          vitals: { hr: '82', bp: '118/75', o2: '98' },
-          trends: {
-            hr: [80, 81, 82, 82, 82, 82],
-            bp: [120, 119, 118, 118, 118, 118],
-            o2: [99, 98, 98, 98, 98, 98],
-          },
-        },
-        {
-          id: '5',
-          name: 'Ruiz, Carlos',
-          age: '71M',
-          mrn: 'MRN-4415',
-          loc: 'Room 202',
-          status: 'warning',
-          code: 'FULL CODE',
-          notes: 'BP dropping, paging MD. Fluid bolus started.',
-          vitals: { hr: '110', bp: '90/60', o2: '94' },
-          trends: {
-            hr: [85, 90, 95, 100, 105, 110],
-            bp: [110, 105, 100, 95, 92, 90],
-            o2: [97, 96, 95, 95, 94, 94],
-          },
-        },
-      ];
-    }
+    // ER personnel own the ED bays (Trauma 1, Fast Track, etc.); nurses
+    // on the floor own the inpatient rooms. MOCK_PATIENTS is grouped
+    // by encounter class so we can filter with one line.
+    const pool =
+      currentUser.role === UserRole.ER_PERSONNEL
+        ? MOCK_PATIENTS.filter(
+            (p) => p.currentEncounter?.class === 'EMERGENCY',
+          )
+        : MOCK_PATIENTS.filter(
+            (p) => p.currentEncounter?.class !== 'EMERGENCY',
+          );
+    return pool.map(adaptPatientForList);
   };
 
   const myPatients = getMyPatients();
