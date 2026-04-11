@@ -329,10 +329,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 scroll-smooth">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden relative z-10 scroll-smooth [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
         
         {activeTab === 'dashboard' && (
-          <div className="p-5 pb-40 space-y-7 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="p-5 pb-40 space-y-7 animate-in fade-in slide-in-from-bottom-8">
             <div className="flex items-center justify-between mt-2 mb-2">
               <h1 className="text-[36px] font-bold text-white tracking-tighter leading-none">Overview</h1>
               <div className="flex items-center gap-1.5 text-[13px] font-semibold text-white/40 bg-white/[0.05] px-3 py-1.5 rounded-full border border-white/[0.05]">
@@ -363,8 +363,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </div>
 
             {/* Quick Actions Scroll */}
-            <div className="-mx-5">
-              <div className="flex gap-3 overflow-x-auto px-5 pb-2 snap-x [&::-webkit-scrollbar]:hidden">
+            <div className="-mx-5 px-5">
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [mask-image:linear-gradient(to_right,black_calc(100%-40px),transparent)]">
                 <button onClick={() => showToast('Paging On-Call Physician...', 'info')} className="flex items-center gap-2.5 bg-white/[0.08] border border-white/[0.1] rounded-full px-5 py-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] active:scale-95 transition-all snap-start shrink-0">
                   <PhoneCall className="w-4 h-4 text-[#32ADE6]" />
                   <span className="text-[15px] font-bold text-white">Page On-Call</span>
@@ -474,7 +474,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
 
         {activeTab === 'tasks' && (
-          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8">
             <h1 className="text-[36px] font-bold text-white tracking-tighter mt-2">Actions</h1>
 
             {/* Urgent Surge Tasks (Live Sync) */}
@@ -634,7 +634,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
         
         {activeTab === 'patients' && (
-          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8">
             <h1 className="text-[36px] font-bold text-white tracking-tighter mt-2">
               {currentUser.role === UserRole.MANAGER ? 'Units' : 'Patients'}
             </h1>
@@ -712,7 +712,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
 
         {activeTab === 'alerts' && (
-          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="p-5 pb-40 space-y-6 animate-in fade-in slide-in-from-bottom-8">
             <h1 className="text-[36px] font-bold text-white tracking-tighter mt-2">Alerts</h1>
             
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-[28px] overflow-hidden shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] backdrop-blur-2xl">
@@ -748,7 +748,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
 
         {activeTab === 'comms' && (
-          <div className="p-5 pb-40 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)]">
+          <div className="p-5 pb-40 space-y-8 animate-in fade-in slide-in-from-bottom-8">
              <h1 className="text-[36px] font-bold text-white tracking-tighter mt-2">Comms</h1>
              
              {/* Secure Chat Threads */}
