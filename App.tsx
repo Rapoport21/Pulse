@@ -24,6 +24,7 @@ import {
   UrgentTask,
 } from './lib/surgeTaskTemplates';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
+import { installGlobalHapticListener } from './lib/haptics';
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -72,6 +73,11 @@ function App() {
   // First-click permission for browser notifications.
   useEffect(() => {
     return installFirstClickPermissionListener();
+  }, []);
+
+  // Global haptic tap on every button/selection click (native + web).
+  useEffect(() => {
+    return installGlobalHapticListener();
   }, []);
 
   // Listen for surge-activated pings from OTHER devices and fire the
