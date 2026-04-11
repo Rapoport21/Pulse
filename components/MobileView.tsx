@@ -23,6 +23,7 @@ import {
   ChevronRight,
   ChevronLeft,
   BrainCircuit,
+  QrCode,
   Radio,
 } from 'lucide-react';
 import {
@@ -38,6 +39,8 @@ import {
 import { UserProfile, UserRole } from '../types';
 import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { PatientDetailScreen } from './PatientDetailScreen';
+import { QRScannerModal } from './QRScannerModal';
+import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
@@ -709,7 +712,39 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [taskFilter, setTaskFilter] = useState<'all' | 'stat' | 'routine'>('all');
   const [time, setTime] = useState(new Date());
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showTestQR, setShowTestQR] = useState(false);
   const myDeviceId = getDeviceId();
+
+  /**
+   * QR scan handler. Parses `pulse://` deep-link payloads.
+   *
+   * Supported schemes today:
+   *   pulse://tab/<tabname>  → jump to the named tab
+   *
+   * Unknown payloads close the scanner and show a toast preview of
+   * the raw string so the user can see *something* scanned.
+   */
+  const handleQRScan = (payload: string) => {
+    if (payload.startsWith('pulse://tab/')) {
+      const tab = payload.slice('pulse://tab/'.length).split(/[?#/]/)[0];
+      if (
+        tab === 'dashboard' ||
+        tab === 'tasks' ||
+        tab === 'patients' ||
+        tab === 'alerts' ||
+        tab === 'comms'
+      ) {
+        setActiveTab(tab);
+        setShowScanner(false);
+        showToast(`OPENED ${tab.toUpperCase()} TAB`, 'success');
+        return;
+      }
+    }
+    setShowScanner(false);
+    const preview = payload.length > 48 ? payload.slice(0, 48) + '…' : payload;
+    showToast(`QR: ${preview}`, 'info');
+  };
   const connectionStatus = useConnectionStatus();
   const connectionColor =
     connectionStatus === 'connected'
@@ -1879,6 +1914,20 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     haptic: 'medium' as const,
                     action: () =>
                       showToast('Divert status requested', 'info'),
+                  },
+                  {
+                    icon: QrCode,
+                    label: 'SCAN QR',
+                    tone: 'info' as const,
+                    haptic: 'light' as const,
+                    action: () => setShowScanner(true),
+                  },
+                  {
+                    icon: QrCode,
+                    label: 'TEST QR',
+                    tone: 'info' as const,
+                    haptic: 'light' as const,
+                    action: () => setShowTestQR(true),
                   },
                 ].map((btn, qIdx) => {
                   const color =
@@ -3338,6 +3387,32 @@ export const MobileView: React.FC<MobileViewProps> = ({
           showToast={showToast}
         />
       )}
+
+      {/* QR Scanner — fullscreen camera view. Animates in/out via
+          AnimatePresence so the unmount transition completes before
+          we release the camera stream. */}
+      <AnimatePresence>
+        {showScanner && (
+          <QRScannerModal
+            onClose={() => setShowScanner(false)}
+            onScan={handleQRScan}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Test QR display — renders a scannable code for
+          pulse://tab/patients so the user can exercise the scanner
+          from a second device (laptop screen, other phone, etc). */}
+      <AnimatePresence>
+        {showTestQR && (
+          <TestQRModal
+            payload="pulse://tab/patients"
+            label="OPEN PATIENTS TAB"
+            sublabel="Scan from another device to jump to the Patients view"
+            onClose={() => setShowTestQR(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
