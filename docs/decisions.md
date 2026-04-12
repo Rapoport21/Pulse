@@ -12,6 +12,32 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-11 · 15-screen clinical surface: launch from everywhere
+
+**Context.** PULSE now has 15 clinical components (ESI Triage, EMS
+Inbound, Bed Board, Admit, Discharge, Rounding List, Note Composer,
+CPOE, Code Blue, Handoff, Secure Messaging, Workforce Coverage,
+Alerts Center, Patient Header, Vitals Panel). The question was where
+each screen launches from — dedicated tab, shared launcher, or inline.
+
+**Decision.** Every screen is accessible from multiple entry points.
+The Patients tab has launcher cards for clinical workflows (Triage,
+EMS, Admit, Discharge, Rounding, Notes, Orders, Code Blue, Handoff).
+The Dashboard tab has Quick Actions (Code Blue, Page, Divert, QR) and
+a Workforce launcher. Alerts tab has a full Alerts Center launcher.
+Comms tab has a Secure Messaging launcher. The desktop PulseHorizon
+right column mirrors all launchers in a compact grid. The patient
+chart's "Add Note" and "Order" buttons open the NoteComposer and
+OrderEntry overlays directly. This means a clinician always finds the
+tool they need from wherever they happen to be.
+
+**Rejected.** (1) One launcher per screen — forces navigation when the
+user is already in context. (2) A dedicated "Tools" tab — hides
+screens behind an extra tap. (3) Only in the patient chart — screens
+like Workforce and Messaging aren't patient-specific.
+
+---
+
 ## 2026-04-11 · Strategic pivot: three-bucket build plan
 
 **Context.** The 47-wedge build plan conflated "what production hospital
