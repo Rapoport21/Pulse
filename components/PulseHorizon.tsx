@@ -765,10 +765,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     }}
                   >
                     {isSurgeActive
-                      ? 'Surge Level 2 activated. Risk trajectory stabilizing. Monitor fast-track throughput.'
+                      ? 'Surge Level 2 active. Census 312 (+28). Float pool deployed. Overflow Hall C open — 2 occupied, 2 ready. ER wait 125m, divert recommended. 3 active codes. Risk trajectory stabilizing — monitor fast-track throughput.'
                       : loginCount > 1
-                      ? 'Capacity is stable. No active surge protocols required at this time.'
-                      : 'Forecast exceeds safety thresholds. Activate Surge Protocol Level 2 immediately.'}
+                      ? 'Capacity is stable. Census 284, ER wait 45m. ICU at 83%. Staffing ratio 1:4.2 — optimal. No surge protocols required.'
+                      : 'Forecast exceeds safety thresholds. Census trending +28 over 2h. Activate Surge Protocol Level 2 immediately.'}
                   </p>
                 </div>
                 {!isSurgeActive && loginCount <= 1 && (

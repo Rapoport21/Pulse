@@ -1874,17 +1874,22 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M01"
                   label="ER Wait Time"
-                  value="45"
+                  value={isSurgeActive ? '125' : '45'}
                   unit="min"
-                  delta={{ text: '+5m', tone: 'crit' }}
-                  accent="warn"
+                  delta={isSurgeActive
+                    ? { text: '+80m', tone: 'crit' }
+                    : { text: '+5m', tone: 'crit' }}
+                  accent={isSurgeActive ? 'crit' : 'warn'}
                 />
                 <MetricTile
                   id="M02"
                   label="Total Census"
-                  value="284"
+                  value={isSurgeActive ? '312' : '284'}
                   unit="pts"
-                  delta={{ text: '-12', tone: 'ok' }}
+                  delta={isSurgeActive
+                    ? { text: '+28', tone: 'crit' }
+                    : { text: '-12', tone: 'ok' }}
+                  accent={isSurgeActive ? 'warn' : undefined}
                 />
                 <MetricTile
                   id="M03"
@@ -1897,9 +1902,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M04"
                   label="Active Codes"
-                  value="1"
-                  delta={{ text: 'STABLE', tone: 'info' }}
-                  accent="info"
+                  value={isSurgeActive ? '3' : '1'}
+                  delta={isSurgeActive
+                    ? { text: '+2 NEW', tone: 'crit' }
+                    : { text: 'STABLE', tone: 'info' }}
+                  accent={isSurgeActive ? 'crit' : 'info'}
                 />
               </div>
             </div>
@@ -2594,13 +2601,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   }}
                 >
                   {isSurgeActive
-                    ? `Surge protocol active for ${formatElapsed(
+                    ? `Surge protocol active T+${formatElapsed(
                         surgeActivatedAt,
                         time.getTime(),
                       )}. ${
                         urgentTasks.filter((t) => !t.acknowledgedBy).length
-                      } of ${urgentTasks.length} urgent tasks pending. ER capacity at 115%. Divert status recommended.`
-                    : 'Normal operations. ER wait time is 45m. ICU has 2 beds available. Staffing is optimal for current census.'}
+                      }/${urgentTasks.length} urgent tasks pending. Census 312 (+28 from baseline). ER wait 125m — divert status recommended. Float pool deployed to ICU-4, SD-3, 3E-304. Overflow Hall C open: 2 occupied, 2 ready. 3 active codes (2 new since surge onset).`
+                    : 'Normal operations. ER wait 45m, trending +5m. Census 284 — 12 discharges pending. ICU at 83% (1 bed not staffed, 1 blocked for vent maintenance). Staffing ratio 1:4.2, optimal for current census. Next shift change in 3h 42m.'}
                 </p>
                 <div
                   style={{
