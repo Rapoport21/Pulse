@@ -251,3 +251,85 @@ export function stateLabel(state: BedState): string {
     case 'reserved': return 'RESERVED';
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Surge escalation transforms
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Transforms bed state to reflect surge conditions.
+ * Called when surge protocol activates. Effects:
+ *   1. Ready beds in high-demand units → reserved for incoming
+ *   2. Dirty beds fast-turn → ready (EVS rapid response)
+ *   3. Overflow Hall C beds get staffed and start receiving patients
+ *   4. Not-staffed beds get float pool coverage
+ *
+ * Returns a deep copy — doesn't mutate input.
+ */
+export function escalateBedState(baseUnits: BedUnit[]): BedUnit[] {
+  const units: BedUnit[] = JSON.parse(JSON.stringify(baseUnits));
+
+  for (const unit of units) {
+    for (const bed of unit.beds) {
+      // Dirty beds fast-turn → ready (EVS surge response, < 15min)
+      if (bed.state === 'dirty') {
+        bed.state = 'ready';
+        bed.stateChangedMinAgo = 2;
+      }
+      // Not-staffed → ready (float pool deployed)
+      if (bed.state === 'not_staffed') {
+        bed.state = 'ready';
+        bed.assignedNurse = 'Float Pool';
+        bed.stateChangedMinAgo = 5;
+      }
+    }
+
+    // ED Acute: reserve the newly-ready beds for EMS inbound
+    if (unit.id === 'ed-acute') {
+      const readyBeds = unit.beds.filter(b => b.state === 'ready');
+      for (const bed of readyBeds) {
+        bed.state = 'reserved';
+        bed.reservedFor = 'Surge Hold — EMS Inbound';
+        bed.stateChangedMinAgo = 1;
+      }
+    }
+
+    // ED Trauma: reserve any ready bay
+    if (unit.id === 'ed-trauma') {
+      const readyBeds = unit.beds.filter(b => b.state === 'ready');
+      for (const bed of readyBeds) {
+        bed.state = 'reserved';
+        bed.reservedFor = 'Trauma Standby';
+        bed.stateChangedMinAgo = 0;
+      }
+    }
+
+    // Overflow: first 2 beds → occupied (early surge patients),
+    // remaining → ready with float nurses
+    if (unit.surgeOnly) {
+      unit.beds.forEach((bed, i) => {
+        if (i < 2) {
+          bed.state = 'occupied';
+          bed.patientInitials = ['MH', 'DV'][i];
+          bed.acuity = 3;
+          bed.assignedNurse = 'Float Pool';
+          bed.stateChangedMinAgo = 10;
+        } else {
+          bed.state = 'ready';
+          bed.assignedNurse = 'Float Pool';
+          bed.stateChangedMinAgo = 0;
+        }
+      });
+    }
+  }
+
+  return units;
+}
+
+/**
+ * Revert surge escalation — return to baseline bed state.
+ * Simply re-seeds from the original constants.
+ */
+export function deescalateBedState(): BedUnit[] {
+  return seedBedState();
+}

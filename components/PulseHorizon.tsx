@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   XAxis,
@@ -58,7 +58,7 @@ import {
   DeptCoordination,
   BriefMeScreen,
 } from './clinical';
-import { seedBedState, type BedUnit } from '../data/bedMock';
+import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from '../data/bedMock';
 import {
   COLORS,
   FONTS,
@@ -140,7 +140,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showManualModal, setShowManualModal] = useState(false);
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
-  const [bedUnits] = useState<BedUnit[]>(() => seedBedState());
+  const [bedUnits, setBedUnits] = useState<BedUnit[]>(() => seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
@@ -203,6 +203,11 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       { time: '+90m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus90 - r90), capacity: 100 },
     ];
   }, [simState, isSurgeActive, systemStatus, loginCount]);
+
+  // Bed state reacts to surge activation
+  useEffect(() => {
+    setBedUnits(isSurgeActive ? escalateBedState(seedBedState()) : deescalateBedState());
+  }, [isSurgeActive]);
 
   const currentLoad = chartData[1].load;
   const projectedLoad = chartData[4].load;
