@@ -65,23 +65,23 @@ export const FONTS = {
 /** Consistent type scale — use these rather than arbitrary sizes */
 export const TYPE = {
   // Display — hero numerics and headlines
-  display: { size: 56, weight: 600, tracking: '-0.05em', lineHeight: 0.9 },
-  displaySm: { size: 42, weight: 600, tracking: '-0.04em', lineHeight: 0.95 },
+  display: { size: 64, weight: 600, tracking: '-0.05em', lineHeight: 0.9 },
+  displaySm: { size: 48, weight: 600, tracking: '-0.04em', lineHeight: 0.95 },
 
   // Section titles
-  h1: { size: 28, weight: 600, tracking: '-0.02em', lineHeight: 1.15 },
-  h2: { size: 22, weight: 600, tracking: '-0.02em', lineHeight: 1.2 },
-  h3: { size: 18, weight: 600, tracking: '-0.015em', lineHeight: 1.25 },
-  h4: { size: 15, weight: 600, tracking: '-0.01em', lineHeight: 1.3 },
+  h1: { size: 34, weight: 600, tracking: '-0.02em', lineHeight: 1.15 },
+  h2: { size: 26, weight: 600, tracking: '-0.02em', lineHeight: 1.2 },
+  h3: { size: 21, weight: 600, tracking: '-0.015em', lineHeight: 1.25 },
+  h4: { size: 17, weight: 600, tracking: '-0.01em', lineHeight: 1.3 },
 
   // Body
-  body: { size: 14, weight: 400, tracking: '-0.005em', lineHeight: 1.5 },
-  bodySm: { size: 13, weight: 400, tracking: '-0.003em', lineHeight: 1.45 },
+  body: { size: 16, weight: 400, tracking: '-0.005em', lineHeight: 1.5 },
+  bodySm: { size: 14, weight: 400, tracking: '-0.003em', lineHeight: 1.45 },
 
   // Mono (data, labels, metadata)
-  mono: { size: 11, weight: 500, tracking: '0.14em', lineHeight: 1.2 },
-  monoSm: { size: 10, weight: 500, tracking: '0.14em', lineHeight: 1.2 },
-  monoXs: { size: 9, weight: 500, tracking: '0.16em', lineHeight: 1.2 },
+  mono: { size: 13, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
+  monoSm: { size: 12, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
+  monoXs: { size: 11, weight: 500, tracking: '0.14em', lineHeight: 1.25 },
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -142,10 +142,10 @@ export const MOTION = {
 // Chrome heights — ensures boot/login/shell align to the same grid
 // ─────────────────────────────────────────────────────────────────────────
 export const CHROME = {
-  headerHeight: 48,    // top HUD strip / desktop header
-  footerHeight: 32,    // bottom HUD ticker
-  mobileNavHeight: 56, // mobile bottom tab bar
-  sidebarWidth: 280,   // command sidebar
+  headerHeight: 56,    // top HUD strip / desktop header
+  footerHeight: 36,    // bottom HUD ticker
+  mobileNavHeight: 64, // mobile bottom tab bar
+  sidebarWidth: 300,   // command sidebar
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────

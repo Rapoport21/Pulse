@@ -13,9 +13,13 @@ export interface UserProfile {
 
 export enum Tab {
   HORIZON = 'Pulse Horizon',
+  BED_BOARD = 'Bed Board',
+  ADMISSIONS = 'Admissions',
   LIVE_OPS = 'Live Ops',
   PLAYBOOKS = 'Playbooks',
   ACTIONS = 'Actions',
+  ALERTS = 'Alerts',
+  STAFFING = 'Staffing',
   BRIEF_ME = 'Brief Me',
   REPLAY = 'Replay',
   ROSTER = 'Roster',

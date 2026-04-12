@@ -14,6 +14,10 @@ import {
   MessageSquare,
   CheckCircle2,
   Clock,
+  BedDouble,
+  UserPlus,
+  ShieldAlert as ShieldAlertIcon,
+  UsersRound,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile } from './types';
 import { USERS } from './data/userProfiles';
@@ -31,6 +35,8 @@ import { CommandSidebar } from './components/CommandSidebar';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
+import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage } from './components/clinical';
+import { seedBedState, type BedUnit } from './data/bedMock';
 import { useRealtimeState, useRealtimePing, subscribe } from './lib/realtime';
 import {
   buildInitialUrgentTasks,
@@ -173,6 +179,10 @@ function App() {
 
   const navItems = [
     { id: Tab.HORIZON, icon: Activity, label: 'Horizon', code: 'H' },
+    { id: Tab.BED_BOARD, icon: BedDouble, label: 'Bed Board', code: 'D' },
+    { id: Tab.ADMISSIONS, icon: UserPlus, label: 'Admissions', code: 'I' },
+    { id: Tab.ALERTS, icon: ShieldAlertIcon, label: 'Alerts', code: 'T' },
+    { id: Tab.STAFFING, icon: UsersRound, label: 'Staffing', code: 'S' },
     { id: Tab.LIVE_OPS, icon: Radio, label: 'Live Ops', code: 'L' },
     { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
     { id: Tab.ACTIONS, icon: Layout, label: 'Actions', code: 'A' },
@@ -539,8 +549,8 @@ function App() {
                       compact={isCompactNav}
                       title={isCompactNav ? item.label : undefined}
                     >
-                      <Icon size={14} strokeWidth={2} />
-                      {!isCompactNav && <span style={{ fontSize: 12 }}>{item.label}</span>}
+                      <Icon size={16} strokeWidth={2} />
+                      {!isCompactNav && <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>}
                     </NavButton>
                   );
                 })}
@@ -704,6 +714,47 @@ function App() {
                   loginCount={loginCount}
                   isSurgeActive={isSurgeActive}
                 />
+              )}
+              {activeTab === Tab.BED_BOARD && (
+                <div style={{ height: '100%', overflow: 'auto' }}>
+                  <BedBoard
+                    display="full"
+                    units={seedBedState()}
+                    surgeActive={isSurgeActive}
+                    open
+                    onClose={() => setActiveTab(Tab.HORIZON)}
+                    role={currentUser.role}
+                  />
+                </div>
+              )}
+              {activeTab === Tab.ADMISSIONS && (
+                <div style={{ height: '100%', overflow: 'auto' }}>
+                  <AdmitFlow
+                    open
+                    onClose={() => setActiveTab(Tab.HORIZON)}
+                    showToast={showToast}
+                  />
+                </div>
+              )}
+              {activeTab === Tab.ALERTS && (
+                <div style={{ height: '100%', overflow: 'auto' }}>
+                  <AlertsCenter
+                    open
+                    onClose={() => setActiveTab(Tab.HORIZON)}
+                    showToast={showToast}
+                    role={currentUser.role}
+                  />
+                </div>
+              )}
+              {activeTab === Tab.STAFFING && (
+                <div style={{ height: '100%', overflow: 'auto' }}>
+                  <WorkforceCoverage
+                    open
+                    onClose={() => setActiveTab(Tab.HORIZON)}
+                    showToast={showToast}
+                    role={currentUser.role}
+                  />
+                </div>
               )}
               {activeTab === Tab.PLAYBOOKS && <Playbooks onActivate={handleActivatePlaybook} />}
               {activeTab === Tab.ACTIONS && (
@@ -1018,16 +1069,16 @@ const NavButton: React.FC<{
         display: 'flex',
         alignItems: 'center',
         justifyContent: compact ? 'center' : 'flex-start',
-        gap: compact ? 0 : 7,
-        padding: compact ? '0' : '7px 11px',
-        width: compact ? 30 : undefined,
-        height: compact ? 30 : undefined,
+        gap: compact ? 0 : 8,
+        padding: compact ? '0' : '8px 12px',
+        width: compact ? 34 : undefined,
+        height: compact ? 34 : undefined,
         background: active ? COLORS.surfaceElev : hovered ? COLORS.surface : 'transparent',
         border: `1px solid ${active ? COLORS.border : 'transparent'}`,
         borderRadius: RADIUS.sm,
         color: active ? COLORS.textPrimary : hovered ? COLORS.textSecondary : COLORS.textMuted,
         fontFamily: FONTS.sans,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 500,
         cursor: 'pointer',
         letterSpacing: '-0.003em',
@@ -1063,8 +1114,8 @@ const IconButton: React.FC<{
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative',
-        width: 30,
-        height: 30,
+        width: 34,
+        height: 34,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
