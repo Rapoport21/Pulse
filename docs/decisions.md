@@ -12,6 +12,71 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-11 · Strategic pivot: three-bucket build plan
+
+**Context.** The 47-wedge build plan conflated "what production hospital
+software needs" with "what a demo should show." Many wedges (SEP-1
+trackers, Falls/Braden forms, restraint timers) mirror existing Epic/Cerner
+screens — they wouldn't impress a UX audience or differentiate PULSE.
+
+**Decision.** Sort all planned work into three buckets:
+
+- **Bucket A (build full fidelity):** PULSE-native innovation — 90-min
+  forecast, risk drivers, surge proposal with Ops Director confirmation,
+  bed state board, confidence/freshness indicators, replay timeline,
+  manual mode. This is the moat.
+- **Bucket B (build clean, emulate):** Full hospital platform — EHR tab
+  (labs, notes, imaging, meds, orders), admit/discharge flows, comms,
+  alerts. Looks and feels like software hospitals can use, but doesn't
+  need backend compliance.
+- **Bucket C (document only):** Compliance/regulatory — SEP-1, HIPAA
+  audit trails, CMS quality reporting, FHIR/HL7 integration specs.
+  Documented in `docs/production-scope.md`, never built.
+
+**Rejected.** (1) Build everything at equal fidelity — wastes demo time
+on commodity screens. (2) Skip clinical surfaces entirely and only
+build Bucket A — makes PULSE feel like a dashboard, not an all-in-one
+platform. Nick's framing: *"compliance-lite, visually complete."*
+
+---
+
+## 2026-04-11 · PULSE is all-in-one, not just an ops layer
+
+**Context.** Early sessions framed PULSE as "the operations layer on top
+of the EHR." Nick corrected: PULSE is the **entire hospital platform** —
+it includes EHR workflow, bed management, staffing, communication, and
+operations under one roof. The EHR is a tab inside PULSE, not something
+PULSE sits on top of.
+
+**Decision.** Build the EHR tab (patient chart with labs, notes, imaging,
+meds, orders) as a core part of PULSE, not an imitation overlay.
+Position for the demo: "PULSE integrates with existing systems on the
+backend and provides better, more consistent UI + AI features."
+
+**Rejected.** (1) Position as ops-only layer — undersells the vision.
+(2) Build a full EHR competitor — overkill for POC. The middle ground:
+emulate EHR workflow at full visual quality without backend compliance.
+
+---
+
+## 2026-04-11 · ConfidenceBadge as a first-class design primitive
+
+**Context.** The PULSE vision document names confidence and freshness
+indicators as a core differentiator. Nothing else in hospital software
+makes data quality this explicit.
+
+**Decision.** Add `ConfidenceBadge` to the tactical design system
+(`components/design/primitives.tsx`). Two variants: compact (dot +
+percentage) and full (freshness label + confidence + age). Four
+freshness levels: LIVE (≤1m), RECENT (≤10m), STALE (≤60m), OFFLINE
+(>60m). Weave into section headers and data tiles throughout.
+
+**Rejected.** (1) Show confidence only when degraded — misses the trust
+signal when data IS good. (2) Use tooltip-only approach — too hidden
+for a primary differentiator.
+
+---
+
 ## 2026-04-11 · Commit to the full clinical gap (not just the short list)
 
 **Context.** After the QR scanner shipped, Nick asked for a gap
