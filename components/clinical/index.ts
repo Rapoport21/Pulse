@@ -39,4 +39,8 @@ export { WorkforceCoverage } from './WorkforceCoverage';
 export type { WorkforceCoverageProps } from './WorkforceCoverage';
 export { AlertsCenter } from './AlertsCenter';
 export type { AlertsCenterProps } from './AlertsCenter';
+export { BriefMeScreen } from './BriefMeScreen';
+export type { BriefMeScreenProps } from './BriefMeScreen';
+export { DeptCoordination } from './DeptCoordination';
+export type { DeptCoordinationProps } from './DeptCoordination';
 

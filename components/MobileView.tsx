@@ -32,6 +32,8 @@ import {
   Pill,
   Siren,
   ArrowRightLeft,
+  Network,
+  BrainCircuit,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -64,6 +66,8 @@ import {
   SecureMessaging,
   WorkforceCoverage,
   AlertsCenter,
+  DeptCoordination,
+  BriefMeScreen,
   type TriageResult,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
@@ -919,6 +923,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showMessaging, setShowMessaging] = useState(false);
   const [showWorkforce, setShowWorkforce] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showDeptCoord, setShowDeptCoord] = useState(false);
+  const [showBriefMe, setShowBriefMe] = useState(false);
 
   const myDeviceId = getDeviceId();
 
@@ -4545,6 +4551,20 @@ export const MobileView: React.FC<MobileViewProps> = ({
       <AlertsCenter
         open={showAlerts}
         onClose={() => setShowAlerts(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
+      />
+
+      {/* Dept Coordination — multi-department C2 view. */}
+      <DeptCoordination
+        open={showDeptCoord}
+        onClose={() => setShowDeptCoord(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
+      />
+
+      {/* Brief Me — AI operational briefing. */}
+      <BriefMeScreen
+        open={showBriefMe}
+        onClose={() => setShowBriefMe(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
       />
 

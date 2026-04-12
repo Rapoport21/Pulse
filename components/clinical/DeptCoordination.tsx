@@ -1,18 +1,7 @@
 /**
- * DeptCoordination — fullscreen overlay showing real-time multi-department
- * coordination across the hospital.
- *
- * Core PULSE innovation (Bucket A): a tactical C2 (command-and-control)
- * view that surfaces department interconnections, active patient transfers,
- * shared resource utilization, bottleneck alerts, and inter-department
- * coordination messages in a single operational picture.
- *
- * Sections:
- *   1. Department Nodes    — compact cards for each dept with census/status
- *   2. Active Transfers    — animated patient hand-off cards between depts
- *   3. Resource Sharing    — utilization bars for shared hospital resources
- *   4. Bottleneck Alerts   — amber/red warnings with resolution actions
- *   5. Department Chat     — timestamped coordination messages
+ * DeptCoordination — tactical C2 overlay for multi-department ops.
+ * Bucket A innovation: dept nodes, transfers, shared resources,
+ * bottleneck alerts, and inter-dept coordination comms.
  */
 
 import React, { useState } from 'react';
@@ -28,73 +17,20 @@ import {
   ConfidenceBadge,
 } from '../design';
 
-// ─────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────
 
-export interface DeptCoordinationProps {
-  open: boolean;
-  onClose: () => void;
-  showToast: (msg: string) => void;
-}
+export interface DeptCoordinationProps { open: boolean; onClose: () => void; showToast: (msg: string) => void; }
 
 type DeptStatus = 'NORMAL' | 'STRAINED' | 'CRITICAL';
 type TransferStatus = 'IN PROGRESS' | 'PENDING' | 'BLOCKED';
-type AlertSeverity = 'warn' | 'crit';
 
-interface Department {
-  id: string;
-  name: string;
-  shortName: string;
-  census: number;
-  capacity: number;
-  status: DeptStatus;
-  activeTransfers: number;
-  color: string;
-  type: 'clinical' | 'utility';
-}
+interface Department { id: string; name: string; shortName: string; census: number; capacity: number; status: DeptStatus; activeTransfers: number; color: string; type: 'clinical' | 'utility'; }
+interface ActiveTransfer { id: string; patientId: string; patientInitials: string; from: string; to: string; reason: string; eta: string; status: TransferStatus; progress: number; }
+interface SharedResource { id: string; name: string; available: number; total: number; unit: string; detail: string; }
+interface BottleneckAlert { id: string; title: string; detail: string; severity: 'warn' | 'crit'; action: string; }
+interface CoordMessage { id: string; from: string; to: string; message: string; time: string; fromColor: string; }
 
-interface ActiveTransfer {
-  id: string;
-  patientId: string;
-  patientInitials: string;
-  from: string;
-  to: string;
-  reason: string;
-  eta: string;
-  status: TransferStatus;
-  progress: number; // 0-100
-}
-
-interface SharedResource {
-  id: string;
-  name: string;
-  available: number;
-  total: number;
-  unit: string;
-  detail: string;
-}
-
-interface BottleneckAlert {
-  id: string;
-  title: string;
-  detail: string;
-  severity: AlertSeverity;
-  action: string;
-}
-
-interface CoordMessage {
-  id: string;
-  from: string;
-  to: string;
-  message: string;
-  time: string;
-  fromColor: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Mock data
-// ─────────────────────────────────────────────────────────────────────────
+// ── Mock data ────────────────────────────────────────────────────────────
 
 const DEPARTMENTS: Department[] = [
   { id: 'ed', name: 'Emergency Dept', shortName: 'ED', census: 32, capacity: 40, status: 'STRAINED', activeTransfers: 3, color: COLORS.accent, type: 'clinical' },
@@ -135,36 +71,15 @@ const COORD_MESSAGES: CoordMessage[] = [
   { id: 'm5', from: 'RX', to: 'ICU', message: 'Vasopressin drip prepared for bed 7, runner dispatched', time: '14:12', fromColor: '#8B5CF6' },
 ];
 
-// ─────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────
 
-function deptStatusTone(s: DeptStatus): 'ok' | 'warn' | 'crit' {
-  return s === 'NORMAL' ? 'ok' : s === 'STRAINED' ? 'warn' : 'crit';
-}
+const deptStatusTone = (s: DeptStatus): 'ok' | 'warn' | 'crit' => s === 'NORMAL' ? 'ok' : s === 'STRAINED' ? 'warn' : 'crit';
+const deptStatusColor = (s: DeptStatus) => s === 'NORMAL' ? COLORS.ok : s === 'STRAINED' ? COLORS.warn : COLORS.crit;
+const transferStatusColor = (s: TransferStatus) => s === 'IN PROGRESS' ? COLORS.info : s === 'PENDING' ? COLORS.warn : COLORS.crit;
+const transferStatusTone = (s: TransferStatus): 'ok' | 'warn' | 'crit' | 'info' => s === 'IN PROGRESS' ? 'info' : s === 'PENDING' ? 'warn' : 'crit';
+const utilizationColor = (avail: number, total: number) => { const p = total > 0 ? (avail / total) * 100 : 0; return p >= 30 ? COLORS.ok : p >= 15 ? COLORS.warn : COLORS.crit; };
 
-function deptStatusColor(s: DeptStatus): string {
-  return s === 'NORMAL' ? COLORS.ok : s === 'STRAINED' ? COLORS.warn : COLORS.crit;
-}
-
-function transferStatusColor(s: TransferStatus): string {
-  return s === 'IN PROGRESS' ? COLORS.info : s === 'PENDING' ? COLORS.warn : COLORS.crit;
-}
-
-function transferStatusTone(s: TransferStatus): 'ok' | 'warn' | 'crit' | 'info' {
-  return s === 'IN PROGRESS' ? 'info' : s === 'PENDING' ? 'warn' : 'crit';
-}
-
-function utilizationColor(available: number, total: number): string {
-  const pct = total > 0 ? (available / total) * 100 : 0;
-  if (pct >= 30) return COLORS.ok;
-  if (pct >= 15) return COLORS.warn;
-  return COLORS.crit;
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────────────────────────────────
+// ── Component ────────────────────────────────────────────────────────────
 
 export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClose, showToast }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>('transfers');
