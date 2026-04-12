@@ -33,4 +33,10 @@ export { CodeBlueScreen } from './CodeBlueScreen';
 export type { CodeBlueScreenProps } from './CodeBlueScreen';
 export { HandoffComposer } from './HandoffComposer';
 export type { HandoffComposerProps } from './HandoffComposer';
+export { SecureMessaging } from './SecureMessaging';
+export type { SecureMessagingProps } from './SecureMessaging';
+export { WorkforceCoverage } from './WorkforceCoverage';
+export type { WorkforceCoverageProps } from './WorkforceCoverage';
+export { AlertsCenter } from './AlertsCenter';
+export type { AlertsCenterProps } from './AlertsCenter';
 

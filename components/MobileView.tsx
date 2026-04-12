@@ -61,6 +61,9 @@ import {
   OrderEntry,
   CodeBlueScreen,
   HandoffComposer,
+  SecureMessaging,
+  WorkforceCoverage,
+  AlertsCenter,
   type TriageResult,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
@@ -913,6 +916,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showOrderEntry, setShowOrderEntry] = useState(false);
   const [showCodeBlue, setShowCodeBlue] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [showWorkforce, setShowWorkforce] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   const myDeviceId = getDeviceId();
 
@@ -2328,7 +2334,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     label: 'CODE BLUE',
                     tone: 'crit' as const,
                     haptic: 'heavy' as const,
-                    action: () => showToast('Code Blue Initiated', 'error'),
+                    action: () => setShowCodeBlue(true),
                   },
                   {
                     icon: ShieldAlert,
@@ -2424,6 +2430,57 @@ export const MobileView: React.FC<MobileViewProps> = ({
               sublabel="Scan this code to open the Patients tab."
               onExpand={() => setShowTestQR(true)}
             />
+
+            {/* Workforce Coverage launcher — open full staffing view */}
+            <motion.button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setShowWorkforce(true); }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                width: '100%',
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background: `linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)`,
+                border: '1px solid rgba(139,92,246,0.5)',
+                borderLeft: '3px solid rgba(139,92,246,0.7)',
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 48,
+              }}
+            >
+              <CornerBracket position="tl" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(139,92,246,0.18)',
+                  border: '1px solid rgba(139,92,246,0.5)',
+                  borderRadius: RADIUS.sm,
+                  color: 'rgba(139,92,246,0.9)',
+                }}
+              >
+                <Users size={16} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>WORKFORCE</BracketLabel>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                  Staff coverage · 47 on shift · 1:4.2 ratio
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+            </motion.button>
 
             {/* AI Shift Brief — narrative summary of the above.
                 Positioned LAST on the dashboard because narrative is
@@ -3733,6 +3790,57 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </Mono>
             </div>
 
+            {/* Full alerts center launcher */}
+            <motion.button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background: `linear-gradient(90deg, ${COLORS.crit}10 0%, ${COLORS.crit}02 100%)`,
+                border: `1px solid ${COLORS.crit}60`,
+                borderLeft: `3px solid ${COLORS.crit}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 48,
+                width: '100%',
+              }}
+            >
+              <CornerBracket position="tl" color={COLORS.crit} size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color={COLORS.crit} size={6} thickness={1} inset={-1} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: `${COLORS.crit}18`,
+                  border: `1px solid ${COLORS.crit}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.crit,
+                }}
+              >
+                <Bell size={16} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel tone="crit" size="xs">ALERTS CENTER</BracketLabel>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                  15 alerts · 4 critical · filter &amp; acknowledge
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+            </motion.button>
+
             <TacticalCard padding="none">
               {mockAlerts.map((alert, i) => {
                 const tone: 'crit' | 'warn' | 'info' =
@@ -3900,6 +4008,57 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 Comms Channel
               </h1>
             </div>
+
+            {/* Full messaging launcher */}
+            <motion.button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background: `linear-gradient(90deg, ${COLORS.info}10 0%, ${COLORS.info}02 100%)`,
+                border: `1px solid ${COLORS.info}`,
+                borderLeft: `3px solid ${COLORS.info}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 48,
+                width: '100%',
+              }}
+            >
+              <CornerBracket position="tl" color={COLORS.info} size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color={COLORS.info} size={6} thickness={1} inset={-1} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: `${COLORS.info}18`,
+                  border: `1px solid ${COLORS.info}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.info,
+                }}
+              >
+                <MessageSquare size={16} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel tone="info" size="xs">SECURE MESSAGING</BracketLabel>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                  6 channels · 3 unread threads
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+            </motion.button>
 
             {/* Active Threads — unread state reduced to a single dot
                 marker on the right. Icon box now reflects the thread
@@ -4366,6 +4525,27 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showHandoff}
         onClose={() => setShowHandoff(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
+      />
+
+      {/* Secure Messaging — clinical communication hub. */}
+      <SecureMessaging
+        open={showMessaging}
+        onClose={() => setShowMessaging(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
+      />
+
+      {/* Workforce Coverage — staffing across all units. */}
+      <WorkforceCoverage
+        open={showWorkforce}
+        onClose={() => setShowWorkforce(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
+      />
+
+      {/* Alerts Center — hospital-wide alert feed. */}
+      <AlertsCenter
+        open={showAlerts}
+        onClose={() => setShowAlerts(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
       />
 
       {/* ESI Triage wizard — fullscreen modal that walks the

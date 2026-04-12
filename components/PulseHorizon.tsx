@@ -35,6 +35,9 @@ import {
   Pill,
   Siren,
   ArrowRightLeft,
+  MessageSquare,
+  Users,
+  Bell,
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
@@ -47,6 +50,9 @@ import {
   OrderEntry,
   CodeBlueScreen,
   HandoffComposer,
+  SecureMessaging,
+  WorkforceCoverage,
+  AlertsCenter,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
@@ -139,6 +145,9 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showOrderEntry, setShowOrderEntry] = useState(false);
   const [showCodeBlue, setShowCodeBlue] = useState(false);
   const [showHandoff, setShowHandoff] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [showWorkforce, setShowWorkforce] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1373,6 +1382,37 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </TacticalCard>
           </div>
+
+          {/* Comms / Workforce / Alerts — 3-col compact row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE.sm }}>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowMessaging(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <MessageSquare size={14} color={COLORS.info} />
+                <div>
+                  <Mono tone="info" size="xs">COMMS</Mono>
+                  <Mono tone="secondary" size="xs">Messaging</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowWorkforce(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <Users size={14} color="rgba(139,92,246,0.9)" />
+                <div>
+                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>STAFF</Mono>
+                  <Mono tone="secondary" size="xs">Coverage</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowAlerts(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <Bell size={14} color={COLORS.crit} />
+                <div>
+                  <Mono tone="crit" size="xs">ALERTS</Mono>
+                  <Mono tone="secondary" size="xs">15 active</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+          </div>
         </div>
       </div>
 
@@ -1433,6 +1473,27 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showHandoff}
         onClose={() => setShowHandoff(false)}
         showToast={(msg: string) => showToast?.(msg, 'success')}
+      />
+
+      {/* Secure Messaging overlay */}
+      <SecureMessaging
+        open={showMessaging}
+        onClose={() => setShowMessaging(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
+      />
+
+      {/* Workforce Coverage overlay */}
+      <WorkforceCoverage
+        open={showWorkforce}
+        onClose={() => setShowWorkforce(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
+      />
+
+      {/* Alerts Center overlay */}
+      <AlertsCenter
+        open={showAlerts}
+        onClose={() => setShowAlerts(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
       />
 
       {/* ── Manual Mode Modal ── */}
