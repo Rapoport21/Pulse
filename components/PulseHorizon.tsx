@@ -38,6 +38,8 @@ import {
   MessageSquare,
   Users,
   Bell,
+  Network as NetworkIcon,
+  BrainCircuit,
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
@@ -53,6 +55,8 @@ import {
   SecureMessaging,
   WorkforceCoverage,
   AlertsCenter,
+  DeptCoordination,
+  BriefMeScreen,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
@@ -148,6 +152,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showMessaging, setShowMessaging] = useState(false);
   const [showWorkforce, setShowWorkforce] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showDeptCoord, setShowDeptCoord] = useState(false);
+  const [showBriefMe, setShowBriefMe] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1413,6 +1419,28 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </TacticalCard>
           </div>
+
+          {/* Dept Coordination + Brief Me */}
+          <div style={{ display: 'flex', gap: SPACE.sm }}>
+            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowDeptCoord(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <NetworkIcon size={14} color={COLORS.info} />
+                <div>
+                  <Mono tone="info" size="xs">COORD</Mono>
+                  <Mono tone="secondary" size="xs">Departments</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowBriefMe(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <BrainCircuit size={14} color={COLORS.accent} />
+                <div>
+                  <Mono tone="accent" size="xs">BRIEF ME</Mono>
+                  <Mono tone="secondary" size="xs">AI Briefing</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+          </div>
         </div>
       </div>
 
@@ -1493,6 +1521,20 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       <AlertsCenter
         open={showAlerts}
         onClose={() => setShowAlerts(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
+      />
+
+      {/* Dept Coordination overlay */}
+      <DeptCoordination
+        open={showDeptCoord}
+        onClose={() => setShowDeptCoord(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
+      />
+
+      {/* Brief Me overlay */}
+      <BriefMeScreen
+        open={showBriefMe}
+        onClose={() => setShowBriefMe(false)}
         showToast={(msg: string) => showToast?.(msg, 'info')}
       />
 

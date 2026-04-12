@@ -2488,6 +2488,48 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
+            {/* Dept Coordination + Brief Me — side by side launchers */}
+            <div style={{ display: 'flex', gap: SPACE.sm }}>
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowDeptCoord(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1, position: 'relative', display: 'flex', alignItems: 'center',
+                  gap: SPACE.sm, padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, ${COLORS.info}10 0%, ${COLORS.info}02 100%)`,
+                  border: `1px solid ${COLORS.info}`, borderLeft: `3px solid ${COLORS.info}`,
+                  borderRadius: RADIUS.sm, color: COLORS.textPrimary, fontFamily: FONTS.sans,
+                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 44,
+                }}
+              >
+                <Network size={14} strokeWidth={2} color={COLORS.info} />
+                <div style={{ flex: 1 }}>
+                  <Mono tone="info" size="xs">COORD</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>Departments</div>
+                </div>
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowBriefMe(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1, position: 'relative', display: 'flex', alignItems: 'center',
+                  gap: SPACE.sm, padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, ${COLORS.accent}10 0%, ${COLORS.accent}02 100%)`,
+                  border: `1px solid ${COLORS.accent}`, borderLeft: `3px solid ${COLORS.accent}`,
+                  borderRadius: RADIUS.sm, color: COLORS.textPrimary, fontFamily: FONTS.sans,
+                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 44,
+                }}
+              >
+                <BrainCircuit size={14} strokeWidth={2} color={COLORS.accent} />
+                <div style={{ flex: 1 }}>
+                  <Mono tone="accent" size="xs">BRIEF ME</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>AI Briefing</div>
+                </div>
+              </motion.button>
+            </div>
+
             {/* AI Shift Brief — narrative summary of the above.
                 Positioned LAST on the dashboard because narrative is
                 always less scannable than raw state. By the time an
