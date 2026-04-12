@@ -41,7 +41,7 @@ import {
   DotGridBg,
   Divider,
 } from './design';
-import { PatientHeaderStrip, VitalsPanel } from './clinical';
+import { PatientHeaderStrip, VitalsPanel, NoteComposer, OrderEntry } from './clinical';
 import type { Patient } from '../types';
 import { MOCK_LABS, MOCK_NOTES, MOCK_MEDS, MOCK_IMAGING, type ImagingOrder } from '../data/ehrMock';
 import { ConfidenceBadge } from './design';
@@ -286,6 +286,8 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
 }) => {
   const [painScore, setPainScore] = useState(4);
   const [isSaving, setIsSaving] = useState(false);
+  const [showNoteComposer, setShowNoteComposer] = useState(false);
+  const [showOrderEntry, setShowOrderEntry] = useState(false);
   const [isGuarantorSame, setIsGuarantorSame] = useState(true);
   const [chiefComplaintFocused, setChiefComplaintFocused] = useState(false);
   const [orders, setOrders] = useState([
@@ -947,7 +949,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 title="Clinical Notes"
                 icon={StickyNote}
                 action={
-                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />}>
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowNoteComposer(true)}>
                     Add Note
                   </TacticalButton>
                 }
@@ -1030,7 +1032,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 title="Imaging"
                 icon={ImageIcon}
                 action={
-                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />}>
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowOrderEntry(true)}>
                     Order
                   </TacticalButton>
                 }
@@ -1287,6 +1289,20 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
       <style>
         {`@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }`}
       </style>
+
+      {/* Clinical workflow overlays — launched from chart action buttons */}
+      <NoteComposer
+        open={showNoteComposer}
+        onClose={() => setShowNoteComposer(false)}
+        showToast={(msg) => showToast(msg, 'success')}
+        patientId={clinical?.id}
+      />
+      <OrderEntry
+        open={showOrderEntry}
+        onClose={() => setShowOrderEntry(false)}
+        showToast={(msg) => showToast(msg, 'success')}
+        patientId={clinical?.id}
+      />
     </motion.div>
   );
 };
