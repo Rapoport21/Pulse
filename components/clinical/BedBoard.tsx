@@ -18,11 +18,12 @@
  *   - `card`  — compact dashboard tile showing summary + mini grid
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bed as BedIcon, User, AlertTriangle, Clock, Wrench,
-  ChevronRight, ArrowUpRight, ShieldAlert, Truck,
+  ChevronRight, ArrowUpRight, ShieldAlert, Truck, GripVertical,
+  ChevronDown, ChevronUp, RefreshCw,
 } from 'lucide-react';
 import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z } from '../design/tokens';
 import {
@@ -34,7 +35,9 @@ import type {
 } from '../../data/bedMock';
 import {
   summarizeBeds, summarizeUnit, availabilityPercent, stateLabel,
+  getPendingAdmits,
 } from '../../data/bedMock';
+import type { PendingAdmit } from '../../data/bedMock';
 import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -630,8 +633,83 @@ const FullMode: React.FC<{
     { key: 'reserved', label: 'RSRVD', count: summary.reserved },
   ];
 
-  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  // ── Embedded mode: Epic-style desktop bed board ──
+  // These hooks are always called (rules of hooks) but only used when embedded.
+  const [pendingAdmits] = useState<PendingAdmit[]>(() => getPendingAdmits());
+  const [refreshCountdown, setRefreshCountdown] = useState<number>(30);
+  const [collapsedUnits, setCollapsedUnits] = useState<Set<string>>(new Set());
+
+  // Auto-refresh countdown timer (only ticks when embedded)
+  useEffect(() => {
+    if (!embedded) return;
+    const interval = setInterval(() => {
+      setRefreshCountdown((prev) => (prev <= 1 ? 30 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [embedded]);
+
+  // LOS formatter helper
+  const formatLOS = (hours?: number): string => {
+    if (hours === undefined || hours === 0) return '--';
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    const remainHrs = hours % 24;
+    if (remainHrs === 0) return `${days}d`;
+    return `${days}d ${remainHrs}h`;
+  };
+
+  // Toggle unit collapse
+  const toggleUnit = (unitId: string) => {
+    setCollapsedUnits((prev: Set<string>) => {
+      const next = new Set(prev);
+      if (next.has(unitId)) next.delete(unitId);
+      else next.add(unitId);
+      return next;
+    });
+  };
+
+  // Source badge colors for pending admits
+  const SOURCE_COLOR: Record<string, string> = {
+    ED: COLORS.crit,
+    OR: COLORS.info,
+    Transfer: '#A855F7',
+    Direct: COLORS.ok,
+  };
+
+  // Row tint colors (very subtle)
+  const STATE_ROW_TINT: Record<BedState, string> = {
+    ready: 'rgba(16, 185, 129, 0.04)',
+    occupied: 'transparent',
+    dirty: 'rgba(245, 158, 11, 0.04)',
+    not_staffed: 'rgba(249, 115, 22, 0.04)',
+    blocked: 'rgba(239, 68, 68, 0.04)',
+    reserved: 'rgba(168, 85, 247, 0.04)',
+  };
+
+  // Bed status display text
+  const bedStatusText = (bed: Bed): string => {
+    if (bed.state === 'ready') return 'AVAILABLE';
+    if (bed.state === 'dirty') {
+      const evs = bed.evsStatus === 'requested' ? 'EVS Requested' : bed.evsStatus === 'in_progress' ? 'EVS In Progress' : bed.evsStatus === 'complete' ? 'EVS Complete' : '';
+      return evs ? `DIRTY \u2014 ${evs}` : 'DIRTY';
+    }
+    if (bed.state === 'blocked') return `BLOCKED \u2014 ${bed.blockReason || 'Unknown'}`;
+    if (bed.state === 'reserved') return `RESERVED \u2014 ${bed.reservedFor || 'Pending'}`;
+    if (bed.state === 'not_staffed') return 'NOT STAFFED';
+    return '';
+  };
+
+  // Isolation badge labels
+  const ISOLATION_LABEL: Record<string, { short: string; color: string }> = {
+    CONTACT: { short: 'C', color: '#F97316' },
+    DROPLET: { short: 'D', color: COLORS.warn },
+    AIRBORNE: { short: 'A', color: COLORS.crit },
+    PROTECTIVE: { short: 'P', color: COLORS.info },
+  };
+
   if (embedded) {
+    const sortedPending = pendingAdmits ? [...pendingAdmits].sort((a, b) => b.waitingMinutes - a.waitingMinutes) : [];
+
     return (
       <div
         style={{
@@ -646,34 +724,96 @@ const FullMode: React.FC<{
           color: COLORS.textPrimary,
         }}
       >
-        {/* Header */}
+        {/* ── HudStrip header ── */}
         <HudStrip side="top" fixed>
-          <BracketLabel tone="accent">BED BOARD</BracketLabel>
+          <BracketLabel tone="accent">BED BOARD &mdash; COMMAND VIEW</BracketLabel>
           <div style={{ flex: 1 }} />
           {surgeActive && <StatusPill label="SURGE ACTIVE" tone="crit" pulse />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: SPACE.sm }}>
+            <RefreshCw size={12} color={COLORS.textMuted} />
+            <span style={{
+              fontFamily: FONTS.mono,
+              fontSize: 11,
+              fontWeight: 500,
+              letterSpacing: '0.1em',
+              color: COLORS.textMuted,
+            }}>
+              REFRESH IN {refreshCountdown}s
+            </span>
+          </div>
         </HudStrip>
 
-        {/* Body */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            padding: `${SPACE.xl + 52}px ${SPACE.base}px 0`,
-            paddingBottom: SPACE.xl,
-          }}
-        >
-          {/* Summary */}
-          <SummaryBar summary={summary} surgeActive={surgeActive} />
+        {/* ── Content below header ── */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          paddingTop: 52,
+        }}>
+          {/* ── Summary Bar: 6 stat boxes ── */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, 1fr)',
+            gap: SPACE.sm,
+            padding: `${SPACE.base}px ${SPACE.lg}px`,
+            background: COLORS.bgDeep,
+            borderBottom: `1px solid ${COLORS.border}`,
+            flexShrink: 0,
+          }}>
+            {[
+              { label: 'TOTAL BEDS', value: summary.total, color: COLORS.textPrimary },
+              { label: 'OCCUPIED', value: summary.occupied, color: COLORS.textSecondary },
+              { label: 'AVAILABLE', value: summary.ready, color: COLORS.ok },
+              { label: 'DIRTY', value: summary.dirty, color: COLORS.warn },
+              { label: 'NOT STAFFED', value: summary.notStaffed, color: '#F97316' },
+              { label: 'BLOCKED', value: summary.blocked, color: COLORS.crit },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                style={{
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  padding: `${SPACE.md}px ${SPACE.base}px`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{
+                  fontFamily: FONTS.sans,
+                  fontSize: 32,
+                  fontWeight: 700,
+                  color: stat.color,
+                  lineHeight: 1.1,
+                }}>
+                  {stat.value}
+                </span>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: '0.14em',
+                  color: COLORS.textMuted,
+                  marginTop: 4,
+                  textTransform: 'uppercase',
+                }}>
+                  {stat.label}
+                </span>
+              </div>
+            ))}
+          </div>
 
-          {/* Filter chips */}
+          {/* ── Filter Row ── */}
           <div style={{
             display: 'flex',
+            alignItems: 'center',
             gap: SPACE.xs,
-            flexWrap: 'wrap',
-            marginBottom: SPACE.lg,
-            paddingBottom: SPACE.md,
+            padding: `${SPACE.sm}px ${SPACE.lg}px`,
             borderBottom: `1px solid ${COLORS.border}`,
+            flexShrink: 0,
+            flexWrap: 'wrap',
           }}>
             {filters.map((f) => {
               const isActive = filter === f.key;
@@ -683,21 +823,30 @@ const FullMode: React.FC<{
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   style={{
-                    padding: `4px ${SPACE.sm}px`,
+                    padding: `5px ${SPACE.md}px`,
                     background: isActive ? `${chipColor}20` : 'transparent',
                     border: `1px solid ${isActive ? chipColor : COLORS.border}`,
-                    borderRadius: RADIUS.sm,
+                    borderRadius: RADIUS.full,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
+                    gap: 6,
+                    transition: `all ${MOTION.fast}s ease`,
                   }}
                 >
+                  {f.key !== 'all' && (
+                    <div style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: RADIUS.full,
+                      background: chipColor,
+                    }} />
+                  )}
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: 500,
-                    letterSpacing: '0.12em',
+                    letterSpacing: '0.1em',
                     color: isActive ? chipColor : COLORS.textMuted,
                     textTransform: 'uppercase',
                   }}>
@@ -705,7 +854,7 @@ const FullMode: React.FC<{
                   </span>
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 9,
+                    fontSize: 11,
                     fontWeight: 600,
                     color: isActive ? chipColor : COLORS.textDim,
                   }}>
@@ -716,24 +865,521 @@ const FullMode: React.FC<{
             })}
           </div>
 
-          {/* Unit rows */}
-          {visibleUnits.map((unit) => (
-            <UnitRow
-              key={unit.id}
-              unit={unit}
-              onBedTap={setSelectedBed}
-              isNew={unit.surgeOnly}
-            />
-          ))}
-
-          {visibleUnits.length === 0 && (
+          {/* ── Main content: Unit sections + Pending Admits sidebar ── */}
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            overflow: 'hidden',
+          }}>
+            {/* ── Left: Unit sections (scrollable) ── */}
             <div style={{
-              textAlign: 'center',
-              padding: SPACE['3xl'],
+              flex: 1,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              padding: `${SPACE.base}px ${SPACE.lg}px`,
             }}>
-              <Mono tone="muted">NO BEDS MATCH FILTER</Mono>
+              {visibleUnits.map((unit) => {
+                const uSummary = summarizeUnit(unit);
+                const occupiedCount = uSummary.occupied + uSummary.reserved;
+                const totalBeds = uSummary.total;
+                const occupancyPct = totalBeds > 0 ? Math.round((occupiedCount / totalBeds) * 100) : 0;
+                const barColor = occupancyPct >= 90 ? COLORS.crit : occupancyPct >= 70 ? COLORS.warn : COLORS.ok;
+                const isCollapsed = collapsedUnits.has(unit.id);
+
+                return (
+                  <div
+                    key={unit.id}
+                    style={{
+                      marginBottom: SPACE.lg,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {/* Unit header */}
+                    <div
+                      onClick={() => toggleUnit(unit.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        padding: `${SPACE.sm}px ${SPACE.base}px`,
+                        background: COLORS.surface,
+                        borderBottom: isCollapsed ? 'none' : `1px solid ${COLORS.border}`,
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                      }}
+                    >
+                      {isCollapsed
+                        ? <ChevronRight size={14} color={COLORS.textMuted} />
+                        : <ChevronDown size={14} color={COLORS.textMuted} />
+                      }
+                      <span style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: '0.08em',
+                        color: COLORS.textPrimary,
+                        textTransform: 'uppercase',
+                      }}>
+                        {unit.name}
+                      </span>
+                      {unit.surgeOnly && (
+                        <StatusPill label="SURGE" tone="crit" pulse size="xs" />
+                      )}
+                      {/* Occupancy bar */}
+                      <div style={{
+                        flex: 1,
+                        maxWidth: 180,
+                        height: 8,
+                        background: COLORS.bgDeep,
+                        borderRadius: RADIUS.full,
+                        overflow: 'hidden',
+                        border: `1px solid ${COLORS.border}`,
+                        marginLeft: SPACE.sm,
+                      }}>
+                        <div style={{
+                          width: `${occupancyPct}%`,
+                          height: '100%',
+                          background: barColor,
+                          borderRadius: RADIUS.full,
+                          transition: 'width 0.3s ease',
+                        }} />
+                      </div>
+                      <span style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        letterSpacing: '0.08em',
+                        color: COLORS.textSecondary,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {occupancyPct}% ({occupiedCount}/{totalBeds} OCCUPIED)
+                      </span>
+                      <span style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        color: COLORS.ok,
+                        marginLeft: 'auto',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {uSummary.ready} AVAIL
+                      </span>
+                    </div>
+
+                    {/* Bed table */}
+                    {!isCollapsed && (
+                      <div>
+                        {/* Table header */}
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: '28px 64px 1fr 72px 110px 110px 72px 40px 80px',
+                          gap: 0,
+                          padding: `${SPACE.xs}px ${SPACE.base}px`,
+                          background: COLORS.bgDeep,
+                          borderBottom: `1px solid ${COLORS.border}`,
+                        }}>
+                          {['', 'BED', 'PATIENT', 'ACUITY', 'ATTENDING', 'NURSE', 'LOS', 'ISO', 'DC'].map((col) => (
+                            <span key={col} style={{
+                              fontFamily: FONTS.mono,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              letterSpacing: '0.14em',
+                              color: COLORS.textDim,
+                              textTransform: 'uppercase',
+                              padding: `2px 4px`,
+                            }}>
+                              {col}
+                            </span>
+                          ))}
+                        </div>
+                        {/* Bed rows */}
+                        {unit.beds.map((bed) => {
+                          const dotColor = STATE_COLOR[bed.state];
+                          const rowBg = STATE_ROW_TINT[bed.state];
+                          const isOccupied = bed.state === 'occupied';
+                          const showStatusText = !isOccupied;
+                          const iso = bed.isolation && bed.isolation !== 'NONE' ? ISOLATION_LABEL[bed.isolation] : null;
+                          const milestones = bed.dischargeMilestones;
+                          return (
+                            <div
+                              key={bed.id}
+                              onClick={() => setSelectedBed(bed)}
+                              style={{
+                                display: 'grid',
+                                gridTemplateColumns: '28px 64px 1fr 72px 110px 110px 72px 40px 80px',
+                                gap: 0,
+                                padding: `0 ${SPACE.base}px`,
+                                height: 44,
+                                alignItems: 'center',
+                                background: rowBg,
+                                borderBottom: `1px solid ${COLORS.border}`,
+                                cursor: 'pointer',
+                                transition: `background ${MOTION.fast}s ease`,
+                              }}
+                              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = COLORS.surfaceHover; }}
+                              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = rowBg; }}
+                            >
+                              {/* Status dot */}
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: RADIUS.full,
+                                  background: dotColor,
+                                  boxShadow: `0 0 4px ${dotColor}60`,
+                                }} />
+                              </div>
+                              {/* Bed label */}
+                              <span style={{
+                                fontFamily: FONTS.mono,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                letterSpacing: '0.04em',
+                                color: COLORS.textPrimary,
+                                padding: '0 4px',
+                              }}>
+                                {bed.label}
+                              </span>
+                              {/* Patient name / status */}
+                              <div style={{ padding: '0 4px', overflow: 'hidden' }}>
+                                {isOccupied ? (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                                    <span style={{
+                                      fontFamily: FONTS.sans,
+                                      fontSize: 14,
+                                      fontWeight: 500,
+                                      color: COLORS.textPrimary,
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}>
+                                      {bed.patientName || bed.patientInitials || '--'}
+                                    </span>
+                                    {bed.mrn && (
+                                      <span style={{
+                                        fontFamily: FONTS.mono,
+                                        fontSize: 11,
+                                        color: COLORS.textMuted,
+                                        letterSpacing: '0.06em',
+                                      }}>
+                                        {bed.mrn}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span style={{
+                                    fontFamily: FONTS.mono,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    letterSpacing: '0.06em',
+                                    color: dotColor,
+                                  }}>
+                                    {bedStatusText(bed)}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Acuity badge */}
+                              <div style={{ padding: '0 4px' }}>
+                                {bed.acuity ? (
+                                  <span style={{
+                                    fontFamily: FONTS.mono,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.06em',
+                                    color: ACUITY_COLOR[bed.acuity],
+                                    background: `${ACUITY_COLOR[bed.acuity]}18`,
+                                    border: `1px solid ${ACUITY_COLOR[bed.acuity]}30`,
+                                    borderRadius: RADIUS.sm,
+                                    padding: '2px 6px',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    ESI-{bed.acuity}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textDim }}>--</span>
+                                )}
+                              </div>
+                              {/* Attending */}
+                              <span style={{
+                                fontFamily: FONTS.sans,
+                                fontSize: 13,
+                                color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
+                                padding: '0 4px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}>
+                                {bed.attending || '--'}
+                              </span>
+                              {/* Nurse */}
+                              <span style={{
+                                fontFamily: FONTS.sans,
+                                fontSize: 13,
+                                color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
+                                padding: '0 4px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}>
+                                {bed.assignedNurse || '--'}
+                              </span>
+                              {/* LOS */}
+                              <span style={{
+                                fontFamily: FONTS.mono,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
+                                padding: '0 4px',
+                              }}>
+                                {isOccupied ? formatLOS(bed.losHours) : '--'}
+                              </span>
+                              {/* Isolation */}
+                              <div style={{ padding: '0 4px', display: 'flex', justifyContent: 'center' }}>
+                                {iso ? (
+                                  <span style={{
+                                    fontFamily: FONTS.mono,
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: iso.color,
+                                    background: `${iso.color}18`,
+                                    border: `1px solid ${iso.color}30`,
+                                    borderRadius: RADIUS.sm,
+                                    padding: '1px 4px',
+                                    lineHeight: '16px',
+                                  }}>
+                                    {iso.short}
+                                  </span>
+                                ) : null}
+                              </div>
+                              {/* Discharge milestones */}
+                              <div style={{ padding: '0 4px', display: 'flex', gap: 4, alignItems: 'center' }}>
+                                {milestones ? (
+                                  <>
+                                    <div title="DC Order" style={{
+                                      width: 8, height: 8, borderRadius: RADIUS.full,
+                                      background: milestones.dcOrderWritten ? COLORS.ok : COLORS.textDim,
+                                      border: `1px solid ${milestones.dcOrderWritten ? COLORS.ok : COLORS.textDim}`,
+                                    }} />
+                                    <div title="Ride Confirmed" style={{
+                                      width: 8, height: 8, borderRadius: RADIUS.full,
+                                      background: milestones.rideConfirmed ? COLORS.ok : COLORS.textDim,
+                                      border: `1px solid ${milestones.rideConfirmed ? COLORS.ok : COLORS.textDim}`,
+                                    }} />
+                                    <div title="Meds to Bedside" style={{
+                                      width: 8, height: 8, borderRadius: RADIUS.full,
+                                      background: milestones.medsToeBedside ? COLORS.ok : COLORS.textDim,
+                                      border: `1px solid ${milestones.medsToeBedside ? COLORS.ok : COLORS.textDim}`,
+                                    }} />
+                                    {milestones.estimatedDcTime && (
+                                      <span style={{
+                                        fontFamily: FONTS.mono,
+                                        fontSize: 10,
+                                        color: COLORS.textMuted,
+                                        marginLeft: 2,
+                                      }}>
+                                        {milestones.estimatedDcTime}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {visibleUnits.length === 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: SPACE['3xl'],
+                }}>
+                  <Mono tone="muted">NO BEDS MATCH FILTER</Mono>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* ── Right: Pending Admits Queue ── */}
+            <div style={{
+              width: 320,
+              minWidth: 320,
+              borderLeft: `1px solid ${COLORS.border}`,
+              display: 'flex',
+              flexDirection: 'column',
+              background: COLORS.surface,
+              overflow: 'hidden',
+            }}>
+              {/* Queue header */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: `${SPACE.sm}px ${SPACE.base}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                flexShrink: 0,
+              }}>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.1em',
+                  color: COLORS.textPrimary,
+                  textTransform: 'uppercase',
+                }}>
+                  PENDING ADMITS
+                </span>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  background: COLORS.accent,
+                  borderRadius: RADIUS.full,
+                  padding: '2px 8px',
+                  lineHeight: '16px',
+                }}>
+                  {sortedPending.length}
+                </span>
+              </div>
+              {/* Queue list */}
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+              }}>
+                {sortedPending.map((admit) => {
+                  const waitColor = admit.waitingMinutes > 60 ? COLORS.crit : admit.waitingMinutes > 30 ? COLORS.warn : COLORS.ok;
+                  const srcColor = SOURCE_COLOR[admit.source] || COLORS.textMuted;
+                  return (
+                    <div
+                      key={admit.id}
+                      style={{
+                        padding: `${SPACE.sm}px ${SPACE.base}px`,
+                        borderBottom: `1px solid ${COLORS.border}`,
+                        display: 'flex',
+                        gap: SPACE.sm,
+                      }}
+                    >
+                      {/* Drag handle */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: COLORS.textDim,
+                        flexShrink: 0,
+                        cursor: 'grab',
+                        paddingTop: 2,
+                      }}>
+                        <GripVertical size={14} />
+                      </div>
+                      {/* Card content */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Name + MRN row */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: 4 }}>
+                          <span style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: COLORS.textPrimary,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}>
+                            {admit.patientName}
+                          </span>
+                          <span style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            letterSpacing: '0.06em',
+                            flexShrink: 0,
+                          }}>
+                            {admit.mrn}
+                          </span>
+                        </div>
+                        {/* Source + Acuity badges */}
+                        <div style={{ display: 'flex', gap: SPACE.xs, marginBottom: 4, flexWrap: 'wrap' }}>
+                          <span style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.08em',
+                            color: srcColor,
+                            background: `${srcColor}18`,
+                            border: `1px solid ${srcColor}30`,
+                            borderRadius: RADIUS.sm,
+                            padding: '1px 6px',
+                          }}>
+                            {admit.source.toUpperCase()}
+                          </span>
+                          <span style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.06em',
+                            color: ACUITY_COLOR[admit.acuity],
+                            background: `${ACUITY_COLOR[admit.acuity]}18`,
+                            border: `1px solid ${ACUITY_COLOR[admit.acuity]}30`,
+                            borderRadius: RADIUS.sm,
+                            padding: '1px 6px',
+                          }}>
+                            ESI-{admit.acuity}
+                          </span>
+                        </div>
+                        {/* Chief complaint */}
+                        <div style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          marginBottom: 4,
+                        }}>
+                          {admit.chiefComplaint}
+                        </div>
+                        {/* Wait time + unit */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={10} color={waitColor} />
+                            <span style={{
+                              fontFamily: FONTS.mono,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              color: waitColor,
+                              letterSpacing: '0.06em',
+                            }}>
+                              {admit.waitingMinutes}m
+                            </span>
+                          </div>
+                          <span style={{
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            color: COLORS.textMuted,
+                            letterSpacing: '0.08em',
+                          }}>
+                            &rarr; {admit.requestedUnit}
+                          </span>
+                        </div>
+                        {/* Attending */}
+                        <span style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 11,
+                          color: COLORS.textDim,
+                        }}>
+                          {admit.attending}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Bed popover */}
