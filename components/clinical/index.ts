@@ -19,3 +19,7 @@ export { EmsInboundBoard } from './EmsInboundBoard';
 export type { EmsInboundBoardProps } from './EmsInboundBoard';
 export { BedBoard } from './BedBoard';
 export type { BedBoardProps } from './BedBoard';
+export { AdmitFlow } from './AdmitFlow';
+export type { AdmitFlowProps } from './AdmitFlow';
+export { DischargeFlow } from './DischargeFlow';
+export type { DischargeFlowProps } from './DischargeFlow';
