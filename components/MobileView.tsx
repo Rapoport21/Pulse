@@ -270,7 +270,7 @@ const TestQRInlineCard: React.FC<TestQRInlineCardProps> = ({
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 8,
+              fontSize: 10,
               color: COLORS.textMuted,
             }}
           >
@@ -284,7 +284,7 @@ const TestQRInlineCard: React.FC<TestQRInlineCardProps> = ({
           style={{
             marginTop: 4,
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 500,
             color: COLORS.textPrimary,
             letterSpacing: '-0.005em',
@@ -297,7 +297,7 @@ const TestQRInlineCard: React.FC<TestQRInlineCardProps> = ({
           style={{
             marginTop: SPACE.xs,
             fontFamily: FONTS.mono,
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: 500,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
@@ -384,7 +384,7 @@ const VitalBox: React.FC<VitalBoxProps> = ({
         <span
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: 600,
             letterSpacing: '-0.03em',
             lineHeight: 1,
@@ -466,7 +466,7 @@ const ProgressRing: React.FC<{ progress: number }> = ({ progress }) => {
       >
         <span
           style={{
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: 600,
             color: COLORS.textPrimary,
             letterSpacing: '-0.03em',
@@ -475,7 +475,7 @@ const ProgressRing: React.FC<{ progress: number }> = ({ progress }) => {
           }}
         >
           {Math.round(progress)}
-          <span style={{ fontSize: 11, color: COLORS.textMuted, marginLeft: 2 }}>
+          <span style={{ fontSize: 13, color: COLORS.textMuted, marginLeft: 2 }}>
             %
           </span>
         </span>
@@ -762,7 +762,7 @@ const StateHero: React.FC<{
           style={{
             margin: 0,
             fontFamily: FONTS.sans,
-            fontSize: 30,
+            fontSize: 34,
             fontWeight: 600,
             letterSpacing: '-0.02em',
             lineHeight: 1,
@@ -805,7 +805,7 @@ const StateHero: React.FC<{
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: 500,
                   color: COLORS.textMuted,
                   letterSpacing: '-0.01em',
@@ -829,7 +829,7 @@ const StateHero: React.FC<{
                 alignItems: 'center',
                 gap: 4,
                 fontFamily: FONTS.mono,
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 600,
                 color: toneColor,
                 letterSpacing: '0.04em',
@@ -1224,7 +1224,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         >
           <ScanningLine color={COLORS.accent} duration={3} />
           <ShieldAlert
-            size={13}
+            size={15}
             color={COLORS.accent}
             style={{ filter: `drop-shadow(0 0 6px ${COLORS.accent})` }}
           />
@@ -1264,7 +1264,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               letterSpacing: '0.06em',
               color: COLORS.textPrimary,
@@ -1319,7 +1319,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <div
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 600,
                 color: COLORS.textPrimary,
                 letterSpacing: '-0.01em',
@@ -1356,7 +1356,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <Mono
                 tone="dim"
                 size="xs"
-                style={{ fontSize: 9, letterSpacing: '0.12em' }}
+                style={{ fontSize: 11, letterSpacing: '0.12em' }}
               >
                 {connectionStatus === 'connected'
                   ? 'LINK'
@@ -1384,7 +1384,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               width: 44,
-              height: 36,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1395,7 +1395,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               cursor: 'pointer',
             }}
           >
-            <BrainCircuit size={16} strokeWidth={1.75} />
+            <BrainCircuit size={18} strokeWidth={1.75} />
           </motion.button>
           <motion.button
             onClick={() => setShowMenu(!showMenu)}
@@ -1405,7 +1405,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               width: 44,
-              height: 36,
+              height: 44,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1429,7 +1429,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   justifyContent: 'center',
                 }}
               >
-                {showMenu ? <X size={16} /> : <Menu size={16} />}
+                {showMenu ? <X size={18} /> : <Menu size={18} />}
               </motion.span>
             </AnimatePresence>
           </motion.button>
@@ -1489,13 +1489,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   color: COLORS.textSecondary,
                   cursor: 'pointer',
                   fontFamily: FONTS.mono,
-                  fontSize: 10,
+                  fontSize: 12,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                   fontWeight: 500,
                 }}
               >
-                <ChevronLeft size={12} strokeWidth={2} />
+                <ChevronLeft size={14} strokeWidth={2} />
                 Back
               </motion.button>
               <div
@@ -1580,7 +1580,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 15,
+                        fontSize: 17,
                         fontWeight: 600,
                         color: COLORS.textPrimary,
                         letterSpacing: '-0.01em',
@@ -1661,7 +1661,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 15,
+                        fontSize: 17,
                         fontWeight: 600,
                         color: COLORS.textPrimary,
                         letterSpacing: '-0.01em',
@@ -1671,7 +1671,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     </div>
                     <Mono tone="muted">Shift data · KPIs</Mono>
                   </div>
-                  <ChevronRight size={16} color={COLORS.textMuted} />
+                  <ChevronRight size={18} color={COLORS.textMuted} />
                 </div>
               </TacticalCard>
             </motion.div>
@@ -1688,7 +1688,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 variant="danger"
                 fullWidth
                 size="md"
-                icon={<LogOut size={14} />}
+                icon={<LogOut size={16} />}
                 onClick={onLogout}
                 style={{ height: 48 }}
               >
@@ -1949,7 +1949,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       <div
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: 600,
                           color: COLORS.textPrimary,
                           letterSpacing: '-0.02em',
@@ -2011,7 +2011,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                           dataKey="time"
                           stroke={COLORS.textMuted}
                           tick={{
-                            fontSize: 9,
+                            fontSize: 11,
                             fontFamily: FONTS.mono,
                             letterSpacing: '0.12em',
                             fill: COLORS.textMuted,
@@ -2026,7 +2026,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                           width={28}
                           stroke={COLORS.textMuted}
                           tick={{
-                            fontSize: 9,
+                            fontSize: 11,
                             fontFamily: FONTS.mono,
                             letterSpacing: '0.1em',
                             fill: COLORS.textDim,
@@ -2042,7 +2042,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             border: `1px solid ${COLORS.borderStrong}`,
                             color: COLORS.textPrimary,
                             borderRadius: RADIUS.sm,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontFamily: FONTS.mono,
                             letterSpacing: '0.08em',
                             textTransform: 'uppercase',
@@ -2073,7 +2073,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             value: 'CAPACITY',
                             position: 'insideTopRight',
                             fill: COLORS.crit,
-                            fontSize: 8,
+                            fontSize: 10,
                             fontFamily: FONTS.mono,
                             letterSpacing: '0.14em',
                           }}
@@ -2103,7 +2103,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     size="xs"
                     style={{
                       marginTop: 6,
-                      fontSize: 9,
+                      fontSize: 11,
                       letterSpacing: '0.14em',
                       display: 'block',
                       textAlign: 'center',
@@ -2192,7 +2192,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             </div>
                             <div style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 11,
+                              fontSize: 13,
                               color: COLORS.textMuted,
                               marginTop: 1,
                               lineHeight: 1.3,
@@ -2222,12 +2222,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
                         <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                          <ShieldAlert size={14} color={COLORS.accent} />
+                          <ShieldAlert size={16} color={COLORS.accent} />
                           <Mono tone="accent" size="sm">SURGE RECOMMENDED</Mono>
                         </div>
                         <div style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 14,
                           color: COLORS.textSecondary,
                           lineHeight: 1.4,
                           marginBottom: SPACE.md,
@@ -2238,7 +2238,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         </div>
                         <div style={{
                           fontFamily: FONTS.mono,
-                          fontSize: 9,
+                          fontSize: 11,
                           letterSpacing: '0.12em',
                           color: COLORS.textMuted,
                           textTransform: 'uppercase',
@@ -2260,10 +2260,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             padding: `3px 0`,
                             borderTop: i > 0 ? `1px solid ${COLORS.border}` : undefined,
                           }}>
-                            <span style={{ fontSize: 10, width: 16, textAlign: 'center' }}>{a.icon}</span>
+                            <span style={{ fontSize: 12, width: 18, textAlign: 'center' }}>{a.icon}</span>
                             <span style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 11,
+                              fontSize: 13,
                               color: COLORS.textPrimary,
                               flex: 1,
                             }}>
@@ -2278,7 +2278,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                               variant="primary"
                               size="sm"
                               fullWidth
-                              icon={<ShieldAlert size={12} />}
+                              icon={<ShieldAlert size={14} />}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onActivateSurge();
@@ -2325,7 +2325,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       </div>
                       <div style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 12,
+                        fontSize: 14,
                         color: COLORS.textSecondary,
                         lineHeight: 1.4,
                       }}>
@@ -2428,7 +2428,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: SPACE.sm,
-                        minHeight: 44,
+                        minHeight: 48,
                         padding: `${SPACE.sm}px ${SPACE.md}px`,
                         background: COLORS.surface,
                         border: `1px solid ${color}`,
@@ -2438,11 +2438,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         color,
                       }}
                     >
-                      <btn.icon size={13} />
+                      <btn.icon size={15} />
                       <span
                         style={{
                           fontFamily: FONTS.mono,
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: 500,
                           letterSpacing: '0.1em',
                           textTransform: 'uppercase',
@@ -2509,15 +2509,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   color: 'rgba(139,92,246,0.9)',
                 }}
               >
-                <Users size={16} strokeWidth={2} />
+                <Users size={18} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>WORKFORCE</BracketLabel>
-                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
                   Staff coverage · 47 on shift · 1:4.2 ratio
                 </div>
               </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
             {/* Dept Coordination + Brief Me — side by side launchers */}
@@ -2532,13 +2532,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   background: `linear-gradient(90deg, ${COLORS.info}10 0%, ${COLORS.info}02 100%)`,
                   border: `1px solid ${COLORS.info}`, borderLeft: `3px solid ${COLORS.info}`,
                   borderRadius: RADIUS.sm, color: COLORS.textPrimary, fontFamily: FONTS.sans,
-                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 44,
+                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 48,
                 }}
               >
-                <Network size={14} strokeWidth={2} color={COLORS.info} />
+                <Network size={16} strokeWidth={2} color={COLORS.info} />
                 <div style={{ flex: 1 }}>
                   <Mono tone="info" size="xs">COORD</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>Departments</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>Departments</div>
                 </div>
               </motion.button>
               <motion.button
@@ -2551,13 +2551,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   background: `linear-gradient(90deg, ${COLORS.accent}10 0%, ${COLORS.accent}02 100%)`,
                   border: `1px solid ${COLORS.accent}`, borderLeft: `3px solid ${COLORS.accent}`,
                   borderRadius: RADIUS.sm, color: COLORS.textPrimary, fontFamily: FONTS.sans,
-                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 44,
+                  textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 48,
                 }}
               >
-                <BrainCircuit size={14} strokeWidth={2} color={COLORS.accent} />
+                <BrainCircuit size={16} strokeWidth={2} color={COLORS.accent} />
                 <div style={{ flex: 1 }}>
                   <Mono tone="accent" size="xs">BRIEF ME</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>AI Briefing</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>AI Briefing</div>
                 </div>
               </motion.button>
             </div>
@@ -2587,7 +2587,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   }}
                 >
                   <BrainCircuit
-                    size={14}
+                    size={16}
                     strokeWidth={1.75}
                     color={COLORS.info}
                   />
@@ -2631,7 +2631,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       gap: 6,
                     }}
                   >
-                    <Clock size={10} color={COLORS.textMuted} />
+                    <Clock size={12} color={COLORS.textMuted} />
                     <Mono tone="dim">
                       SYNC{' '}
                       {time.toLocaleTimeString([], {
@@ -2711,7 +2711,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     }}
                   >
                     <ShieldAlert
-                      size={14}
+                      size={16}
                       color={COLORS.accent}
                       style={{
                         filter: `drop-shadow(0 0 6px ${COLORS.accent})`,
@@ -2802,7 +2802,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 15,
+                            fontSize: 17,
                             fontWeight: 600,
                             color: acked ? COLORS.textSecondary : COLORS.textPrimary,
                             letterSpacing: '-0.01em',
@@ -2835,7 +2835,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                               gap: 6,
                             }}
                           >
-                            <CheckCircle size={10} color={COLORS.ok} />
+                            <CheckCircle size={12} color={COLORS.ok} />
                             <Mono tone="ok">
                               ACK {ackedByMe ? 'BY YOU' : `· ${task.acknowledgedBy?.slice(0, 6)}`}
                               {task.acknowledgedAt &&
@@ -2875,7 +2875,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     <span
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 36,
+                        fontSize: 42,
                         fontWeight: 600,
                         letterSpacing: '-0.03em',
                         lineHeight: 1,
@@ -2919,14 +2919,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     onClick={() => setTaskFilter(filter)}
                     style={{
                       flex: 1,
-                      minHeight: 40,
+                      minHeight: 48,
                       padding: `0 ${SPACE.md}px`,
                       background: active ? COLORS.surfaceElev : 'transparent',
                       border: `1px solid ${active ? COLORS.borderHover : 'transparent'}`,
                       borderRadius: RADIUS.sm,
                       cursor: 'pointer',
                       fontFamily: FONTS.mono,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: 500,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
@@ -3009,8 +3009,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         aria-label="Mark complete"
                         style={{
                           flexShrink: 0,
-                          width: 28,
-                          height: 28,
+                          width: 44,
+                          height: 44,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -3018,7 +3018,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                           border: 'none',
                           cursor: 'pointer',
                           color: COLORS.textMuted,
-                          marginTop: 2,
+                          marginTop: 0,
                         }}
                       >
                         <Circle size={20} />
@@ -3041,7 +3041,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 15,
+                            fontSize: 17,
                             fontWeight: 600,
                             color: COLORS.textPrimary,
                             letterSpacing: '-0.01em',
@@ -3068,7 +3068,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         </div>
                       </div>
                       <ChevronRight
-                        size={16}
+                        size={18}
                         color={COLORS.textMuted}
                         style={{ flexShrink: 0, marginTop: 4 }}
                       />
@@ -3179,7 +3179,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     style={{
                       marginTop: 2,
                       fontFamily: FONTS.sans,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: 600,
                       color: COLORS.textPrimary,
                       letterSpacing: '-0.005em',
@@ -3190,7 +3190,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       : 'Start a new triage assessment'}
                   </div>
                 </div>
-                <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+                <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
               </motion.button>
             )}
 
@@ -3250,7 +3250,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   style={{
                     marginTop: 2,
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 600,
                     color: COLORS.textPrimary,
                     letterSpacing: '-0.005em',
@@ -3259,7 +3259,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   Live radio · runs decrementing in real time
                 </div>
               </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
             {/* ── Admit / Discharge launchers ─────────────────────── */}
@@ -3308,7 +3308,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     color: COLORS.ok,
                   }}
                 >
-                  <UserPlus size={15} strokeWidth={2} />
+                  <UserPlus size={17} strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <BracketLabel tone="ok" size="xs">ADMIT</BracketLabel>
@@ -3316,7 +3316,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     style={{
                       marginTop: 1,
                       fontFamily: FONTS.sans,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       color: COLORS.textSecondary,
                     }}
@@ -3324,7 +3324,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     New admission
                   </div>
                 </div>
-                <ChevronRight size={14} strokeWidth={2} color={COLORS.textMuted} />
+                <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
               </motion.button>
 
               {/* Discharge Patient launcher */}
@@ -3371,7 +3371,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     color: COLORS.warn,
                   }}
                 >
-                  <DoorOpen size={15} strokeWidth={2} />
+                  <DoorOpen size={17} strokeWidth={2} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <BracketLabel tone="warn" size="xs">D/C</BracketLabel>
@@ -3379,7 +3379,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     style={{
                       marginTop: 1,
                       fontFamily: FONTS.sans,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 600,
                       color: COLORS.textSecondary,
                     }}
@@ -3387,7 +3387,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     Discharge patient
                   </div>
                 </div>
-                <ChevronRight size={14} strokeWidth={2} color={COLORS.textMuted} />
+                <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
               </motion.button>
             </div>
 
@@ -3435,7 +3435,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   color: 'rgba(139,92,246,0.9)',
                 }}
               >
-                <ClipboardList size={16} strokeWidth={2} />
+                <ClipboardList size={18} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>
@@ -3445,7 +3445,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   style={{
                     marginTop: 2,
                     fontFamily: FONTS.sans,
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: 600,
                     color: COLORS.textPrimary,
                     letterSpacing: '-0.005em',
@@ -3454,7 +3454,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   All patients · sorted by acuity
                 </div>
               </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
             {/* ── Clinical workflow launchers (2-col row) ───────── */}
@@ -3480,13 +3480,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   textAlign: 'left',
                   cursor: 'pointer',
                   overflow: 'hidden',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
-                <FileText size={14} strokeWidth={2} color={COLORS.info} />
+                <FileText size={16} strokeWidth={2} color={COLORS.info} />
                 <div style={{ flex: 1 }}>
                   <Mono tone="info" size="xs">NOTE</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
                     SOAP / H&amp;P
                   </div>
                 </div>
@@ -3513,13 +3513,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   textAlign: 'left',
                   cursor: 'pointer',
                   overflow: 'hidden',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
-                <Pill size={14} strokeWidth={2} color={COLORS.ok} />
+                <Pill size={16} strokeWidth={2} color={COLORS.ok} />
                 <div style={{ flex: 1 }}>
                   <Mono tone="ok" size="xs">CPOE</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
                     Orders
                   </div>
                 </div>
@@ -3548,13 +3548,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   textAlign: 'left',
                   cursor: 'pointer',
                   overflow: 'hidden',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
-                <Siren size={14} strokeWidth={2} color={COLORS.crit} />
+                <Siren size={16} strokeWidth={2} color={COLORS.crit} />
                 <div style={{ flex: 1 }}>
                   <Mono tone="crit" size="xs">CODE BLUE</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
                     Emergency
                   </div>
                 </div>
@@ -3581,13 +3581,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   textAlign: 'left',
                   cursor: 'pointer',
                   overflow: 'hidden',
-                  minHeight: 44,
+                  minHeight: 48,
                 }}
               >
-                <ArrowRightLeft size={14} strokeWidth={2} color="rgba(139,92,246,0.9)" />
+                <ArrowRightLeft size={16} strokeWidth={2} color="rgba(139,92,246,0.9)" />
                 <div style={{ flex: 1 }}>
                   <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>HANDOFF</Mono>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
                     Shift SBAR
                   </div>
                 </div>
@@ -3597,7 +3597,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
-                size={14}
+                size={16}
                 color={COLORS.textMuted}
                 style={{
                   position: 'absolute',
@@ -3612,13 +3612,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 placeholder="SEARCH MRN OR NAME"
                 style={{
                   width: '100%',
-                  minHeight: 44,
+                  minHeight: 48,
                   padding: `0 ${SPACE.base}px 0 ${SPACE['2xl']}px`,
                   background: COLORS.surface,
                   border: `1px solid ${COLORS.border}`,
                   borderRadius: RADIUS.sm,
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 500,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
@@ -3705,7 +3705,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             <h3
                               style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: 600,
                                 color: COLORS.textPrimary,
                                 letterSpacing: '-0.015em',
@@ -3717,7 +3717,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             </h3>
                             {critical && (
                               <Flame
-                                size={14}
+                                size={16}
                                 color={COLORS.crit}
                                 style={{
                                   filter: `drop-shadow(0 0 6px ${COLORS.crit})`,
@@ -3769,7 +3769,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                             gap: 6,
                           }}
                         >
-                          <Stethoscope size={10} color={COLORS.textMuted} />
+                          <Stethoscope size={12} color={COLORS.textMuted} />
                           <Mono tone="muted" size="xs">
                             CLINICAL NOTES
                           </Mono>
@@ -3910,15 +3910,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   color: COLORS.crit,
                 }}
               >
-                <Bell size={16} strokeWidth={2} />
+                <Bell size={18} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel tone="crit" size="xs">ALERTS CENTER</BracketLabel>
-                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
                   15 alerts · 4 critical · filter &amp; acknowledge
                 </div>
               </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
             <TacticalCard padding="none">
@@ -3986,7 +3986,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     >
                       <CornerBracket position="tl" color={toneColor} size={4} thickness={1} />
                       <CornerBracket position="br" color={toneColor} size={4} thickness={1} />
-                      <Icon size={16} />
+                      <Icon size={18} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
@@ -4001,7 +4001,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: alert.unread ? 600 : 500,
                             color: alert.unread
                               ? COLORS.textPrimary
@@ -4063,7 +4063,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 }}
               >
                 <Mono tone="crit" size="xs">VIEW ALL 15 ALERTS</Mono>
-                <ChevronRight size={12} strokeWidth={2} color={COLORS.crit} />
+                <ChevronRight size={14} strokeWidth={2} color={COLORS.crit} />
               </motion.div>
             </TacticalCard>
           </motion.div>
@@ -4150,15 +4150,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   color: COLORS.info,
                 }}
               >
-                <MessageSquare size={16} strokeWidth={2} />
+                <MessageSquare size={18} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel tone="info" size="xs">SECURE MESSAGING</BracketLabel>
-                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
+                <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
                   6 channels · 3 unread threads
                 </div>
               </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
             {/* Active Threads — preview of recent conversations.
@@ -4204,7 +4204,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         position: 'relative',
                       }}
                     >
-                      <thread.icon size={16} />
+                      <thread.icon size={18} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
@@ -4219,7 +4219,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 14,
+                            fontSize: 16,
                             fontWeight: thread.fontWeight,
                             color: thread.nameColor,
                             letterSpacing: '-0.01em',
@@ -4263,7 +4263,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       />
                     ) : (
                       <ChevronRight
-                        size={14}
+                        size={16}
                         color={COLORS.textMuted}
                         style={{ flexShrink: 0 }}
                       />
@@ -4286,7 +4286,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   }}
                 >
                   <Mono tone="info" size="xs">VIEW ALL 6 CHANNELS</Mono>
-                  <ChevronRight size={12} strokeWidth={2} color={COLORS.info} />
+                  <ChevronRight size={14} strokeWidth={2} color={COLORS.info} />
                 </motion.div>
               </TacticalCard>
             </div>
@@ -4353,7 +4353,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               variant="danger"
               fullWidth
               size="md"
-              icon={<Radio size={14} />}
+              icon={<Radio size={16} />}
               onClick={() =>
                 showToast('Emergency broadcast sent to all units', 'error')
               }
@@ -4408,13 +4408,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   position: 'relative',
-                  minHeight: 44,
+                  minHeight: 48,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 3,
-                  padding: `${SPACE.xs}px 2px`,
+                  padding: `${SPACE.md}px 2px`,
                   background: 'transparent',
                   border: '1px solid transparent',
                   borderRadius: RADIUS.sm,
@@ -4471,7 +4471,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 )}
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <Icon
-                    size={16}
+                    size={18}
                     strokeWidth={active ? 2.25 : 1.75}
                   />
                   {hasBadge && (
@@ -4495,7 +4495,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     position: 'relative',
                     zIndex: 1,
                     fontFamily: FONTS.mono,
-                    fontSize: 8,
+                    fontSize: 10,
                     fontWeight: 500,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase',
