@@ -1022,6 +1022,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* ── Header strip ──────────────────────────────────────────── */}
@@ -1053,7 +1054,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             flex: 1,
             overflow: 'auto',
             paddingTop: 56,
-            paddingBottom: orders.length > 0 && !reviewing ? 72 : SPACE.base,
+            paddingBottom: orders.length > 0 && !reviewing ? 'max(env(safe-area-inset-bottom), 72px)' : `max(env(safe-area-inset-bottom), ${SPACE.base}px)`,
             WebkitOverflowScrolling: 'touch',
           }}>
             <AnimatePresence mode="wait">

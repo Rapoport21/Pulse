@@ -611,6 +611,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* ── Header strip ──────────────────────────────────────────── */}
@@ -634,7 +635,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
           {/* ── Scrollable body ───────────────────────────────────────── */}
           <div style={{
             flex: 1, overflow: 'auto',
-            paddingTop: 56, paddingBottom: 32,
+            paddingTop: 56, paddingBottom: 'max(env(safe-area-inset-bottom), 32px)',
             WebkitOverflowScrolling: 'touch',
           }}>
             {renderSummary()}

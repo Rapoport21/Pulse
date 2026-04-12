@@ -620,6 +620,7 @@ const FullMode: React.FC<{
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        paddingTop: 'env(safe-area-inset-top)',
       }}
     >
       <ScanningLine color={COLORS.accent} duration={20} />
@@ -654,7 +655,8 @@ const FullMode: React.FC<{
           flex: 1,
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: `${SPACE.xl + 52}px ${SPACE.base}px ${SPACE.xl}px`,
+          padding: `${SPACE.xl + 52}px ${SPACE.base}px 0`,
+          paddingBottom: `max(env(safe-area-inset-bottom), ${SPACE.xl}px)`,
         }}
       >
         {/* Summary */}

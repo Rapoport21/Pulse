@@ -141,7 +141,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
           key="briefme-screen"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: MOTION.fast }}
-          style={{ position: 'fixed', inset: 0, zIndex: Z.modal, background: COLORS.bg, display: 'flex', flexDirection: 'column', fontFamily: FONTS.sans, color: COLORS.textPrimary, overflow: 'hidden' }}
+          style={{ position: 'fixed', inset: 0, zIndex: Z.modal, background: COLORS.bg, display: 'flex', flexDirection: 'column', fontFamily: FONTS.sans, color: COLORS.textPrimary, overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)' }}
         >
           {/* Header */}
           <HudStrip side="top" fixed>
@@ -152,7 +152,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
           </HudStrip>
 
           {/* Scrollable body */}
-          <div style={{ flex: 1, overflow: 'auto', paddingTop: 56, paddingBottom: 40, WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ flex: 1, overflow: 'auto', paddingTop: 56, paddingBottom: 'max(env(safe-area-inset-bottom), 40px)', WebkitOverflowScrolling: 'touch' }}>
             <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
 
               {/* 1. Briefing Header */}

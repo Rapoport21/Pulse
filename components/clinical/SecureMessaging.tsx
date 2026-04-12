@@ -764,6 +764,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* header strip */}

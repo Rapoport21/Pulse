@@ -671,6 +671,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onCl
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* ── Header strip ──────────────────────────────────────────── */}
@@ -697,7 +698,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onCl
               flex: 1,
               overflow: 'auto',
               paddingTop: 56,
-              paddingBottom: SPACE['3xl'],
+              paddingBottom: `max(env(safe-area-inset-bottom), ${SPACE['3xl']}px)`,
               WebkitOverflowScrolling: 'touch',
             }}
           >

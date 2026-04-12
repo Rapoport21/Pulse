@@ -258,6 +258,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* ── Header ─────────────────────────────────────────────── */}
@@ -293,7 +294,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
               flex: 1,
               overflow: 'auto',
               paddingTop: 56,
-              paddingBottom: 20,
+              paddingBottom: 'max(env(safe-area-inset-bottom), 20px)',
               WebkitOverflowScrolling: 'touch',
             }}
           >

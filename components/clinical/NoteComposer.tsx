@@ -839,6 +839,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            paddingTop: 'env(safe-area-inset-top)',
           }}
         >
           {/* Header strip */}
@@ -873,7 +874,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
               flex: 1,
               overflow: 'auto',
               paddingTop: 56,
-              paddingBottom: 72,
+              paddingBottom: 'max(env(safe-area-inset-bottom), 72px)',
               WebkitOverflowScrolling: 'touch',
             }}
           >
