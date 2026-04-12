@@ -28,10 +28,12 @@ import {
   X,
   Activity,
   ChevronRight,
+  UserPlus,
+  DoorOpen,
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
-import { BedBoard } from './clinical';
+import { BedBoard, AdmitFlow, DischargeFlow } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
   COLORS,
@@ -116,6 +118,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
   const [bedUnits] = useState<BedUnit[]>(() => seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
+  const [showAdmitFlow, setShowAdmitFlow] = useState(false);
+  const [showDischargeFlow, setShowDischargeFlow] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1229,6 +1233,60 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             surgeActive={isSurgeActive}
             onExpand={() => setShowBedBoard(true)}
           />
+
+          {/* Admit / Discharge quick-launch row */}
+          <div style={{ display: 'flex', gap: SPACE.sm }}>
+            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowAdmitFlow(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: `${COLORS.ok}18`,
+                    border: `1px solid ${COLORS.ok}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.ok,
+                  }}
+                >
+                  <UserPlus size={16} strokeWidth={2} />
+                </div>
+                <div>
+                  <BracketLabel tone="ok" size="xs">ADMIT</BracketLabel>
+                  <Mono tone="secondary" size="xs">Start new admission</Mono>
+                </div>
+                <div style={{ flex: 1 }} />
+                <ChevronRight size={14} color={COLORS.textMuted} />
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowDischargeFlow(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: `${COLORS.warn}18`,
+                    border: `1px solid ${COLORS.warn}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.warn,
+                  }}
+                >
+                  <DoorOpen size={16} strokeWidth={2} />
+                </div>
+                <div>
+                  <BracketLabel tone="warn" size="xs">D/C</BracketLabel>
+                  <Mono tone="secondary" size="xs">Discharge patient</Mono>
+                </div>
+                <div style={{ flex: 1 }} />
+                <ChevronRight size={14} color={COLORS.textMuted} />
+              </div>
+            </TacticalCard>
+          </div>
         </div>
       </div>
 
@@ -1239,6 +1297,20 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         surgeActive={isSurgeActive}
         open={showBedBoard}
         onClose={() => setShowBedBoard(false)}
+      />
+
+      {/* Admit Flow fullscreen overlay */}
+      <AdmitFlow
+        open={showAdmitFlow}
+        onClose={() => setShowAdmitFlow(false)}
+        showToast={(msg: string) => showToast?.(msg, 'success')}
+      />
+
+      {/* Discharge Flow fullscreen overlay */}
+      <DischargeFlow
+        open={showDischargeFlow}
+        onClose={() => setShowDischargeFlow(false)}
+        showToast={(msg: string) => showToast?.(msg, 'success')}
       />
 
       {/* ── Manual Mode Modal ── */}

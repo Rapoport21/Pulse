@@ -26,6 +26,8 @@ import {
   QrCode,
   Radio,
   ClipboardList,
+  UserPlus,
+  DoorOpen,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -44,7 +46,7 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { ESITriageScreen, EmsInboundBoard, BedBoard, type TriageResult } from './clinical';
+import { ESITriageScreen, EmsInboundBoard, BedBoard, AdmitFlow, DischargeFlow, type TriageResult } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
@@ -886,6 +888,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
    */
   const [bedUnits] = useState<BedUnit[]>(() => seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
+
+  /** Admit / Discharge fullscreen flow wizards. */
+  const [showAdmitFlow, setShowAdmitFlow] = useState(false);
+  const [showDischargeFlow, setShowDischargeFlow] = useState(false);
+
   const myDeviceId = getDeviceId();
 
   /**
@@ -3097,6 +3104,135 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
+            {/* ── Admit / Discharge launchers ─────────────────────── */}
+            <div style={{ display: 'flex', gap: SPACE.sm }}>
+              {/* Admit Patient launcher */}
+              <motion.button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowAdmitFlow(true);
+                }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.md}px ${SPACE.md}px`,
+                  background:
+                    'linear-gradient(90deg, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0.02) 100%)',
+                  border: `1px solid ${COLORS.ok}`,
+                  borderLeft: `3px solid ${COLORS.ok}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 48,
+                }}
+              >
+                <CornerBracket position="tl" color={COLORS.ok} size={5} thickness={1} inset={-1} />
+                <CornerBracket position="br" color={COLORS.ok} size={5} thickness={1} inset={-1} />
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(34,197,94,0.18)',
+                    border: `1px solid ${COLORS.ok}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.ok,
+                  }}
+                >
+                  <UserPlus size={15} strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <BracketLabel tone="ok" size="xs">ADMIT</BracketLabel>
+                  <div
+                    style={{
+                      marginTop: 1,
+                      fontFamily: FONTS.sans,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: COLORS.textSecondary,
+                    }}
+                  >
+                    New admission
+                  </div>
+                </div>
+                <ChevronRight size={14} strokeWidth={2} color={COLORS.textMuted} />
+              </motion.button>
+
+              {/* Discharge Patient launcher */}
+              <motion.button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowDischargeFlow(true);
+                }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.md}px ${SPACE.md}px`,
+                  background:
+                    'linear-gradient(90deg, rgba(251,191,36,0.10) 0%, rgba(251,191,36,0.02) 100%)',
+                  border: `1px solid ${COLORS.warn}`,
+                  borderLeft: `3px solid ${COLORS.warn}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 48,
+                }}
+              >
+                <CornerBracket position="tl" color={COLORS.warn} size={5} thickness={1} inset={-1} />
+                <CornerBracket position="br" color={COLORS.warn} size={5} thickness={1} inset={-1} />
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(251,191,36,0.18)',
+                    border: `1px solid ${COLORS.warn}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.warn,
+                  }}
+                >
+                  <DoorOpen size={15} strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <BracketLabel tone="warn" size="xs">D/C</BracketLabel>
+                  <div
+                    style={{
+                      marginTop: 1,
+                      fontFamily: FONTS.sans,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: COLORS.textSecondary,
+                    }}
+                  >
+                    Discharge patient
+                  </div>
+                </div>
+                <ChevronRight size={14} strokeWidth={2} color={COLORS.textMuted} />
+              </motion.button>
+            </div>
+
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -3953,6 +4089,22 @@ export const MobileView: React.FC<MobileViewProps> = ({
         surgeActive={isSurgeActive}
         open={showBedBoard}
         onClose={() => setShowBedBoard(false)}
+      />
+
+      {/* Admit Flow — 3-step admission wizard (patient ID → bed
+          assignment → confirmation). */}
+      <AdmitFlow
+        open={showAdmitFlow}
+        onClose={() => setShowAdmitFlow(false)}
+        showToast={(msg: string) => showToast(msg, 'success')}
+      />
+
+      {/* Discharge Flow — readiness checklist → disposition → confirm
+          discharge. Closes encounter and frees bed. */}
+      <DischargeFlow
+        open={showDischargeFlow}
+        onClose={() => setShowDischargeFlow(false)}
+        showToast={(msg: string) => showToast(msg, 'success')}
       />
 
       {/* ESI Triage wizard — fullscreen modal that walks the
