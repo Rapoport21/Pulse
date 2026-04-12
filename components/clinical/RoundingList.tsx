@@ -65,6 +65,7 @@ import { MOCK_PATIENTS, ageInYears } from '../../data/clinicalMock';
 import { MOCK_LABS } from '../../data/ehrMock';
 import { computeMEWS } from '../../lib/clinicalScores';
 import type { Patient, Vital, LabResult } from '../../types';
+import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -74,6 +75,8 @@ export interface RoundingListProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  /** Current user role — drives default filter, sort, and header label. */
+  role?: UserRole;
 }
 
 type SortMode = 'acuity' | 'bed' | 'name';
@@ -195,13 +198,38 @@ const MOCK_SBAR: Record<string, { s: string; b: string; a: string; r: string }> 
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast }) => {
+export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast, role }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>('acuity');
-  const [filterMode, setFilterMode] = useState<FilterMode>('all');
+
+  // Role-aware defaults:
+  //  - Nurse: default sort by bed (geographic proximity), filter to critical
+  //  - ER: default sort by acuity, filter to critical (ED triage priority)
+  //  - Manager: default sort by bed (unit overview), show all patients
+  const defaultSort: SortMode = role === UserRole.NURSE ? 'bed' : 'acuity';
+  const defaultFilter: FilterMode =
+    role === UserRole.NURSE ? 'critical'
+    : role === UserRole.ER_PERSONNEL ? 'critical'
+    : 'all';
+
+  const [sortMode, setSortMode] = useState<SortMode>(defaultSort);
+  const [filterMode, setFilterMode] = useState<FilterMode>(defaultFilter);
+
+  // Role-aware header subtitle
+  const headerSubtitle =
+    role === UserRole.NURSE ? 'My Patients'
+    : role === UserRole.ER_PERSONNEL ? 'ED Patients'
+    : role === UserRole.MANAGER ? 'All Units'
+    : 'Rounding List';
 
   const patients = useMemo(() => {
     let list = [...MOCK_PATIENTS];
+
+    // Role-based pre-filter: ER sees only EMERGENCY encounters
+    if (role === UserRole.ER_PERSONNEL) {
+      list = list.filter(
+        (p) => p.currentEncounter?.class === 'EMERGENCY',
+      );
+    }
 
     // Filter
     if (filterMode !== 'all') {
@@ -231,7 +259,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
     });
 
     return list;
-  }, [sortMode, filterMode]);
+  }, [sortMode, filterMode, role]);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -280,7 +308,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Rounding List</BracketLabel>
+            <BracketLabel tone="accent" size="sm">{headerSubtitle}</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={94} ageMinutes={1} compact />
             <Mono tone="muted" size="xs">

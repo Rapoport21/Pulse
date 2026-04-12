@@ -1462,6 +1462,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         surgeActive={isSurgeActive}
         open={showBedBoard}
         onClose={() => setShowBedBoard(false)}
+        role={currentUser.role}
       />
 
       {/* Admit Flow fullscreen overlay */}
@@ -1483,6 +1484,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showRoundingList}
         onClose={() => setShowRoundingList(false)}
         showToast={(msg: string) => showToast?.(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Note Composer overlay */}
@@ -1526,6 +1528,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showWorkforce}
         onClose={() => setShowWorkforce(false)}
         showToast={(msg: string) => showToast?.(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Alerts Center overlay */}
@@ -1533,6 +1536,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showAlerts}
         onClose={() => setShowAlerts(false)}
         showToast={(msg: string) => showToast?.(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Dept Coordination overlay */}

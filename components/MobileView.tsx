@@ -4537,6 +4537,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         surgeActive={isSurgeActive}
         open={showBedBoard}
         onClose={() => setShowBedBoard(false)}
+        role={currentUser.role}
       />
 
       {/* Admit Flow — 3-step admission wizard (patient ID → bed
@@ -4561,6 +4562,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showRoundingList}
         onClose={() => setShowRoundingList(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Note Composer — SOAP / H&P / Progress note wizard. */}
@@ -4604,6 +4606,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showWorkforce}
         onClose={() => setShowWorkforce(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Alerts Center — hospital-wide alert feed. */}
@@ -4611,6 +4614,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showAlerts}
         onClose={() => setShowAlerts(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
+        role={currentUser.role}
       />
 
       {/* Dept Coordination — multi-department C2 view. */}

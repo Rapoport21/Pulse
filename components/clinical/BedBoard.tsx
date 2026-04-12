@@ -35,6 +35,7 @@ import type {
 import {
   summarizeBeds, summarizeUnit, availabilityPercent, stateLabel,
 } from '../../data/bedMock';
+import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
 // State → visual mapping
@@ -579,17 +580,39 @@ const FullMode: React.FC<{
   units: BedUnit[];
   surgeActive: boolean;
   onClose: () => void;
-}> = ({ units, surgeActive, onClose }) => {
+  role?: UserRole;
+}> = ({ units, surgeActive, onClose, role }) => {
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
-  const [filter, setFilter] = useState<BedState | 'all'>('all');
+  // Role-aware default filter:
+  //  - ER: default to showing occupied beds (ED focus on active patients)
+  //  - Manager: show all beds (full capacity overview)
+  //  - Nurse: show occupied beds (assigned patients first)
+  const defaultBedFilter: BedState | 'all' =
+    role === UserRole.ER_PERSONNEL ? 'occupied'
+    : role === UserRole.NURSE ? 'occupied'
+    : 'all';
+  const [filter, setFilter] = useState<BedState | 'all'>(defaultBedFilter);
 
   const visibleUnits = useMemo(() => {
-    const base = surgeActive ? units : units.filter(u => !u.surgeOnly);
-    if (filter === 'all') return base;
-    return base
-      .map(u => ({ ...u, beds: u.beds.filter(b => b.state === filter) }))
-      .filter(u => u.beds.length > 0);
-  }, [units, surgeActive, filter]);
+    let base = surgeActive ? units : units.filter(u => !u.surgeOnly);
+    if (filter !== 'all') {
+      base = base
+        .map(u => ({ ...u, beds: u.beds.filter(b => b.state === filter) }))
+        .filter(u => u.beds.length > 0);
+    }
+    // Role-aware unit ordering:
+    //  - ER: ED units (shortName starts with "ED") sorted to top
+    //  - Nurse: assigned unit highlighted (no reorder, keep natural order)
+    //  - Manager: all units in natural order
+    if (role === UserRole.ER_PERSONNEL) {
+      base = [...base].sort((a, b) => {
+        const aED = a.shortName.startsWith('ED') ? 0 : 1;
+        const bED = b.shortName.startsWith('ED') ? 0 : 1;
+        return aED - bED;
+      });
+    }
+    return base;
+  }, [units, surgeActive, filter, role]);
 
   const summary = summarizeBeds(
     surgeActive ? units : units.filter(u => !u.surgeOnly),
@@ -778,6 +801,8 @@ export interface BedBoardProps {
   onClose?: () => void;
   /** Whether the full overlay is open (only for display="full"). */
   open?: boolean;
+  /** Current user role — drives default unit expansion and highlight. */
+  role?: UserRole;
 }
 
 export const BedBoard: React.FC<BedBoardProps> = ({
@@ -787,6 +812,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
   onExpand,
   onClose,
   open = false,
+  role,
 }) => {
   if (display === 'card') {
     return (
@@ -806,6 +832,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
           units={units}
           surgeActive={surgeActive}
           onClose={onClose || (() => {})}
+          role={role}
         />
       )}
     </AnimatePresence>

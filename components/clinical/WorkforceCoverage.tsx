@@ -28,6 +28,7 @@ import {
   TacticalButton, HudStrip, ScanningLine, Divider,
   ConfidenceBadge,
 } from '../design';
+import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -37,6 +38,8 @@ export interface WorkforceCoverageProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  /** Current user role — drives default unit filter and gaps-only toggle. */
+  role?: UserRole;
 }
 
 type Role = 'RN' | 'MD' | 'RT' | 'Tech' | 'Charge';
@@ -172,10 +175,20 @@ function statusDotColor(s: FloatStatus): string {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onClose, showToast }) => {
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>('ALL');
-  const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>('ALL');
-  const [gapsOnly, setGapsOnly] = useState(false);
+export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onClose, showToast, role }) => {
+  // Role-aware defaults:
+  //  - Manager: see all units, all roles (full staffing dashboard)
+  //  - Nurse: default to RN role filter, gaps-only on (what needs attention now)
+  //  - ER: filter to ED-Trauma unit (trauma bay focus)
+  const defaultUnitFilter: UnitFilter =
+    role === UserRole.ER_PERSONNEL ? 'ed-trauma' : 'ALL';
+  const defaultRoleFilter: Role | 'ALL' =
+    role === UserRole.NURSE ? 'RN' : 'ALL';
+  const defaultGapsOnly = role === UserRole.NURSE;
+
+  const [unitFilter, setUnitFilter] = useState<UnitFilter>(defaultUnitFilter);
+  const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>(defaultRoleFilter);
+  const [gapsOnly, setGapsOnly] = useState(defaultGapsOnly);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const toggleSection = (s: string) => setExpandedSection(prev => prev === s ? null : s);

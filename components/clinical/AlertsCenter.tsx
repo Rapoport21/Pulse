@@ -46,6 +46,7 @@ import {
   ScanningLine,
   Divider,
 } from '../design';
+import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -55,6 +56,8 @@ export interface AlertsCenterProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  /** Current user role — drives default filter tab and sort priority. */
+  role?: UserRole;
 }
 
 type Severity = 'critical' | 'warning' | 'info' | 'success';
@@ -273,10 +276,41 @@ const timeLabel = (mins: number): string => {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast }) => {
+export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast, role }) => {
   const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [filter, setFilter] = useState<FilterTab>('all');
+
+  // Role-aware default filter:
+  //  - Nurse: clinical alerts first (patient deterioration, labs, meds)
+  //  - Manager: staffing alerts first (coverage gaps, capacity)
+  //  - ER: critical alerts first (trauma, triage, code activations)
+  const defaultFilter: FilterTab =
+    role === UserRole.NURSE ? 'clinical'
+    : role === UserRole.MANAGER ? 'staffing'
+    : role === UserRole.ER_PERSONNEL ? 'critical'
+    : 'all';
+  const [filter, setFilter] = useState<FilterTab>(defaultFilter);
+
+  // Role-aware category weight for secondary sort within same ack+time.
+  // Surfaces the most relevant alerts toward the top for each role.
+  const categoryWeight = (cat: Category): number => {
+    if (role === UserRole.NURSE) {
+      if (cat === 'clinical') return 0;
+      if (cat === 'safety') return 1;
+      return 2;
+    }
+    if (role === UserRole.MANAGER) {
+      if (cat === 'staffing') return 0;
+      if (cat === 'system') return 1;
+      return 2;
+    }
+    if (role === UserRole.ER_PERSONNEL) {
+      if (cat === 'clinical') return 0;
+      if (cat === 'safety') return 0;
+      return 2;
+    }
+    return 1;
+  };
 
   const alerts = useMemo(() => {
     let list = [...MOCK_ALERTS];
@@ -286,16 +320,18 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
     else if (filter === 'system') list = list.filter((a) => a.category === 'system');
     else if (filter === 'staffing') list = list.filter((a) => a.category === 'staffing');
 
-    // Unacknowledged first, then by time
+    // Unacknowledged first, then role-weighted category, then by time
     list.sort((a, b) => {
       const ackA = acknowledged.has(a.id) ? 1 : 0;
       const ackB = acknowledged.has(b.id) ? 1 : 0;
       if (ackA !== ackB) return ackA - ackB;
+      const catW = categoryWeight(a.category) - categoryWeight(b.category);
+      if (catW !== 0) return catW;
       return a.minutesAgo - b.minutesAgo;
     });
 
     return list;
-  }, [filter, acknowledged]);
+  }, [filter, acknowledged, role]);
 
   const unreadCount = MOCK_ALERTS.filter((a) => !acknowledged.has(a.id)).length;
   const critCount = MOCK_ALERTS.filter((a) => a.severity === 'critical' && !acknowledged.has(a.id)).length;
