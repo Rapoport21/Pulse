@@ -17,3 +17,5 @@ export { ESITriageScreen } from './ESITriageScreen';
 export type { ESITriageScreenProps, TriageResult } from './ESITriageScreen';
 export { EmsInboundBoard } from './EmsInboundBoard';
 export type { EmsInboundBoardProps } from './EmsInboundBoard';
+export { BedBoard } from './BedBoard';
+export type { BedBoardProps } from './BedBoard';

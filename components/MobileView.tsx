@@ -44,7 +44,8 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { ESITriageScreen, EmsInboundBoard, type TriageResult } from './clinical';
+import { ESITriageScreen, EmsInboundBoard, BedBoard, type TriageResult } from './clinical';
+import { seedBedState, type BedUnit } from '../data/bedMock';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
@@ -877,6 +878,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
    * the same board inline on the Dashboard tab as a tile.
    */
   const [showEmsBoard, setShowEmsBoard] = useState(false);
+
+  /**
+   * Bed Board state — mutable bed data seeded from mock.
+   * Surge-aware: overflow units show when surge is active.
+   */
+  const [bedUnits] = useState<BedUnit[]>(() => seedBedState());
+  const [showBedBoard, setShowBedBoard] = useState(false);
   const myDeviceId = getDeviceId();
 
   /**
@@ -1769,6 +1777,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 the patients tab so they can still glance at it
                 without it dominating the home screen. */}
             {currentUser.role === UserRole.ER_PERSONNEL && <EmsInboundBoard display="card" />}
+
+            {/* Bed Board — all roles see this on the dashboard.
+                Compact tile shows availability %, state breakdown,
+                and mini bed grid. Tapping expands to fullscreen. */}
+            <BedBoard
+              display="card"
+              units={bedUnits}
+              surgeActive={isSurgeActive}
+              onExpand={() => setShowBedBoard(true)}
+            />
 
             {/* Live Ops Grid — house-wide KPIs, scannable at a glance.
                 Critical tiles now render their numeric at 40px so
@@ -3692,6 +3710,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
         display="full"
         open={showEmsBoard}
         onClose={() => setShowEmsBoard(false)}
+      />
+
+      {/* Bed Board — fullscreen overlay. Shows all units with
+          bed tiles, state filtering, and bed detail popovers. */}
+      <BedBoard
+        display="full"
+        units={bedUnits}
+        surgeActive={isSurgeActive}
+        open={showBedBoard}
+        onClose={() => setShowBedBoard(false)}
       />
 
       {/* ESI Triage wizard — fullscreen modal that walks the
