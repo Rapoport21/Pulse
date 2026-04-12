@@ -23,6 +23,9 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  UserCheck,
+  ArrowRightLeft,
+  Timer,
 } from 'lucide-react';
 import {
   COLORS,
@@ -41,7 +44,7 @@ import {
   DotGridBg,
   Divider,
 } from './design';
-import { PatientHeaderStrip, VitalsPanel, NoteComposer, OrderEntry } from './clinical';
+import { PatientHeaderStrip, VitalsPanel, NoteComposer, OrderEntry, HandoffComposer } from './clinical';
 import type { Patient } from '../types';
 import { MOCK_LABS, MOCK_NOTES, MOCK_MEDS, MOCK_IMAGING, type ImagingOrder } from '../data/ehrMock';
 import { ConfidenceBadge } from './design';
@@ -288,6 +291,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showNoteComposer, setShowNoteComposer] = useState(false);
   const [showOrderEntry, setShowOrderEntry] = useState(false);
+  const [showHandoff, setShowHandoff] = useState(false);
   const [isGuarantorSame, setIsGuarantorSame] = useState(true);
   const [chiefComplaintFocused, setChiefComplaintFocused] = useState(false);
   const [orders, setOrders] = useState([
@@ -491,6 +495,133 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               />
               <StatBox label="Acuity" value="ESI 2" tone="crit" />
             </div>
+          )}
+
+          {/* Encounter Timeline — shows the patient's ED journey */}
+          {clinical && (
+            <Section id="PT.TIMELINE" title="Encounter Timeline" icon={Timer}>
+              <div style={{ position: 'relative', paddingLeft: 20 }}>
+                {/* Vertical connector line */}
+                <div
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    left: 6,
+                    top: 4,
+                    bottom: 4,
+                    width: 1,
+                    background: `linear-gradient(180deg, ${COLORS.ok} 0%, ${COLORS.info} 50%, ${COLORS.border} 100%)`,
+                  }}
+                />
+                {[
+                  { time: '12:15', label: 'Arrival', detail: `Ambulatory walk-in · ${clinical.currentEncounter?.chiefComplaint ?? 'Chest pain'}`, tone: COLORS.ok, done: true },
+                  { time: '12:22', label: 'Triage (ESI ' + (clinical.currentEncounter?.esiLevel ?? 2) + ')', detail: 'Vitals recorded · MEWS calculated · Allergies verified', tone: COLORS.ok, done: true },
+                  { time: '12:35', label: 'Assessment', detail: clinical.currentEncounter?.attendingId ? `Attending: ${clinical.currentEncounter.attendingId}` : 'Attending: Dr. Reeves', tone: COLORS.ok, done: true },
+                  { time: '13:00', label: 'Labs Drawn', detail: 'CBC, BMP, Troponin, BNP · Results pending', tone: COLORS.info, done: true },
+                  { time: '13:15', label: 'Imaging', detail: 'CT Head ordered · In progress', tone: COLORS.warn, done: false },
+                  { time: '—', label: 'Disposition', detail: 'Pending attending review', tone: COLORS.textMuted, done: false },
+                ].map((step, i) => (
+                  <div key={i} style={{ display: 'flex', gap: SPACE.md, marginBottom: i < 5 ? SPACE.md : 0, position: 'relative' }}>
+                    {/* Dot */}
+                    <div style={{
+                      position: 'absolute',
+                      left: -20,
+                      top: 2,
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: step.done ? step.tone : COLORS.surface,
+                      border: `2px solid ${step.tone}`,
+                      boxShadow: step.done ? `0 0 6px ${step.tone}40` : 'none',
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: 2 }}>
+                        <Mono tone="dim" size="xs">{step.time}</Mono>
+                        <span style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          fontWeight: step.done ? 600 : 500,
+                          color: step.done ? COLORS.textPrimary : COLORS.textMuted,
+                        }}>
+                          {step.label}
+                        </span>
+                        {!step.done && <StatusPill label="PENDING" tone="warn" size="xs" />}
+                      </div>
+                      <span style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 11,
+                        color: COLORS.textSecondary,
+                        lineHeight: 1.4,
+                      }}>
+                        {step.detail}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {/* Care Team */}
+          {clinical && (
+            <Section
+              id="PT.TEAM"
+              title="Care Team"
+              icon={UserCheck}
+              action={
+                <TacticalButton variant="ghost" size="sm" icon={<ArrowRightLeft size={12} />} onClick={() => setShowHandoff(true)}>
+                  Handoff
+                </TacticalButton>
+              }
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+                {[
+                  { role: 'ATTENDING', name: clinical.currentEncounter?.attendingId ?? 'Dr. R. Reeves', dept: 'Emergency Medicine', active: true },
+                  { role: 'PRIMARY RN', name: clinical.currentEncounter?.nurseId ?? 'RN J. Kim', dept: 'ED Acute', active: true },
+                  { role: 'CHARGE', name: 'RN S. Lee', dept: 'ED', active: true },
+                  { role: 'PHARM', name: 'Dr. T. Pham', dept: 'Clinical Pharmacy', active: false },
+                  { role: 'CONSULT', name: 'Dr. M. Chen', dept: 'Cardiology', active: false },
+                ].map((member) => (
+                  <div
+                    key={member.role}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: SPACE.sm,
+                      padding: `${SPACE.sm}px ${SPACE.md}px`,
+                      background: COLORS.bgDeep,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+                      <div style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: member.active ? COLORS.ok : COLORS.textMuted,
+                        boxShadow: member.active ? `0 0 4px ${COLORS.ok}` : 'none',
+                        flexShrink: 0,
+                      }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: COLORS.textPrimary,
+                          lineHeight: 1.25,
+                        }}>
+                          {member.name}
+                        </div>
+                        <Mono tone="muted" size="xs">{member.dept}</Mono>
+                      </div>
+                    </div>
+                    <StatusPill label={member.role} tone={member.active ? 'ok' : 'neutral'} size="xs" />
+                  </div>
+                ))}
+              </div>
+            </Section>
           )}
 
           {/* Intake & Measurements */}
@@ -1302,6 +1433,11 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
         onClose={() => setShowOrderEntry(false)}
         showToast={(msg) => showToast(msg, 'success')}
         patientId={clinical?.id}
+      />
+      <HandoffComposer
+        open={showHandoff}
+        onClose={() => setShowHandoff(false)}
+        showToast={(msg) => showToast(msg, 'success')}
       />
     </motion.div>
   );
