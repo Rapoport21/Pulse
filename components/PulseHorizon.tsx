@@ -1393,10 +1393,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE.sm }}>
             <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowMessaging(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <MessageSquare size={14} color={COLORS.info} />
+                <div style={{ position: 'relative' }}>
+                  <MessageSquare size={14} color={COLORS.info} />
+                  <span aria-hidden style={{ position: 'absolute', top: -2, right: -3, width: 5, height: 5, borderRadius: '50%', background: COLORS.info, boxShadow: `0 0 4px ${COLORS.info}` }} />
+                </div>
                 <div>
                   <Mono tone="info" size="xs">COMMS</Mono>
-                  <Mono tone="secondary" size="xs">Messaging</Mono>
+                  <Mono tone="secondary" size="xs">3 unread</Mono>
                 </div>
               </div>
             </TacticalCard>
@@ -1405,16 +1408,19 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 <Users size={14} color="rgba(139,92,246,0.9)" />
                 <div>
                   <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>STAFF</Mono>
-                  <Mono tone="secondary" size="xs">Coverage</Mono>
+                  <Mono tone="secondary" size="xs">47 on shift</Mono>
                 </div>
               </div>
             </TacticalCard>
             <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowAlerts(true)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <Bell size={14} color={COLORS.crit} />
+                <div style={{ position: 'relative' }}>
+                  <Bell size={14} color={COLORS.crit} />
+                  <span aria-hidden style={{ position: 'absolute', top: -2, right: -3, width: 5, height: 5, borderRadius: '50%', background: COLORS.crit, boxShadow: `0 0 4px ${COLORS.crit}` }} />
+                </div>
                 <div>
                   <Mono tone="crit" size="xs">ALERTS</Mono>
-                  <Mono tone="secondary" size="xs">15 active</Mono>
+                  <Mono tone="secondary" size="xs">4 critical</Mono>
                 </div>
               </div>
             </TacticalCard>

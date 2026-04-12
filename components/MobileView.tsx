@@ -33,7 +33,6 @@ import {
   Siren,
   ArrowRightLeft,
   Network,
-  BrainCircuit,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -1105,9 +1104,25 @@ export const MobileView: React.FC<MobileViewProps> = ({
     },
     {
       id: 3,
+      title: 'Fall Risk — Bed 4A',
+      desc: 'Martinez, R. attempted unassisted ambulation. Bed alarm triggered.',
+      time: '8m ago',
+      unread: true,
+      type: 'warning' as const,
+    },
+    {
+      id: 4,
       title: 'Pharmacy Update',
       desc: 'Vanco shortage, use alternative protocols as per guidelines.',
       time: '1h ago',
+      unread: false,
+      type: 'info' as const,
+    },
+    {
+      id: 5,
+      title: 'Staffing Coverage Gap',
+      desc: 'Night shift RN call-out for Unit 3B. Float pool notified.',
+      time: '2h ago',
       unread: false,
       type: 'info' as const,
     },
@@ -3912,8 +3927,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 return (
                   <motion.div
                     key={alert.id}
+                    onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
+                    whileTap={{ scale: 0.99 }}
                     transition={{
                       delay: i * 0.05,
                       duration: MOTION.base,
@@ -3932,6 +3949,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       background: alert.unread
                         ? `linear-gradient(90deg, ${toneColor}08 0%, transparent 40%)`
                         : 'transparent',
+                      cursor: 'pointer',
                     }}
                   >
                     <div
@@ -4012,6 +4030,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   </motion.div>
                 );
               })}
+              {/* View all footer */}
+              <motion.div
+                onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  padding: `${SPACE.sm}px ${SPACE.base}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: SPACE.xs,
+                  borderTop: `1px solid ${COLORS.border}`,
+                  cursor: 'pointer',
+                  background: `${COLORS.crit}04`,
+                }}
+              >
+                <Mono tone="crit" size="xs">VIEW ALL 15 ALERTS</Mono>
+                <ChevronRight size={12} strokeWidth={2} color={COLORS.crit} />
+              </motion.div>
             </TacticalCard>
           </motion.div>
         )}
@@ -4108,169 +4144,133 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* Active Threads — unread state reduced to a single dot
-                marker on the right. Icon box now reflects the thread
-                category (crit for trauma) instead of stacking brand
-                accent on top of a critical icon. */}
+            {/* Active Threads — preview of recent conversations.
+                Each row taps into the full Secure Messaging overlay. */}
             <div>
               <SectionHeader id="CH" label="ACTIVE THREADS" />
               <TacticalCard padding="none">
-                <div
-                  style={{
-                    padding: SPACE.base,
-                    minHeight: 72,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE.md,
-                    borderBottom: `1px solid ${COLORS.border}`,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div
+                {[
+                  { name: 'Trauma Team Alpha', preview: 'Dr. Jenkins: Patient stabilized, moving to CT.', time: '2M', icon: AlertCircle, iconBorder: COLORS.crit, iconColor: COLORS.crit, iconBg: COLORS.surfaceElev, unread: true, fontWeight: 600, nameColor: COLORS.textPrimary, previewColor: COLORS.textSecondary },
+                  { name: 'Charge Nurse Huddle', preview: 'RN Torres: Bed 6B ready for admit, calling report now.', time: '8M', icon: Users, iconBorder: COLORS.info, iconColor: COLORS.info, iconBg: `${COLORS.info}10`, unread: true, fontWeight: 600, nameColor: COLORS.textPrimary, previewColor: COLORS.textSecondary },
+                  { name: 'Pharmacy Consults', preview: 'Pharm: Vanco trough is 14.2, dose is good.', time: '15M', icon: Stethoscope, iconBorder: COLORS.border, iconColor: COLORS.textSecondary, iconBg: COLORS.surface, unread: false, fontWeight: 500, nameColor: COLORS.textSecondary, previewColor: COLORS.textMuted },
+                ].map((thread, i, arr) => (
+                  <motion.div
+                    key={thread.name}
+                    onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                    whileTap={{ scale: 0.99 }}
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04, duration: MOTION.base, ease: MOTION.ease }}
                     style={{
-                      width: 40,
-                      height: 40,
-                      flexShrink: 0,
+                      padding: SPACE.base,
+                      minHeight: 72,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      background: COLORS.surfaceElev,
-                      border: `1px solid ${COLORS.crit}`,
-                      borderRadius: RADIUS.sm,
-                      color: COLORS.crit,
-                      position: 'relative',
+                      gap: SPACE.md,
+                      borderBottom: i !== arr.length - 1 ? `1px solid ${COLORS.border}` : 'none',
+                      cursor: 'pointer',
+                      background: thread.unread ? `linear-gradient(90deg, ${thread.iconColor}06 0%, transparent 50%)` : 'transparent',
                     }}
                   >
-                    <AlertCircle size={16} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
                         display: 'flex',
-                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: SPACE.sm,
-                        marginBottom: 4,
+                        justifyContent: 'center',
+                        background: thread.iconBg,
+                        border: `1px solid ${thread.iconBorder}`,
+                        borderRadius: RADIUS.sm,
+                        color: thread.iconColor,
+                        position: 'relative',
                       }}
                     >
+                      <thread.icon size={16} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: SPACE.sm,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 14,
+                            fontWeight: thread.fontWeight,
+                            color: thread.nameColor,
+                            letterSpacing: '-0.01em',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {thread.name}
+                        </div>
+                        <Mono tone="dim" size="xs">
+                          {thread.time}
+                        </Mono>
+                      </div>
+                      <p
+                        style={{
+                          margin: 0,
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
-                          fontWeight: 600,
-                          color: COLORS.textPrimary,
-                          letterSpacing: '-0.01em',
+                          fontSize: TYPE.bodySm.size,
+                          color: thread.previewColor,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        Trauma Team Alpha
-                      </div>
-                      <Mono tone="dim" size="xs">
-                        2M
-                      </Mono>
+                        {thread.preview}
+                      </p>
                     </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontFamily: FONTS.sans,
-                        fontSize: TYPE.bodySm.size,
-                        color: COLORS.textSecondary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Dr. Jenkins: Patient stabilized, moving to CT.
-                    </p>
-                  </div>
-                  <div
-                    aria-hidden
-                    title="Unread"
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: RADIUS.full,
-                      background: COLORS.info,
-                      flexShrink: 0,
-                    }}
-                  />
-                </div>
-                <div
+                    {thread.unread ? (
+                      <div
+                        aria-hidden
+                        title="Unread"
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: RADIUS.full,
+                          background: COLORS.info,
+                          boxShadow: `0 0 6px ${COLORS.info}`,
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <ChevronRight
+                        size={14}
+                        color={COLORS.textMuted}
+                        style={{ flexShrink: 0 }}
+                      />
+                    )}
+                  </motion.div>
+                ))}
+                {/* View all footer */}
+                <motion.div
+                  onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                  whileTap={{ scale: 0.98 }}
                   style={{
-                    padding: SPACE.base,
-                    minHeight: 72,
+                    padding: `${SPACE.sm}px ${SPACE.base}px`,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: SPACE.md,
+                    justifyContent: 'center',
+                    gap: SPACE.xs,
+                    borderTop: `1px solid ${COLORS.border}`,
                     cursor: 'pointer',
+                    background: `${COLORS.info}04`,
                   }}
                 >
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: COLORS.surface,
-                      border: `1px solid ${COLORS.border}`,
-                      borderRadius: RADIUS.sm,
-                      color: COLORS.textSecondary,
-                    }}
-                  >
-                    <Stethoscope size={16} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: SPACE.sm,
-                        marginBottom: 4,
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: COLORS.textSecondary,
-                          letterSpacing: '-0.01em',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        Pharmacy Consults
-                      </div>
-                      <Mono tone="dim" size="xs">
-                        15M
-                      </Mono>
-                    </div>
-                    <p
-                      style={{
-                        margin: 0,
-                        fontFamily: FONTS.sans,
-                        fontSize: TYPE.bodySm.size,
-                        color: COLORS.textMuted,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      Pharm: Vanco trough is 14.2, dose is good.
-                    </p>
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    color={COLORS.textMuted}
-                    style={{ flexShrink: 0 }}
-                  />
-                </div>
+                  <Mono tone="info" size="xs">VIEW ALL 6 CHANNELS</Mono>
+                  <ChevronRight size={12} strokeWidth={2} color={COLORS.info} />
+                </motion.div>
               </TacticalCard>
             </div>
 
