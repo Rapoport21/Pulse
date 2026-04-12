@@ -12,6 +12,40 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-12 · Phase 3-4 polish: animations, surge reactivity, safe-area, real-time sim
+
+**Context.** All 17 clinical screens were built and wired. Next was
+making the platform feel polished and alive: consistent animations,
+surge protocol actually affecting bed state, iOS device safety, and
+live-updating metrics.
+
+**Decisions.**
+
+1. **Animation tokens over hard-coded durations.** Five screens had
+   custom durations (0.32–0.38s). Normalized to MOTION.fast / MOTION.base
+   tokens. Step slides standardized to x:±30 offset.
+
+2. **Surge escalates bed state.** `escalateBedState()` transforms the
+   entire hospital: dirty→ready (EVS rapid response), not-staffed→float
+   pool, ED beds→reserved, overflow hall opens. Reverts on deescalation.
+
+3. **Safe-area on all overlays.** All 10 clinical overlay screens now
+   use `env(safe-area-inset-top/bottom)` for Dynamic Island and home
+   indicator. CodeBlueScreen and ESITriageScreen already had it.
+
+4. **Real-time simulation hook.** `useRealtimeSimulation` jitters
+   metrics every 5s with ±2% noise. Surge mode transitions smoothly
+   over 4 ticks (20s). Dashboard tiles now show live-updating values.
+
+5. **Patient chart enrichment.** Added encounter timeline (6-step ED
+   journey with visual connector), care team section (5 members with
+   active dots), and handoff launch button.
+
+**Rejected.** Code-splitting via React.lazy — breaks AnimatePresence
+exit animations on overlays. Acceptable for a PoC at 2.1MB.
+
+---
+
 ## 2026-04-11 · 15-screen clinical surface: launch from everywhere
 
 **Context.** PULSE now has 15 clinical components (ESI Triage, EMS
