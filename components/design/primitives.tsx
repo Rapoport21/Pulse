@@ -767,3 +767,141 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
   },
 );
 TacticalButton.displayName = 'TacticalButton';
+
+// ─────────────────────────────────────────────────────────────────────────
+// ConfidenceBadge — PULSE-native confidence + freshness indicator
+//
+// Every data tile in PULSE should carry two signals:
+//   1. Confidence — how sure the system is (0–100%)
+//   2. Freshness — how old the data is
+//
+// This is a core differentiator: nothing else in hospital software
+// makes data quality this explicit. When confidence is low or data is
+// stale, the badge dims and shows a warning state, building trust
+// through transparency.
+// ─────────────────────────────────────────────────────────────────────────
+
+type FreshnessLevel = 'live' | 'recent' | 'stale' | 'offline';
+
+function freshnessFromMinutes(min: number): FreshnessLevel {
+  if (min <= 1) return 'live';
+  if (min <= 10) return 'recent';
+  if (min <= 60) return 'stale';
+  return 'offline';
+}
+
+const freshnessColor: Record<FreshnessLevel, string> = {
+  live: COLORS.ok,
+  recent: COLORS.info,
+  stale: COLORS.warn,
+  offline: COLORS.crit,
+};
+
+const freshnessLabel: Record<FreshnessLevel, string> = {
+  live: 'LIVE',
+  recent: 'RECENT',
+  stale: 'STALE',
+  offline: 'OFFLINE',
+};
+
+export interface ConfidenceBadgeProps {
+  /** Confidence percentage 0–100. */
+  confidence: number;
+  /** Data age in minutes. */
+  ageMinutes: number;
+  /** Compact mode — just dot + number, no freshness label. */
+  compact?: boolean;
+  style?: React.CSSProperties;
+}
+
+export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
+  confidence,
+  ageMinutes,
+  compact = false,
+  style,
+}) => {
+  const freshness = freshnessFromMinutes(ageMinutes);
+  const fColor = freshnessColor[freshness];
+  const confColor = confidence >= 80 ? COLORS.ok : confidence >= 50 ? COLORS.warn : COLORS.crit;
+  const ageText = ageMinutes < 1 ? '<1M' : ageMinutes < 60 ? `${Math.round(ageMinutes)}M` : `${Math.round(ageMinutes / 60)}H`;
+
+  if (compact) {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 3,
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          fontWeight: 500,
+          letterSpacing: '0.12em',
+          color: confColor,
+          opacity: freshness === 'stale' ? 0.7 : freshness === 'offline' ? 0.5 : 1,
+          ...style,
+        }}
+      >
+        <span style={{
+          width: 4,
+          height: 4,
+          borderRadius: RADIUS.full,
+          background: fColor,
+          boxShadow: freshness === 'live' ? `0 0 4px ${fColor}` : undefined,
+        }} />
+        {confidence}%
+      </span>
+    );
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: `1px ${SPACE.xs}px`,
+        background: `${fColor}10`,
+        border: `1px solid ${fColor}20`,
+        borderRadius: RADIUS.sm,
+        opacity: freshness === 'stale' ? 0.7 : freshness === 'offline' ? 0.5 : 1,
+        ...style,
+      }}
+    >
+      <span style={{
+        width: 4,
+        height: 4,
+        borderRadius: RADIUS.full,
+        background: fColor,
+        boxShadow: freshness === 'live' ? `0 0 4px ${fColor}` : undefined,
+      }} />
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 8,
+        fontWeight: 500,
+        letterSpacing: '0.14em',
+        color: fColor,
+        textTransform: 'uppercase',
+      }}>
+        {freshnessLabel[freshness]}
+      </span>
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 8,
+        fontWeight: 500,
+        letterSpacing: '0.1em',
+        color: confColor,
+      }}>
+        {confidence}%
+      </span>
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 8,
+        fontWeight: 500,
+        letterSpacing: '0.1em',
+        color: COLORS.textDim,
+      }}>
+        {ageText}
+      </span>
+    </span>
+  );
+};

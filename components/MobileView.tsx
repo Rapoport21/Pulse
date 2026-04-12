@@ -71,6 +71,7 @@ import {
   GlowBg,
   ScanningLine,
   Divider,
+  ConfidenceBadge,
 } from './design';
 
 /**
@@ -1795,7 +1796,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <SectionHeader
                 id="LO"
                 label="LIVE OPS"
-                right={<StatusPill label="Sync" tone="info" size="xs" />}
+                right={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+                    <ConfidenceBadge confidence={92} ageMinutes={1} compact />
+                    <StatusPill label="Sync" tone="info" size="xs" />
+                  </div>
+                }
               />
               <div
                 style={{
@@ -1881,10 +1887,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         Next 4 Hours
                       </div>
                     </div>
-                    <StatusPill
-                      label={isSafe ? 'Trend Ok' : 'At Risk'}
-                      tone={isSafe ? 'ok' : 'crit'}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                      <ConfidenceBadge confidence={isSafe ? 94 : 87} ageMinutes={2} />
+                      <StatusPill
+                        label={isSafe ? 'Trend Ok' : 'At Risk'}
+                        tone={isSafe ? 'ok' : 'crit'}
+                      />
+                    </div>
                   </div>
                   <div
                     style={{
@@ -2030,6 +2039,230 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   >
                     DRAG ACROSS CHART TO SCRUB · 15-MIN RESOLUTION
                   </Mono>
+
+                  {/* ── RISK DRIVERS ───────────────────────────
+                      Explainable "Why" view — when the forecast
+                      is above capacity, show what's pushing it.
+                      This is Bucket A — core PULSE innovation.
+                  ────────────────���─────────────────────────── */}
+                  {!isSafe && !isSurgeActive && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: MOTION.base, delay: 0.3 }}
+                      style={{
+                        marginTop: SPACE.base,
+                        padding: SPACE.md,
+                        background: `${COLORS.crit}08`,
+                        border: `1px solid ${COLORS.crit}25`,
+                        borderRadius: RADIUS.sm,
+                        position: 'relative',
+                      }}
+                    >
+                      <CornerBracket position="tl" color={COLORS.crit} size={8} thickness={1} inset={0} />
+                      <CornerBracket position="br" color={COLORS.crit} size={8} thickness={1} inset={0} />
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
+                        <BracketLabel tone="crit" size="xs">RISK DRIVERS</BracketLabel>
+                        <Mono tone="crit" size="xs">CONF 87% · 2M AGO</Mono>
+                      </div>
+                      {/* Driver breakdown — what's pushing saturation */}
+                      {[
+                        { label: 'EMS INBOUND', value: '4 RUNS', impact: 32, detail: '2 trauma activations, STEMI, sepsis alert' },
+                        { label: 'ED HOLDS', value: '6 PTS', impact: 28, detail: 'Waiting for inpatient beds, avg 3.2h hold' },
+                        { label: 'BEDS NOT STAFFED', value: '3 BEDS', impact: 22, detail: 'ICU-4, SD-3, 3E-304 — no assigned RN' },
+                        { label: 'HIGH ACUITY MIX', value: 'ESI ≤2: 40%', impact: 18, detail: '4 of 10 ED pts are ESI 1-2, above 25% baseline' },
+                      ].map((driver, idx) => (
+                        <div
+                          key={driver.label}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: SPACE.sm,
+                            padding: `${SPACE.xs}px 0`,
+                            borderTop: idx > 0 ? `1px solid ${COLORS.border}` : undefined,
+                          }}
+                        >
+                          {/* Impact bar */}
+                          <div style={{
+                            width: 32,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 2,
+                            flexShrink: 0,
+                            paddingTop: 2,
+                          }}>
+                            <div style={{
+                              width: '100%',
+                              height: 3,
+                              background: COLORS.border,
+                              borderRadius: RADIUS.full,
+                              overflow: 'hidden',
+                            }}>
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${driver.impact}%` }}
+                                transition={{ duration: 0.6, delay: 0.4 + idx * 0.1 }}
+                                style={{
+                                  height: '100%',
+                                  background: COLORS.crit,
+                                  borderRadius: RADIUS.full,
+                                }}
+                              />
+                            </div>
+                            <Mono tone="crit" size="xs">{driver.impact}%</Mono>
+                          </div>
+                          {/* Content */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Mono tone="primary" size="xs">{driver.label}</Mono>
+                              <Mono tone="crit" size="xs">{driver.value}</Mono>
+                            </div>
+                            <div style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 11,
+                              color: COLORS.textMuted,
+                              marginTop: 1,
+                              lineHeight: 1.3,
+                            }}>
+                              {driver.detail}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Surge proposal — the PULSE climax moment */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: MOTION.base, delay: 0.8 }}
+                        style={{
+                          marginTop: SPACE.md,
+                          padding: SPACE.md,
+                          background: `${COLORS.accent}10`,
+                          border: `1px solid ${COLORS.accent}30`,
+                          borderRadius: RADIUS.sm,
+                          position: 'relative',
+                        }}
+                      >
+                        <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
+                        <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
+                        <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
+                        <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1.5} inset={0} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+                          <ShieldAlert size={14} color={COLORS.accent} />
+                          <Mono tone="accent" size="sm">SURGE RECOMMENDED</Mono>
+                        </div>
+                        <div style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          lineHeight: 1.4,
+                          marginBottom: SPACE.md,
+                        }}>
+                          ED saturation projected at 112% in 90 min. PULSE recommends
+                          Level 2 Surge Protocol — open overflow capacity, redistribute
+                          stable patients, and hold non-urgent imaging.
+                        </div>
+                        <div style={{
+                          fontFamily: FONTS.mono,
+                          fontSize: 9,
+                          letterSpacing: '0.12em',
+                          color: COLORS.textMuted,
+                          textTransform: 'uppercase',
+                          marginBottom: SPACE.sm,
+                        }}>
+                          PROPOSED ACTIONS · 5 TASKS ACROSS 3 DEPARTMENTS
+                        </div>
+                        {[
+                          { task: 'Open overflow bay in Hall C', dept: 'Bed Mgmt', icon: '🛏' },
+                          { task: 'Page Dr. Kim — trauma lead', dept: 'Medical', icon: '📟' },
+                          { task: 'Reassign stable pts from Bay 3 → Med-Surg', dept: 'Nursing', icon: '↗' },
+                          { task: 'Prep 2 additional crash carts', dept: 'Nursing', icon: '⚡' },
+                          { task: 'Hold non-urgent CTs, free CT-1', dept: 'Radiology', icon: '🔬' },
+                        ].map((a, i) => (
+                          <div key={i} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: SPACE.sm,
+                            padding: `3px 0`,
+                            borderTop: i > 0 ? `1px solid ${COLORS.border}` : undefined,
+                          }}>
+                            <span style={{ fontSize: 10, width: 16, textAlign: 'center' }}>{a.icon}</span>
+                            <span style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 11,
+                              color: COLORS.textPrimary,
+                              flex: 1,
+                            }}>
+                              {a.task}
+                            </span>
+                            <Mono tone="muted" size="xs">{a.dept}</Mono>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', gap: SPACE.sm, marginTop: SPACE.md }}>
+                          {currentUser.role === UserRole.MANAGER ? (
+                            <TacticalButton
+                              variant="primary"
+                              size="sm"
+                              fullWidth
+                              icon={<ShieldAlert size={12} />}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onActivateSurge();
+                              }}
+                            >
+                              CONFIRM SURGE
+                            </TacticalButton>
+                          ) : (
+                            <div style={{
+                              width: '100%',
+                              padding: `${SPACE.sm}px`,
+                              background: `${COLORS.warn}10`,
+                              border: `1px solid ${COLORS.warn}25`,
+                              borderRadius: RADIUS.sm,
+                              textAlign: 'center',
+                            }}>
+                              <Mono tone="warn" size="xs">
+                                AWAITING OPS DIRECTOR CONFIRMATION
+                              </Mono>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+
+                  {/* After surge is active — show resolved state */}
+                  {isSurgeActive && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: MOTION.base }}
+                      style={{
+                        marginTop: SPACE.base,
+                        padding: SPACE.md,
+                        background: `${COLORS.ok}08`,
+                        border: `1px solid ${COLORS.ok}25`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.xs }}>
+                        <StatusPill label="SURGE ACTIVE" tone="crit" pulse size="xs" />
+                        <Mono tone="ok" size="xs">FORECAST IMPROVING</Mono>
+                      </div>
+                      <div style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 12,
+                        color: COLORS.textSecondary,
+                        lineHeight: 1.4,
+                      }}>
+                        Surge protocol in effect. Overflow beds online. Forecast revised
+                        downward — projected saturation now 32%. Monitor task completion
+                        on the Actions tab.
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               </TacticalCard>
             </div>
