@@ -839,9 +839,9 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               {activeId ? (
                 <motion.div
                   key="thread"
-                  initial={{ opacity: 0, x: 60 }}
+                  initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 60 }}
+                  exit={{ opacity: 0, x: 30 }}
                   transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 >
@@ -850,9 +850,9 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               ) : (
                 <motion.div
                   key="channels"
-                  initial={{ opacity: 0, x: -60 }}
+                  initial={{ opacity: 0, x: -30 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -60 }}
+                  exit={{ opacity: 0, x: -30 }}
                   transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 >

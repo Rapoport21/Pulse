@@ -201,7 +201,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 3. Key Metrics Strip */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.sm }}>
                 {METRICS.map((m, i) => (
-                  <motion.div key={m.label} initial={{ opacity: 0, y: 10 }}
+                  <motion.div key={m.label} initial={{ opacity: 0, y: 8 }}
                     animate={ready ? { opacity: 1, y: 0 } : {}}
                     transition={{ delay: i * 0.06, duration: MOTION.base, ease: MOTION.ease }}>
                     <TacticalCard padding="md">

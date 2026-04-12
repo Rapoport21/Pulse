@@ -332,7 +332,7 @@ const EmsRow: React.FC<{
       initial={{ opacity: 0, x: 8 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -8, scale: 0.96 }}
-      transition={{ duration: 0.32, ease: MOTION.ease }}
+      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
     >
       <div
         style={{
@@ -608,10 +608,10 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
     <AnimatePresence>
       <motion.div
         key="ems-board"
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 30 }}
-        transition={{ duration: 0.36, ease: MOTION.ease }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: MOTION.base, ease: MOTION.ease }}
         style={{
           position: 'fixed',
           inset: 0,

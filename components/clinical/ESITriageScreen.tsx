@@ -942,10 +942,10 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
     <AnimatePresence>
       <motion.div
         key="esi-triage"
-        initial={{ opacity: 0, y: 30 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 30 }}
-        transition={{ duration: 0.38, ease: MOTION.ease }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: MOTION.base, ease: MOTION.ease }}
         style={{
           position: 'fixed',
           inset: 0,
@@ -1019,10 +1019,10 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
             <AnimatePresence mode="wait">
               <motion.div
                 key={step}
-                initial={{ opacity: 0, x: 12 }}
+                initial={{ opacity: 0, x: 30 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                transition={{ duration: 0.24, ease: MOTION.ease }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
               >
                 {step === 'identity' && (
                   <>
