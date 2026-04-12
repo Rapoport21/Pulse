@@ -28,6 +28,10 @@ import {
   ClipboardList,
   UserPlus,
   DoorOpen,
+  FileText,
+  Pill,
+  Siren,
+  ArrowRightLeft,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -46,7 +50,19 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { ESITriageScreen, EmsInboundBoard, BedBoard, AdmitFlow, DischargeFlow, RoundingList, type TriageResult } from './clinical';
+import {
+  ESITriageScreen,
+  EmsInboundBoard,
+  BedBoard,
+  AdmitFlow,
+  DischargeFlow,
+  RoundingList,
+  NoteComposer,
+  OrderEntry,
+  CodeBlueScreen,
+  HandoffComposer,
+  type TriageResult,
+} from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
@@ -893,6 +909,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
   const [showRoundingList, setShowRoundingList] = useState(false);
+  const [showNoteComposer, setShowNoteComposer] = useState(false);
+  const [showOrderEntry, setShowOrderEntry] = useState(false);
+  const [showCodeBlue, setShowCodeBlue] = useState(false);
+  const [showHandoff, setShowHandoff] = useState(false);
 
   const myDeviceId = getDeviceId();
 
@@ -3300,6 +3320,143 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
+            {/* ── Clinical workflow launchers (2-col row) ───────── */}
+            <div style={{ display: 'flex', gap: SPACE.sm }}>
+              {/* Note Composer */}
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowNoteComposer(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, ${COLORS.info}10 0%, ${COLORS.info}02 100%)`,
+                  border: `1px solid ${COLORS.info}`,
+                  borderLeft: `3px solid ${COLORS.info}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 44,
+                }}
+              >
+                <FileText size={14} strokeWidth={2} color={COLORS.info} />
+                <div style={{ flex: 1 }}>
+                  <Mono tone="info" size="xs">NOTE</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                    SOAP / H&amp;P
+                  </div>
+                </div>
+              </motion.button>
+
+              {/* Order Entry (CPOE) */}
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowOrderEntry(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, ${COLORS.ok}10 0%, ${COLORS.ok}02 100%)`,
+                  border: `1px solid ${COLORS.ok}`,
+                  borderLeft: `3px solid ${COLORS.ok}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 44,
+                }}
+              >
+                <Pill size={14} strokeWidth={2} color={COLORS.ok} />
+                <div style={{ flex: 1 }}>
+                  <Mono tone="ok" size="xs">CPOE</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                    Orders
+                  </div>
+                </div>
+              </motion.button>
+            </div>
+
+            <div style={{ display: 'flex', gap: SPACE.sm }}>
+              {/* Code Blue */}
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('heavy'); setShowCodeBlue(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, ${COLORS.crit}12 0%, ${COLORS.crit}03 100%)`,
+                  border: `1px solid ${COLORS.crit}`,
+                  borderLeft: `3px solid ${COLORS.crit}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 44,
+                }}
+              >
+                <Siren size={14} strokeWidth={2} color={COLORS.crit} />
+                <div style={{ flex: 1 }}>
+                  <Mono tone="crit" size="xs">CODE BLUE</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                    Emergency
+                  </div>
+                </div>
+              </motion.button>
+
+              {/* Handoff Composer */}
+              <motion.button
+                type="button"
+                onClick={() => { triggerHaptic('light'); setShowHandoff(true); }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  flex: 1,
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: `linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)`,
+                  border: `1px solid rgba(139,92,246,0.5)`,
+                  borderLeft: `3px solid rgba(139,92,246,0.7)`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 44,
+                }}
+              >
+                <ArrowRightLeft size={14} strokeWidth={2} color="rgba(139,92,246,0.9)" />
+                <div style={{ flex: 1 }}>
+                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>HANDOFF</Mono>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: COLORS.textSecondary }}>
+                    Shift SBAR
+                  </div>
+                </div>
+              </motion.button>
+            </div>
+
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -4180,6 +4337,35 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showRoundingList}
         onClose={() => setShowRoundingList(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
+      />
+
+      {/* Note Composer — SOAP / H&P / Progress note wizard. */}
+      <NoteComposer
+        open={showNoteComposer}
+        onClose={() => setShowNoteComposer(false)}
+        showToast={(msg: string) => showToast(msg, 'success')}
+      />
+
+      {/* Order Entry (CPOE) — meds, labs, imaging, consults. */}
+      <OrderEntry
+        open={showOrderEntry}
+        onClose={() => setShowOrderEntry(false)}
+        showToast={(msg: string) => showToast(msg, 'success')}
+      />
+
+      {/* Code Blue — cardiac arrest / rapid response management. */}
+      <CodeBlueScreen
+        open={showCodeBlue}
+        onClose={() => setShowCodeBlue(false)}
+        showToast={(msg: string) => showToast(msg, 'error')}
+        location="ICU-3"
+      />
+
+      {/* Handoff Composer — SBAR shift handoff notes. */}
+      <HandoffComposer
+        open={showHandoff}
+        onClose={() => setShowHandoff(false)}
+        showToast={(msg: string) => showToast(msg, 'success')}
       />
 
       {/* ESI Triage wizard — fullscreen modal that walks the

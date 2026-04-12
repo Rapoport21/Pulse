@@ -31,10 +31,23 @@ import {
   UserPlus,
   DoorOpen,
   ClipboardList,
+  FileText,
+  Pill,
+  Siren,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
-import { BedBoard, AdmitFlow, DischargeFlow, RoundingList } from './clinical';
+import {
+  BedBoard,
+  AdmitFlow,
+  DischargeFlow,
+  RoundingList,
+  NoteComposer,
+  OrderEntry,
+  CodeBlueScreen,
+  HandoffComposer,
+} from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
   COLORS,
@@ -122,6 +135,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
   const [showRoundingList, setShowRoundingList] = useState(false);
+  const [showNoteComposer, setShowNoteComposer] = useState(false);
+  const [showOrderEntry, setShowOrderEntry] = useState(false);
+  const [showCodeBlue, setShowCodeBlue] = useState(false);
+  const [showHandoff, setShowHandoff] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1316,6 +1333,46 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               <ChevronRight size={14} color={COLORS.textMuted} />
             </div>
           </TacticalCard>
+
+          {/* Clinical workflow launchers — 2×2 compact grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.sm }}>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowNoteComposer(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <FileText size={14} color={COLORS.info} />
+                <div>
+                  <Mono tone="info" size="xs">NOTE</Mono>
+                  <Mono tone="secondary" size="xs">SOAP / H&amp;P</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowOrderEntry(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <Pill size={14} color={COLORS.ok} />
+                <div>
+                  <Mono tone="ok" size="xs">CPOE</Mono>
+                  <Mono tone="secondary" size="xs">Orders</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowCodeBlue(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <Siren size={14} color={COLORS.crit} />
+                <div>
+                  <Mono tone="crit" size="xs">CODE BLUE</Mono>
+                  <Mono tone="secondary" size="xs">Emergency</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowHandoff(true)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
+                <ArrowRightLeft size={14} color="rgba(139,92,246,0.9)" />
+                <div>
+                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>HANDOFF</Mono>
+                  <Mono tone="secondary" size="xs">Shift SBAR</Mono>
+                </div>
+              </div>
+            </TacticalCard>
+          </div>
         </div>
       </div>
 
@@ -1347,6 +1404,35 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showRoundingList}
         onClose={() => setShowRoundingList(false)}
         showToast={(msg: string) => showToast?.(msg, 'info')}
+      />
+
+      {/* Note Composer overlay */}
+      <NoteComposer
+        open={showNoteComposer}
+        onClose={() => setShowNoteComposer(false)}
+        showToast={(msg: string) => showToast?.(msg, 'success')}
+      />
+
+      {/* Order Entry (CPOE) overlay */}
+      <OrderEntry
+        open={showOrderEntry}
+        onClose={() => setShowOrderEntry(false)}
+        showToast={(msg: string) => showToast?.(msg, 'success')}
+      />
+
+      {/* Code Blue overlay */}
+      <CodeBlueScreen
+        open={showCodeBlue}
+        onClose={() => setShowCodeBlue(false)}
+        showToast={(msg: string) => showToast?.(msg, 'error')}
+        location="ICU-3"
+      />
+
+      {/* Handoff Composer overlay */}
+      <HandoffComposer
+        open={showHandoff}
+        onClose={() => setShowHandoff(false)}
+        showToast={(msg: string) => showToast?.(msg, 'success')}
       />
 
       {/* ── Manual Mode Modal ── */}
