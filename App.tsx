@@ -716,7 +716,7 @@ function App() {
                 />
               )}
               {activeTab === Tab.BED_BOARD && (
-                <div style={{ height: '100%', overflow: 'auto' }}>
+                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
                   <BedBoard
                     display="full"
                     units={seedBedState()}
@@ -728,7 +728,7 @@ function App() {
                 </div>
               )}
               {activeTab === Tab.ADMISSIONS && (
-                <div style={{ height: '100%', overflow: 'auto' }}>
+                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
                   <AdmitFlow
                     open
                     onClose={() => setActiveTab(Tab.HORIZON)}
@@ -737,7 +737,7 @@ function App() {
                 </div>
               )}
               {activeTab === Tab.ALERTS && (
-                <div style={{ height: '100%', overflow: 'auto' }}>
+                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
                   <AlertsCenter
                     open
                     onClose={() => setActiveTab(Tab.HORIZON)}
@@ -747,7 +747,7 @@ function App() {
                 </div>
               )}
               {activeTab === Tab.STAFFING && (
-                <div style={{ height: '100%', overflow: 'auto' }}>
+                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
                   <WorkforceCoverage
                     open
                     onClose={() => setActiveTab(Tab.HORIZON)}

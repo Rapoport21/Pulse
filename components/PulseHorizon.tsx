@@ -1273,185 +1273,77 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             onExpand={() => setShowBedBoard(true)}
           />
 
-          {/* Admit / Discharge quick-launch row */}
-          <div style={{ display: 'flex', gap: SPACE.sm }}>
-            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowAdmitFlow(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: `${COLORS.ok}18`,
-                    border: `1px solid ${COLORS.ok}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.ok,
-                  }}
-                >
-                  <UserPlus size={16} strokeWidth={2} />
+          {/* ── Census & Throughput KPI Strip ── */}
+          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+              <Activity size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono tone="primary" size="sm">Census & Throughput</Mono>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE.md }}>
+              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
+                <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
+                <div style={{ fontFamily: FONTS.sans, fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
                 </div>
-                <div>
-                  <BracketLabel tone="ok" size="xs">ADMIT</BracketLabel>
-                  <Mono tone="secondary" size="xs">Start new admission</Mono>
+                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '▼ 14 FROM 6H AGO' : isSurgeActive ? '▲ 28 FROM 6H AGO' : '▲ 12 FROM 6H AGO'}
+                </Mono>
+              </div>
+              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
+                <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
+                <div style={{ fontFamily: FONTS.sans, fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '45m' : isSurgeActive ? '125m' : '98m'}
                 </div>
-                <div style={{ flex: 1 }} />
-                <ChevronRight size={14} color={COLORS.textMuted} />
+                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'crit'} size="xs" style={{ marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? 'WITHIN TARGET' : 'EXCEEDS THRESHOLD'}
+                </Mono>
               </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowDischargeFlow(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: `${COLORS.warn}18`,
-                    border: `1px solid ${COLORS.warn}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.warn,
-                  }}
-                >
-                  <DoorOpen size={16} strokeWidth={2} />
+              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
+                <Mono tone="muted" size="xs">STAFF RATIO</Mono>
+                <div style={{ fontFamily: FONTS.sans, fontSize: 36, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '1:4.2' : isSurgeActive ? '1:6.1' : '1:5.3'}
                 </div>
-                <div>
-                  <BracketLabel tone="warn" size="xs">D/C</BracketLabel>
-                  <Mono tone="secondary" size="xs">Discharge patient</Mono>
-                </div>
-                <div style={{ flex: 1 }} />
-                <ChevronRight size={14} color={COLORS.textMuted} />
+                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? 'OPTIMAL' : isSurgeActive ? 'ABOVE SAFE LIMIT' : 'MONITOR'}
+                </Mono>
               </div>
-            </TacticalCard>
-          </div>
-
-          {/* Rounding List launcher */}
-          <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowRoundingList(true)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'rgba(139,92,246,0.15)',
-                  border: '1px solid rgba(139,92,246,0.5)',
-                  borderRadius: RADIUS.sm,
-                  color: 'rgba(139,92,246,0.9)',
-                }}
-              >
-                <ClipboardList size={16} strokeWidth={2} />
-              </div>
-              <div>
-                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>ROUNDING LIST</BracketLabel>
-                <Mono tone="secondary" size="xs">All patients · sorted by acuity</Mono>
-              </div>
-              <div style={{ flex: 1 }} />
-              <ChevronRight size={14} color={COLORS.textMuted} />
             </div>
           </TacticalCard>
 
-          {/* Clinical workflow launchers — 2×2 compact grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.sm }}>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowNoteComposer(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <FileText size={14} color={COLORS.info} />
-                <div>
-                  <Mono tone="info" size="xs">NOTE</Mono>
-                  <Mono tone="secondary" size="xs">SOAP / H&amp;P</Mono>
-                </div>
+          {/* ── Active Admissions & Discharges Snapshot ── */}
+          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                <UserPlus size={16} strokeWidth={2} color={COLORS.textSecondary} />
+                <Mono tone="primary" size="sm">Admissions & Discharges</Mono>
               </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowOrderEntry(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <Pill size={14} color={COLORS.ok} />
-                <div>
-                  <Mono tone="ok" size="xs">CPOE</Mono>
-                  <Mono tone="secondary" size="xs">Orders</Mono>
+              <Mono tone="muted" size="xs">LAST 4 HOURS</Mono>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.md }}>
+              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.ok}`, borderRadius: RADIUS.sm }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <Mono tone="ok" size="sm">ADMITTED</Mono>
+                  <span style={{ fontFamily: FONTS.sans, fontSize: 28, fontWeight: 600, color: COLORS.ok }}>
+                    {loginCount > 1 && !isSurgeActive ? '4' : isSurgeActive ? '11' : '7'}
+                  </span>
                 </div>
+                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '2 pending placement' : isSurgeActive ? '6 pending placement' : '3 pending placement'}
+                </Mono>
               </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowCodeBlue(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <Siren size={14} color={COLORS.crit} />
-                <div>
-                  <Mono tone="crit" size="xs">CODE BLUE</Mono>
-                  <Mono tone="secondary" size="xs">Emergency</Mono>
+              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.warn}`, borderRadius: RADIUS.sm }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <Mono tone="warn" size="sm">DISCHARGED</Mono>
+                  <span style={{ fontFamily: FONTS.sans, fontSize: 28, fontWeight: 600, color: COLORS.warn }}>
+                    {loginCount > 1 && !isSurgeActive ? '6' : isSurgeActive ? '3' : '4'}
+                  </span>
                 </div>
+                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>
+                  {loginCount > 1 && !isSurgeActive ? '2 awaiting transport' : isSurgeActive ? '5 awaiting transport' : '3 awaiting transport'}
+                </Mono>
               </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowHandoff(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <ArrowRightLeft size={14} color="rgba(139,92,246,0.9)" />
-                <div>
-                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>HANDOFF</Mono>
-                  <Mono tone="secondary" size="xs">Shift SBAR</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-          </div>
-
-          {/* Comms / Workforce / Alerts — 3-col compact row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE.sm }}>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowMessaging(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <div style={{ position: 'relative' }}>
-                  <MessageSquare size={14} color={COLORS.info} />
-                  <span aria-hidden style={{ position: 'absolute', top: -2, right: -3, width: 5, height: 5, borderRadius: '50%', background: COLORS.info, boxShadow: `0 0 4px ${COLORS.info}` }} />
-                </div>
-                <div>
-                  <Mono tone="info" size="xs">COMMS</Mono>
-                  <Mono tone="secondary" size="xs">3 unread</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowWorkforce(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <Users size={14} color="rgba(139,92,246,0.9)" />
-                <div>
-                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>STAFF</Mono>
-                  <Mono tone="secondary" size="xs">47 on shift</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowAlerts(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <div style={{ position: 'relative' }}>
-                  <Bell size={14} color={COLORS.crit} />
-                  <span aria-hidden style={{ position: 'absolute', top: -2, right: -3, width: 5, height: 5, borderRadius: '50%', background: COLORS.crit, boxShadow: `0 0 4px ${COLORS.crit}` }} />
-                </div>
-                <div>
-                  <Mono tone="crit" size="xs">ALERTS</Mono>
-                  <Mono tone="secondary" size="xs">4 critical</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-          </div>
-
-          {/* Dept Coordination + Brief Me */}
-          <div style={{ display: 'flex', gap: SPACE.sm }}>
-            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowDeptCoord(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <NetworkIcon size={14} color={COLORS.info} />
-                <div>
-                  <Mono tone="info" size="xs">COORD</Mono>
-                  <Mono tone="secondary" size="xs">Departments</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-            <TacticalCard interactive style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowBriefMe(true)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.xs}px 0` }}>
-                <BrainCircuit size={14} color={COLORS.accent} />
-                <div>
-                  <Mono tone="accent" size="xs">BRIEF ME</Mono>
-                  <Mono tone="secondary" size="xs">AI Briefing</Mono>
-                </div>
-              </div>
-            </TacticalCard>
-          </div>
+            </div>
+          </TacticalCard>
         </div>
       </div>
 
