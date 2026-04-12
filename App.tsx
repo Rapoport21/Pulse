@@ -716,45 +716,41 @@ function App() {
                 />
               )}
               {activeTab === Tab.BED_BOARD && (
-                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
-                  <BedBoard
-                    display="full"
-                    units={seedBedState()}
-                    surgeActive={isSurgeActive}
-                    open
-                    onClose={() => setActiveTab(Tab.HORIZON)}
-                    role={currentUser.role}
-                  />
-                </div>
+                <BedBoard
+                  display="full"
+                  units={seedBedState()}
+                  surgeActive={isSurgeActive}
+                  open
+                  embedded
+                  onClose={() => setActiveTab(Tab.HORIZON)}
+                  role={currentUser.role}
+                />
               )}
               {activeTab === Tab.ADMISSIONS && (
-                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
-                  <AdmitFlow
-                    open
-                    onClose={() => setActiveTab(Tab.HORIZON)}
-                    showToast={showToast}
-                  />
-                </div>
+                <AdmitFlow
+                  open
+                  embedded
+                  onClose={() => setActiveTab(Tab.HORIZON)}
+                  showToast={showToast}
+                />
               )}
               {activeTab === Tab.ALERTS && (
-                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
-                  <AlertsCenter
-                    open
-                    onClose={() => setActiveTab(Tab.HORIZON)}
-                    showToast={showToast}
-                    role={currentUser.role}
-                  />
-                </div>
+                <AlertsCenter
+                  open
+                  embedded
+                  onClose={() => setActiveTab(Tab.HORIZON)}
+                  showToast={showToast}
+                  role={currentUser.role}
+                />
               )}
               {activeTab === Tab.STAFFING && (
-                <div style={{ position: 'relative', height: '100%', overflow: 'hidden', transform: 'translateZ(0)' }}>
-                  <WorkforceCoverage
-                    open
-                    onClose={() => setActiveTab(Tab.HORIZON)}
-                    showToast={showToast}
-                    role={currentUser.role}
-                  />
-                </div>
+                <WorkforceCoverage
+                  open
+                  embedded
+                  onClose={() => setActiveTab(Tab.HORIZON)}
+                  showToast={showToast}
+                  role={currentUser.role}
+                />
               )}
               {activeTab === Tab.PLAYBOOKS && <Playbooks onActivate={handleActivatePlaybook} />}
               {activeTab === Tab.ACTIONS && (

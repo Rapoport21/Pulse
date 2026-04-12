@@ -1273,6 +1273,53 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             onExpand={() => setShowBedBoard(true)}
           />
 
+          {/* ── Clinical Quick Actions ── */}
+          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+              <Zap size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono tone="primary" size="sm">Quick Actions</Mono>
+              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.sm }}>
+              {[
+                { label: 'Admit', icon: <UserPlus size={16} />, color: COLORS.ok, onClick: () => setShowAdmitFlow(true) },
+                { label: 'Discharge', icon: <DoorOpen size={16} />, color: COLORS.warn, onClick: () => setShowDischargeFlow(true) },
+                { label: 'Rounding', icon: <ClipboardList size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => setShowRoundingList(true) },
+                { label: 'Notes', icon: <FileText size={16} />, color: COLORS.info, onClick: () => setShowNoteComposer(true) },
+                { label: 'Orders', icon: <Pill size={16} />, color: COLORS.ok, onClick: () => setShowOrderEntry(true) },
+                { label: 'Code Blue', icon: <Siren size={16} />, color: COLORS.crit, onClick: () => setShowCodeBlue(true) },
+                { label: 'Handoff', icon: <ArrowRightLeft size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => setShowHandoff(true) },
+                { label: 'Comms', icon: <MessageSquare size={16} />, color: COLORS.info, onClick: () => setShowMessaging(true) },
+              ].map((action) => (
+                <div
+                  key={action.label}
+                  role="button"
+                  tabIndex={0}
+                  onClick={action.onClick}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && action.onClick()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    padding: `${SPACE.sm}px ${SPACE.md}px`,
+                    background: COLORS.bgDeep,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    cursor: 'pointer',
+                    transition: `all ${MOTION.fast}s ease`,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.borderHover; e.currentTarget.style.background = COLORS.surfaceElev; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.background = COLORS.bgDeep; }}
+                >
+                  <span style={{ color: action.color, flexShrink: 0 }}>{action.icon}</span>
+                  <span style={{ fontFamily: FONTS.sans, fontSize: 14, fontWeight: 500, color: COLORS.textPrimary, letterSpacing: '-0.005em' }}>
+                    {action.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </TacticalCard>
+
           {/* ── Census & Throughput KPI Strip ── */}
           <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>

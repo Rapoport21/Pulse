@@ -40,6 +40,8 @@ export interface WorkforceCoverageProps {
   showToast: (msg: string) => void;
   /** Current user role — drives default unit filter and gaps-only toggle. */
   role?: UserRole;
+  /** When true, renders as inline desktop layout instead of mobile overlay. */
+  embedded?: boolean;
 }
 
 type Role = 'RN' | 'MD' | 'RT' | 'Tech' | 'Charge';
@@ -175,7 +177,7 @@ function statusDotColor(s: FloatStatus): string {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onClose, showToast, role }) => {
+export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onClose, showToast, role, embedded }) => {
   // Role-aware defaults:
   //  - Manager: see all units, all roles (full staffing dashboard)
   //  - Nurse: default to RN role filter, gaps-only on (what needs attention now)
@@ -664,6 +666,60 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onCl
   };
 
   // ── Main render ───────────────────────────────────────────────────────
+
+  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  if (embedded) {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: COLORS.bg,
+          overflow: 'hidden',
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+        }}
+      >
+        {/* ── Header strip ──────────────────────────────────────────── */}
+        <HudStrip side="top" fixed>
+          <BracketLabel tone="accent" size="sm">Workforce</BracketLabel>
+          <div style={{ flex: 1 }} />
+          <ConfidenceBadge confidence={92} ageMinutes={1} />
+        </HudStrip>
+
+        {/* ── Body ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            paddingTop: 56,
+            paddingBottom: SPACE['3xl'],
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {renderHero()}
+
+          <Divider style={{ margin: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px` }} />
+          {renderFilters()}
+
+          <Divider style={{ margin: `${SPACE.xs}px ${SPACE.base}px ${SPACE.base}px` }} />
+          {renderUnitCards()}
+
+          <Divider style={{ margin: `${SPACE.base}px ${SPACE.base}px 0` }} />
+          {renderRoleBreakdown()}
+
+          <Divider style={{ margin: `0 ${SPACE.base}px` }} />
+          {renderFloatPool()}
+
+          <Divider style={{ margin: `0 ${SPACE.base}px` }} />
+          {renderShiftChanges()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence>

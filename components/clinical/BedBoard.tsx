@@ -581,7 +581,8 @@ const FullMode: React.FC<{
   surgeActive: boolean;
   onClose: () => void;
   role?: UserRole;
-}> = ({ units, surgeActive, onClose, role }) => {
+  embedded?: boolean;
+}> = ({ units, surgeActive, onClose, role, embedded }) => {
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
   // Role-aware default filter:
   //  - ER: default to showing occupied beds (ED focus on active patients)
@@ -628,6 +629,141 @@ const FullMode: React.FC<{
     { key: 'blocked', label: 'BLOCK', count: summary.blocked },
     { key: 'reserved', label: 'RSRVD', count: summary.reserved },
   ];
+
+  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  if (embedded) {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: COLORS.bg,
+          overflow: 'hidden',
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+        }}
+      >
+        {/* Header */}
+        <HudStrip side="top" fixed>
+          <BracketLabel tone="accent">BED BOARD</BracketLabel>
+          <div style={{ flex: 1 }} />
+          {surgeActive && <StatusPill label="SURGE ACTIVE" tone="crit" pulse />}
+        </HudStrip>
+
+        {/* Body */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: `${SPACE.xl + 52}px ${SPACE.base}px 0`,
+            paddingBottom: SPACE.xl,
+          }}
+        >
+          {/* Summary */}
+          <SummaryBar summary={summary} surgeActive={surgeActive} />
+
+          {/* Filter chips */}
+          <div style={{
+            display: 'flex',
+            gap: SPACE.xs,
+            flexWrap: 'wrap',
+            marginBottom: SPACE.lg,
+            paddingBottom: SPACE.md,
+            borderBottom: `1px solid ${COLORS.border}`,
+          }}>
+            {filters.map((f) => {
+              const isActive = filter === f.key;
+              const chipColor = f.key === 'all' ? COLORS.textSecondary : STATE_COLOR[f.key as BedState];
+              return (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  style={{
+                    padding: `4px ${SPACE.sm}px`,
+                    background: isActive ? `${chipColor}20` : 'transparent',
+                    border: `1px solid ${isActive ? chipColor : COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <span style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 9,
+                    fontWeight: 500,
+                    letterSpacing: '0.12em',
+                    color: isActive ? chipColor : COLORS.textMuted,
+                    textTransform: 'uppercase',
+                  }}>
+                    {f.label}
+                  </span>
+                  <span style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 9,
+                    fontWeight: 600,
+                    color: isActive ? chipColor : COLORS.textDim,
+                  }}>
+                    {f.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Unit rows */}
+          {visibleUnits.map((unit) => (
+            <UnitRow
+              key={unit.id}
+              unit={unit}
+              onBedTap={setSelectedBed}
+              isNew={unit.surgeOnly}
+            />
+          ))}
+
+          {visibleUnits.length === 0 && (
+            <div style={{
+              textAlign: 'center',
+              padding: SPACE['3xl'],
+            }}>
+              <Mono tone="muted">NO BEDS MATCH FILTER</Mono>
+            </div>
+          )}
+        </div>
+
+        {/* Bed popover */}
+        <AnimatePresence>
+          {selectedBed && (
+            <>
+              <motion.div
+                key="backdrop"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setSelectedBed(null)}
+                style={{
+                  position: 'fixed',
+                  inset: 0,
+                  background: 'rgba(0,0,0,0.4)',
+                  zIndex: Z.toast - 1,
+                }}
+              />
+              <BedPopover
+                key="popover"
+                bed={selectedBed}
+                onClose={() => setSelectedBed(null)}
+              />
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -803,6 +939,8 @@ export interface BedBoardProps {
   open?: boolean;
   /** Current user role — drives default unit expansion and highlight. */
   role?: UserRole;
+  /** When true, renders as inline desktop layout instead of mobile overlay. */
+  embedded?: boolean;
 }
 
 export const BedBoard: React.FC<BedBoardProps> = ({
@@ -813,6 +951,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
   onClose,
   open = false,
   role,
+  embedded,
 }) => {
   if (display === 'card') {
     return (
@@ -833,6 +972,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
           surgeActive={surgeActive}
           onClose={onClose || (() => {})}
           role={role}
+          embedded={embedded}
         />
       )}
     </AnimatePresence>

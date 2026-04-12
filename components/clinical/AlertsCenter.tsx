@@ -58,6 +58,8 @@ export interface AlertsCenterProps {
   showToast: (msg: string) => void;
   /** Current user role — drives default filter tab and sort priority. */
   role?: UserRole;
+  /** When true, renders as inline desktop layout instead of mobile overlay. */
+  embedded?: boolean;
 }
 
 type Severity = 'critical' | 'warning' | 'info' | 'success';
@@ -276,7 +278,7 @@ const timeLabel = (mins: number): string => {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast, role }) => {
+export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast, role, embedded }) => {
   const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -360,6 +362,338 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
     system: MOCK_ALERTS.filter((a) => a.category === 'system' && !acknowledged.has(a.id)).length,
     staffing: MOCK_ALERTS.filter((a) => a.category === 'staffing' && !acknowledged.has(a.id)).length,
   };
+
+  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  if (embedded) {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: COLORS.bg,
+          overflow: 'hidden',
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+        }}
+      >
+        {/* Header */}
+        <HudStrip side="top" fixed>
+          <BracketLabel tone="accent" size="sm">Alerts</BracketLabel>
+          <div style={{ flex: 1 }} />
+          {unreadCount > 0 && (
+            <div
+              style={{
+                padding: '2px 8px',
+                background: COLORS.crit,
+                borderRadius: RADIUS.full,
+                fontFamily: FONTS.mono,
+                fontSize: 10,
+                fontWeight: 700,
+                color: '#fff',
+              }}
+            >
+              {unreadCount}
+            </div>
+          )}
+        </HudStrip>
+
+        {/* Body */}
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            paddingTop: 56,
+            paddingBottom: 20,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {/* Summary strip */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE.md,
+              padding: `${SPACE.md}px ${SPACE.base}px`,
+              borderBottom: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: critCount > 0 ? COLORS.crit : COLORS.ok,
+                  boxShadow: critCount > 0 ? `0 0 6px ${COLORS.crit}` : 'none',
+                }}
+              />
+              <Mono tone={critCount > 0 ? 'crit' : 'ok'} size="xs">
+                {critCount} CRIT
+              </Mono>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+              <div
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: warnCount > 0 ? COLORS.warn : COLORS.ok,
+                }}
+              />
+              <Mono tone={warnCount > 0 ? 'warn' : 'ok'} size="xs">
+                {warnCount} WARN
+              </Mono>
+            </div>
+            <div style={{ flex: 1 }} />
+            <TacticalButton variant="ghost" size="sm" onClick={clearAllRead}>
+              Clear All
+            </TacticalButton>
+          </div>
+
+          {/* Filter tabs */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              padding: `${SPACE.sm}px ${SPACE.base}px`,
+              overflowX: 'auto',
+            }}
+          >
+            {(['all', 'critical', 'clinical', 'system', 'staffing'] as FilterTab[]).map((tab) => {
+              const isActive = filter === tab;
+              const tColor =
+                tab === 'critical' ? COLORS.crit
+                : tab === 'clinical' ? COLORS.info
+                : tab === 'system' ? COLORS.warn
+                : tab === 'staffing' ? 'rgba(139,92,246,0.9)'
+                : COLORS.textSecondary;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setFilter(tab)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 10px',
+                    background: isActive ? `${tColor}15` : 'transparent',
+                    border: `1px solid ${isActive ? tColor : COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    fontFamily: FONTS.mono,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase' as const,
+                    color: isActive ? tColor : COLORS.textMuted,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap' as const,
+                  }}
+                >
+                  {tab}
+                  {tabCounts[tab] > 0 && (
+                    <span
+                      style={{
+                        padding: '1px 5px',
+                        background: isActive ? tColor : COLORS.border,
+                        borderRadius: RADIUS.full,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: isActive ? '#fff' : COLORS.textMuted,
+                      }}
+                    >
+                      {tabCounts[tab]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Alert feed */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: SPACE.sm,
+              padding: `${SPACE.sm}px ${SPACE.base}px ${SPACE.base}px`,
+            }}
+          >
+            {alerts.map((alert, idx) => {
+              const isAck = acknowledged.has(alert.id);
+              const isExp = expanded === alert.id;
+              const color = SEV_COLOR[alert.severity];
+              const bg = isAck ? COLORS.surface : SEV_BG[alert.severity];
+              const isFirstCrit = !isAck && alert.severity === 'critical' && idx === 0;
+
+              return (
+                <motion.div
+                  key={alert.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.02, duration: MOTION.fast }}
+                  style={{
+                    position: 'relative',
+                    background: bg,
+                    border: `1px solid ${isAck ? COLORS.border : `${color}30`}`,
+                    borderLeft: `3px solid ${isAck ? COLORS.border : color}`,
+                    borderRadius: RADIUS.sm,
+                    overflow: 'hidden',
+                    opacity: isAck ? 0.55 : 1,
+                    transition: `opacity ${MOTION.base}s ease`,
+                  }}
+                >
+                  {isFirstCrit && <ScanningLine duration={4} />}
+
+                  <button
+                    onClick={() => setExpanded(isExp ? null : alert.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      width: '100%',
+                      gap: SPACE.sm,
+                      padding: `${SPACE.md}px`,
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: COLORS.textPrimary,
+                      outline: 'none',
+                    }}
+                  >
+                    {/* Category icon */}
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: RADIUS.sm,
+                        background: `${color}15`,
+                        border: `1px solid ${color}30`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color,
+                        flexShrink: 0,
+                        marginTop: 1,
+                      }}
+                    >
+                      {CAT_ICON[alert.category]}
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: 2 }}>
+                        <StatusPill
+                          label={alert.severity.toUpperCase()}
+                          tone={
+                            alert.severity === 'critical' ? 'crit'
+                            : alert.severity === 'warning' ? 'warn'
+                            : alert.severity === 'success' ? 'ok'
+                            : 'info'
+                          }
+                        />
+                        <Mono tone="muted" size="xs">{alert.source}</Mono>
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: TYPE.body.size,
+                          fontWeight: 600,
+                          color: isAck ? COLORS.textMuted : COLORS.textPrimary,
+                          marginBottom: 2,
+                        }}
+                      >
+                        {isAck && <CheckCircle2 size={12} color={COLORS.ok} style={{ marginRight: 4, verticalAlign: 'middle' }} />}
+                        {alert.title}
+                      </div>
+                      {alert.patientRef && (
+                        <Mono tone="secondary" size="xs">{alert.patientRef}</Mono>
+                      )}
+                    </div>
+
+                    {/* Time + chevron */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <Mono tone="muted" size="xs">{timeLabel(alert.minutesAgo)}</Mono>
+                      {isExp ? <ChevronUp size={12} color={COLORS.textMuted} /> : <ChevronDown size={12} color={COLORS.textMuted} />}
+                    </div>
+                  </button>
+
+                  {/* Expanded detail */}
+                  <AnimatePresence>
+                    {isExp && (
+                      <motion.div
+                        key={`exp-${alert.id}`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: MOTION.fast }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <Divider />
+                        <div style={{ padding: `${SPACE.md}px`, display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                          <div
+                            style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: TYPE.bodySm.size,
+                              color: COLORS.textSecondary,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {alert.description}
+                          </div>
+
+                          {/* Action buttons */}
+                          <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+                            {alert.actions.map((action) =>
+                              action === 'Acknowledge' ? (
+                                <TacticalButton
+                                  key={action}
+                                  variant="primary"
+                                  size="sm"
+                                  disabled={isAck}
+                                  icon={<CheckCircle2 size={12} />}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAck(alert.id);
+                                  }}
+                                >
+                                  {isAck ? 'Acknowledged' : 'Acknowledge'}
+                                </TacticalButton>
+                              ) : (
+                                <TacticalButton
+                                  key={action}
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    showToast(action);
+                                  }}
+                                >
+                                  {action}
+                                </TacticalButton>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+
+            {alerts.length === 0 && (
+              <div style={{ textAlign: 'center', padding: `${SPACE['2xl']}px` }}>
+                <Mono tone="muted" size="sm">No alerts match the current filter</Mono>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence>

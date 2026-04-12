@@ -57,6 +57,8 @@ export interface AdmitFlowProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  /** When true, renders as inline desktop layout instead of mobile overlay. */
+  embedded?: boolean;
 }
 
 type Step = 'identity' | 'bed' | 'confirm';
@@ -109,7 +111,7 @@ function bedStateColor(state: BedType['state']): string {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast }) => {
+export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, embedded }) => {
   const [step, setStep] = useState<Step>('identity');
   const [selectedBed, setSelectedBed] = useState<BedType | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<BedUnit | null>(null);
@@ -462,6 +464,95 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast }
   };
 
   // ── Main render ───────────────────────────────────────────────────────
+
+  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  if (embedded) {
+    return (
+      <div
+        style={{
+          position: 'relative',
+          height: '100%',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: COLORS.bg,
+          overflow: 'hidden',
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+        }}
+      >
+        {/* ── Header strip ──────────────────────────────────────────── */}
+        <HudStrip side="top" fixed>
+          <BracketLabel tone="accent" size="sm">Admit Patient</BracketLabel>
+          <div style={{ flex: 1 }} />
+          <StatusPill label="ESI 2" tone="crit" />
+        </HudStrip>
+
+        {/* ── Body ──────────────────────────────────────────────────── */}
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            paddingTop: 56,
+            paddingBottom: 72,
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {renderStepIndicator()}
+
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 30 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -30 }}
+              transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+            >
+              {step === 'identity' && renderIdentity()}
+              {step === 'bed' && renderBedAssignment()}
+              {step === 'confirm' && renderConfirmation()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* ── Footer navigation ─────────────────────────────────────── */}
+        {!admitted && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE.sm,
+              padding: `${SPACE.md}px ${SPACE.base}px`,
+              paddingBottom: SPACE.md,
+              background: `linear-gradient(180deg, ${COLORS.bg}00 0%, ${COLORS.bg} 20%)`,
+              borderTop: `1px solid ${COLORS.border}`,
+            }}
+          >
+            {stepIndex > 0 && (
+              <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={14} />}>
+                Back
+              </TacticalButton>
+            )}
+            <div style={{ flex: 1 }} />
+            {step !== 'confirm' && (
+              <TacticalButton
+                variant="primary"
+                onClick={goNext}
+                disabled={!canProceed}
+                icon={<ArrowRight size={14} />}
+              >
+                {step === 'bed' ? 'Review' : 'Next'}
+              </TacticalButton>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence>
