@@ -74,6 +74,7 @@ import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
+import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import {
   COLORS,
@@ -926,6 +927,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showBriefMe, setShowBriefMe] = useState(false);
 
   const myDeviceId = getDeviceId();
+
+  // Live-updating hospital metrics (jitter every ~5s, surge-aware)
+  const liveMetrics = useRealtimeSimulation({ active: true, surgeActive: isSurgeActive });
 
   /**
    * QR scan handler. Parses `pulse://` deep-link payloads.
@@ -1874,7 +1878,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M01"
                   label="ER Wait Time"
-                  value={isSurgeActive ? '125' : '45'}
+                  value={String(liveMetrics.erWaitMinutes)}
                   unit="min"
                   delta={isSurgeActive
                     ? { text: '+80m', tone: 'crit' }
@@ -1884,7 +1888,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M02"
                   label="Total Census"
-                  value={isSurgeActive ? '312' : '284'}
+                  value={String(liveMetrics.totalCensus)}
                   unit="pts"
                   delta={isSurgeActive
                     ? { text: '+28', tone: 'crit' }
@@ -1894,15 +1898,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M03"
                   label="Bed Capacity"
-                  value={isSurgeActive ? '98' : '82'}
+                  value={String(liveMetrics.bedCapacityPct)}
                   unit="%"
                   accent={isSurgeActive ? 'crit' : 'ok'}
-                  progressPct={isSurgeActive ? 98 : 82}
+                  progressPct={liveMetrics.bedCapacityPct}
                 />
                 <MetricTile
                   id="M04"
                   label="Active Codes"
-                  value={isSurgeActive ? '3' : '1'}
+                  value={String(liveMetrics.activeCodes)}
                   delta={isSurgeActive
                     ? { text: '+2 NEW', tone: 'crit' }
                     : { text: 'STABLE', tone: 'info' }}
