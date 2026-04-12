@@ -259,12 +259,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         height: '100%',
         overflowY: 'auto',
         background: COLORS.bg,
-        padding: SPACE['2xl'],
+        padding: SPACE['3xl'],
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         display: 'flex',
         flexDirection: 'column',
-        gap: SPACE.lg,
+        gap: SPACE.xl,
       }}
     >
       {/* Page Header — HUD strip (full width so both columns below start on
@@ -318,13 +318,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
-          gap: SPACE.lg,
+          gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
+          gap: SPACE.xl,
           alignItems: 'start',
         }}
       >
         {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl, minWidth: 0 }}>
           {/* Stale Data Banner */}
           <AnimatePresence>
             {systemStatus === 'stale' && (
@@ -364,7 +364,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 12,
+                            fontSize: 14,
                             color: COLORS.textSecondary,
                             marginTop: 2,
                           }}
@@ -416,7 +416,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 12,
+                            fontSize: 14,
                             color: COLORS.textSecondary,
                             marginTop: 2,
                           }}
@@ -465,7 +465,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-                <Activity size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                <Activity size={16} strokeWidth={2} color={COLORS.textSecondary} />
                 <Mono tone="primary" size="sm">
                   Saturation Forecast
                 </Mono>
@@ -495,13 +495,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             <div
               style={{
                 position: 'relative',
-                height: 280,
+                height: 340,
                 padding: SPACE.md,
                 overflow: 'hidden',
               }}
             >
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 12, right: 16, left: -12, bottom: 4 }}>
+                <AreaChart data={chartData} margin={{ top: 16, right: 20, left: -8, bottom: 8 }}>
                   <defs>
                     <linearGradient id="horizonFill" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.35} />
@@ -540,7 +540,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       borderRadius: RADIUS.sm,
                       color: COLORS.textPrimary,
                       fontFamily: FONTS.mono,
-                      fontSize: 11,
+                      fontSize: 13,
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                     }}
@@ -557,7 +557,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       value: 'CAPACITY 100%',
                       position: 'insideTopRight',
                       fill: COLORS.crit,
-                      fontSize: 9,
+                      fontSize: 11,
                       fontFamily: FONTS.mono,
                       letterSpacing: '0.14em',
                     }}
@@ -571,7 +571,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       value: 'WARN 85%',
                       position: 'insideTopRight',
                       fill: COLORS.warn,
-                      fontSize: 9,
+                      fontSize: 11,
                       fontFamily: FONTS.mono,
                       letterSpacing: '0.14em',
                     }}
@@ -661,7 +661,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     marginBottom: SPACE.md,
                   }}
                 >
-                  <Zap size={14} strokeWidth={2} color={COLORS.info} />
+                  <Zap size={16} strokeWidth={2} color={COLORS.info} />
                   <Mono tone="primary" size="sm">
                     Operational Levers
                   </Mono>
@@ -723,7 +723,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: 220,
+                  minHeight: 260,
                 }}
               >
                 <div>
@@ -758,7 +758,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   <p
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 13,
+                      fontSize: 15,
                       lineHeight: 1.55,
                       color: COLORS.textSecondary,
                       margin: 0,
@@ -797,12 +797,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                  <Network size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                  <Network size={16} strokeWidth={2} color={COLORS.textSecondary} />
                   <Mono tone="primary" size="sm">
                     Regional Network
                   </Mono>
                 </div>
-                <RefreshCw size={11} strokeWidth={2} color={COLORS.textMuted} />
+                <RefreshCw size={13} strokeWidth={2} color={COLORS.textMuted} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
                 {nearbyHospitals.map((h, idx) => {
@@ -827,7 +827,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                           <div
                             style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 13,
+                              fontSize: 15,
                               color: COLORS.textPrimary,
                               fontWeight: 500,
                               letterSpacing: '-0.005em',
@@ -846,7 +846,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                               marginTop: 2,
                             }}
                           >
-                            <MapPin size={9} strokeWidth={2} color={COLORS.textMuted} />
+                            <MapPin size={11} strokeWidth={2} color={COLORS.textMuted} />
                             <Mono tone="muted" size="xs">
                               {h.time} TRANSFER
                             </Mono>
@@ -869,7 +869,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: SPACE.lg,
+            gap: SPACE.xl,
             minWidth: 0,
           }}
         >
@@ -884,7 +884,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Ambulance size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                <Ambulance size={16} strokeWidth={2} color={COLORS.textSecondary} />
                 <Mono tone="primary" size="sm">
                   Inbound EMS
                 </Mono>
@@ -902,7 +902,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 48,
+                  fontSize: 56,
                   fontWeight: 600,
                   letterSpacing: '-0.04em',
                   lineHeight: 0.9,
@@ -945,7 +945,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               {loginCount > 1 && !isSurgeActive ? (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={11} strokeWidth={2} color={COLORS.ok} />
+                    <CheckCircle2 size={13} strokeWidth={2} color={COLORS.ok} />
                     <Mono tone="ok" size="xs">
                       0 CRIT
                     </Mono>
@@ -957,7 +957,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               ) : (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ShieldAlert size={11} strokeWidth={2} color={COLORS.accent} />
+                    <ShieldAlert size={13} strokeWidth={2} color={COLORS.accent} />
                     <Mono tone="accent" size="xs">
                       3 CRIT {'<'} 5M
                     </Mono>
@@ -990,7 +990,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 flexShrink: 0,
               }}
             >
-              <Wind size={14} strokeWidth={2} color={COLORS.textSecondary} />
+              <Wind size={16} strokeWidth={2} color={COLORS.textSecondary} />
               <Mono tone="primary" size="sm">
                 {getDriverTitle()}
               </Mono>
@@ -1068,7 +1068,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <span
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 15,
                             fontWeight: 500,
                             color: COLORS.textPrimary,
                             letterSpacing: '-0.005em',
@@ -1091,7 +1091,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <span
                           style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: 600,
                             letterSpacing: '0.08em',
                             color: driverColor,
@@ -1173,7 +1173,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                             <p
                               style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 12,
+                                fontSize: 14,
                                 lineHeight: 1.5,
                                 color: COLORS.textSecondary,
                                 margin: 0,
@@ -1237,7 +1237,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     marginBottom: SPACE.sm,
                   }}
                 >
-                  <Building2 size={11} strokeWidth={2} color={COLORS.textSecondary} />
+                  <Building2 size={13} strokeWidth={2} color={COLORS.textSecondary} />
                   <Mono tone="secondary" size="xs">
                     HOUSE STATUS
                   </Mono>
@@ -1608,7 +1608,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 <p
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 13,
+                    fontSize: 15,
                     lineHeight: 1.6,
                     color: COLORS.textSecondary,
                     marginBottom: SPACE.lg,
@@ -1742,7 +1742,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 13,
+                            fontSize: 15,
                             color: COLORS.textPrimary,
                             fontWeight: 600,
                             marginTop: 2,
@@ -1758,7 +1758,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 13,
+                            fontSize: 15,
                             color: statusToColor(selectedDriverDetails.status),
                             fontWeight: 600,
                             marginTop: 2,
@@ -1823,7 +1823,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                           padding: 0,
                           margin: 0,
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 14,
                           color: COLORS.textSecondary,
                           lineHeight: 1.6,
                         }}
@@ -1856,7 +1856,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       <p
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 14,
                           color: COLORS.textSecondary,
                           lineHeight: 1.6,
                           margin: 0,
@@ -1896,7 +1896,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                             <span
                               style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 12,
+                                fontSize: 14,
                                 color: COLORS.textPrimary,
                                 letterSpacing: '-0.005em',
                               }}
@@ -2062,7 +2062,7 @@ const HouseRow: React.FC<{
     <span
       style={{
         fontFamily: FONTS.sans,
-        fontSize: 12,
+        fontSize: 14,
         color: COLORS.textSecondary,
         letterSpacing: '-0.005em',
       }}
