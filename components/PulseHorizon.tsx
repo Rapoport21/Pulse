@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
+import { BedBoard } from './clinical';
+import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
   COLORS,
   FONTS,
@@ -112,6 +114,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showManualModal, setShowManualModal] = useState(false);
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
+  const [bedUnits] = useState<BedUnit[]>(() => seedBedState());
+  const [showBedBoard, setShowBedBoard] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1217,8 +1221,25 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </div>
           </TacticalCard>
+
+          {/* Bed Board — compact dashboard tile */}
+          <BedBoard
+            display="card"
+            units={bedUnits}
+            surgeActive={isSurgeActive}
+            onExpand={() => setShowBedBoard(true)}
+          />
         </div>
       </div>
+
+      {/* Bed Board fullscreen overlay */}
+      <BedBoard
+        display="full"
+        units={bedUnits}
+        surgeActive={isSurgeActive}
+        open={showBedBoard}
+        onClose={() => setShowBedBoard(false)}
+      />
 
       {/* ── Manual Mode Modal ── */}
       <AnimatePresence>

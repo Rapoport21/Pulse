@@ -17,6 +17,12 @@ import {
   Droplets,
   Loader2,
   Save,
+  FlaskConical,
+  StickyNote,
+  ImageIcon,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from 'lucide-react';
 import {
   COLORS,
@@ -37,6 +43,8 @@ import {
 } from './design';
 import { PatientHeaderStrip, VitalsPanel } from './clinical';
 import type { Patient } from '../types';
+import { MOCK_LABS, MOCK_NOTES, MOCK_MEDS, MOCK_IMAGING, type ImagingOrder } from '../data/ehrMock';
+import { ConfidenceBadge } from './design';
 
 /**
  * Minimal legacy shape that the MobileView list used to pass in —
@@ -758,7 +766,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
             </div>
           </Section>
 
-          {/* Medications (MAR) */}
+          {/* Medications (MAR) — uses FHIR MedicationRequest data */}
           <Section
             id="PT.MAR"
             title="Medications · MAR"
@@ -775,28 +783,323 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
             }
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
-              <MedRow
-                icon={<CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />}
-                title="Ondansetron (Zofran)"
-                sub="4mg IV Push · Given 14:30"
-                status="given"
-              />
-              <MedRow
-                icon={<Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />}
-                title="Morphine Sulfate"
-                sub="2mg IV Push · Due 16:00"
-                action={
-                  <TacticalButton
-                    variant="primary"
-                    size="sm"
-                    onClick={() => showToast('Medication administered', 'success')}
-                  >
-                    Administer
-                  </TacticalButton>
+              {(() => {
+                const patientId = clinical?.id;
+                const meds = patientId ? (MOCK_MEDS[patientId] ?? []) : [];
+                if (meds.length === 0) {
+                  return (
+                    <>
+                      <MedRow
+                        icon={<CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />}
+                        title="Ondansetron (Zofran)"
+                        sub="4mg IV Push · Given 14:30"
+                        status="given"
+                      />
+                      <MedRow
+                        icon={<Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />}
+                        title="Morphine Sulfate"
+                        sub="2mg IV Push · Due 16:00"
+                        action={
+                          <TacticalButton variant="primary" size="sm" onClick={() => showToast('Medication administered', 'success')}>
+                            Administer
+                          </TacticalButton>
+                        }
+                      />
+                    </>
+                  );
                 }
-              />
+                return meds.map((med) => {
+                  const isCompleted = med.status === 'completed';
+                  const isHighAlert = med.priorityHigh;
+                  return (
+                    <MedRow
+                      key={med.id}
+                      icon={
+                        isCompleted
+                          ? <CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />
+                          : isHighAlert
+                            ? <AlertTriangle size={14} color={COLORS.warn} strokeWidth={2} />
+                            : <Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />
+                      }
+                      title={med.medication}
+                      sub={`${med.dose} ${med.route} · ${med.frequency}${med.indication ? ` · ${med.indication}` : ''}`}
+                      status={isCompleted ? 'given' : undefined}
+                      action={
+                        !isCompleted ? (
+                          <TacticalButton
+                            variant={isHighAlert ? 'danger' : 'primary'}
+                            size="sm"
+                            onClick={() => showToast(`${med.medication} administered`, 'success')}
+                          >
+                            Admin
+                          </TacticalButton>
+                        ) : undefined
+                      }
+                    />
+                  );
+                });
+              })()}
             </div>
           </Section>
+
+          {/* ── LAB RESULTS ────────────────────────────────────
+              FHIR Observation (category: laboratory) — abnormal
+              flagging with critical value callouts. This section
+              makes the patient chart feel like a real EHR. */}
+          {(() => {
+            const patientId = clinical?.id;
+            const labs = patientId ? (MOCK_LABS[patientId] ?? []) : [];
+            if (labs.length === 0) return null;
+            return (
+              <Section
+                id="PT.LABS"
+                title="Lab Results"
+                icon={FlaskConical}
+                action={<ConfidenceBadge confidence={96} ageMinutes={15} compact />}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {/* Header row */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 80px 60px 50px',
+                    gap: SPACE.xs,
+                    padding: `${SPACE.xs}px 0`,
+                    borderBottom: `1px solid ${COLORS.border}`,
+                  }}>
+                    <Mono tone="muted" size="xs">TEST</Mono>
+                    <Mono tone="muted" size="xs">VALUE</Mono>
+                    <Mono tone="muted" size="xs">REF</Mono>
+                    <Mono tone="muted" size="xs">FLAG</Mono>
+                  </div>
+                  {labs.map((lab) => {
+                    const isCritical = lab.flag === 'HH' || lab.flag === 'LL';
+                    const isAbnormal = lab.flag === 'H' || lab.flag === 'L';
+                    const flagColor = isCritical ? COLORS.crit : isAbnormal ? COLORS.warn : COLORS.ok;
+                    const flagLabel = lab.flag === 'HH' ? 'CRIT ↑' : lab.flag === 'LL' ? 'CRIT ↓' : lab.flag === 'H' ? 'HIGH' : lab.flag === 'L' ? 'LOW' : lab.flag === 'N' ? 'NL' : '—';
+                    const isPending = lab.status === 'preliminary';
+                    return (
+                      <div
+                        key={lab.id}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 80px 60px 50px',
+                          gap: SPACE.xs,
+                          padding: `${SPACE.sm}px 0`,
+                          borderBottom: `1px solid ${COLORS.border}`,
+                          background: isCritical ? `${COLORS.crit}06` : 'transparent',
+                          borderLeft: isCritical ? `2px solid ${COLORS.crit}` : '2px solid transparent',
+                          paddingLeft: SPACE.xs,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            color: isPending ? COLORS.textMuted : COLORS.textPrimary,
+                            lineHeight: 1.2,
+                          }}>
+                            {lab.name}
+                          </div>
+                        </div>
+                        <div style={{
+                          fontFamily: FONTS.mono,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: isPending ? COLORS.textMuted : isCritical ? COLORS.crit : isAbnormal ? COLORS.warn : COLORS.textPrimary,
+                          letterSpacing: '0.04em',
+                        }}>
+                          {isPending ? '...' : `${lab.value}`}
+                          {lab.unit && !isPending && <span style={{ fontSize: 9, color: COLORS.textMuted, marginLeft: 2 }}>{lab.unit}</span>}
+                        </div>
+                        <Mono tone="dim" size="xs">
+                          {lab.referenceLow !== undefined && lab.referenceHigh !== undefined
+                            ? `${lab.referenceLow}-${lab.referenceHigh}`
+                            : '—'}
+                        </Mono>
+                        <span style={{
+                          fontFamily: FONTS.mono,
+                          fontSize: 9,
+                          fontWeight: 600,
+                          letterSpacing: '0.1em',
+                          color: flagColor,
+                        }}>
+                          {isPending ? 'PEND' : flagLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            );
+          })()}
+
+          {/* ── CLINICAL NOTES ─────────────────────────────────
+              FHIR DocumentReference — SOAP, H&P, nursing notes.
+              Each note shows author, time, type, and content. */}
+          {(() => {
+            const patientId = clinical?.id;
+            const notes = patientId ? (MOCK_NOTES[patientId] ?? []) : [];
+            if (notes.length === 0) return null;
+            return (
+              <Section
+                id="PT.NOTES"
+                title="Clinical Notes"
+                icon={StickyNote}
+                action={
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />}>
+                    Add Note
+                  </TacticalButton>
+                }
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                  {notes.map((note) => (
+                    <div
+                      key={note.id}
+                      style={{
+                        padding: SPACE.md,
+                        background: COLORS.bgDeep,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        position: 'relative',
+                      }}
+                    >
+                      <CornerBracket position="tl" color={COLORS.info} size={6} thickness={1} inset={0} />
+                      <CornerBracket position="br" color={COLORS.info} size={6} thickness={1} inset={0} />
+                      {/* Note header */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: SPACE.sm,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                          <StatusPill
+                            label={note.type}
+                            tone={note.type === 'H&P' ? 'info' : note.type === 'SOAP' ? 'ok' : 'neutral'}
+                            size="xs"
+                          />
+                          <Mono tone="muted" size="xs">{note.authorId}</Mono>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          {note.signed && <CheckCircle2 size={10} color={COLORS.ok} />}
+                          <Mono tone="dim" size="xs">
+                            {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </Mono>
+                        </div>
+                      </div>
+                      {/* Note content — markdown-like rendering */}
+                      <div style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 12,
+                        color: COLORS.textSecondary,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: 160,
+                        overflow: 'hidden',
+                        maskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 70%, transparent 100%)',
+                      }}>
+                        {note.content.replace(/\*\*(.*?)\*\*/g, '$1')}
+                      </div>
+                      <TacticalButton
+                        variant="ghost"
+                        size="sm"
+                        style={{ marginTop: SPACE.sm }}
+                        onClick={() => showToast('Opening full note view', 'info')}
+                      >
+                        Read Full Note
+                      </TacticalButton>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            );
+          })()}
+
+          {/* ── IMAGING ────────────────────────────────────────
+              Imaging orders with status (ordered → in-progress →
+              resulted) and result summaries. */}
+          {(() => {
+            const patientId = clinical?.id;
+            const imaging = patientId ? (MOCK_IMAGING[patientId] ?? []) : [];
+            if (imaging.length === 0) return null;
+            return (
+              <Section
+                id="PT.IMG"
+                title="Imaging"
+                icon={ImageIcon}
+                action={
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />}>
+                    Order
+                  </TacticalButton>
+                }
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                  {imaging.map((img) => {
+                    const statusTone = img.status === 'resulted' ? 'ok' : img.status === 'in-progress' ? 'warn' : img.status === 'ordered' ? 'info' : 'neutral';
+                    return (
+                      <div
+                        key={img.id}
+                        style={{
+                          padding: SPACE.md,
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${COLORS.border}`,
+                          borderLeft: `3px solid ${img.priority === 'stat' ? COLORS.crit : img.priority === 'urgent' ? COLORS.warn : COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginBottom: img.resultSummary ? SPACE.xs : 0,
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              color: COLORS.textPrimary,
+                              lineHeight: 1.2,
+                            }}>
+                              {img.study}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                              <Mono tone="muted" size="xs">{img.modality}</Mono>
+                              <Mono tone="dim" size="xs">·</Mono>
+                              <Mono tone="muted" size="xs">{img.orderedBy}</Mono>
+                              {img.priority === 'stat' && <StatusPill label="STAT" tone="crit" size="xs" />}
+                            </div>
+                          </div>
+                          <StatusPill
+                            label={img.status.toUpperCase().replace('-', ' ')}
+                            tone={statusTone}
+                            size="xs"
+                          />
+                        </div>
+                        {img.resultSummary && (
+                          <div style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 11,
+                            color: COLORS.textSecondary,
+                            lineHeight: 1.4,
+                            padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                            background: `${COLORS.ok}06`,
+                            border: `1px solid ${COLORS.ok}15`,
+                            borderRadius: RADIUS.sm,
+                            marginTop: SPACE.xs,
+                          }}>
+                            {img.resultSummary}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            );
+          })()}
 
           {/* Nursing Orders */}
           <Section id="PT.ORDERS" title="Nursing Orders" icon={ListTodo}>
