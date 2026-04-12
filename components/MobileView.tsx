@@ -46,7 +46,7 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
-import { ESITriageScreen, EmsInboundBoard, BedBoard, AdmitFlow, DischargeFlow, type TriageResult } from './clinical';
+import { ESITriageScreen, EmsInboundBoard, BedBoard, AdmitFlow, DischargeFlow, RoundingList, type TriageResult } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
@@ -892,6 +892,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
+  const [showRoundingList, setShowRoundingList] = useState(false);
 
   const myDeviceId = getDeviceId();
 
@@ -3233,6 +3234,72 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </motion.button>
             </div>
 
+            {/* Rounding List launcher */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowRoundingList(true);
+              }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background:
+                  'linear-gradient(90deg, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.02) 100%)',
+                border: `1px solid rgba(139,92,246,0.5)`,
+                borderLeft: `3px solid rgba(139,92,246,0.7)`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 48,
+                width: '100%',
+              }}
+            >
+              <CornerBracket position="tl" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(139,92,246,0.18)',
+                  border: '1px solid rgba(139,92,246,0.5)',
+                  borderRadius: RADIUS.sm,
+                  color: 'rgba(139,92,246,0.9)',
+                }}
+              >
+                <ClipboardList size={16} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>
+                  ROUNDING LIST
+                </BracketLabel>
+                <div
+                  style={{
+                    marginTop: 2,
+                    fontFamily: FONTS.sans,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: COLORS.textPrimary,
+                    letterSpacing: '-0.005em',
+                  }}
+                >
+                  All patients · sorted by acuity
+                </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+            </motion.button>
+
             {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -4105,6 +4172,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
         open={showDischargeFlow}
         onClose={() => setShowDischargeFlow(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
+      />
+
+      {/* Rounding List — physician rounding view with all patients
+          sorted by acuity, expandable SBAR summaries. */}
+      <RoundingList
+        open={showRoundingList}
+        onClose={() => setShowRoundingList(false)}
+        showToast={(msg: string) => showToast(msg, 'info')}
       />
 
       {/* ESI Triage wizard — fullscreen modal that walks the

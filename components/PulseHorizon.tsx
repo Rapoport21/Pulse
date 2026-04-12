@@ -30,10 +30,11 @@ import {
   ChevronRight,
   UserPlus,
   DoorOpen,
+  ClipboardList,
 } from 'lucide-react';
 import { Status, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
-import { BedBoard, AdmitFlow, DischargeFlow } from './clinical';
+import { BedBoard, AdmitFlow, DischargeFlow, RoundingList } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import {
   COLORS,
@@ -120,6 +121,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showBedBoard, setShowBedBoard] = useState(false);
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
+  const [showRoundingList, setShowRoundingList] = useState(false);
 
   const drivers = useMemo(() => {
     const baseDrivers = ROLE_METRICS[currentUser.role];
@@ -1287,6 +1289,33 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </TacticalCard>
           </div>
+
+          {/* Rounding List launcher */}
+          <TacticalCard interactive style={{ cursor: 'pointer' }} onClick={() => setShowRoundingList(true)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, padding: `${SPACE.xs}px 0` }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(139,92,246,0.15)',
+                  border: '1px solid rgba(139,92,246,0.5)',
+                  borderRadius: RADIUS.sm,
+                  color: 'rgba(139,92,246,0.9)',
+                }}
+              >
+                <ClipboardList size={16} strokeWidth={2} />
+              </div>
+              <div>
+                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>ROUNDING LIST</BracketLabel>
+                <Mono tone="secondary" size="xs">All patients · sorted by acuity</Mono>
+              </div>
+              <div style={{ flex: 1 }} />
+              <ChevronRight size={14} color={COLORS.textMuted} />
+            </div>
+          </TacticalCard>
         </div>
       </div>
 
@@ -1311,6 +1340,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         open={showDischargeFlow}
         onClose={() => setShowDischargeFlow(false)}
         showToast={(msg: string) => showToast?.(msg, 'success')}
+      />
+
+      {/* Rounding List fullscreen overlay */}
+      <RoundingList
+        open={showRoundingList}
+        onClose={() => setShowRoundingList(false)}
+        showToast={(msg: string) => showToast?.(msg, 'info')}
       />
 
       {/* ── Manual Mode Modal ── */}
