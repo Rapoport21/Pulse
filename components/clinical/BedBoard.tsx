@@ -277,7 +277,7 @@ const BedPopover: React.FC<{
 
   return (
     <>
-      {/* Backdrop overlay */}
+      {/* Backdrop + centering wrapper */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -288,9 +288,12 @@ const BedPopover: React.FC<{
           position: 'fixed',
           inset: 0,
           background: 'rgba(0,0,0,0.5)',
-          zIndex: Z.toast - 1,
+          zIndex: Z.toast,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
         }}
-      />
+      >
       {/* Popover panel */}
       <motion.div
         initial={{ opacity: 0, y: 12, scale: 0.96 }}
@@ -299,11 +302,7 @@ const BedPopover: React.FC<{
         transition={{ duration: MOTION.fast }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -55%)',
-          width: 480,
+          width: 520,
           maxWidth: 'calc(100vw - 32px)',
           maxHeight: 'calc(100vh - 80px)',
           overflowY: 'auto',
@@ -311,7 +310,6 @@ const BedPopover: React.FC<{
           border: `1px solid ${color}40`,
           borderRadius: RADIUS.md,
           padding: 0,
-          zIndex: Z.toast,
           boxShadow: `${SHADOW.modal}, 0 0 0 1px ${COLORS.border}`,
         }}
       >
@@ -576,6 +574,7 @@ const BedPopover: React.FC<{
             </div>
           </>
         )}
+      </motion.div>
       </motion.div>
     </>
   );
@@ -1605,30 +1604,15 @@ const FullMode: React.FC<{
           </div>
         </div>
 
-        {/* Bed popover */}
+        {/* Bed popover — BedPopover renders its own backdrop */}
         <AnimatePresence>
           {selectedBed && (
-            <>
-              <motion.div
-                key="backdrop"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSelectedBed(null)}
-                style={{
-                  position: 'fixed',
-                  inset: 0,
-                  background: 'rgba(0,0,0,0.4)',
-                  zIndex: Z.toast - 1,
-                }}
-              />
-              <BedPopover
-                key="popover"
-                bed={selectedBed}
-                onClose={() => setSelectedBed(null)}
-                onNavigateToPatient={onNavigateToPatient}
-              />
-            </>
+            <BedPopover
+              key="popover"
+              bed={selectedBed}
+              onClose={() => setSelectedBed(null)}
+              onNavigateToPatient={onNavigateToPatient}
+            />
           )}
         </AnimatePresence>
       </div>
@@ -1761,30 +1745,15 @@ const FullMode: React.FC<{
         )}
       </div>
 
-      {/* Bed popover */}
+      {/* Bed popover — BedPopover renders its own backdrop */}
       <AnimatePresence>
         {selectedBed && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedBed(null)}
-              style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(0,0,0,0.4)',
-                zIndex: Z.toast - 1,
-              }}
-            />
-            <BedPopover
-              key="popover"
-              bed={selectedBed}
-              onClose={() => setSelectedBed(null)}
-              onNavigateToPatient={onNavigateToPatient}
-            />
-          </>
+          <BedPopover
+            key="popover"
+            bed={selectedBed}
+            onClose={() => setSelectedBed(null)}
+            onNavigateToPatient={onNavigateToPatient}
+          />
         )}
       </AnimatePresence>
     </motion.div>
