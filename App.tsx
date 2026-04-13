@@ -415,6 +415,13 @@ function App() {
     showToast('Surge Mode Activated', 'error');
   };
 
+  const deactivateSurge = () => {
+    if (!surgeState.active) return;
+    setSurgeState({ active: false, activatedAt: null });
+    setUrgentTasks([]);
+    showToast('Surge Mode Deactivated — Stand Down', 'info');
+  };
+
   const handleConfirmPlaybook = () => {
     setShowPlaybookModal(false);
     activateSurge();
@@ -976,6 +983,7 @@ function App() {
               surgeActivatedAt={surgeState.activatedAt}
               urgentTasks={urgentTasks}
               onActivateSurge={activateSurge}
+              onDeactivateSurge={deactivateSurge}
             />
           </div>
 

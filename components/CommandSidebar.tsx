@@ -46,6 +46,7 @@ interface CommandSidebarProps {
   surgeActivatedAt: number | null;
   urgentTasks: UrgentTask[];
   onActivateSurge: () => void;
+  onDeactivateSurge: () => void;
 }
 
 const formatActivatedTime = (ts: number | null) => {
@@ -333,7 +334,9 @@ export const CommandSidebar = ({
   surgeActivatedAt,
   urgentTasks,
   onActivateSurge,
+  onDeactivateSurge,
 }: CommandSidebarProps) => {
+  const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [activeCall, setActiveCall] = useState<'nurse' | 'blood_bank' | null>(null);
   const [callState, setCallState] = useState<
     'calling' | 'connected' | 'ai_speaking' | 'ended'
@@ -709,6 +712,104 @@ export const CommandSidebar = ({
                       </Mono>
                     </div>
                   </div>
+                  {/* ── Stand Down button ── */}
+                  <AnimatePresence>
+                    {!showStandDownConfirm ? (
+                      <motion.button
+                        key="standdown-trigger"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowStandDownConfirm(true)}
+                        style={{
+                          marginTop: SPACE.sm,
+                          width: '100%',
+                          padding: `${SPACE.xs}px 0`,
+                          background: 'transparent',
+                          border: `1px solid ${COLORS.accent}44`,
+                          borderRadius: RADIUS.sm,
+                          color: COLORS.accent,
+                          fontFamily: FONTS.mono,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase' as const,
+                          cursor: 'pointer',
+                          transition: `all ${MOTION.base}s ease`,
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.target as HTMLButtonElement).style.background = `${COLORS.accent}1a`;
+                          (e.target as HTMLButtonElement).style.borderColor = COLORS.accent;
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.target as HTMLButtonElement).style.background = 'transparent';
+                          (e.target as HTMLButtonElement).style.borderColor = `${COLORS.accent}44`;
+                        }}
+                      >
+                        Stand Down
+                      </motion.button>
+                    ) : (
+                      <motion.div
+                        key="standdown-confirm"
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        style={{
+                          marginTop: SPACE.sm,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: SPACE.xs,
+                        }}
+                      >
+                        <Mono tone="accent" size="xs" style={{ textAlign: 'center' }}>
+                          Confirm surge deactivation?
+                        </Mono>
+                        <div style={{ display: 'flex', gap: SPACE.xs }}>
+                          <button
+                            onClick={() => {
+                              onDeactivateSurge();
+                              setShowStandDownConfirm(false);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: `${SPACE.xs}px 0`,
+                              background: COLORS.accent,
+                              border: 'none',
+                              borderRadius: RADIUS.sm,
+                              color: COLORS.bg,
+                              fontFamily: FONTS.mono,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase' as const,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setShowStandDownConfirm(false)}
+                            style={{
+                              flex: 1,
+                              padding: `${SPACE.xs}px 0`,
+                              background: 'transparent',
+                              border: `1px solid ${COLORS.border}`,
+                              borderRadius: RADIUS.sm,
+                              color: COLORS.textSecondary,
+                              fontFamily: FONTS.mono,
+                              fontSize: 11,
+                              fontWeight: 500,
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase' as const,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </TacticalCard>
               </motion.div>
             )}
