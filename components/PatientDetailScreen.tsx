@@ -436,12 +436,12 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: `${SPACE.lg}px ${SPACE.lg}px ${SPACE['3xl']}px`,
+            padding: `${SPACE.lg}px ${SPACE.xl}px ${SPACE['3xl']}px`,
             position: 'relative',
             zIndex: 10,
           }}
         >
-          <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          <div style={{ width: '100%' }}>
             {clinical ? (
               <>
                 <PatientHeaderStrip patient={clinical} />
@@ -465,9 +465,10 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               </div>
             )}
 
-            {/* Encounter Timeline */}
+            {/* Two-column grid: Timeline + Care Team */}
             {clinical && (
-              <Section id="PT.TIMELINE" title="Encounter Timeline" icon={Timer}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.lg, alignItems: 'start' }}>
+            <Section id="PT.TIMELINE" title="Encounter Timeline" icon={Timer}>
                 <div style={{ position: 'relative', paddingLeft: 20 }}>
                   <div
                     aria-hidden
@@ -526,10 +527,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   ))}
                 </div>
               </Section>
-            )}
 
-            {/* Care Team */}
-            {clinical && (
               <Section
                 id="PT.TEAM"
                 title="Care Team"
@@ -588,6 +586,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   ))}
                 </div>
               </Section>
+            </div>
             )}
 
             {/* Intake & Measurements */}
