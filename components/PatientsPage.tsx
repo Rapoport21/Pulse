@@ -18,6 +18,8 @@ interface PatientsPageProps {
   currentUser: UserProfile;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   initialPatientId?: string;
+  /** Mutable patient list from App — includes newly admitted patients */
+  patients?: Patient[];
 }
 
 type SortKey = 'acuity' | 'bed' | 'name' | 'los';
@@ -302,7 +304,10 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
   currentUser,
   showToast,
   initialPatientId,
+  patients: externalPatients,
 }) => {
+  // Use mutable patient list from App if provided, otherwise fall back to static mock
+  const patientList = externalPatients ?? MOCK_PATIENTS;
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
     initialPatientId ?? null,
   );
@@ -318,12 +323,12 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
   // Pre-compute MEWS for each patient (latest vitals)
   const patientsWithMews = useMemo(
     () =>
-      MOCK_PATIENTS.map((p) => {
+      patientList.map((p) => {
         const latest = p.vitalsHistory[p.vitalsHistory.length - 1];
         const mews = latest ? computeMEWS(latest).value : 0;
         return { patient: p, mews };
       }),
-    [],
+    [patientList],
   );
 
   // Filter + sort pipeline
@@ -377,7 +382,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
   }, [patientsWithMews, searchQuery, filterStatus, sortBy]);
 
   const selectedPatient = selectedPatientId
-    ? MOCK_PATIENTS.find((p) => p.id === selectedPatientId || p.mrn === selectedPatientId)
+    ? patientList.find((p) => p.id === selectedPatientId || p.mrn === selectedPatientId)
     : undefined;
 
   // ───────────────────────────────────────────────────────────────────────
@@ -409,7 +414,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
             PATIENT LIST
           </BracketLabel>
           <Mono tone="muted" size="xs" style={{ marginLeft: 'auto' }}>
-            {filteredPatients.length} / {MOCK_PATIENTS.length}
+            {filteredPatients.length} / {patientList.length}
           </Mono>
         </HudStrip>
 

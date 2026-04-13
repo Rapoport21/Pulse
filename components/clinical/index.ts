@@ -20,7 +20,7 @@ export type { EmsInboundBoardProps } from './EmsInboundBoard';
 export { BedBoard } from './BedBoard';
 export type { BedBoardProps } from './BedBoard';
 export { AdmitFlow, INITIAL_ADMISSION_QUEUE } from './AdmitFlow';
-export type { AdmitFlowProps, AdmissionEntry, AdmissionSource, AdmissionStatus } from './AdmitFlow';
+export type { AdmitFlowProps, AdmissionEntry, AdmissionDemographics, AdmissionAllergyInput, AdmissionProblemInput, AdmissionSource, AdmissionStatus } from './AdmitFlow';
 export { DischargeFlow } from './DischargeFlow';
 export type { DischargeFlowProps } from './DischargeFlow';
 export { RoundingList } from './RoundingList';

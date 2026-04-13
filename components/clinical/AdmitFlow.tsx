@@ -60,6 +60,43 @@ import { HOSPITAL_UNITS, type BedUnit, type Bed as BedType } from '../../data/be
 export type AdmissionSource = 'ED' | 'OR' | 'Transfer' | 'Direct';
 export type AdmissionStatus = 'pending' | 'placing' | 'in_transit' | 'admitted';
 
+export interface AdmissionAllergyInput {
+  substance: string;
+  reaction: string;
+  severity: 'mild' | 'moderate' | 'severe' | 'life-threatening';
+}
+
+export interface AdmissionProblemInput {
+  display: string;
+  icd10: string;
+  status: 'active' | 'resolved' | 'inactive';
+}
+
+export interface AdmissionDemographics {
+  dob?: string;
+  sex?: 'M' | 'F' | 'X' | 'U';
+  insurance?: string;
+  emergencyContact?: string;
+  isolation?: string;
+  codeStatus?: string;
+  preferredLanguage?: string;
+  needsInterpreter?: boolean;
+  weightKg?: number;
+  heightCm?: number;
+  arrivalMode?: string;
+  // Vitals on admission
+  vitals?: {
+    hr?: number; systolic?: number; diastolic?: number;
+    rr?: number; spo2?: number; temp?: number;
+    painScore?: number; gcs?: number;
+  };
+  // Clinical lists
+  allergies?: AdmissionAllergyInput[];
+  problems?: AdmissionProblemInput[];
+  specialReqs?: string;
+  priority?: string;
+}
+
 export interface AdmissionEntry {
   id: string;
   name: string;
@@ -74,6 +111,8 @@ export interface AdmissionEntry {
   requestedAt: string;
   assignedBed?: string;
   assignedUnit?: string;
+  /** Extra demographics captured from the new-admission form */
+  demographics?: AdmissionDemographics;
 }
 
 export const INITIAL_ADMISSION_QUEUE: AdmissionEntry[] = [
@@ -98,7 +137,7 @@ export interface AdmitFlowProps {
   admissionQueue?: AdmissionEntry[];
   /** Callback to assign a bed to a queue entry */
   onAssignBed?: (admissionId: string, bedId: string) => void;
-  /** Callback to submit a new admission */
+  /** Callback to submit a new admission (demographics included) */
   onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => void;
   /** Navigate to patient tab */
   onNavigateToPatient?: (patientId: string) => void;
@@ -508,8 +547,27 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
   // ── Desktop form state ─────────────────────────────────────────────────
   const [formData, setFormData] = useState({
-    name: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '',
+    // Demographics
+    firstName: '', lastName: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '',
+    preferredLanguage: 'en', needsInterpreter: false, weightKg: '', heightCm: '',
+    // Clinical
     complaint: '', attending: '', esi: 3, isolation: 'NONE',
+    codeStatus: 'FULL', arrivalMode: 'ems',
+    // Vitals
+    hr: '', systolic: '', diastolic: '', rr: '', spo2: '', temp: '', painScore: '', gcs: '15',
+    // Allergies (up to 3 slots)
+    allergies: [
+      { substance: '', reaction: '', severity: 'mild' as 'mild' | 'moderate' | 'severe' | 'life-threatening' },
+      { substance: '', reaction: '', severity: 'mild' as 'mild' | 'moderate' | 'severe' | 'life-threatening' },
+      { substance: '', reaction: '', severity: 'mild' as 'mild' | 'moderate' | 'severe' | 'life-threatening' },
+    ],
+    // Problems (up to 3 slots)
+    problems: [
+      { display: '', icd10: '', status: 'active' as 'active' | 'resolved' | 'inactive' },
+      { display: '', icd10: '', status: 'active' as 'active' | 'resolved' | 'inactive' },
+      { display: '', icd10: '', status: 'active' as 'active' | 'resolved' | 'inactive' },
+    ],
+    // Bed request
     requestedUnit: '', specialReqs: '', priority: 'routine',
   });
   const [queueFilter, setQueueFilter] = useState<'all' | 'pending' | 'placing' | 'in_transit' | 'admitted'>('all');
@@ -1007,209 +1065,412 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 gap: SPACE.lg,
               }}
             >
-              {/* Step 1: Patient Demographics */}
+              {/* ═══ Section 1: Patient Demographics ═══ */}
               <div>
                 <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
-                  Step 1 &mdash; Patient Demographics
+                  1 &mdash; Patient Demographics
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
                   <div style={{ display: 'flex', gap: SPACE.md }}>
                     <div style={{ flex: 1 }}>
-                      <div style={labelStyle}>Patient Name</div>
-                      <input
-                        type="text"
-                        placeholder="Last, First"
-                        value={formData.name}
-                        onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
-                        style={inputStyle}
-                      />
+                      <div style={labelStyle}>First Name *</div>
+                      <input type="text" placeholder="Given name" value={formData.firstName} onChange={e => setFormData(p => ({ ...p, firstName: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Last Name *</div>
+                      <input type="text" placeholder="Family name" value={formData.lastName} onChange={e => setFormData(p => ({ ...p, lastName: e.target.value }))} style={inputStyle} />
                     </div>
                     <div style={{ flex: 0, minWidth: 120 }}>
                       <div style={labelStyle}>MRN</div>
-                      <input
-                        type="text"
-                        placeholder="MRN-0000"
-                        value={formData.mrn}
-                        onChange={e => setFormData(p => ({ ...p, mrn: e.target.value }))}
-                        style={inputStyle}
-                      />
+                      <input type="text" placeholder="MRN-0000" value={formData.mrn} onChange={e => setFormData(p => ({ ...p, mrn: e.target.value }))} style={inputStyle} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: SPACE.md }}>
                     <div style={{ flex: 1 }}>
                       <div style={labelStyle}>Date of Birth</div>
-                      <input
-                        type="text"
-                        placeholder="MM/DD/YYYY"
-                        value={formData.dob}
-                        onChange={e => setFormData(p => ({ ...p, dob: e.target.value }))}
-                        style={inputStyle}
-                      />
+                      <input type="text" placeholder="MM/DD/YYYY" value={formData.dob} onChange={e => setFormData(p => ({ ...p, dob: e.target.value }))} style={inputStyle} />
                     </div>
-                    <div style={{ flex: 0, minWidth: 100 }}>
+                    <div style={{ flex: 0, minWidth: 80 }}>
                       <div style={labelStyle}>Sex</div>
-                      <select
-                        value={formData.sex}
-                        onChange={e => setFormData(p => ({ ...p, sex: e.target.value }))}
-                        style={selectStyle}
-                      >
+                      <select value={formData.sex} onChange={e => setFormData(p => ({ ...p, sex: e.target.value }))} style={selectStyle}>
                         <option value="">--</option>
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                        <option value="O">Other</option>
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                        <option value="X">X</option>
                       </select>
                     </div>
-                  </div>
-                  <div>
-                    <div style={labelStyle}>Insurance / Payer</div>
-                    <input
-                      type="text"
-                      placeholder="Payer name"
-                      value={formData.insurance}
-                      onChange={e => setFormData(p => ({ ...p, insurance: e.target.value }))}
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <div style={labelStyle}>Emergency Contact</div>
-                    <input
-                      type="text"
-                      placeholder="Name / Phone"
-                      value={formData.emergencyContact}
-                      onChange={e => setFormData(p => ({ ...p, emergencyContact: e.target.value }))}
-                      style={inputStyle}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Divider />
-
-              {/* Step 2: Clinical Info */}
-              <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
-                  Step 2 &mdash; Clinical Info
-                </Mono>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
-                  <div>
-                    <div style={labelStyle}>Chief Complaint</div>
-                    <input
-                      type="text"
-                      placeholder="Reason for admission"
-                      value={formData.complaint}
-                      onChange={e => setFormData(p => ({ ...p, complaint: e.target.value }))}
-                      style={inputStyle}
-                    />
+                    <div style={{ flex: 0, minWidth: 80 }}>
+                      <div style={labelStyle}>Weight (kg)</div>
+                      <input type="number" placeholder="kg" value={formData.weightKg} onChange={e => setFormData(p => ({ ...p, weightKg: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 0, minWidth: 80 }}>
+                      <div style={labelStyle}>Height (cm)</div>
+                      <input type="number" placeholder="cm" value={formData.heightCm} onChange={e => setFormData(p => ({ ...p, heightCm: e.target.value }))} style={inputStyle} />
+                    </div>
                   </div>
                   <div style={{ display: 'flex', gap: SPACE.md }}>
                     <div style={{ flex: 1 }}>
-                      <div style={labelStyle}>Attending Assignment</div>
-                      <input
-                        type="text"
-                        placeholder="Dr. ..."
-                        value={formData.attending}
-                        onChange={e => setFormData(p => ({ ...p, attending: e.target.value }))}
-                        style={inputStyle}
-                      />
+                      <div style={labelStyle}>Insurance / Payer</div>
+                      <input type="text" placeholder="Payer name" value={formData.insurance} onChange={e => setFormData(p => ({ ...p, insurance: e.target.value }))} style={inputStyle} />
                     </div>
-                    <div style={{ flex: 0, minWidth: 90 }}>
-                      <div style={labelStyle}>ESI Level</div>
-                      <select
-                        value={formData.esi}
-                        onChange={e => setFormData(p => ({ ...p, esi: Number(e.target.value) }))}
-                        style={selectStyle}
-                      >
-                        {[1, 2, 3, 4, 5].map(n => (
-                          <option key={n} value={n}>ESI {n}</option>
-                        ))}
-                      </select>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Emergency Contact</div>
+                      <input type="text" placeholder="Name / Phone" value={formData.emergencyContact} onChange={e => setFormData(p => ({ ...p, emergencyContact: e.target.value }))} style={inputStyle} />
                     </div>
                   </div>
-                  <div>
-                    <div style={labelStyle}>Isolation Precautions</div>
-                    <select
-                      value={formData.isolation}
-                      onChange={e => setFormData(p => ({ ...p, isolation: e.target.value }))}
-                      style={selectStyle}
-                    >
-                      <option value="NONE">None</option>
-                      <option value="CONTACT">Contact</option>
-                      <option value="DROPLET">Droplet</option>
-                      <option value="AIRBORNE">Airborne</option>
-                      <option value="CONTACT_PLUS">Contact+</option>
-                    </select>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Language</div>
+                      <select value={formData.preferredLanguage} onChange={e => setFormData(p => ({ ...p, preferredLanguage: e.target.value }))} style={selectStyle}>
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="zh">Chinese</option>
+                        <option value="ar">Arabic</option>
+                        <option value="vi">Vietnamese</option>
+                        <option value="ko">Korean</option>
+                        <option value="tl">Tagalog</option>
+                        <option value="ru">Russian</option>
+                        <option value="fr">French</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 0, display: 'flex', alignItems: 'flex-end', gap: SPACE.sm, paddingBottom: 6 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.08em', color: COLORS.textSecondary }}>
+                        <input type="checkbox" checked={formData.needsInterpreter} onChange={e => setFormData(p => ({ ...p, needsInterpreter: e.target.checked }))} style={{ accentColor: COLORS.accent }} />
+                        INTERPRETER
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <Divider />
 
-              {/* Step 3: Bed Request */}
+              {/* ═══ Section 2: Clinical Info ═══ */}
               <div>
                 <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
-                  Step 3 &mdash; Bed Request
+                  2 &mdash; Clinical Info
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
                   <div>
-                    <div style={labelStyle}>Requested Unit</div>
-                    <select
-                      value={formData.requestedUnit}
-                      onChange={e => setFormData(p => ({ ...p, requestedUnit: e.target.value }))}
-                      style={selectStyle}
-                    >
-                      <option value="">Select unit...</option>
-                      <option value="ICU">ICU</option>
-                      <option value="Stepdown">Stepdown</option>
-                      <option value="Med-Surg">Med-Surg</option>
-                      <option value="Telemetry">Telemetry</option>
-                      <option value="Peds">Pediatrics</option>
-                      <option value="L&D">Labor & Delivery</option>
-                    </select>
+                    <div style={labelStyle}>Chief Complaint *</div>
+                    <input type="text" placeholder="Reason for admission" value={formData.complaint} onChange={e => setFormData(p => ({ ...p, complaint: e.target.value }))} style={inputStyle} />
                   </div>
-                  <div>
-                    <div style={labelStyle}>Special Requirements</div>
-                    <input
-                      type="text"
-                      placeholder="e.g. negative pressure, bariatric bed"
-                      value={formData.specialReqs}
-                      onChange={e => setFormData(p => ({ ...p, specialReqs: e.target.value }))}
-                      style={inputStyle}
-                    />
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Attending</div>
+                      <input type="text" placeholder="Dr. ..." value={formData.attending} onChange={e => setFormData(p => ({ ...p, attending: e.target.value }))} style={inputStyle} />
+                    </div>
+                    <div style={{ flex: 0, minWidth: 80 }}>
+                      <div style={labelStyle}>ESI</div>
+                      <select value={formData.esi} onChange={e => setFormData(p => ({ ...p, esi: Number(e.target.value) }))} style={selectStyle}>
+                        {[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>ESI {n}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: 0, minWidth: 90 }}>
+                      <div style={labelStyle}>Arrival</div>
+                      <select value={formData.arrivalMode} onChange={e => setFormData(p => ({ ...p, arrivalMode: e.target.value }))} style={selectStyle}>
+                        <option value="ems">EMS</option>
+                        <option value="walk-in">Walk-in</option>
+                        <option value="transfer">Transfer</option>
+                        <option value="ambulatory">Private</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <div style={labelStyle}>Priority Level</div>
-                    <select
-                      value={formData.priority}
-                      onChange={e => setFormData(p => ({ ...p, priority: e.target.value }))}
-                      style={selectStyle}
-                    >
-                      <option value="routine">Routine</option>
-                      <option value="urgent">Urgent</option>
-                      <option value="emergent">Emergent</option>
-                    </select>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Isolation</div>
+                      <select value={formData.isolation} onChange={e => setFormData(p => ({ ...p, isolation: e.target.value }))} style={selectStyle}>
+                        <option value="NONE">None</option>
+                        <option value="CONTACT">Contact</option>
+                        <option value="DROPLET">Droplet</option>
+                        <option value="AIRBORNE">Airborne</option>
+                        <option value="PROTECTIVE">Protective</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Code Status</div>
+                      <select value={formData.codeStatus} onChange={e => setFormData(p => ({ ...p, codeStatus: e.target.value }))} style={selectStyle}>
+                        <option value="FULL">Full Code</option>
+                        <option value="DNR">DNR</option>
+                        <option value="DNI">DNI</option>
+                        <option value="DNR/DNI">DNR/DNI</option>
+                        <option value="COMFORT">Comfort Only</option>
+                        <option value="LIMITED">Limited</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Submit */}
-              <div style={{ paddingTop: SPACE.sm }}>
+              <Divider />
+
+              {/* ═══ Section 3: Admission Vitals ═══ */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  3 &mdash; Admission Vitals
+                </Mono>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.md }}>
+                  <div>
+                    <div style={labelStyle}>HR (bpm)</div>
+                    <input type="number" placeholder="--" value={formData.hr} onChange={e => setFormData(p => ({ ...p, hr: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>SBP (mmHg)</div>
+                    <input type="number" placeholder="--" value={formData.systolic} onChange={e => setFormData(p => ({ ...p, systolic: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>DBP (mmHg)</div>
+                    <input type="number" placeholder="--" value={formData.diastolic} onChange={e => setFormData(p => ({ ...p, diastolic: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>RR (/min)</div>
+                    <input type="number" placeholder="--" value={formData.rr} onChange={e => setFormData(p => ({ ...p, rr: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>SpO2 (%)</div>
+                    <input type="number" placeholder="--" value={formData.spo2} onChange={e => setFormData(p => ({ ...p, spo2: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Temp (&deg;C)</div>
+                    <input type="number" step="0.1" placeholder="--" value={formData.temp} onChange={e => setFormData(p => ({ ...p, temp: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Pain (0-10)</div>
+                    <input type="number" min="0" max="10" placeholder="--" value={formData.painScore} onChange={e => setFormData(p => ({ ...p, painScore: e.target.value }))} style={inputStyle} />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>GCS (3-15)</div>
+                    <input type="number" min="3" max="15" placeholder="15" value={formData.gcs} onChange={e => setFormData(p => ({ ...p, gcs: e.target.value }))} style={inputStyle} />
+                  </div>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* ═══ Section 4: Allergies ═══ */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  4 &mdash; Allergies
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                  {formData.allergies.map((allergy, i) => (
+                    <div key={i} style={{ display: 'flex', gap: SPACE.sm, alignItems: 'flex-end' }}>
+                      <div style={{ flex: 2 }}>
+                        {i === 0 && <div style={labelStyle}>Substance</div>}
+                        <input
+                          type="text"
+                          placeholder={i === 0 ? 'e.g. Penicillin' : 'Substance...'}
+                          value={allergy.substance}
+                          onChange={e => {
+                            const updated = [...formData.allergies];
+                            updated[i] = { ...updated[i], substance: e.target.value };
+                            setFormData(p => ({ ...p, allergies: updated }));
+                          }}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div style={{ flex: 2 }}>
+                        {i === 0 && <div style={labelStyle}>Reaction</div>}
+                        <input
+                          type="text"
+                          placeholder={i === 0 ? 'e.g. Anaphylaxis' : 'Reaction...'}
+                          value={allergy.reaction}
+                          onChange={e => {
+                            const updated = [...formData.allergies];
+                            updated[i] = { ...updated[i], reaction: e.target.value };
+                            setFormData(p => ({ ...p, allergies: updated }));
+                          }}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        {i === 0 && <div style={labelStyle}>Severity</div>}
+                        <select
+                          value={allergy.severity}
+                          onChange={e => {
+                            const updated = [...formData.allergies];
+                            updated[i] = { ...updated[i], severity: e.target.value as typeof allergy.severity };
+                            setFormData(p => ({ ...p, allergies: updated }));
+                          }}
+                          style={selectStyle}
+                        >
+                          <option value="mild">Mild</option>
+                          <option value="moderate">Moderate</option>
+                          <option value="severe">Severe</option>
+                          <option value="life-threatening">Life-threatening</option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                  <Mono tone="dim" size="xs">Leave blank for NKA (no known allergies)</Mono>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* ═══ Section 5: Problems / Diagnoses ═══ */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  5 &mdash; Problems / Diagnoses
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                  {formData.problems.map((problem, i) => (
+                    <div key={i} style={{ display: 'flex', gap: SPACE.sm, alignItems: 'flex-end' }}>
+                      <div style={{ flex: 3 }}>
+                        {i === 0 && <div style={labelStyle}>Diagnosis</div>}
+                        <input
+                          type="text"
+                          placeholder={i === 0 ? 'e.g. Type 2 diabetes mellitus' : 'Diagnosis...'}
+                          value={problem.display}
+                          onChange={e => {
+                            const updated = [...formData.problems];
+                            updated[i] = { ...updated[i], display: e.target.value };
+                            setFormData(p => ({ ...p, problems: updated }));
+                          }}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        {i === 0 && <div style={labelStyle}>ICD-10</div>}
+                        <input
+                          type="text"
+                          placeholder="Code"
+                          value={problem.icd10}
+                          onChange={e => {
+                            const updated = [...formData.problems];
+                            updated[i] = { ...updated[i], icd10: e.target.value };
+                            setFormData(p => ({ ...p, problems: updated }));
+                          }}
+                          style={inputStyle}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        {i === 0 && <div style={labelStyle}>Status</div>}
+                        <select
+                          value={problem.status}
+                          onChange={e => {
+                            const updated = [...formData.problems];
+                            updated[i] = { ...updated[i], status: e.target.value as typeof problem.status };
+                            setFormData(p => ({ ...p, problems: updated }));
+                          }}
+                          style={selectStyle}
+                        >
+                          <option value="active">Active</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* ═══ Section 6: Bed Request ═══ */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  6 &mdash; Bed Request
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Requested Unit</div>
+                      <select value={formData.requestedUnit} onChange={e => setFormData(p => ({ ...p, requestedUnit: e.target.value }))} style={selectStyle}>
+                        <option value="">Select unit...</option>
+                        <option value="ICU">ICU</option>
+                        <option value="Stepdown">Stepdown</option>
+                        <option value="Med-Surg">Med-Surg</option>
+                        <option value="Telemetry">Telemetry</option>
+                        <option value="Peds">Pediatrics</option>
+                        <option value="L&D">Labor & Delivery</option>
+                      </select>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Priority</div>
+                      <select value={formData.priority} onChange={e => setFormData(p => ({ ...p, priority: e.target.value }))} style={selectStyle}>
+                        <option value="routine">Routine</option>
+                        <option value="urgent">Urgent</option>
+                        <option value="emergent">Emergent</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Special Requirements</div>
+                    <input type="text" placeholder="e.g. negative pressure, bariatric bed, telemetry monitor" value={formData.specialReqs} onChange={e => setFormData(p => ({ ...p, specialReqs: e.target.value }))} style={inputStyle} />
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══ Submit ═══ */}
+              <div style={{ paddingTop: SPACE.sm, paddingBottom: SPACE.lg }}>
                 <TacticalButton
                   variant="primary"
                   fullWidth
                   onClick={() => {
-                    if (onSubmitAdmission && formData.name && formData.complaint) {
+                    if (onSubmitAdmission && formData.firstName && formData.lastName && formData.complaint) {
+                      const fullName = `${formData.firstName} ${formData.lastName}`;
+                      const filledAllergies = formData.allergies.filter(a => a.substance.trim());
+                      const filledProblems = formData.problems.filter(p => p.display.trim());
                       onSubmitAdmission({
-                        name: formData.name,
+                        name: fullName,
                         mrn: formData.mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`,
-                        source: 'ED' as AdmissionSource,
+                        source: (formData.arrivalMode === 'transfer' ? 'Transfer' : formData.arrivalMode === 'ems' ? 'ED' : 'Direct') as AdmissionSource,
                         acuity: formData.esi,
                         complaint: formData.complaint,
                         requestedUnit: formData.requestedUnit || 'Med-Surg',
                         attending: formData.attending || 'TBD',
+                        demographics: {
+                          dob: formData.dob || undefined,
+                          sex: (formData.sex || 'U') as 'M' | 'F' | 'X' | 'U',
+                          insurance: formData.insurance || undefined,
+                          emergencyContact: formData.emergencyContact || undefined,
+                          isolation: formData.isolation !== 'NONE' ? formData.isolation : undefined,
+                          codeStatus: formData.codeStatus !== 'FULL' ? formData.codeStatus : undefined,
+                          preferredLanguage: formData.preferredLanguage !== 'en' ? formData.preferredLanguage : undefined,
+                          needsInterpreter: formData.needsInterpreter || undefined,
+                          weightKg: formData.weightKg ? Number(formData.weightKg) : undefined,
+                          heightCm: formData.heightCm ? Number(formData.heightCm) : undefined,
+                          arrivalMode: formData.arrivalMode,
+                          vitals: (formData.hr || formData.systolic || formData.spo2) ? {
+                            hr: formData.hr ? Number(formData.hr) : undefined,
+                            systolic: formData.systolic ? Number(formData.systolic) : undefined,
+                            diastolic: formData.diastolic ? Number(formData.diastolic) : undefined,
+                            rr: formData.rr ? Number(formData.rr) : undefined,
+                            spo2: formData.spo2 ? Number(formData.spo2) : undefined,
+                            temp: formData.temp ? Number(formData.temp) : undefined,
+                            painScore: formData.painScore ? Number(formData.painScore) : undefined,
+                            gcs: formData.gcs ? Number(formData.gcs) : undefined,
+                          } : undefined,
+                          allergies: filledAllergies.length > 0 ? filledAllergies : undefined,
+                          problems: filledProblems.length > 0 ? filledProblems : undefined,
+                          specialReqs: formData.specialReqs || undefined,
+                          priority: formData.priority !== 'routine' ? formData.priority : undefined,
+                        },
                       });
-                      setFormData({ name: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '', complaint: '', attending: '', esi: 3, isolation: 'NONE', requestedUnit: '', specialReqs: '', priority: 'routine' });
+                      // Reset form
+                      setFormData({
+                        firstName: '', lastName: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '',
+                        preferredLanguage: 'en', needsInterpreter: false, weightKg: '', heightCm: '',
+                        complaint: '', attending: '', esi: 3, isolation: 'NONE',
+                        codeStatus: 'FULL', arrivalMode: 'ems',
+                        hr: '', systolic: '', diastolic: '', rr: '', spo2: '', temp: '', painScore: '', gcs: '15',
+                        allergies: [
+                          { substance: '', reaction: '', severity: 'mild' },
+                          { substance: '', reaction: '', severity: 'mild' },
+                          { substance: '', reaction: '', severity: 'mild' },
+                        ],
+                        problems: [
+                          { display: '', icd10: '', status: 'active' },
+                          { display: '', icd10: '', status: 'active' },
+                          { display: '', icd10: '', status: 'active' },
+                        ],
+                        requestedUnit: '', specialReqs: '', priority: 'routine',
+                      });
                     } else {
-                      showToast('Please fill in patient name and chief complaint');
+                      showToast('Please fill in first name, last name, and chief complaint');
                     }
                   }}
                   icon={<Plus size={14} />}

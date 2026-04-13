@@ -40,6 +40,8 @@ import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION
 import type { AdmissionEntry } from './components/clinical';
 import type { Bed } from './data/bedMock';
 import { PatientsPage } from './components/PatientsPage';
+import { MOCK_PATIENTS } from './data/clinicalMock';
+import type { Patient, Vital, Encounter } from './types';
 import { seedBedState, type BedUnit } from './data/bedMock';
 import { useRealtimeState, useRealtimePing, subscribe } from './lib/realtime';
 import {
@@ -114,26 +116,35 @@ function App() {
   // ── Admissions queue — shared state so AdmitFlow actions persist ──
   const [admissionQueue, setAdmissionQueue] = useState<AdmissionEntry[]>(() => INITIAL_ADMISSION_QUEUE);
 
-  /** Assign a bed to an admission queue entry — updates both bed state and queue */
+  // ── Patient list — mutable so admitted patients appear in Patients tab ──
+  const [patients, setPatients] = useState<Patient[]>(() => [...MOCK_PATIENTS]);
+
+  /** Assign a bed to an admission queue entry — updates bed state, queue, AND patient list */
   const assignBedToAdmission = (admissionId: string, bedId: string) => {
+    const admission = admissionQueue.find(a => a.id === admissionId);
+    if (!admission) return;
+
     let bedLabel = '';
     let unitName = '';
+    let zoneName = '';
+
     // Update bed state
     setBedUnits(prev => prev.map(unit => ({
       ...unit,
       beds: unit.beds.map(bed => {
         if (bed.id === bedId && bed.state === 'ready') {
-          const admission = admissionQueue.find(a => a.id === admissionId);
           bedLabel = bed.label;
           unitName = unit.shortName;
+          zoneName = unit.name;
           return {
             ...bed,
             state: 'occupied' as const,
-            patientName: admission?.name ?? 'Unknown',
-            mrn: admission?.mrn ?? '',
-            acuity: admission?.acuity as (1|2|3|4|5) ?? 3,
-            attending: admission?.attending ?? '',
-            admitSource: (admission?.source ?? 'ED') as Bed['admitSource'],
+            patientName: admission.name,
+            patientId: admission.mrn,
+            mrn: admission.mrn,
+            acuity: admission.acuity as (1|2|3|4|5),
+            attending: admission.attending,
+            admitSource: (admission.source ?? 'ED') as Bed['admitSource'],
             losHours: 0,
             isolation: 'NONE' as const,
             stateChangedMinAgo: 0,
@@ -142,11 +153,109 @@ function App() {
         return bed;
       }),
     })));
+
     // Update queue entry status
     setAdmissionQueue(prev => prev.map(a =>
       a.id === admissionId ? { ...a, status: 'admitted' as const, assignedBed: bedLabel, assignedUnit: unitName, waitMin: 0 } : a
     ));
-    showToast(`Assigned ${bedLabel} (${unitName}) — patient admitted`);
+
+    // ── Create Patient record so they appear in the Patients tab ──
+    const nameParts = admission.name.split(' ');
+    const given = nameParts[0] ?? admission.name;
+    const family = nameParts.slice(1).join(' ') || 'Unknown';
+    const demo = admission.demographics;
+    const nowIso = new Date().toISOString();
+    const patientId = `P-${admission.mrn.replace('MRN-', '')}`;
+
+    // Use vitals from form if provided, otherwise generate defaults
+    const dv = demo?.vitals;
+    const initialVitals: Vital = {
+      id: `V-${patientId}-0`,
+      timestamp: nowIso,
+      heartRate: dv?.hr ?? (78 + Math.floor(Math.random() * 20)),
+      systolic: dv?.systolic ?? (118 + Math.floor(Math.random() * 20)),
+      diastolic: dv?.diastolic ?? (70 + Math.floor(Math.random() * 15)),
+      respRate: dv?.rr ?? (16 + Math.floor(Math.random() * 6)),
+      spO2: dv?.spo2 ?? (94 + Math.floor(Math.random() * 5)),
+      temperature: dv?.temp ?? (36.6 + Math.round(Math.random() * 10) / 10),
+      painScore: dv?.painScore ?? Math.min(admission.acuity, Math.floor(Math.random() * 6)),
+      gcs: dv?.gcs ?? 15,
+    };
+
+    const arrivalMode = demo?.arrivalMode
+      ? demo.arrivalMode as Encounter['arrivalMode']
+      : admission.source === 'ED' ? 'ems' : admission.source === 'Transfer' ? 'transfer' : 'ambulatory';
+
+    const encounter: Encounter = {
+      id: `ENC-${patientId}`,
+      patientId,
+      class: admission.source === 'ED' ? 'EMERGENCY' : 'INPATIENT',
+      status: 'in-progress',
+      admittedAt: nowIso,
+      location: { zone: zoneName || unitName, bed: bedLabel },
+      chiefComplaint: admission.complaint,
+      esi: admission.acuity as 1 | 2 | 3 | 4 | 5,
+      attendingId: admission.attending,
+      arrivalMode,
+      payer: demo?.insurance ? { primary: demo.insurance } : undefined,
+    };
+
+    // Parse DOB — form uses "MM/DD/YYYY", mock entries won't have it
+    let birthDate = '1970-01-01';
+    if (demo?.dob) {
+      const parts = demo.dob.split('/');
+      if (parts.length === 3) birthDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+      else birthDate = demo.dob;
+    }
+
+    // Build allergy list from form input
+    const allergies = (demo?.allergies ?? [])
+      .filter(a => a.substance.trim())
+      .map((a, i) => ({
+        id: `ALG-${patientId}-${i}`,
+        substance: a.substance,
+        reaction: a.reaction || 'Unknown',
+        severity: a.severity as 'mild' | 'moderate' | 'severe' | 'life-threatening',
+        verification: 'confirmed' as const,
+      }));
+
+    // Build problem list from form input
+    const problems = (demo?.problems ?? [])
+      .filter(p => p.display.trim())
+      .map((p, i) => ({
+        id: `PROB-${patientId}-${i}`,
+        display: p.display,
+        icd10Code: p.icd10 || undefined,
+        status: p.status as 'active' | 'resolved' | 'inactive',
+        priority: i + 1,
+      }));
+
+    const newPatient: Patient = {
+      id: patientId,
+      mrn: admission.mrn,
+      name: { given, family },
+      birthDate,
+      sex: (demo?.sex ?? 'U') as 'M' | 'F' | 'X' | 'U',
+      preferredLanguage: demo?.preferredLanguage ?? 'en',
+      needsInterpreter: demo?.needsInterpreter,
+      weightKg: demo?.weightKg,
+      heightCm: demo?.heightCm,
+      codeStatus: (demo?.codeStatus ?? 'FULL') as Patient['codeStatus'],
+      isolation: (demo?.isolation ?? 'NONE') as Patient['isolation'],
+      allergies,
+      problems,
+      vitalsHistory: [initialVitals],
+      currentEncounter: encounter,
+      avatarInitials: `${given[0] ?? ''}${family[0] ?? ''}`.toUpperCase(),
+    };
+
+    setPatients(prev => {
+      // Don't duplicate if MRN already exists
+      if (prev.some(p => p.mrn === admission.mrn)) return prev;
+      return [newPatient, ...prev];
+    });
+
+    showToast(`Admitted ${admission.name} → ${bedLabel} (${unitName})`);
   };
 
   /** Add a new admission to the queue from the form */
@@ -779,6 +888,7 @@ function App() {
                   currentUser={currentUser}
                   showToast={showToast}
                   initialPatientId={initialPatientId}
+                  patients={patients}
                 />
               )}
               {activeTab === Tab.LIVE_OPS && (
