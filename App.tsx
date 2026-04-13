@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity,
@@ -115,13 +115,17 @@ function App() {
 
   // ── Admissions queue — shared state so AdmitFlow actions persist ──
   const [admissionQueue, setAdmissionQueue] = useState<AdmissionEntry[]>(() => INITIAL_ADMISSION_QUEUE);
+  // Keep a ref so assignBedToAdmission always reads the latest queue
+  const admissionQueueRef = useRef(admissionQueue);
+  admissionQueueRef.current = admissionQueue;
 
   // ── Patient list — mutable so admitted patients appear in Patients tab ──
   const [patients, setPatients] = useState<Patient[]>(() => [...MOCK_PATIENTS]);
 
   /** Assign a bed to an admission queue entry — updates bed state, queue, AND patient list */
   const assignBedToAdmission = (admissionId: string, bedId: string) => {
-    const admission = admissionQueue.find(a => a.id === admissionId);
+    // Read from ref to always get the latest queue (avoids stale closure)
+    const admission = admissionQueueRef.current.find(a => a.id === admissionId);
     if (!admission) return;
 
     let bedLabel = '';
