@@ -542,6 +542,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
                 onClose={() => setSelectedPatientId(null)}
                 onSave={() => showToast('Chart saved', 'success')}
                 showToast={showToast}
+                embedded
               />
             </motion.div>
           ) : (
