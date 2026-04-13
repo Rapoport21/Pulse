@@ -41,7 +41,7 @@ import {
   Network as NetworkIcon,
   BrainCircuit,
 } from 'lucide-react';
-import { Status, UserProfile, UserRole } from '../types';
+import { Status, Tab, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
 import {
   BedBoard,
@@ -87,6 +87,8 @@ interface PulseHorizonProps {
   setSystemStatus?: (status: 'normal' | 'stale' | 'manual') => void;
   showToast?: (message: string, type?: 'success' | 'info' | 'error') => void;
   onNavigateToActionBoard?: (filter: string) => void;
+  /** Navigate to a top-level tab (e.g. Tab.ADMISSIONS, Tab.PATIENTS). */
+  onNavigateTab?: (tab: string) => void;
   loginCount?: number;
 }
 
@@ -129,6 +131,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   systemStatus = 'normal',
   setSystemStatus,
   showToast,
+  onNavigateTab,
   loginCount = 1,
 }) => {
   const [simState, setSimState] = useState({
@@ -1282,13 +1285,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.sm }}>
               {[
-                { label: 'Admit', icon: <UserPlus size={16} />, color: COLORS.ok, onClick: () => setShowAdmitFlow(true) },
-                { label: 'Discharge', icon: <DoorOpen size={16} />, color: COLORS.warn, onClick: () => setShowDischargeFlow(true) },
-                { label: 'Rounding', icon: <ClipboardList size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => setShowRoundingList(true) },
-                { label: 'Notes', icon: <FileText size={16} />, color: COLORS.info, onClick: () => setShowNoteComposer(true) },
-                { label: 'Orders', icon: <Pill size={16} />, color: COLORS.ok, onClick: () => setShowOrderEntry(true) },
-                { label: 'Code Blue', icon: <Siren size={16} />, color: COLORS.crit, onClick: () => setShowCodeBlue(true) },
-                { label: 'Handoff', icon: <ArrowRightLeft size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => setShowHandoff(true) },
+                { label: 'Admit', icon: <UserPlus size={16} />, color: COLORS.ok, onClick: () => onNavigateTab?.(Tab.ADMISSIONS) || setShowAdmitFlow(true) },
+                { label: 'Discharge', icon: <DoorOpen size={16} />, color: COLORS.warn, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowDischargeFlow(true) },
+                { label: 'Rounding', icon: <ClipboardList size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowRoundingList(true) },
+                { label: 'Notes', icon: <FileText size={16} />, color: COLORS.info, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowNoteComposer(true) },
+                { label: 'Orders', icon: <Pill size={16} />, color: COLORS.ok, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowOrderEntry(true) },
+                { label: 'Code Blue', icon: <Siren size={16} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowCodeBlue(true) },
+                { label: 'Handoff', icon: <ArrowRightLeft size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowHandoff(true) },
                 { label: 'Comms', icon: <MessageSquare size={16} />, color: COLORS.info, onClick: () => setShowMessaging(true) },
               ].map((action) => (
                 <div

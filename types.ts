@@ -13,6 +13,7 @@ export interface UserProfile {
 
 export enum Tab {
   HORIZON = 'Pulse Horizon',
+  PATIENTS = 'Patients',
   BED_BOARD = 'Bed Board',
   ADMISSIONS = 'Admissions',
   LIVE_OPS = 'Live Ops',

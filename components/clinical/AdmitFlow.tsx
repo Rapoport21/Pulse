@@ -24,6 +24,9 @@ import {
   Bed,
   CheckCircle2,
   ClipboardList,
+  Clock,
+  Filter,
+  Plus,
   User,
   X,
 } from 'lucide-react';
@@ -463,10 +466,106 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
     );
   };
 
+  // ── Desktop form state ─────────────────────────────────────────────────
+  const [formData, setFormData] = useState({
+    name: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '',
+    complaint: '', attending: '', esi: 3, isolation: 'NONE',
+    requestedUnit: '', specialReqs: '', priority: 'routine',
+  });
+  const [queueFilter, setQueueFilter] = useState<'all' | 'pending' | 'placing' | 'in_transit' | 'admitted'>('all');
+
   // ── Main render ───────────────────────────────────────────────────────
 
-  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  // ── Embedded mode: desktop admissions command center ──
   if (embedded) {
+    const ADMISSION_QUEUE = [
+      { id: 'ADM-001', name: 'Robert Thompson', mrn: 'MRN-9923', source: 'ED' as const, acuity: 2, complaint: 'Chest pain, elevated troponin', requestedUnit: 'ICU', status: 'pending' as const, waitMin: 45, attending: 'Dr. Rivera', requestedAt: '08:15' },
+      { id: 'ADM-002', name: 'Linda Park', mrn: 'MRN-4412', source: 'OR' as const, acuity: 3, complaint: 'Post-craniotomy monitoring', requestedUnit: 'Stepdown', status: 'placing' as const, waitMin: 22, attending: 'Dr. Kim', requestedAt: '08:38' },
+      { id: 'ADM-003', name: 'Marcus Williams', mrn: 'MRN-6617', source: 'Transfer' as const, acuity: 2, complaint: 'STEMI, needs cath lab post-PCI', requestedUnit: 'ICU', status: 'in_transit' as const, waitMin: 68, attending: 'Dr. Chen', requestedAt: '07:52' },
+      { id: 'ADM-004', name: 'Sarah Mitchell', mrn: 'MRN-3301', source: 'ED' as const, acuity: 3, complaint: 'Pneumonia, O2 requirement', requestedUnit: 'Med-Surg', status: 'pending' as const, waitMin: 30, attending: 'Dr. Foster', requestedAt: '08:30' },
+      { id: 'ADM-005', name: 'James Ortiz', mrn: 'MRN-8854', source: 'Direct' as const, acuity: 4, complaint: 'Elective hip replacement', requestedUnit: 'Med-Surg', status: 'admitted' as const, waitMin: 0, attending: 'Dr. Adams', requestedAt: '07:00' },
+      { id: 'ADM-006', name: 'Patricia Chen', mrn: 'MRN-5529', source: 'ED' as const, acuity: 2, complaint: 'GI bleed, hemodynamically unstable', requestedUnit: 'ICU', status: 'pending' as const, waitMin: 55, attending: 'Dr. Patel', requestedAt: '08:05' },
+      { id: 'ADM-007', name: 'David Brown', mrn: 'MRN-7746', source: 'Transfer' as const, acuity: 3, complaint: 'Stroke, tPA administered at OSH', requestedUnit: 'Stepdown', status: 'in_transit' as const, waitMin: 40, attending: 'Dr. Nguyen', requestedAt: '08:20' },
+    ];
+
+    type QueueStatus = 'pending' | 'placing' | 'in_transit' | 'admitted';
+    type QueueSource = 'ED' | 'OR' | 'Transfer' | 'Direct';
+
+    const sourceColor: Record<QueueSource, string> = {
+      ED: COLORS.crit,
+      OR: COLORS.info,
+      Transfer: '#A855F7',
+      Direct: COLORS.ok,
+    };
+
+    const statusDotColor: Record<QueueStatus, string> = {
+      pending: COLORS.warn,
+      placing: COLORS.info,
+      in_transit: '#A855F7',
+      admitted: COLORS.ok,
+    };
+
+    const statusLabel: Record<QueueStatus, string> = {
+      pending: 'PENDING BED',
+      placing: 'PLACING',
+      in_transit: 'IN TRANSIT',
+      admitted: 'ADMITTED',
+    };
+
+    const acuityColor = (a: number) =>
+      a <= 2 ? COLORS.crit : a === 3 ? COLORS.warn : COLORS.ok;
+
+    const filteredQueue = queueFilter === 'all'
+      ? ADMISSION_QUEUE
+      : ADMISSION_QUEUE.filter(q => q.status === queueFilter);
+
+    const countByStatus = (s: QueueStatus) => ADMISSION_QUEUE.filter(q => q.status === s).length;
+    const pendingCount = countByStatus('pending');
+    const placingCount = countByStatus('placing') + countByStatus('in_transit');
+    const admittedCount = countByStatus('admitted');
+
+    const FILTER_TABS: { key: typeof queueFilter; label: string }[] = [
+      { key: 'all', label: 'All' },
+      { key: 'pending', label: 'Pending' },
+      { key: 'placing', label: 'Placing' },
+      { key: 'in_transit', label: 'In Transit' },
+      { key: 'admitted', label: 'Admitted' },
+    ];
+
+    const inputStyle: React.CSSProperties = {
+      width: '100%',
+      height: 36,
+      padding: `0 ${SPACE.md}px`,
+      fontFamily: FONTS.sans,
+      fontSize: TYPE.bodySm.size,
+      color: COLORS.textPrimary,
+      background: COLORS.surface,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      outline: 'none',
+      transition: `border-color ${MOTION.fast}s ease`,
+    };
+
+    const selectStyle: React.CSSProperties = {
+      ...inputStyle,
+      appearance: 'none' as const,
+      WebkitAppearance: 'none' as const,
+      backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23525252' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+      backgroundRepeat: 'no-repeat',
+      backgroundPosition: `right ${SPACE.md}px center`,
+      paddingRight: SPACE['2xl'],
+    };
+
+    const labelStyle: React.CSSProperties = {
+      fontFamily: FONTS.mono,
+      fontSize: TYPE.monoXs.size,
+      fontWeight: TYPE.monoXs.weight,
+      letterSpacing: TYPE.monoXs.tracking,
+      textTransform: 'uppercase',
+      color: COLORS.textMuted,
+      marginBottom: SPACE.xs,
+    };
+
     return (
       <div
         style={{
@@ -482,74 +581,487 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
         }}
       >
         {/* ── Header strip ──────────────────────────────────────────── */}
-        <HudStrip side="top" fixed>
-          <BracketLabel tone="accent" size="sm">Admit Patient</BracketLabel>
+        <HudStrip side="top">
+          <BracketLabel tone="accent" size="sm">Admissions Command Center</BracketLabel>
           <div style={{ flex: 1 }} />
-          <StatusPill label="ESI 2" tone="crit" />
+          <StatusPill label={`${ADMISSION_QUEUE.length} ACTIVE`} tone="info" pulse />
         </HudStrip>
 
-        {/* ── Body ──────────────────────────────────────────────────── */}
+        {/* ── Summary bar ───────────────────────────────────────────── */}
         <div
           style={{
-            flex: 1,
-            overflow: 'auto',
-            paddingTop: 56,
-            paddingBottom: 72,
-            WebkitOverflowScrolling: 'touch',
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE['2xl'],
+            padding: `${SPACE.md}px ${SPACE.lg}px`,
+            background: COLORS.surface,
+            borderBottom: `1px solid ${COLORS.border}`,
+            flexShrink: 0,
           }}
         >
-          {renderStepIndicator()}
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-            >
-              {step === 'identity' && renderIdentity()}
-              {step === 'bed' && renderBedAssignment()}
-              {step === 'confirm' && renderConfirmation()}
-            </motion.div>
-          </AnimatePresence>
+          <SummaryStatDesktop label="Pending" value={pendingCount} color={COLORS.warn} />
+          <div style={{ width: 1, height: 32, background: COLORS.border }} />
+          <SummaryStatDesktop label="In Progress" value={placingCount} color={COLORS.info} />
+          <div style={{ width: 1, height: 32, background: COLORS.border }} />
+          <SummaryStatDesktop label="Admitted Today" value={admittedCount} color={COLORS.ok} />
         </div>
 
-        {/* ── Footer navigation ─────────────────────────────────────── */}
-        {!admitted && (
+        {/* ── Two-column body ───────────────────────────────────────── */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* ── LEFT: Admissions queue (60%) ──────────────────────── */}
           <div
             style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
+              flex: '0 0 60%',
               display: 'flex',
-              alignItems: 'center',
-              gap: SPACE.sm,
-              padding: `${SPACE.md}px ${SPACE.base}px`,
-              paddingBottom: SPACE.md,
-              background: `linear-gradient(180deg, ${COLORS.bg}00 0%, ${COLORS.bg} 20%)`,
-              borderTop: `1px solid ${COLORS.border}`,
+              flexDirection: 'column',
+              borderRight: `1px solid ${COLORS.border}`,
+              overflow: 'hidden',
             }}
           >
-            {stepIndex > 0 && (
-              <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={14} />}>
-                Back
-              </TacticalButton>
-            )}
-            <div style={{ flex: 1 }} />
-            {step !== 'confirm' && (
-              <TacticalButton
-                variant="primary"
-                onClick={goNext}
-                disabled={!canProceed}
-                icon={<ArrowRight size={14} />}
-              >
-                {step === 'bed' ? 'Review' : 'Next'}
-              </TacticalButton>
-            )}
+            {/* Pipeline filter tabs */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                flexShrink: 0,
+              }}
+            >
+              <Filter size={12} color={COLORS.textMuted} />
+              {FILTER_TABS.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setQueueFilter(tab.key)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    height: 28,
+                    padding: `0 ${SPACE.md}px`,
+                    fontFamily: FONTS.mono,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: queueFilter === tab.key ? COLORS.textPrimary : COLORS.textMuted,
+                    background: queueFilter === tab.key ? COLORS.accentDim : 'transparent',
+                    border: `1px solid ${queueFilter === tab.key ? COLORS.accent : COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    cursor: 'pointer',
+                    transition: `all ${MOTION.fast}s ease`,
+                    outline: 'none',
+                  }}
+                >
+                  {tab.key !== 'all' && (
+                    <span
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: RADIUS.full,
+                        background: statusDotColor[tab.key as QueueStatus] ?? COLORS.textMuted,
+                      }}
+                    />
+                  )}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Queue entries */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: SPACE.lg,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.md,
+              }}
+            >
+              {filteredQueue.map(entry => (
+                <TacticalCard
+                  key={entry.id}
+                  interactive
+                  padding="md"
+                  style={{
+                    borderLeft: `3px solid ${acuityColor(entry.acuity)}`,
+                  }}
+                >
+                  {/* Top row: name + source + acuity */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: TYPE.h4.size,
+                        fontWeight: TYPE.h4.weight,
+                        color: COLORS.textPrimary,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {entry.name}
+                      </div>
+                      <Mono tone="muted" size="xs">{entry.mrn}</Mono>
+                    </div>
+                    {/* Source badge */}
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        height: 20,
+                        padding: `0 ${SPACE.sm}px`,
+                        fontFamily: FONTS.mono,
+                        fontSize: 9,
+                        fontWeight: 600,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        color: sourceColor[entry.source],
+                        background: `${sourceColor[entry.source]}18`,
+                        border: `1px solid ${sourceColor[entry.source]}30`,
+                        borderRadius: RADIUS.full,
+                      }}
+                    >
+                      {entry.source}
+                    </span>
+                    {/* Acuity badge */}
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 24,
+                        height: 24,
+                        fontFamily: FONTS.mono,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: acuityColor(entry.acuity),
+                        background: `${acuityColor(entry.acuity)}18`,
+                        border: `1px solid ${acuityColor(entry.acuity)}30`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      {entry.acuity}
+                    </span>
+                  </div>
+
+                  {/* Chief complaint */}
+                  <div style={{
+                    fontFamily: FONTS.sans,
+                    fontSize: TYPE.bodySm.size,
+                    color: COLORS.textSecondary,
+                    marginBottom: SPACE.md,
+                  }}>
+                    {entry.complaint}
+                  </div>
+
+                  {/* Status + meta row */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexWrap: 'wrap' }}>
+                    {/* Status pill with dot */}
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      fontFamily: FONTS.mono,
+                      fontSize: 10,
+                      fontWeight: 500,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: statusDotColor[entry.status],
+                    }}>
+                      <span style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: RADIUS.full,
+                        background: statusDotColor[entry.status],
+                        boxShadow: `0 0 6px ${statusDotColor[entry.status]}`,
+                      }} />
+                      {statusLabel[entry.status]}
+                    </span>
+
+                    <Mono tone="muted" size="xs">Req: {entry.requestedUnit}</Mono>
+                    <Mono tone="muted" size="xs">Att: {entry.attending}</Mono>
+
+                    {entry.waitMin > 0 && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        fontFamily: FONTS.mono,
+                        fontSize: 10,
+                        fontWeight: 500,
+                        letterSpacing: '0.1em',
+                        color: entry.waitMin > 60 ? COLORS.crit : entry.waitMin > 30 ? COLORS.warn : COLORS.textMuted,
+                      }}>
+                        <Clock size={10} />
+                        {entry.waitMin}m
+                      </span>
+                    )}
+
+                    <div style={{ flex: 1 }} />
+
+                    {/* Action buttons */}
+                    {entry.status !== 'admitted' && (
+                      <div style={{ display: 'flex', gap: SPACE.sm }}>
+                        <TacticalButton variant="primary" size="sm">
+                          Assign Bed
+                        </TacticalButton>
+                        <TacticalButton variant="ghost" size="sm">
+                          Cancel
+                        </TacticalButton>
+                      </div>
+                    )}
+                  </div>
+                </TacticalCard>
+              ))}
+
+              {filteredQueue.length === 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: SPACE['3xl'],
+                }}>
+                  <Mono tone="muted" size="sm">No admissions matching filter</Mono>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+
+          {/* ── RIGHT: New admission form (40%) ──────────────────── */}
+          <div
+            style={{
+              flex: '0 0 40%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Form header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                flexShrink: 0,
+              }}
+            >
+              <Plus size={14} color={COLORS.accent} />
+              <BracketLabel tone="accent" size="xs">New Admission Request</BracketLabel>
+            </div>
+
+            {/* Form body */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: SPACE.lg,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.lg,
+              }}
+            >
+              {/* Step 1: Patient Demographics */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  Step 1 &mdash; Patient Demographics
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Patient Name</div>
+                      <input
+                        type="text"
+                        placeholder="Last, First"
+                        value={formData.name}
+                        onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ flex: 0, minWidth: 120 }}>
+                      <div style={labelStyle}>MRN</div>
+                      <input
+                        type="text"
+                        placeholder="MRN-0000"
+                        value={formData.mrn}
+                        onChange={e => setFormData(p => ({ ...p, mrn: e.target.value }))}
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Date of Birth</div>
+                      <input
+                        type="text"
+                        placeholder="MM/DD/YYYY"
+                        value={formData.dob}
+                        onChange={e => setFormData(p => ({ ...p, dob: e.target.value }))}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ flex: 0, minWidth: 100 }}>
+                      <div style={labelStyle}>Sex</div>
+                      <select
+                        value={formData.sex}
+                        onChange={e => setFormData(p => ({ ...p, sex: e.target.value }))}
+                        style={selectStyle}
+                      >
+                        <option value="">--</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                        <option value="O">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Insurance / Payer</div>
+                    <input
+                      type="text"
+                      placeholder="Payer name"
+                      value={formData.insurance}
+                      onChange={e => setFormData(p => ({ ...p, insurance: e.target.value }))}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Emergency Contact</div>
+                    <input
+                      type="text"
+                      placeholder="Name / Phone"
+                      value={formData.emergencyContact}
+                      onChange={e => setFormData(p => ({ ...p, emergencyContact: e.target.value }))}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* Step 2: Clinical Info */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  Step 2 &mdash; Clinical Info
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                  <div>
+                    <div style={labelStyle}>Chief Complaint</div>
+                    <input
+                      type="text"
+                      placeholder="Reason for admission"
+                      value={formData.complaint}
+                      onChange={e => setFormData(p => ({ ...p, complaint: e.target.value }))}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: SPACE.md }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={labelStyle}>Attending Assignment</div>
+                      <input
+                        type="text"
+                        placeholder="Dr. ..."
+                        value={formData.attending}
+                        onChange={e => setFormData(p => ({ ...p, attending: e.target.value }))}
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div style={{ flex: 0, minWidth: 90 }}>
+                      <div style={labelStyle}>ESI Level</div>
+                      <select
+                        value={formData.esi}
+                        onChange={e => setFormData(p => ({ ...p, esi: Number(e.target.value) }))}
+                        style={selectStyle}
+                      >
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <option key={n} value={n}>ESI {n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Isolation Precautions</div>
+                    <select
+                      value={formData.isolation}
+                      onChange={e => setFormData(p => ({ ...p, isolation: e.target.value }))}
+                      style={selectStyle}
+                    >
+                      <option value="NONE">None</option>
+                      <option value="CONTACT">Contact</option>
+                      <option value="DROPLET">Droplet</option>
+                      <option value="AIRBORNE">Airborne</option>
+                      <option value="CONTACT_PLUS">Contact+</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <Divider />
+
+              {/* Step 3: Bed Request */}
+              <div>
+                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                  Step 3 &mdash; Bed Request
+                </Mono>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                  <div>
+                    <div style={labelStyle}>Requested Unit</div>
+                    <select
+                      value={formData.requestedUnit}
+                      onChange={e => setFormData(p => ({ ...p, requestedUnit: e.target.value }))}
+                      style={selectStyle}
+                    >
+                      <option value="">Select unit...</option>
+                      <option value="ICU">ICU</option>
+                      <option value="Stepdown">Stepdown</option>
+                      <option value="Med-Surg">Med-Surg</option>
+                      <option value="Telemetry">Telemetry</option>
+                      <option value="Peds">Pediatrics</option>
+                      <option value="L&D">Labor & Delivery</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Special Requirements</div>
+                    <input
+                      type="text"
+                      placeholder="e.g. negative pressure, bariatric bed"
+                      value={formData.specialReqs}
+                      onChange={e => setFormData(p => ({ ...p, specialReqs: e.target.value }))}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <div style={labelStyle}>Priority Level</div>
+                    <select
+                      value={formData.priority}
+                      onChange={e => setFormData(p => ({ ...p, priority: e.target.value }))}
+                      style={selectStyle}
+                    >
+                      <option value="routine">Routine</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="emergent">Emergent</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <div style={{ paddingTop: SPACE.sm }}>
+                <TacticalButton
+                  variant="primary"
+                  fullWidth
+                  onClick={() => showToast('Admission request submitted')}
+                  icon={<Plus size={14} />}
+                >
+                  Submit Admission Request
+                </TacticalButton>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -673,6 +1185,28 @@ AdmitFlow.displayName = 'AdmitFlow';
 // ─────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────
+
+const SummaryStatDesktop: React.FC<{ label: string; value: number; color: string }> = ({
+  label,
+  value,
+  color,
+}) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+    <span
+      style={{
+        fontFamily: FONTS.sans,
+        fontSize: 32,
+        fontWeight: 700,
+        letterSpacing: '-0.03em',
+        lineHeight: 1,
+        color,
+      }}
+    >
+      {value}
+    </span>
+    <Mono tone="muted" size="xs">{label}</Mono>
+  </div>
+);
 
 const InfoRow: React.FC<{ label: string; value: string; valueColor?: string }> = ({
   label,

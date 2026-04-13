@@ -18,6 +18,7 @@ import {
   UserPlus,
   ShieldAlert as ShieldAlertIcon,
   UsersRound,
+  Stethoscope,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile } from './types';
 import { USERS } from './data/userProfiles';
@@ -36,6 +37,7 @@ import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage } from './components/clinical';
+import { PatientsPage } from './components/PatientsPage';
 import { seedBedState, type BedUnit } from './data/bedMock';
 import { useRealtimeState, useRealtimePing, subscribe } from './lib/realtime';
 import {
@@ -100,6 +102,9 @@ function App() {
     author: string;
     notes: string;
   } | null>(null);
+
+  // Patient navigation — when bed board or quick action sends user to Patients tab
+  const [initialPatientId, setInitialPatientId] = useState<string | undefined>();
 
   // Live clock for the header — ticks every second in HH:MM:SS UTC
   const [now, setNow] = useState(() => new Date());
@@ -179,6 +184,7 @@ function App() {
 
   const navItems = [
     { id: Tab.HORIZON, icon: Activity, label: 'Horizon', code: 'H' },
+    { id: Tab.PATIENTS, icon: Stethoscope, label: 'Patients', code: 'N' },
     { id: Tab.BED_BOARD, icon: BedDouble, label: 'Bed Board', code: 'D' },
     { id: Tab.ADMISSIONS, icon: UserPlus, label: 'Admissions', code: 'I' },
     { id: Tab.ALERTS, icon: ShieldAlertIcon, label: 'Alerts', code: 'T' },
@@ -300,9 +306,15 @@ function App() {
     }, 1500);
   };
 
+  const navigateToTab = (tab: Tab) => {
+    // Clear patient context when leaving Patients tab
+    if (tab !== Tab.PATIENTS) setInitialPatientId(undefined);
+    setActiveTab(tab);
+  };
+
   const navigateToActionBoard = (filter: string) => {
     setActionFilter(filter);
-    setActiveTab(Tab.ACTIONS);
+    navigateToTab(Tab.ACTIONS);
   };
 
   // ══════════════════════════════════════════════════════════════════════
@@ -544,7 +556,7 @@ function App() {
                   return (
                     <NavButton
                       key={item.id}
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => navigateToTab(item.id)}
                       active={isActive}
                       compact={isCompactNav}
                       title={isCompactNav ? item.label : undefined}
@@ -702,7 +714,15 @@ function App() {
                   setSystemStatus={setSystemStatus}
                   showToast={showToast}
                   onNavigateToActionBoard={navigateToActionBoard}
+                  onNavigateTab={(tab) => navigateToTab(tab as Tab)}
                   loginCount={loginCount}
+                />
+              )}
+              {activeTab === Tab.PATIENTS && (
+                <PatientsPage
+                  currentUser={currentUser}
+                  showToast={showToast}
+                  initialPatientId={initialPatientId}
                 />
               )}
               {activeTab === Tab.LIVE_OPS && (
@@ -724,6 +744,10 @@ function App() {
                   embedded
                   onClose={() => setActiveTab(Tab.HORIZON)}
                   role={currentUser.role}
+                  onNavigateToPatient={(patientId) => {
+                    setInitialPatientId(patientId);
+                    navigateToTab(Tab.PATIENTS);
+                  }}
                 />
               )}
               {activeTab === Tab.ADMISSIONS && (

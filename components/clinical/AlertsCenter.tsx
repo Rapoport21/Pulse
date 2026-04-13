@@ -363,7 +363,63 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
     staffing: MOCK_ALERTS.filter((a) => a.category === 'staffing' && !acknowledged.has(a.id)).length,
   };
 
-  // ── Embedded mode: inline desktop layout (no overlay, no close button) ──
+  // ── Desktop mock alerts for command view ──
+  const MOCK_ALERTS_DESKTOP = useMemo(() => [
+    { id: 'ALT-001', severity: 'critical' as const, category: 'clinical' as const, title: 'SpO2 Desaturation — ICU Bed 3', description: 'SpO2 dropped to 86%. Patient Alice Torres on 4L NC. Trend shows 15-min decline from 94%.', source: 'Vitals Monitor', patient: 'Alice Torres', mrn: 'MRN-6643', attending: 'Dr. Gomez', minutesAgo: 3, acknowledged: false, escalation: 'Auto-page to Rapid Response team' },
+    { id: 'ALT-002', severity: 'critical' as const, category: 'operational' as const, title: 'ED Wait Time Exceeds Threshold', description: 'Average ED wait time is 125 minutes. 14 patients in lobby. NEDOCS score: 185 (Dangerous).', source: 'Capacity Engine', patient: null, mrn: null, attending: null, minutesAgo: 8, acknowledged: false, escalation: 'Notify Charge Nurse + House Supervisor' },
+    { id: 'ALT-003', severity: 'critical' as const, category: 'clinical' as const, title: 'Critical Lab — Troponin Elevated', description: 'Troponin I: 2.4 ng/mL (ref <0.04). Patient Jason Sellers, ED Bed 4. Second draw pending.', source: 'Lab System', patient: 'Jason Sellers', mrn: 'MRN-2290', attending: 'Dr. Kim', minutesAgo: 12, acknowledged: false, escalation: 'Cardiology consult auto-requested' },
+    { id: 'ALT-004', severity: 'critical' as const, category: 'clinical' as const, title: 'MEWS Score ≥5 — Sepsis Protocol', description: 'Patient Clara Rodriguez, Bed 202. MEWS 6. Lactate 4.2. qSOFA 2/3. Sepsis bundle initiated.', source: 'Early Warning System', patient: 'Clara Rodriguez', mrn: 'MRN-5501', attending: 'Dr. Foster', minutesAgo: 15, acknowledged: true, escalation: 'Sepsis bundle auto-ordered' },
+    { id: 'ALT-005', severity: 'warning' as const, category: 'operational' as const, title: 'ICU Staffing Gap — Night Shift', description: 'ICU night shift (19:00-07:00) short 1 RN. Current coverage: 3 nurses for 5 patients. Ratio 1:1.7 vs target 1:1.', source: 'Workforce Engine', patient: null, mrn: null, attending: null, minutesAgo: 22, acknowledged: false, escalation: 'Float pool notified' },
+    { id: 'ALT-006', severity: 'warning' as const, category: 'clinical' as const, title: 'Fall Risk — Bed 203', description: 'Patient Thomas Kim, 78yo, on opioids + anticoagulant. Morse score 65 (high). Bed alarm active.', source: 'Safety System', patient: 'Thomas Kim', mrn: 'MRN-7321', attending: 'Dr. Park', minutesAgo: 28, acknowledged: false, escalation: null },
+    { id: 'ALT-007', severity: 'warning' as const, category: 'system' as const, title: 'EHR Sync Latency Detected', description: 'HL7 ADT feed from Epic delayed by 8 minutes. Lab results may be stale. Engineering notified.', source: 'Integration Monitor', patient: null, mrn: null, attending: null, minutesAgo: 35, acknowledged: true, escalation: 'IT ticket AUTO-2847 opened' },
+    { id: 'ALT-008', severity: 'warning' as const, category: 'operational' as const, title: 'Dirty Beds Exceeding Turnaround', description: '3 beds dirty >20 minutes. EVS response time degraded. Beds: A5, 206, 309.', source: 'Bed Management', patient: null, mrn: null, attending: null, minutesAgo: 18, acknowledged: false, escalation: 'EVS supervisor paged' },
+    { id: 'ALT-009', severity: 'info' as const, category: 'operational' as const, title: 'Shift Change in 90 Minutes', description: 'Day shift ends 19:00. 12 handoffs pending. 2 nurses have incomplete documentation.', source: 'Workforce Engine', patient: null, mrn: null, attending: null, minutesAgo: 45, acknowledged: true, escalation: null },
+    { id: 'ALT-010', severity: 'info' as const, category: 'system' as const, title: 'Scheduled Downtime — Lab Interface', description: 'Lab interface maintenance window 02:00-03:00. Manual result entry may be required.', source: 'IT Operations', patient: null, mrn: null, attending: null, minutesAgo: 120, acknowledged: true, escalation: null },
+    { id: 'ALT-011', severity: 'warning' as const, category: 'clinical' as const, title: 'Medication Override — Controlled Substance', description: 'Pyxis override for Dilaudid 2mg at Station 3-East. Nurse: V. Singh. No order on file. Pharmacy review pending.', source: 'Pharmacy System', patient: 'Jacob Reeves', mrn: 'MRN-4498', attending: 'Dr. Singh', minutesAgo: 40, acknowledged: false, escalation: 'Pharmacy auto-review triggered' },
+    { id: 'ALT-012', severity: 'info' as const, category: 'clinical' as const, title: 'Discharge Ready — Bed 207', description: 'Patient Jacob Reeves. DC order signed. Meds dispensed. Ride confirmed for 12:30. Ready for final check.', source: 'Discharge Planner', patient: 'Jacob Reeves', mrn: 'MRN-4498', attending: 'Dr. Singh', minutesAgo: 5, acknowledged: false, escalation: null },
+  ], []);
+
+  const [deskFilter, setDeskFilter] = useState<'all' | 'clinical' | 'operational' | 'system'>('all');
+  const [deskAcked, setDeskAcked] = useState<Set<string>>(
+    () => new Set(['ALT-004', 'ALT-007', 'ALT-009', 'ALT-010']),
+  );
+
+  const deskHandleAck = (id: string) => {
+    setDeskAcked(prev => { const n = new Set(prev); n.add(id); return n; });
+    showToast('Alert acknowledged');
+  };
+
+  const deskHandleEscalate = (id: string) => {
+    showToast(`Alert ${id} escalated to supervisor`);
+  };
+
+  const deskHandleSuppress = (id: string) => {
+    showToast(`Alert ${id} suppressed for 30 minutes`);
+  };
+
+  // Filtered + sorted desktop alerts
+  const deskAlerts = useMemo(() => {
+    let list = MOCK_ALERTS_DESKTOP.map(a => ({ ...a, acknowledged: deskAcked.has(a.id) }));
+    if (deskFilter !== 'all') list = list.filter(a => a.category === deskFilter);
+    // Sort: newest first (ascending minutesAgo)
+    list.sort((a, b) => a.minutesAgo - b.minutesAgo);
+    return list;
+  }, [deskFilter, deskAcked, MOCK_ALERTS_DESKTOP]);
+
+  // Desktop stat counts
+  const deskCritCount = MOCK_ALERTS_DESKTOP.filter(a => a.severity === 'critical').length;
+  const deskWarnCount = MOCK_ALERTS_DESKTOP.filter(a => a.severity === 'warning').length;
+  const deskInfoCount = MOCK_ALERTS_DESKTOP.filter(a => a.severity === 'info').length;
+  const deskAckCount = deskAcked.size;
+  const deskUnread = MOCK_ALERTS_DESKTOP.length - deskAckCount;
+
+  const sevColor = (sev: 'critical' | 'warning' | 'info') =>
+    sev === 'critical' ? COLORS.crit : sev === 'warning' ? COLORS.warn : COLORS.info;
+
+  const sevTone = (sev: 'critical' | 'warning' | 'info') =>
+    sev === 'critical' ? 'crit' as const : sev === 'warning' ? 'warn' as const : 'info' as const;
+
+  // ── Embedded mode: full desktop alert command center ──
   if (embedded) {
     return (
       <div
@@ -381,26 +437,27 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
       >
         {/* Header */}
         <HudStrip side="top" fixed>
-          <BracketLabel tone="accent" size="sm">Alerts</BracketLabel>
+          <BracketLabel tone="accent" size="sm">ALERT CENTER — COMMAND VIEW</BracketLabel>
           <div style={{ flex: 1 }} />
-          {unreadCount > 0 && (
+          {deskUnread > 0 && (
             <div
               style={{
-                padding: '2px 8px',
+                padding: '2px 10px',
                 background: COLORS.crit,
                 borderRadius: RADIUS.full,
                 fontFamily: FONTS.mono,
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
                 color: '#fff',
+                letterSpacing: '0.04em',
               }}
             >
-              {unreadCount}
+              {deskUnread} UNREAD
             </div>
           )}
         </HudStrip>
 
-        {/* Body */}
+        {/* Scrollable body */}
         <div
           style={{
             flex: 1,
@@ -410,282 +467,274 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          {/* Summary strip */}
+          {/* ── Summary bar: 4 stat boxes ── */}
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
               gap: SPACE.md,
-              padding: `${SPACE.md}px ${SPACE.base}px`,
+              padding: `${SPACE.lg}px ${SPACE.xl}px`,
               borderBottom: `1px solid ${COLORS.border}`,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: critCount > 0 ? COLORS.crit : COLORS.ok,
-                  boxShadow: critCount > 0 ? `0 0 6px ${COLORS.crit}` : 'none',
-                }}
-              />
-              <Mono tone={critCount > 0 ? 'crit' : 'ok'} size="xs">
-                {critCount} CRIT
-              </Mono>
+            {/* Critical */}
+            <div
+              style={{
+                background: `${COLORS.crit}08`,
+                border: `1px solid ${COLORS.crit}30`,
+                borderRadius: RADIUS.sm,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: SPACE.xs,
+              }}
+            >
+              <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.crit, lineHeight: 1 }}>
+                {deskCritCount}
+              </div>
+              <Mono tone="crit" size="xs">CRITICAL</Mono>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-              <div
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: warnCount > 0 ? COLORS.warn : COLORS.ok,
-                }}
-              />
-              <Mono tone={warnCount > 0 ? 'warn' : 'ok'} size="xs">
-                {warnCount} WARN
-              </Mono>
+            {/* Warning */}
+            <div
+              style={{
+                background: `${COLORS.warn}08`,
+                border: `1px solid ${COLORS.warn}30`,
+                borderRadius: RADIUS.sm,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: SPACE.xs,
+              }}
+            >
+              <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.warn, lineHeight: 1 }}>
+                {deskWarnCount}
+              </div>
+              <Mono tone="warn" size="xs">WARNING</Mono>
             </div>
-            <div style={{ flex: 1 }} />
-            <TacticalButton variant="ghost" size="sm" onClick={clearAllRead}>
-              Clear All
-            </TacticalButton>
+            {/* Info */}
+            <div
+              style={{
+                background: `${COLORS.info}08`,
+                border: `1px solid ${COLORS.info}30`,
+                borderRadius: RADIUS.sm,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: SPACE.xs,
+              }}
+            >
+              <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.info, lineHeight: 1 }}>
+                {deskInfoCount}
+              </div>
+              <Mono tone="info" size="xs">INFO</Mono>
+            </div>
+            {/* Acknowledged */}
+            <div
+              style={{
+                background: `${COLORS.ok}08`,
+                border: `1px solid ${COLORS.ok}30`,
+                borderRadius: RADIUS.sm,
+                padding: `${SPACE.md}px ${SPACE.lg}px`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: SPACE.xs,
+              }}
+            >
+              <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.ok, lineHeight: 1 }}>
+                {deskAckCount}
+              </div>
+              <Mono tone="ok" size="xs">ACKNOWLEDGED</Mono>
+            </div>
           </div>
 
-          {/* Filter tabs */}
+          {/* ── Category filter tabs ── */}
           <div
             style={{
               display: 'flex',
-              gap: 4,
-              padding: `${SPACE.sm}px ${SPACE.base}px`,
-              overflowX: 'auto',
+              gap: 0,
+              padding: `0 ${SPACE.xl}px`,
+              borderBottom: `1px solid ${COLORS.border}`,
             }}
           >
-            {(['all', 'critical', 'clinical', 'system', 'staffing'] as FilterTab[]).map((tab) => {
-              const isActive = filter === tab;
-              const tColor =
-                tab === 'critical' ? COLORS.crit
-                : tab === 'clinical' ? COLORS.info
-                : tab === 'system' ? COLORS.warn
-                : tab === 'staffing' ? 'rgba(139,92,246,0.9)'
+            {(['all', 'clinical', 'operational', 'system'] as const).map(tab => {
+              const isActive = deskFilter === tab;
+              const tabColor =
+                tab === 'clinical' ? COLORS.info
+                : tab === 'operational' ? COLORS.warn
+                : tab === 'system' ? 'rgba(139,92,246,0.9)'
                 : COLORS.textSecondary;
               return (
                 <button
                   key={tab}
-                  onClick={() => setFilter(tab)}
+                  onClick={() => setDeskFilter(tab)}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '4px 10px',
-                    background: isActive ? `${tColor}15` : 'transparent',
-                    border: `1px solid ${isActive ? tColor : COLORS.border}`,
-                    borderRadius: RADIUS.sm,
+                    padding: `${SPACE.md}px ${SPACE.lg}px`,
+                    background: 'transparent',
+                    border: 'none',
+                    borderBottom: `2px solid ${isActive ? tabColor : 'transparent'}`,
                     fontFamily: FONTS.mono,
-                    fontSize: 10,
-                    fontWeight: 600,
-                    letterSpacing: '0.08em',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
                     textTransform: 'uppercase' as const,
-                    color: isActive ? tColor : COLORS.textMuted,
+                    color: isActive ? tabColor : COLORS.textMuted,
                     cursor: 'pointer',
-                    whiteSpace: 'nowrap' as const,
+                    transition: `all ${MOTION.fast}s ease`,
                   }}
                 >
                   {tab}
-                  {tabCounts[tab] > 0 && (
-                    <span
-                      style={{
-                        padding: '1px 5px',
-                        background: isActive ? tColor : COLORS.border,
-                        borderRadius: RADIUS.full,
-                        fontSize: 9,
-                        fontWeight: 700,
-                        color: isActive ? '#fff' : COLORS.textMuted,
-                      }}
-                    >
-                      {tabCounts[tab]}
-                    </span>
-                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* Alert feed */}
+          {/* ── Alert feed ── */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: SPACE.sm,
-              padding: `${SPACE.sm}px ${SPACE.base}px ${SPACE.base}px`,
+              gap: SPACE.md,
+              padding: `${SPACE.lg}px ${SPACE.xl}px ${SPACE['2xl']}px`,
             }}
           >
-            {alerts.map((alert, idx) => {
-              const isAck = acknowledged.has(alert.id);
-              const isExp = expanded === alert.id;
-              const color = SEV_COLOR[alert.severity];
-              const bg = isAck ? COLORS.surface : SEV_BG[alert.severity];
+            {deskAlerts.map((alert, idx) => {
+              const isAck = alert.acknowledged;
+              const color = sevColor(alert.severity);
+              const tone = sevTone(alert.severity);
               const isFirstCrit = !isAck && alert.severity === 'critical' && idx === 0;
 
               return (
                 <motion.div
                   key={alert.id}
-                  initial={{ opacity: 0, y: 4 }}
+                  initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.02, duration: MOTION.fast }}
+                  transition={{ delay: idx * 0.03, duration: MOTION.fast }}
                   style={{
                     position: 'relative',
-                    background: bg,
-                    border: `1px solid ${isAck ? COLORS.border : `${color}30`}`,
-                    borderLeft: `3px solid ${isAck ? COLORS.border : color}`,
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderLeft: `4px solid ${isAck ? COLORS.border : color}`,
                     borderRadius: RADIUS.sm,
                     overflow: 'hidden',
-                    opacity: isAck ? 0.55 : 1,
+                    opacity: isAck ? 0.5 : 1,
                     transition: `opacity ${MOTION.base}s ease`,
+                    padding: `${SPACE.lg}px`,
                   }}
                 >
                   {isFirstCrit && <ScanningLine duration={4} />}
 
-                  <button
-                    onClick={() => setExpanded(isExp ? null : alert.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      width: '100%',
-                      gap: SPACE.sm,
-                      padding: `${SPACE.md}px`,
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      color: COLORS.textPrimary,
-                      outline: 'none',
-                    }}
-                  >
-                    {/* Category icon */}
+                  {/* Row 1: Severity badge + title */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+                    {isAck ? (
+                      <StatusPill label="ACKNOWLEDGED" tone="ok" />
+                    ) : (
+                      <StatusPill label={alert.severity.toUpperCase()} tone={tone} pulse={alert.severity === 'critical'} />
+                    )}
                     <div
                       style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: RADIUS.sm,
-                        background: `${color}15`,
-                        border: `1px solid ${color}30`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color,
-                        flexShrink: 0,
-                        marginTop: 1,
+                        fontFamily: FONTS.sans,
+                        fontSize: TYPE.body.size,
+                        fontWeight: 700,
+                        color: isAck ? COLORS.textMuted : COLORS.textPrimary,
+                        flex: 1,
                       }}
                     >
-                      {CAT_ICON[alert.category]}
+                      {alert.title}
                     </div>
+                  </div>
 
-                    {/* Content */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: 2 }}>
-                        <StatusPill
-                          label={alert.severity.toUpperCase()}
-                          tone={
-                            alert.severity === 'critical' ? 'crit'
-                            : alert.severity === 'warning' ? 'warn'
-                            : alert.severity === 'success' ? 'ok'
-                            : 'info'
-                          }
-                        />
-                        <Mono tone="muted" size="xs">{alert.source}</Mono>
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: TYPE.body.size,
-                          fontWeight: 600,
-                          color: isAck ? COLORS.textMuted : COLORS.textPrimary,
-                          marginBottom: 2,
-                        }}
-                      >
-                        {isAck && <CheckCircle2 size={12} color={COLORS.ok} style={{ marginRight: 4, verticalAlign: 'middle' }} />}
-                        {alert.title}
-                      </div>
-                      {alert.patientRef && (
-                        <Mono tone="secondary" size="xs">{alert.patientRef}</Mono>
+                  {/* Row 2: Description */}
+                  <div
+                    style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: TYPE.bodySm.size,
+                      color: COLORS.textSecondary,
+                      lineHeight: 1.55,
+                      marginBottom: SPACE.sm,
+                    }}
+                  >
+                    {alert.description}
+                  </div>
+
+                  {/* Row 3: Source + time */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginBottom: alert.patient || alert.escalation ? SPACE.sm : 0 }}>
+                    <Mono tone="muted" size="xs">Source: {alert.source}</Mono>
+                    <Mono tone="muted" size="xs">
+                      <Clock size={10} style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                      {timeLabel(alert.minutesAgo)}
+                    </Mono>
+                  </div>
+
+                  {/* Row 4: Patient info (if clinical) */}
+                  {alert.patient && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginBottom: alert.escalation ? SPACE.sm : 0 }}>
+                      <Mono tone="secondary" size="xs">
+                        Patient: {alert.patient} ({alert.mrn})
+                      </Mono>
+                      {alert.attending && (
+                        <Mono tone="secondary" size="xs">
+                          Attending: {alert.attending}
+                        </Mono>
                       )}
                     </div>
+                  )}
 
-                    {/* Time + chevron */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                      <Mono tone="muted" size="xs">{timeLabel(alert.minutesAgo)}</Mono>
-                      {isExp ? <ChevronUp size={12} color={COLORS.textMuted} /> : <ChevronDown size={12} color={COLORS.textMuted} />}
-                    </div>
-                  </button>
-
-                  {/* Expanded detail */}
-                  <AnimatePresence>
-                    {isExp && (
-                      <motion.div
-                        key={`exp-${alert.id}`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: MOTION.fast }}
-                        style={{ overflow: 'hidden' }}
+                  {/* Row 5: Escalation (if exists) */}
+                  {alert.escalation && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: !isAck ? SPACE.md : 0 }}>
+                      <ArrowUpRight size={11} color={COLORS.warn} style={{ flexShrink: 0 }} />
+                      <span
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: TYPE.bodySm.size,
+                          fontStyle: 'italic',
+                          color: COLORS.warn,
+                        }}
                       >
-                        <Divider />
-                        <div style={{ padding: `${SPACE.md}px`, display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
-                          <div
-                            style={{
-                              fontFamily: FONTS.sans,
-                              fontSize: TYPE.bodySm.size,
-                              color: COLORS.textSecondary,
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            {alert.description}
-                          </div>
+                        Escalation: {alert.escalation}
+                      </span>
+                    </div>
+                  )}
 
-                          {/* Action buttons */}
-                          <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
-                            {alert.actions.map((action) =>
-                              action === 'Acknowledge' ? (
-                                <TacticalButton
-                                  key={action}
-                                  variant="primary"
-                                  size="sm"
-                                  disabled={isAck}
-                                  icon={<CheckCircle2 size={12} />}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAck(alert.id);
-                                  }}
-                                >
-                                  {isAck ? 'Acknowledged' : 'Acknowledge'}
-                                </TacticalButton>
-                              ) : (
-                                <TacticalButton
-                                  key={action}
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    showToast(action);
-                                  }}
-                                >
-                                  {action}
-                                </TacticalButton>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Action buttons (hidden when acknowledged) */}
+                  {!isAck && (
+                    <div style={{ display: 'flex', gap: SPACE.sm, marginTop: SPACE.sm, paddingTop: SPACE.sm, borderTop: `1px solid ${COLORS.border}` }}>
+                      <TacticalButton
+                        variant="primary"
+                        size="sm"
+                        icon={<CheckCircle2 size={12} />}
+                        onClick={() => deskHandleAck(alert.id)}
+                      >
+                        ACKNOWLEDGE
+                      </TacticalButton>
+                      <TacticalButton
+                        variant="ghost"
+                        size="sm"
+                        icon={<ArrowUpRight size={12} />}
+                        onClick={() => deskHandleEscalate(alert.id)}
+                      >
+                        ESCALATE
+                      </TacticalButton>
+                      <TacticalButton
+                        variant="ghost"
+                        size="sm"
+                        icon={<Clock size={12} />}
+                        onClick={() => deskHandleSuppress(alert.id)}
+                      >
+                        SUPPRESS 30m
+                      </TacticalButton>
+                    </div>
+                  )}
                 </motion.div>
               );
             })}
 
-            {alerts.length === 0 && (
-              <div style={{ textAlign: 'center', padding: `${SPACE['2xl']}px` }}>
+            {deskAlerts.length === 0 && (
+              <div style={{ textAlign: 'center', padding: `${SPACE['3xl']}px` }}>
                 <Mono tone="muted" size="sm">No alerts match the current filter</Mono>
               </div>
             )}
