@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bed as BedIcon, User, AlertTriangle, Clock, Wrench,
   ChevronRight, ArrowUpRight, ShieldAlert, Truck, GripVertical,
-  ChevronDown, ChevronUp, RefreshCw,
+  ChevronDown, ChevronUp, RefreshCw, FileText,
 } from 'lucide-react';
 import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z } from '../design/tokens';
 import {
@@ -254,7 +254,8 @@ const BedTile: React.FC<{
 const BedPopover: React.FC<{
   bed: Bed;
   onClose: () => void;
-}> = ({ bed, onClose }) => {
+  onNavigateToPatient?: (patientId: string) => void;
+}> = ({ bed, onClose, onNavigateToPatient }) => {
   const color = STATE_COLOR[bed.state];
   return (
     <motion.div
@@ -351,9 +352,20 @@ const BedPopover: React.FC<{
             Assign Nurse
           </TacticalButton>
         )}
-        {bed.state === 'occupied' && (
+        {bed.state === 'occupied' && !onNavigateToPatient && (
           <TacticalButton variant="secondary" size="sm" fullWidth>
             View Patient
+          </TacticalButton>
+        )}
+        {bed.state === 'occupied' && onNavigateToPatient && (
+          <TacticalButton
+            variant="primary"
+            size="sm"
+            fullWidth
+            onClick={() => onNavigateToPatient(bed.mrn || bed.patientId || bed.id)}
+          >
+            <FileText size={14} style={{ marginRight: 6 }} />
+            OPEN CHART
           </TacticalButton>
         )}
       </div>
@@ -585,7 +597,8 @@ const FullMode: React.FC<{
   onClose: () => void;
   role?: UserRole;
   embedded?: boolean;
-}> = ({ units, surgeActive, onClose, role, embedded }) => {
+  onNavigateToPatient?: (patientId: string) => void;
+}> = ({ units, surgeActive, onClose, role, embedded, onNavigateToPatient }) => {
   const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
   // Role-aware default filter:
   //  - ER: default to showing occupied beds (ED focus on active patients)
@@ -1005,7 +1018,13 @@ const FullMode: React.FC<{
                           return (
                             <div
                               key={bed.id}
-                              onClick={() => setSelectedBed(bed)}
+                              onClick={() => {
+                                if (isOccupied && onNavigateToPatient && (bed.patientId || bed.mrn)) {
+                                  onNavigateToPatient(bed.mrn || bed.patientId || bed.id);
+                                } else {
+                                  setSelectedBed(bed);
+                                }
+                              }}
                               style={{
                                 display: 'grid',
                                 gridTemplateColumns: '28px 64px 1fr 72px 110px 110px 72px 40px 80px',
@@ -1403,6 +1422,7 @@ const FullMode: React.FC<{
                 key="popover"
                 bed={selectedBed}
                 onClose={() => setSelectedBed(null)}
+                onNavigateToPatient={onNavigateToPatient}
               />
             </>
           )}
@@ -1558,6 +1578,7 @@ const FullMode: React.FC<{
               key="popover"
               bed={selectedBed}
               onClose={() => setSelectedBed(null)}
+              onNavigateToPatient={onNavigateToPatient}
             />
           </>
         )}
@@ -1587,6 +1608,8 @@ export interface BedBoardProps {
   role?: UserRole;
   /** When true, renders as inline desktop layout instead of mobile overlay. */
   embedded?: boolean;
+  /** Callback when user clicks an occupied bed to navigate to a patient chart. */
+  onNavigateToPatient?: (patientId: string) => void;
 }
 
 export const BedBoard: React.FC<BedBoardProps> = ({
@@ -1598,6 +1621,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
   open = false,
   role,
   embedded,
+  onNavigateToPatient,
 }) => {
   if (display === 'card') {
     return (
@@ -1619,6 +1643,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
           onClose={onClose || (() => {})}
           role={role}
           embedded={embedded}
+          onNavigateToPatient={onNavigateToPatient}
         />
       )}
     </AnimatePresence>
