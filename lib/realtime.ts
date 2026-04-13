@@ -474,16 +474,23 @@ export function useRealtimeState<T>(
   }, [key]);
 
   const setAndPublish = (next: T | ((prev: T) => T)) => {
-    setValue((prev) => {
-      const resolved = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
-      store.cache.set(key, resolved);
-      // Notify other local subscribers on this device (multiple components
-      // sharing the same key). Each subscriber's setState is idempotent in
-      // React, so re-notifying our own setValue is fine.
-      store.cacheSubs.get(key)?.forEach((fn) => fn(resolved));
-      publish('state-update', resolved, key);
-      return resolved;
-    });
+    // Resolve value synchronously from our own cache (always up-to-date)
+    // instead of inside React's setValue callback. This avoids putting
+    // side-effects (publish) inside what React expects to be a pure updater.
+    const prev = (store.cache.has(key) ? store.cache.get(key) : value) as T;
+    const resolved = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
+
+    // 1. Update local cache (synchronous — subsequent calls see this immediately)
+    store.cache.set(key, resolved);
+
+    // 2. Set React state (batched by React, but that's fine — UI catches up)
+    setValue(resolved);
+
+    // 3. Notify other local subscribers sharing this key on the same device
+    store.cacheSubs.get(key)?.forEach((fn) => fn(resolved));
+
+    // 4. Broadcast to other devices — outside setState, guaranteed to fire
+    publish('state-update', resolved, key);
   };
 
   return [value, setAndPublish];
