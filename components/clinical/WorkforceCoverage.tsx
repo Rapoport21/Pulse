@@ -1,33 +1,28 @@
 /**
- * WorkforceCoverage — fullscreen overlay showing real-time staffing
- * and workforce coverage across all hospital units.
+ * WorkforceCoverage — Full-screen Staffing Command Center
  *
- * Core PULSE innovation (Bucket A): nothing in current hospital software
- * gives charge nurses and administrators a unified, real-time view of
- * staffing ratios, coverage gaps, float pool availability, and upcoming
- * shift change impact in a single tactical surface.
+ * Desktop drag-and-drop staffing board with:
+ *   - Top HudStrip: title, shift selector, summary stats
+ *   - Left column (~65%): Unit staffing grid with draggable staff chips
+ *   - Right column (~35%): Staff pool / roster / float pool
+ *   - Bottom strip: Coverage metrics, ratio compliance, overtime alerts
  *
- * Sections:
- *   1. Summary Hero      — total staff, avg ratio, coverage status, shift countdown
- *   2. Unit Staffing     — per-unit cards with role breakdown + coverage bars
- *   3. Role Breakdown    — horizontal bar chart of filled vs needed by role
- *   4. Call/Float Pool   — available float nurses and on-call staff
- *   5. Shift Changes     — upcoming shift transitions with net impact
- *   6. Filter Controls   — unit, role, gaps-only toggle
+ * All state is managed internally. Staff can be dragged between units
+ * and from the float pool using native HTML5 drag-and-drop with
+ * framer-motion animations for smooth transitions.
  */
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, DragEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  X, Users, AlertTriangle, Clock, Phone, ArrowRightLeft,
-  ChevronDown, ChevronUp, Filter, RefreshCw, Activity,
-  TrendingDown, TrendingUp, Shield, PhoneCall, PhoneOff, UserPlus,
+  Users, AlertTriangle, Clock, Search, Shield,
+  Activity, ArrowRightLeft, Phone, UserPlus,
+  GripVertical, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import {
-  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z, CHROME,
+  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION,
   Mono, BracketLabel, StatusPill, TacticalCard,
-  TacticalButton, HudStrip, ScanningLine, Divider,
-  ConfidenceBadge,
+  TacticalButton, HudStrip, Divider, CornerBracket,
 } from '../design';
 import { UserRole } from '../../types';
 
@@ -39,1653 +34,1036 @@ export interface WorkforceCoverageProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
-  /** Current user role — drives default unit filter and gaps-only toggle. */
   role?: UserRole;
-  /** When true, renders as inline desktop layout instead of mobile overlay. */
   embedded?: boolean;
 }
 
-type Role = 'RN' | 'MD' | 'RT' | 'Tech' | 'Charge';
-type CoverageStatus = 'ADEQUATE' | 'STRAINED' | 'CRITICAL';
-type FloatStatus = 'Available' | 'On-Call' | 'Called In' | 'En Route';
-type UnitFilter = 'ALL' | string;
+type StaffRole = 'RN' | 'LPN' | 'CNA' | 'MD' | 'PA' | 'RT' | 'TECH';
+type ShiftType = 'day' | 'night';
+type StaffStatus = 'on-duty' | 'on-call' | 'off' | 'float';
+type ShiftFilter = 'day' | 'night' | 'all';
 
-interface StaffCount { current: number; required: number; }
-interface UnitStaffing {
+interface StaffMember {
+  id: string;
+  name: string;
+  role: StaffRole;
+  unit: string | null;
+  shift: ShiftType;
+  status: StaffStatus;
+  certifications?: string[];
+  hoursWorked?: number;
+}
+
+interface UnitDef {
   id: string;
   name: string;
   floor: string;
-  patients: number;
+  required: Record<StaffRole, number>;
+  mandatedRatio: number;
   beds: number;
-  roles: Record<Role, StaffCount>;
-  nursePatientRatio: number;
-}
-interface FloatEntry {
-  id: string;
-  name: string;
-  credentials: string;
-  specialty: string;
-  status: FloatStatus;
-}
-interface ShiftUnit {
-  name: string;
-  incoming: number;
-  outgoing: number;
-  gapAfter: number;
-}
-interface ShiftChange {
-  time: string;
-  label: string;
-  units: ShiftUnit[];
+  patients: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// Mock data
+// Role colors
 // ─────────────────────────────────────────────────────────────────────────
 
-const UNITS: UnitStaffing[] = [
-  { id: 'ed-trauma', name: 'ED-Trauma', floor: '1F', patients: 8, beds: 10, nursePatientRatio: 2.0,
-    roles: { RN: { current: 4, required: 4 }, MD: { current: 2, required: 2 }, RT: { current: 1, required: 1 }, Tech: { current: 2, required: 2 }, Charge: { current: 1, required: 1 } } },
-  { id: 'ed-acute', name: 'ED-Acute', floor: '1F', patients: 18, beds: 22, nursePatientRatio: 4.5,
-    roles: { RN: { current: 4, required: 5 }, MD: { current: 2, required: 2 }, RT: { current: 1, required: 1 }, Tech: { current: 1, required: 2 }, Charge: { current: 1, required: 1 } } },
-  { id: 'ed-fast', name: 'ED-Fast Track', floor: '1F', patients: 6, beds: 8, nursePatientRatio: 3.0,
-    roles: { RN: { current: 2, required: 2 }, MD: { current: 1, required: 1 }, RT: { current: 0, required: 0 }, Tech: { current: 1, required: 1 }, Charge: { current: 0, required: 0 } } },
-  { id: 'icu', name: 'ICU', floor: '3F', patients: 12, beds: 14, nursePatientRatio: 2.0,
-    roles: { RN: { current: 6, required: 6 }, MD: { current: 2, required: 2 }, RT: { current: 2, required: 2 }, Tech: { current: 1, required: 1 }, Charge: { current: 1, required: 1 } } },
-  { id: 'stepdown', name: 'Stepdown', floor: '3F', patients: 10, beds: 12, nursePatientRatio: 3.3,
-    roles: { RN: { current: 3, required: 4 }, MD: { current: 1, required: 1 }, RT: { current: 1, required: 1 }, Tech: { current: 1, required: 1 }, Charge: { current: 1, required: 1 } } },
-  { id: 'medsurg-2w', name: 'Med-Surg 2W', floor: '2F', patients: 24, beds: 28, nursePatientRatio: 6.0,
-    roles: { RN: { current: 4, required: 5 }, MD: { current: 1, required: 1 }, RT: { current: 0, required: 1 }, Tech: { current: 2, required: 2 }, Charge: { current: 1, required: 1 } } },
-  { id: 'medsurg-3e', name: 'Med-Surg 3E', floor: '3F', patients: 20, beds: 26, nursePatientRatio: 5.0,
-    roles: { RN: { current: 4, required: 5 }, MD: { current: 1, required: 1 }, RT: { current: 1, required: 1 }, Tech: { current: 2, required: 2 }, Charge: { current: 1, required: 1 } } },
-];
-
-const FLOAT_POOL: FloatEntry[] = [
-  { id: 'f1', name: 'M. Torres', credentials: 'RN, BSN', specialty: 'Med-Surg', status: 'Available' },
-  { id: 'f2', name: 'J. Kim', credentials: 'RN, BSN', specialty: 'ICU', status: 'Available' },
-  { id: 'f3', name: 'R. Patel', credentials: 'RN, BSN', specialty: 'ED', status: 'On-Call' },
-  { id: 'f4', name: 'A. Washington', credentials: 'RT', specialty: 'Respiratory', status: 'On-Call' },
-  { id: 'f5', name: 'L. Chen', credentials: 'RN, BSN', specialty: 'Stepdown', status: 'Called In' },
-  { id: 'f6', name: 'D. Okafor', credentials: 'RN, MSN', specialty: 'ED', status: 'En Route' },
-];
-
-const SHIFT_CHANGES: ShiftChange[] = [
-  { time: '19:00', label: 'Evening Shift', units: [
-    { name: 'ED-Trauma', incoming: 4, outgoing: 5, gapAfter: 1 },
-    { name: 'ED-Acute', incoming: 3, outgoing: 4, gapAfter: 2 },
-    { name: 'ICU', incoming: 6, outgoing: 6, gapAfter: 0 },
-    { name: 'Stepdown', incoming: 3, outgoing: 3, gapAfter: 1 },
-    { name: 'Med-Surg 2W', incoming: 4, outgoing: 4, gapAfter: 2 },
-    { name: 'Med-Surg 3E', incoming: 4, outgoing: 5, gapAfter: 1 },
-  ]},
-  { time: '07:00', label: 'Day Shift', units: [
-    { name: 'ED-Trauma', incoming: 5, outgoing: 4, gapAfter: 0 },
-    { name: 'ED-Acute', incoming: 5, outgoing: 3, gapAfter: 0 },
-    { name: 'ICU', incoming: 6, outgoing: 6, gapAfter: 0 },
-    { name: 'Stepdown', incoming: 4, outgoing: 3, gapAfter: 0 },
-    { name: 'Med-Surg 2W', incoming: 5, outgoing: 4, gapAfter: 0 },
-    { name: 'Med-Surg 3E', incoming: 5, outgoing: 4, gapAfter: 0 },
-  ]},
-];
-
-const ALL_ROLES: Role[] = ['RN', 'MD', 'RT', 'Tech', 'Charge'];
-
-/** Call-in / call-off tracker entries (desktop embedded only) */
-interface CallEvent {
-  id: string;
-  name: string;
-  type: 'call-in' | 'call-off';
-  role: Role;
-  unit: string;
-  time: string;
-}
-
-const CALL_EVENTS: CallEvent[] = [
-  { id: 'ce1', name: 'T. Rivera', type: 'call-off', role: 'RN', unit: 'ED-Acute', time: '14:22' },
-  { id: 'ce2', name: 'S. Nguyen', type: 'call-in', role: 'RN', unit: 'Med-Surg 2W', time: '14:45' },
-  { id: 'ce3', name: 'P. Martinez', type: 'call-off', role: 'Tech', unit: 'Stepdown', time: '15:01' },
-  { id: 'ce4', name: 'K. Abrams', type: 'call-in', role: 'RT', unit: 'ICU', time: '15:18' },
-  { id: 'ce5', name: 'W. Johnson', type: 'call-off', role: 'RN', unit: 'Med-Surg 3E', time: '15:30' },
-];
-
-/** State-mandated nurse-to-patient ratio limits by unit type */
-const MANDATED_RATIOS: Record<string, number> = {
-  'ED-Trauma': 2.0,
-  'ED-Acute': 4.0,
-  'ED-Fast Track': 4.0,
-  'ICU': 2.0,
-  'Stepdown': 3.0,
-  'Med-Surg 2W': 5.0,
-  'Med-Surg 3E': 5.0,
+const ROLE_COLORS: Record<StaffRole, string> = {
+  RN: '#3B82F6',   // blue
+  LPN: '#8B5CF6',  // violet
+  CNA: '#10B981',  // emerald
+  MD: '#E11D48',   // rose (accent)
+  PA: '#F59E0B',   // amber
+  RT: '#06B6D4',   // cyan
+  TECH: '#6B7280', // gray
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Mock data — Units
+// ─────────────────────────────────────────────────────────────────────────
+
+const UNITS: UnitDef[] = [
+  { id: 'ed-trauma', name: 'ED-Trauma', floor: '1F', beds: 10, patients: 8, mandatedRatio: 2.0,
+    required: { RN: 4, LPN: 0, CNA: 1, MD: 2, PA: 0, RT: 1, TECH: 2 } },
+  { id: 'ed-acute', name: 'ED-Acute', floor: '1F', beds: 22, patients: 18, mandatedRatio: 4.0,
+    required: { RN: 5, LPN: 1, CNA: 2, MD: 2, PA: 1, RT: 1, TECH: 2 } },
+  { id: 'ed-fast', name: 'ED-Fast Track', floor: '1F', beds: 8, patients: 6, mandatedRatio: 4.0,
+    required: { RN: 2, LPN: 0, CNA: 1, MD: 1, PA: 1, RT: 0, TECH: 1 } },
+  { id: 'icu', name: 'ICU', floor: '3F', beds: 14, patients: 12, mandatedRatio: 2.0,
+    required: { RN: 6, LPN: 0, CNA: 2, MD: 2, PA: 0, RT: 2, TECH: 1 } },
+  { id: 'stepdown', name: 'Stepdown', floor: '3F', beds: 12, patients: 10, mandatedRatio: 3.0,
+    required: { RN: 4, LPN: 1, CNA: 1, MD: 1, PA: 0, RT: 1, TECH: 1 } },
+  { id: 'medsurg-2w', name: 'Med-Surg 2W', floor: '2F', beds: 28, patients: 24, mandatedRatio: 5.0,
+    required: { RN: 5, LPN: 2, CNA: 2, MD: 1, PA: 1, RT: 1, TECH: 2 } },
+  { id: 'medsurg-3e', name: 'Med-Surg 3E', floor: '3F', beds: 26, patients: 20, mandatedRatio: 5.0,
+    required: { RN: 5, LPN: 1, CNA: 2, MD: 1, PA: 0, RT: 1, TECH: 2 } },
+];
+
+// ─────────────────────────────────────────────────────────────────────────
+// Mock data — Staff (~28 members)
+// ─────────────────────────────────────────────────────────────────────────
+
+const INITIAL_STAFF: StaffMember[] = [
+  // ED-Trauma
+  { id: 's01', name: 'S. Jenkins', role: 'RN', unit: 'ed-trauma', shift: 'day', status: 'on-duty', certifications: ['TNCC', 'BLS'], hoursWorked: 8.5 },
+  { id: 's02', name: 'M. Chang', role: 'RN', unit: 'ed-trauma', shift: 'day', status: 'on-duty', certifications: ['BLS'], hoursWorked: 4.0 },
+  { id: 's03', name: 'Dr. E. Chen', role: 'MD', unit: 'ed-trauma', shift: 'day', status: 'on-duty', hoursWorked: 10.2 },
+  { id: 's04', name: 'Dr. A. Patel', role: 'MD', unit: 'ed-trauma', shift: 'day', status: 'on-duty', hoursWorked: 6.0 },
+  { id: 's05', name: 'T. Brooks', role: 'TECH', unit: 'ed-trauma', shift: 'day', status: 'on-duty', hoursWorked: 7.0 },
+  { id: 's06', name: 'J. Rivera', role: 'RT', unit: 'ed-trauma', shift: 'day', status: 'on-duty', hoursWorked: 5.5 },
+
+  // ED-Acute
+  { id: 's07', name: 'K. Williams', role: 'RN', unit: 'ed-acute', shift: 'day', status: 'on-duty', certifications: ['BLS', 'ACLS'], hoursWorked: 6.0 },
+  { id: 's08', name: 'P. Gonzalez', role: 'RN', unit: 'ed-acute', shift: 'day', status: 'on-duty', hoursWorked: 3.5 },
+  { id: 's09', name: 'R. Thompson', role: 'RN', unit: 'ed-acute', shift: 'day', status: 'on-duty', hoursWorked: 7.0 },
+  { id: 's10', name: 'Dr. J. Lee', role: 'MD', unit: 'ed-acute', shift: 'day', status: 'on-duty', hoursWorked: 9.0 },
+  { id: 's11', name: 'N. Harris', role: 'PA', unit: 'ed-acute', shift: 'day', status: 'on-duty', hoursWorked: 4.5 },
+  { id: 's12', name: 'C. Davis', role: 'CNA', unit: 'ed-acute', shift: 'day', status: 'on-duty', hoursWorked: 5.0 },
+
+  // ICU
+  { id: 's13', name: 'A. Foster', role: 'RN', unit: 'icu', shift: 'day', status: 'on-duty', certifications: ['CCRN', 'BLS'], hoursWorked: 8.0 },
+  { id: 's14', name: 'L. Martinez', role: 'RN', unit: 'icu', shift: 'day', status: 'on-duty', certifications: ['CCRN'], hoursWorked: 6.5 },
+  { id: 's15', name: 'B. Nguyen', role: 'RN', unit: 'icu', shift: 'day', status: 'on-duty', hoursWorked: 4.0 },
+  { id: 's16', name: 'Dr. R. Smith', role: 'MD', unit: 'icu', shift: 'day', status: 'on-duty', hoursWorked: 11.0 },
+  { id: 's17', name: 'W. Johnson', role: 'RT', unit: 'icu', shift: 'day', status: 'on-duty', hoursWorked: 7.5 },
+
+  // Stepdown
+  { id: 's18', name: 'D. Clark', role: 'RN', unit: 'stepdown', shift: 'day', status: 'on-duty', hoursWorked: 5.0 },
+  { id: 's19', name: 'H. Anderson', role: 'RN', unit: 'stepdown', shift: 'day', status: 'on-duty', hoursWorked: 3.0 },
+  { id: 's20', name: 'Dr. F. Okafor', role: 'MD', unit: 'stepdown', shift: 'day', status: 'on-duty', hoursWorked: 8.0 },
+
+  // Med-Surg 2W
+  { id: 's21', name: 'G. Taylor', role: 'RN', unit: 'medsurg-2w', shift: 'day', status: 'on-duty', hoursWorked: 6.5 },
+  { id: 's22', name: 'E. White', role: 'RN', unit: 'medsurg-2w', shift: 'day', status: 'on-duty', hoursWorked: 4.0 },
+  { id: 's23', name: 'I. Brown', role: 'LPN', unit: 'medsurg-2w', shift: 'day', status: 'on-duty', hoursWorked: 7.0 },
+
+  // Med-Surg 3E
+  { id: 's24', name: 'V. Moore', role: 'RN', unit: 'medsurg-3e', shift: 'day', status: 'on-duty', hoursWorked: 5.5 },
+  { id: 's25', name: 'O. Jackson', role: 'RN', unit: 'medsurg-3e', shift: 'day', status: 'on-duty', hoursWorked: 3.0 },
+  { id: 's26', name: 'Y. Kim', role: 'CNA', unit: 'medsurg-3e', shift: 'day', status: 'on-duty', hoursWorked: 6.0 },
+
+  // Float / unassigned
+  { id: 's27', name: 'M. Torres', role: 'RN', unit: null, shift: 'day', status: 'float', certifications: ['BLS', 'ACLS'], hoursWorked: 0 },
+  { id: 's28', name: 'J. Kim', role: 'RN', unit: null, shift: 'day', status: 'float', certifications: ['CCRN'], hoursWorked: 0 },
+  { id: 's29', name: 'R. Patel', role: 'RN', unit: null, shift: 'night', status: 'on-call', certifications: ['BLS'], hoursWorked: 0 },
+  { id: 's30', name: 'A. Washington', role: 'RT', unit: null, shift: 'night', status: 'on-call', hoursWorked: 0 },
+  { id: 's31', name: 'L. Chen', role: 'LPN', unit: null, shift: 'day', status: 'float', hoursWorked: 0 },
+];
 
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
 
-function unitGap(u: UnitStaffing): number {
-  return ALL_ROLES.reduce((sum, r) => sum + Math.max(0, u.roles[r].required - u.roles[r].current), 0);
+const ALL_ROLES: StaffRole[] = ['RN', 'LPN', 'CNA', 'MD', 'PA', 'RT', 'TECH'];
+
+function unitGap(unit: UnitDef, staff: StaffMember[]): number {
+  const assigned = staff.filter(s => s.unit === unit.id);
+  return ALL_ROLES.reduce((sum, r) => {
+    const current = assigned.filter(s => s.role === r).length;
+    return sum + Math.max(0, unit.required[r] - current);
+  }, 0);
 }
 
-function coverageStatus(units: UnitStaffing[]): CoverageStatus {
-  const totalGap = units.reduce((s, u) => s + unitGap(u), 0);
-  if (totalGap === 0) return 'ADEQUATE';
-  if (totalGap <= 4) return 'STRAINED';
-  return 'CRITICAL';
+function unitCurrent(unit: UnitDef, staff: StaffMember[]): number {
+  return staff.filter(s => s.unit === unit.id).length;
 }
 
-function coverageTone(s: CoverageStatus): 'ok' | 'warn' | 'crit' {
-  return s === 'ADEQUATE' ? 'ok' : s === 'STRAINED' ? 'warn' : 'crit';
+function unitRequired(unit: UnitDef): number {
+  return ALL_ROLES.reduce((s, r) => s + unit.required[r], 0);
 }
 
-function ratioTone(ratio: number): 'ok' | 'warn' | 'crit' {
-  if (ratio <= 4) return 'ok';
-  if (ratio <= 5) return 'warn';
-  return 'crit';
-}
-
-function ratioColor(ratio: number): string {
-  const t = ratioTone(ratio);
-  return t === 'ok' ? COLORS.ok : t === 'warn' ? COLORS.warn : COLORS.crit;
-}
-
-function coveragePercent(u: UnitStaffing): number {
-  const req = ALL_ROLES.reduce((s, r) => s + u.roles[r].required, 0);
+function coveragePct(unit: UnitDef, staff: StaffMember[]): number {
+  const req = unitRequired(unit);
   if (req === 0) return 100;
-  const cur = ALL_ROLES.reduce((s, r) => s + Math.min(u.roles[r].current, u.roles[r].required), 0);
+  const cur = Math.min(unitCurrent(unit, staff), req);
   return Math.round((cur / req) * 100);
 }
 
-function statusDotColor(s: FloatStatus): string {
-  if (s === 'Available') return COLORS.ok;
-  if (s === 'On-Call') return COLORS.warn;
-  if (s === 'Called In') return COLORS.info;
-  return '#A855F7';
+function gapTone(gap: number): 'ok' | 'warn' | 'crit' {
+  if (gap === 0) return 'ok';
+  if (gap <= 2) return 'warn';
+  return 'crit';
+}
+
+function gapColor(gap: number): string {
+  const t = gapTone(gap);
+  return t === 'ok' ? COLORS.ok : t === 'warn' ? COLORS.warn : COLORS.crit;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({ open, onClose, showToast, role, embedded }) => {
-  // Role-aware defaults:
-  //  - Manager: see all units, all roles (full staffing dashboard)
-  //  - Nurse: default to RN role filter, gaps-only on (what needs attention now)
-  //  - ER: filter to ED-Trauma unit (trauma bay focus)
-  const defaultUnitFilter: UnitFilter =
-    role === UserRole.ER_PERSONNEL ? 'ed-trauma' : 'ALL';
-  const defaultRoleFilter: Role | 'ALL' =
-    role === UserRole.NURSE ? 'RN' : 'ALL';
-  const defaultGapsOnly = role === UserRole.NURSE;
+export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
+  open,
+  onClose,
+  showToast,
+  role,
+  embedded,
+}) => {
+  const [staff, setStaff] = useState<StaffMember[]>(INITIAL_STAFF);
+  const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [rosterExpanded, setRosterExpanded] = useState(false);
 
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>(defaultUnitFilter);
-  const [roleFilter, setRoleFilter] = useState<Role | 'ALL'>(defaultRoleFilter);
-  const [gapsOnly, setGapsOnly] = useState(defaultGapsOnly);
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  // Filtered staff by shift
+  const filteredStaff = useMemo(() => {
+    if (shiftFilter === 'all') return staff;
+    return staff.filter(s => s.shift === shiftFilter);
+  }, [staff, shiftFilter]);
 
-  const toggleSection = (s: string) => setExpandedSection(prev => prev === s ? null : s);
-
-  // ── Derived data ──────────────────────────────────────────────────────
-  const filteredUnits = useMemo(() => {
-    let result = UNITS;
-    if (unitFilter !== 'ALL') result = result.filter(u => u.id === unitFilter);
-    if (gapsOnly) result = result.filter(u => unitGap(u) > 0);
-    return result;
-  }, [unitFilter, gapsOnly]);
-
-  const totalStaff = UNITS.reduce((s, u) => s + ALL_ROLES.reduce((rs, r) => rs + u.roles[r].current, 0), 0);
-  const totalPatients = UNITS.reduce((s, u) => s + u.patients, 0);
-  const avgRatio = totalPatients > 0
-    ? (totalPatients / UNITS.reduce((s, u) => s + u.roles.RN.current, 0)).toFixed(1)
-    : '0';
-  const status = coverageStatus(UNITS);
-  const tone = coverageTone(status);
-
-  // Aggregate role breakdown
-  const roleAgg = useMemo(() => ALL_ROLES.map(r => ({
-    role: r,
-    current: UNITS.reduce((s, u) => s + u.roles[r].current, 0),
-    required: UNITS.reduce((s, u) => s + u.roles[r].required, 0),
-  })), []);
-
-  // ── Handlers ──────────────────────────────────────────────────────────
-  const handleCallIn = (entry: FloatEntry) => {
-    showToast(`Paging ${entry.name} (${entry.credentials}) — call-in initiated`);
-  };
-
-  const handleReassign = (entry: FloatEntry) => {
-    showToast(`Float reassignment initiated for ${entry.name}`);
-  };
-
-  // ── Render: Summary Hero ──────────────────────────────────────────────
-  const renderHero = () => (
-    <div style={{ padding: `${SPACE.base}px ${SPACE.base}px 0` }}>
-      <TacticalCard padding="lg">
-        <ScanningLine duration={18} />
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md, marginBottom: SPACE.md }}>
-          <span style={{
-            fontFamily: FONTS.sans, fontSize: 48, fontWeight: 600,
-            letterSpacing: '-0.04em', lineHeight: 0.9,
-            color: COLORS.textPrimary,
-          }}>
-            {totalStaff}
-          </span>
-          <Mono tone="muted" size="sm">STAFF ON SHIFT</Mono>
-        </div>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE.md, marginBottom: SPACE.md }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-            <Mono tone="muted" size="xs">RATIO</Mono>
-            <span style={{ fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary }}>
-              1:{avgRatio}
-            </span>
-            <Mono tone="muted" size="xs">AVG NURSE:PT</Mono>
-          </div>
-        </div>
-
-        <Divider style={{ margin: `${SPACE.sm}px 0` }} />
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACE.md }}>
-          <StatusPill label={status} tone={tone} pulse={status !== 'ADEQUATE'} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-            <Clock size={12} color={COLORS.textMuted} />
-            <Mono tone="secondary" size="xs">NEXT SHIFT 19:00 (3H 22M)</Mono>
-          </div>
-        </div>
-      </TacticalCard>
-    </div>
+  // Float pool + on-call
+  const floatPool = useMemo(
+    () => filteredStaff.filter(s => s.unit === null && (s.status === 'float' || s.status === 'on-call')),
+    [filteredStaff],
   );
 
-  // ── Render: Filter Controls ───────────────────────────────────────────
-  const renderFilters = () => (
-    <div style={{ padding: `${SPACE.md}px ${SPACE.base}px`, display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-        <Filter size={12} color={COLORS.textMuted} />
-        <Mono tone="muted" size="xs">FILTERS</Mono>
-      </div>
+  // Roster search
+  const rosterResults = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    if (!q) return filteredStaff;
+    return filteredStaff.filter(
+      s => s.name.toLowerCase().includes(q) || s.role.toLowerCase().includes(q) || s.id.toLowerCase().includes(q),
+    );
+  }, [filteredStaff, searchQuery]);
 
-      {/* Unit filter */}
-      <div style={{ display: 'flex', gap: SPACE.xs, flexWrap: 'wrap' }}>
-        {['ALL', ...UNITS.map(u => u.id)].map(id => {
-          const isActive = unitFilter === id;
-          const label = id === 'ALL' ? 'ALL' : UNITS.find(u => u.id === id)?.name ?? id;
-          return (
-            <button key={id} onClick={() => setUnitFilter(id)}
-              style={{
-                padding: `3px ${SPACE.sm}px`, background: isActive ? `${COLORS.accent}20` : 'transparent',
-                border: `1px solid ${isActive ? COLORS.accent : COLORS.border}`, borderRadius: RADIUS.sm,
-                cursor: 'pointer',
-              }}>
-              <span style={{
-                fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-                letterSpacing: '0.1em', color: isActive ? COLORS.accent : COLORS.textMuted,
-                textTransform: 'uppercase',
-              }}>{label}</span>
-            </button>
-          );
-        })}
-      </div>
+  // Summary stats
+  const totalOnDuty = filteredStaff.filter(s => s.status === 'on-duty').length;
+  const totalFloat = floatPool.filter(s => s.status === 'float').length;
+  const totalOnCall = floatPool.filter(s => s.status === 'on-call').length;
+  const totalGaps = UNITS.reduce((s, u) => s + unitGap(u, filteredStaff), 0);
+  const overtimeStaff = filteredStaff.filter(s => (s.hoursWorked ?? 0) > 10);
 
-      {/* Role filter + gaps toggle */}
-      <div style={{ display: 'flex', gap: SPACE.xs, flexWrap: 'wrap', alignItems: 'center' }}>
-        {(['ALL', ...ALL_ROLES] as const).map(r => {
-          const isActive = roleFilter === r;
-          return (
-            <button key={r} onClick={() => setRoleFilter(r)}
-              style={{
-                padding: `3px ${SPACE.sm}px`, background: isActive ? `${COLORS.info}20` : 'transparent',
-                border: `1px solid ${isActive ? COLORS.info : COLORS.border}`, borderRadius: RADIUS.sm,
-                cursor: 'pointer',
-              }}>
-              <span style={{
-                fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-                letterSpacing: '0.1em', color: isActive ? COLORS.info : COLORS.textMuted,
-                textTransform: 'uppercase',
-              }}>{r}</span>
-            </button>
-          );
-        })}
+  // Coverage compliance
+  const unitsCompliant = UNITS.filter(u => unitGap(u, filteredStaff) === 0).length;
+  const ratioViolations = UNITS.filter(u => {
+    const rns = filteredStaff.filter(s => s.unit === u.id && s.role === 'RN').length;
+    return rns > 0 && (u.patients / rns) > u.mandatedRatio;
+  }).length;
+
+  // ── Drag handlers ──────────────────────────────────────────────────────
+
+  const handleDragStart = useCallback((e: DragEvent<HTMLDivElement>, staffId: string) => {
+    e.dataTransfer.setData('text/plain', staffId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedId(staffId);
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>, unitId: string | null) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTarget(unitId);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDropTarget(null);
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>, targetUnitId: string | null) => {
+    e.preventDefault();
+    const staffId = e.dataTransfer.getData('text/plain');
+    if (!staffId) return;
+
+    setStaff(prev => prev.map(s => {
+      if (s.id !== staffId) return s;
+      const newStatus: StaffStatus = targetUnitId ? 'on-duty' : 'float';
+      return { ...s, unit: targetUnitId, status: newStatus };
+    }));
+
+    const member = staff.find(s => s.id === staffId);
+    const targetName = targetUnitId
+      ? UNITS.find(u => u.id === targetUnitId)?.name ?? targetUnitId
+      : 'Float Pool';
+    if (member) {
+      showToast(`${member.name} assigned to ${targetName}`);
+    }
+
+    setDraggedId(null);
+    setDropTarget(null);
+  }, [staff, showToast]);
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setDropTarget(null);
+  }, []);
+
+  if (!open && !embedded) return null;
+
+  // ── Render ─────────────────────────────────────────────────────────────
+
+  return (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      background: COLORS.bg,
+      overflow: 'hidden',
+    }}>
+      {/* ── Top HudStrip ─────────────────────────────────────────────── */}
+      <HudStrip side="top" height={48}>
+        <BracketLabel tone="accent" size="sm">STAFFING COMMAND</BracketLabel>
 
         <div style={{ flex: 1 }} />
 
-        <button onClick={() => setGapsOnly(g => !g)}
-          style={{
-            padding: `3px ${SPACE.sm}px`,
-            background: gapsOnly ? `${COLORS.crit}20` : 'transparent',
-            border: `1px solid ${gapsOnly ? COLORS.crit : COLORS.border}`,
-            borderRadius: RADIUS.sm, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-          <AlertTriangle size={9} color={gapsOnly ? COLORS.crit : COLORS.textMuted} />
-          <span style={{
-            fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-            letterSpacing: '0.1em', color: gapsOnly ? COLORS.crit : COLORS.textMuted,
-          }}>GAPS ONLY</span>
-        </button>
-      </div>
-    </div>
-  );
-
-  // ── Render: Unit Staffing Cards ───────────────────────────────────────
-  const renderUnitCards = () => (
-    <div style={{ padding: `0 ${SPACE.base}px`, display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.xs }}>
-        <BracketLabel tone="accent" size="xs">UNIT STAFFING</BracketLabel>
-        <Mono tone="muted" size="xs">{filteredUnits.length} UNITS</Mono>
-      </div>
-
-      {filteredUnits.map(unit => {
-        const gap = unitGap(unit);
-        const covPct = coveragePercent(unit);
-        const rTone = ratioTone(unit.nursePatientRatio);
-        const accentColor = gap > 0 ? (gap >= 3 ? COLORS.crit : COLORS.warn) : COLORS.ok;
-        const visibleRoles = roleFilter === 'ALL' ? ALL_ROLES : ALL_ROLES.filter(r => r === roleFilter);
-
-        return (
-          <TacticalCard key={unit.id} padding="md" style={{
-            borderLeft: `3px solid ${accentColor}`,
-          }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
-              <div>
-                <span style={{
-                  fontFamily: FONTS.sans, fontSize: TYPE.h4.size, fontWeight: TYPE.h4.weight,
-                  color: COLORS.textPrimary,
-                }}>{unit.name}</span>
-                <Mono tone="muted" size="xs" style={{ marginLeft: SPACE.sm }}>{unit.floor}</Mono>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                {gap > 0 && (
-                  <span style={{
-                    padding: `1px ${SPACE.sm}px`, background: `${COLORS.crit}20`,
-                    border: `1px solid ${COLORS.crit}40`, borderRadius: RADIUS.sm,
-                    fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600,
-                    letterSpacing: '0.1em', color: COLORS.crit,
-                  }}>GAP -{gap}</span>
-                )}
-                <StatusPill label={`1:${unit.nursePatientRatio.toFixed(1)}`} tone={rTone} size="xs" />
-              </div>
-            </div>
-
-            {/* Patient load */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-              <Mono tone="muted" size="xs">PATIENTS</Mono>
-              <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>
-                {unit.patients}/{unit.beds}
-              </span>
-              <Mono tone="muted" size="xs">BEDS</Mono>
-            </div>
-
-            {/* Role counts */}
-            <div style={{ display: 'flex', gap: SPACE.md, flexWrap: 'wrap', marginBottom: SPACE.md }}>
-              {visibleRoles.filter(r => unit.roles[r].required > 0).map(r => {
-                const s = unit.roles[r];
-                const short = s.current < s.required;
-                return (
-                  <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{
-                      fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-                      letterSpacing: '0.1em', color: COLORS.textMuted,
-                    }}>{r}</span>
-                    <span style={{
-                      fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
-                      color: short ? COLORS.crit : COLORS.ok,
-                    }}>{s.current}/{s.required}</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Coverage bar */}
-            <div style={{ position: 'relative', height: 4, background: `${COLORS.crit}30`, borderRadius: RADIUS.full, overflow: 'hidden' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${covPct}%` }}
-                transition={{ duration: MOTION.base, ease: MOTION.ease }}
+        {/* Shift selector */}
+        <div style={{ display: 'flex', gap: 2 }}>
+          {(['day', 'night', 'all'] as ShiftFilter[]).map(s => {
+            const active = shiftFilter === s;
+            return (
+              <button
+                key={s}
+                onClick={() => setShiftFilter(s)}
                 style={{
-                  position: 'absolute', top: 0, left: 0, bottom: 0,
-                  background: covPct === 100 ? COLORS.ok : covPct >= 80 ? COLORS.warn : COLORS.crit,
-                  borderRadius: RADIUS.full,
+                  padding: `3px ${SPACE.sm}px`,
+                  background: active ? `${COLORS.accent}20` : 'transparent',
+                  border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  cursor: 'pointer',
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase' as const,
+                  color: active ? COLORS.accent : COLORS.textMuted,
+                  transition: `all ${MOTION.fast}s ease`,
                 }}
-              />
-            </div>
-            <Mono tone="muted" size="xs" style={{ marginTop: SPACE.xs, display: 'block' }}>
-              {covPct}% COVERAGE
-            </Mono>
-          </TacticalCard>
-        );
-      })}
-
-      {filteredUnits.length === 0 && (
-        <div style={{ textAlign: 'center', padding: SPACE['2xl'] }}>
-          <Mono tone="muted">NO UNITS MATCH FILTERS</Mono>
+              >
+                {s}
+              </button>
+            );
+          })}
         </div>
-      )}
-    </div>
-  );
 
-  // ── Render: Role Breakdown ────────────────────────────────────────────
-  const renderRoleBreakdown = () => {
-    const isOpen = expandedSection === 'roles';
-    return (
-      <div style={{ padding: `0 ${SPACE.base}px` }}>
-        <button onClick={() => toggleSection('roles')} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
-        }}>
-          <BracketLabel tone="accent" size="xs">ROLE BREAKDOWN</BracketLabel>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
-        </button>
+        <Divider variant="solid" color={COLORS.border} style={{ width: 1, height: 24, borderTop: 'none', borderLeft: `1px solid ${COLORS.border}` }} />
 
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: MOTION.fast }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, paddingBottom: SPACE.base }}>
-                {roleAgg.map(({ role, current, required }) => {
-                  const gap = Math.max(0, required - current);
-                  const pct = required > 0 ? Math.min(100, Math.round((current / required) * 100)) : 100;
-                  const barTone = gap === 0 ? COLORS.ok : gap === 1 ? COLORS.warn : COLORS.crit;
-                  return (
-                    <div key={role}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <Mono tone="secondary" size="xs">{role}</Mono>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                          <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: barTone }}>
-                            {current}/{required}
-                          </span>
-                          {gap > 0 && (
-                            <span style={{
-                              fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600, color: COLORS.crit,
-                              padding: `0 4px`, background: `${COLORS.crit}18`, borderRadius: RADIUS.sm,
-                            }}>-{gap}</span>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ position: 'relative', height: 6, background: `${COLORS.border}`, borderRadius: RADIUS.full, overflow: 'hidden' }}>
-                        <div style={{
-                          position: 'absolute', top: 0, left: 0, bottom: 0,
-                          width: `${pct}%`, background: barTone, borderRadius: RADIUS.full,
-                          transition: `width ${MOTION.base}s ease`,
-                        }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
+        {/* Summary stats in header */}
+        <div style={{ display: 'flex', gap: SPACE.lg, alignItems: 'center' }}>
+          <StatChip label="ON DUTY" value={totalOnDuty} tone="ok" />
+          <StatChip label="FLOAT" value={totalFloat} tone="info" />
+          <StatChip label="ON-CALL" value={totalOnCall} tone="warn" />
+          <StatChip label="GAPS" value={totalGaps} tone={totalGaps > 0 ? 'crit' : 'ok'} />
+        </div>
+      </HudStrip>
 
-  // ── Render: Float Pool ────────────────────────────────────────────────
-  const renderFloatPool = () => {
-    const isOpen = expandedSection === 'float';
-    return (
-      <div style={{ padding: `0 ${SPACE.base}px` }}>
-        <button onClick={() => toggleSection('float')} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <BracketLabel tone="accent" size="xs">CALL / FLOAT POOL</BracketLabel>
-            <Mono tone="muted" size="xs">{FLOAT_POOL.length} STAFF</Mono>
-          </div>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
-        </button>
-
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: MOTION.fast }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, paddingBottom: SPACE.base }}>
-                {FLOAT_POOL.map(entry => (
-                  <div key={entry.id} style={{
-                    display: 'flex', alignItems: 'center', gap: SPACE.md,
-                    padding: SPACE.md, background: COLORS.surface,
-                    border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm,
-                  }}>
-                    {/* Status dot */}
-                    <div style={{
-                      width: 8, height: 8, borderRadius: RADIUS.full, flexShrink: 0,
-                      background: statusDotColor(entry.status),
-                      boxShadow: `0 0 6px ${statusDotColor(entry.status)}60`,
-                    }} />
-
-                    {/* Info */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, fontWeight: 500, color: COLORS.textPrimary }}>
-                        {entry.name}
-                      </div>
-                      <div style={{ display: 'flex', gap: SPACE.sm, marginTop: 2 }}>
-                        <Mono tone="muted" size="xs">{entry.credentials}</Mono>
-                        <Mono tone="muted" size="xs">{entry.specialty}</Mono>
-                      </div>
-                    </div>
-
-                    {/* Status label */}
-                    <Mono tone={entry.status === 'Available' ? 'ok' : entry.status === 'En Route' ? 'info' : 'warn'} size="xs">
-                      {entry.status.toUpperCase()}
-                    </Mono>
-
-                    {/* Actions */}
-                    {entry.status === 'On-Call' && (
-                      <TacticalButton variant="primary" size="sm" onClick={() => handleCallIn(entry)}
-                        icon={<Phone size={10} />}>
-                        Call In
-                      </TacticalButton>
-                    )}
-                    {entry.status === 'Available' && (
-                      <TacticalButton variant="secondary" size="sm" onClick={() => handleReassign(entry)}
-                        icon={<ArrowRightLeft size={10} />}>
-                        Reassign
-                      </TacticalButton>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
-
-  // ── Render: Shift Changes ─────────────────────────────────────────────
-  const renderShiftChanges = () => {
-    const isOpen = expandedSection === 'shifts';
-    return (
-      <div style={{ padding: `0 ${SPACE.base}px` }}>
-        <button onClick={() => toggleSection('shifts')} style={{
-          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
-        }}>
-          <BracketLabel tone="accent" size="xs">UPCOMING SHIFT CHANGES</BracketLabel>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
-        </button>
-
-        <AnimatePresence>
-          {isOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: MOTION.fast }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.base, paddingBottom: SPACE.base }}>
-                {SHIFT_CHANGES.map(shift => {
-                  const totalIn = shift.units.reduce((s, u) => s + u.incoming, 0);
-                  const totalOut = shift.units.reduce((s, u) => s + u.outgoing, 0);
-                  const totalGaps = shift.units.reduce((s, u) => s + u.gapAfter, 0);
-
-                  return (
-                    <TacticalCard key={shift.time} padding="md">
-                      {/* Shift header */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                          <span style={{
-                            fontFamily: FONTS.mono, fontSize: 16, fontWeight: 700,
-                            color: COLORS.textPrimary, letterSpacing: '0.02em',
-                          }}>{shift.time}</span>
-                          <Mono tone="secondary" size="xs">{shift.label}</Mono>
-                        </div>
-                        <div style={{ display: 'flex', gap: SPACE.md }}>
-                          <Mono tone="ok" size="xs">IN {totalIn}</Mono>
-                          <Mono tone="secondary" size="xs">OUT {totalOut}</Mono>
-                          {totalGaps > 0 && <Mono tone="crit" size="xs">GAPS {totalGaps}</Mono>}
-                        </div>
-                      </div>
-
-                      <Divider style={{ margin: `0 0 ${SPACE.md}px` }} />
-
-                      {/* Per-unit breakdown */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
-                        {shift.units.map(su => {
-                          const net = su.incoming - su.outgoing;
-                          return (
-                            <div key={su.name} style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                              <Mono tone="secondary" size="xs" style={{ width: 90, flexShrink: 0 }}>{su.name}</Mono>
-
-                              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, flex: 1 }}>
-                                <Mono tone="ok" size="xs">{su.incoming} IN</Mono>
-                                <Mono tone="muted" size="xs">/</Mono>
-                                <Mono tone="secondary" size="xs">{su.outgoing} OUT</Mono>
-                              </div>
-
-                              <span style={{
-                                fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
-                                color: net > 0 ? COLORS.ok : net < 0 ? COLORS.crit : COLORS.textMuted,
-                              }}>
-                                {net > 0 ? `+${net}` : net === 0 ? '--' : net}
-                              </span>
-
-                              {su.gapAfter > 0 && (
-                                <span style={{
-                                  padding: `0 4px`, background: `${COLORS.crit}20`,
-                                  border: `1px solid ${COLORS.crit}35`, borderRadius: RADIUS.sm,
-                                  fontFamily: FONTS.mono, fontSize: 8, fontWeight: 600,
-                                  letterSpacing: '0.1em', color: COLORS.crit,
-                                }}>GAP -{su.gapAfter}</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </TacticalCard>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  };
-
-  // ── Main render ───────────────────────────────────────────────────────
-
-  // ── Embedded mode: full-screen desktop staffing command center ──────────
-  // State for desktop-only features
-  const [refreshCountdown, setRefreshCountdown] = useState(30);
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-
-  // Auto-refresh countdown
-  useEffect(() => {
-    if (!embedded) return;
-    const iv = setInterval(() => {
-      setRefreshCountdown(prev => (prev <= 1 ? 30 : prev - 1));
-    }, 1000);
-    return () => clearInterval(iv);
-  }, [embedded]);
-
-  // Aggregated KPI computations
-  const totalGaps = useMemo(() => UNITS.reduce((s, u) => s + unitGap(u), 0), []);
-  const floatAvailable = useMemo(() => FLOAT_POOL.filter(f => f.status === 'Available').length, []);
-  const coveragePct = useMemo(() => {
-    const req = UNITS.reduce((s, u) => s + ALL_ROLES.reduce((rs, r) => rs + u.roles[r].required, 0), 0);
-    const cur = UNITS.reduce((s, u) => s + ALL_ROLES.reduce((rs, r) => rs + Math.min(u.roles[r].current, u.roles[r].required), 0), 0);
-    return req > 0 ? Math.round((cur / req) * 100) : 100;
-  }, []);
-  const roleBreakdownCounts = useMemo(() => {
-    const out: Record<Role, number> = { RN: 0, MD: 0, RT: 0, Tech: 0, Charge: 0 };
-    UNITS.forEach(u => ALL_ROLES.forEach(r => { out[r] += u.roles[r].current; }));
-    return out;
-  }, []);
-  const callNetImpact = useMemo(() => {
-    return CALL_EVENTS.reduce((net, e) => net + (e.type === 'call-in' ? 1 : -1), 0);
-  }, []);
-
-  // Next shift countdown
-  const nextShiftCountdown = useMemo(() => {
-    const now = new Date();
-    const hh = now.getHours();
-    const mm = now.getMinutes();
-    // Next shift at 19:00 or 07:00
-    let targetH = hh < 7 ? 7 : hh < 19 ? 19 : 7;
-    let diffMin = (targetH * 60) - (hh * 60 + mm);
-    if (diffMin <= 0) diffMin += 24 * 60;
-    const hrs = Math.floor(diffMin / 60);
-    const mins = diffMin % 60;
-    return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
-  }, []);
-
-  // Coverage color helper
-  const covColor = coveragePct >= 95 ? COLORS.ok : coveragePct >= 80 ? COLORS.warn : COLORS.crit;
-
-  if (embedded) {
-    // ── Table: column header style
-    const thStyle: React.CSSProperties = {
-      fontFamily: FONTS.mono,
-      fontSize: 10,
-      fontWeight: 600,
-      letterSpacing: '0.14em',
-      color: COLORS.textDim,
-      textTransform: 'uppercase',
-      padding: `6px 8px`,
-      textAlign: 'left',
-      whiteSpace: 'nowrap',
-    };
-    // ── Table: data cell style
-    const tdStyle: React.CSSProperties = {
-      fontFamily: FONTS.mono,
-      fontSize: 12,
-      fontWeight: 500,
-      color: COLORS.textSecondary,
-      padding: `0 8px`,
-      whiteSpace: 'nowrap',
-    };
-    // ── Role cell: current/required with gap coloring
-    const RoleCell: React.FC<{ s: StaffCount }> = ({ s }) => {
-      const short = s.current < s.required;
-      const over = s.current > s.required;
-      return (
-        <span style={{
-          ...tdStyle,
-          color: short ? COLORS.crit : over ? COLORS.info : COLORS.ok,
-          fontWeight: 600,
-        }}>
-          {s.current}/{s.required}
-        </span>
-      );
-    };
-
-    return (
-      <div
-        style={{
-          position: 'relative',
-          height: '100%',
-          width: '100%',
+      {/* ── Main content area (two columns) ──────────────────────────── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        overflow: 'hidden',
+        gap: 1,
+        background: COLORS.border,
+      }}>
+        {/* ── Left column: Unit Staffing Grid (~65%) ─────────────────── */}
+        <div style={{
+          flex: '0 0 65%',
           display: 'flex',
           flexDirection: 'column',
           background: COLORS.bg,
           overflow: 'hidden',
-          fontFamily: FONTS.sans,
-          color: COLORS.textPrimary,
-        }}
-      >
-        {/* ════════════════════════════════════════════════════════════════
-            1. HEADER — HudStrip
-        ════════════════════════════════════════════════════════════════ */}
-        <HudStrip side="top" fixed>
-          <BracketLabel tone="accent">WORKFORCE COMMAND</BracketLabel>
-          <div style={{ flex: 1 }} />
-          <StatusPill
-            label={status}
-            tone={tone}
-            pulse={status !== 'ADEQUATE'}
-          />
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: `2px ${SPACE.md}px`,
-            background: COLORS.surface,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm,
-          }}>
-            <Users size={12} color={COLORS.textMuted} />
-            <span style={{
-              fontFamily: FONTS.mono, fontSize: 12, fontWeight: 700,
-              color: COLORS.textPrimary, letterSpacing: '0.04em',
-            }}>{totalStaff}</span>
-            <Mono tone="muted" size="xs">ON DUTY</Mono>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <RefreshCw size={12} color={COLORS.textMuted} />
-            <Mono tone="muted" size="xs">REFRESH {refreshCountdown}S</Mono>
-          </div>
-          <ConfidenceBadge confidence={92} ageMinutes={1} />
-        </HudStrip>
-
-        {/* ════════════════════════════════════════════════════════════════
-            2. SUMMARY HERO BAR — 6 KPI cells
-        ════════════════════════════════════════════════════════════════ */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(6, 1fr)',
-          gap: SPACE.sm,
-          padding: `${SPACE.base}px ${SPACE.lg}px`,
-          paddingTop: CHROME.headerHeight + SPACE.base,
-          background: COLORS.bgDeep,
-          borderBottom: `1px solid ${COLORS.border}`,
-          flexShrink: 0,
         }}>
-          {/* KPI: Total Staff */}
           <div style={{
-            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: `${SPACE.md}px ${SPACE.lg}px`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE.md,
+            borderBottom: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            flexShrink: 0,
           }}>
-            <span style={{
-              fontFamily: FONTS.sans, fontSize: 32, fontWeight: 700,
-              color: COLORS.textPrimary, lineHeight: 1.1,
-            }}>{totalStaff}</span>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>STAFF ON DUTY</Mono>
-            <div style={{
-              display: 'flex', gap: SPACE.sm, marginTop: 6, flexWrap: 'wrap',
-              justifyContent: 'center',
-            }}>
-              {ALL_ROLES.map(r => (
-                <span key={r} style={{
-                  fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-                  color: COLORS.textDim, letterSpacing: '0.08em',
-                }}>{r} {roleBreakdownCounts[r]}</span>
-              ))}
-            </div>
+            <BracketLabel tone="muted" size="xs">UNIT GRID</BracketLabel>
+            <Mono tone="muted" size="xs">{UNITS.length} UNITS</Mono>
+            <div style={{ flex: 1 }} />
+            <Mono tone="muted" size="xs">{unitsCompliant}/{UNITS.length} COMPLIANT</Mono>
           </div>
 
-          {/* KPI: Overall Coverage */}
+          {/* Grid header */}
           <div style={{
-            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            display: 'grid',
+            gridTemplateColumns: '140px 60px 60px 50px 1fr',
+            gap: SPACE.sm,
+            padding: `${SPACE.sm}px ${SPACE.lg}px`,
+            borderBottom: `1px solid ${COLORS.border}`,
+            background: COLORS.surfaceElev,
+            flexShrink: 0,
           }}>
-            <span style={{
-              fontFamily: FONTS.sans, fontSize: 32, fontWeight: 700,
-              color: covColor, lineHeight: 1.1,
-            }}>{coveragePct}%</span>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>COVERAGE</Mono>
-            <div style={{
-              width: '80%', height: 4, background: COLORS.border,
-              borderRadius: RADIUS.full, overflow: 'hidden', marginTop: 6,
-            }}>
-              <div style={{
-                width: `${coveragePct}%`, height: '100%',
-                background: covColor, borderRadius: RADIUS.full,
-              }} />
-            </div>
+            <Mono tone="muted" size="xs">UNIT</Mono>
+            <Mono tone="muted" size="xs" style={{ textAlign: 'center' }}>REQ</Mono>
+            <Mono tone="muted" size="xs" style={{ textAlign: 'center' }}>CURR</Mono>
+            <Mono tone="muted" size="xs" style={{ textAlign: 'center' }}>GAP</Mono>
+            <Mono tone="muted" size="xs">ASSIGNED STAFF</Mono>
           </div>
 
-          {/* KPI: Avg Nurse:Patient Ratio */}
-          <div style={{
-            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-              <span style={{
-                fontFamily: FONTS.sans, fontSize: 32, fontWeight: 700,
-                color: ratioColor(parseFloat(avgRatio)), lineHeight: 1.1,
-              }}>1:{avgRatio}</span>
-              {parseFloat(avgRatio) > 4.5
-                ? <TrendingUp size={14} color={COLORS.crit} />
-                : <TrendingDown size={14} color={COLORS.ok} />
-              }
-            </div>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>AVG RN:PT RATIO</Mono>
-          </div>
+          {/* Unit rows */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {UNITS.map((unit, idx) => {
+              const gap = unitGap(unit, filteredStaff);
+              const cur = unitCurrent(unit, filteredStaff);
+              const req = unitRequired(unit);
+              const isDropTarget = dropTarget === unit.id;
+              const assigned = filteredStaff.filter(s => s.unit === unit.id);
+              const covPct = coveragePct(unit, filteredStaff);
 
-          {/* KPI: Open Gaps */}
-          <div style={{
-            background: totalGaps > 0 ? `${COLORS.crit}08` : COLORS.surface,
-            border: `1px solid ${totalGaps > 0 ? `${COLORS.crit}40` : COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <span style={{
-              fontFamily: FONTS.sans, fontSize: 32, fontWeight: 700,
-              color: totalGaps > 0 ? COLORS.crit : COLORS.ok, lineHeight: 1.1,
-            }}>{totalGaps}</span>
-            <Mono tone={totalGaps > 0 ? 'crit' : 'muted'} size="xs" style={{ marginTop: 4 }}>
-              OPEN GAPS
-            </Mono>
-          </div>
+              return (
+                <motion.div
+                  key={unit.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.03, duration: MOTION.base, ease: MOTION.ease }}
+                  onDragOver={(e: React.DragEvent<HTMLDivElement>) => handleDragOver(e, unit.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e: React.DragEvent<HTMLDivElement>) => handleDrop(e, unit.id)}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '140px 60px 60px 50px 1fr',
+                    gap: SPACE.sm,
+                    padding: `${SPACE.md}px ${SPACE.lg}px`,
+                    borderBottom: `1px solid ${COLORS.border}`,
+                    alignItems: 'start',
+                    background: isDropTarget
+                      ? `${COLORS.accent}08`
+                      : 'transparent',
+                    borderLeft: isDropTarget
+                      ? `3px solid ${COLORS.accent}`
+                      : `3px solid ${gapColor(gap)}`,
+                    transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                    minHeight: 60,
+                  }}
+                >
+                  {/* Unit name + floor */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{
+                      fontFamily: FONTS.sans,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.005em',
+                    }}>
+                      {unit.name}
+                    </span>
+                    <div style={{ display: 'flex', gap: SPACE.xs, alignItems: 'center' }}>
+                      <Mono tone="muted" size="xs">{unit.floor}</Mono>
+                      <Mono tone="muted" size="xs">{unit.patients}/{unit.beds} BED</Mono>
+                    </div>
+                    {/* Coverage micro-bar */}
+                    <div style={{
+                      marginTop: 3,
+                      height: 3,
+                      width: '100%',
+                      background: `${COLORS.border}`,
+                      borderRadius: RADIUS.full,
+                      overflow: 'hidden',
+                    }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${covPct}%` }}
+                        transition={{ duration: MOTION.base, ease: MOTION.ease }}
+                        style={{
+                          height: '100%',
+                          background: covPct === 100 ? COLORS.ok : covPct >= 80 ? COLORS.warn : COLORS.crit,
+                          borderRadius: RADIUS.full,
+                        }}
+                      />
+                    </div>
+                  </div>
 
-          {/* KPI: Float Pool Available */}
-          <div style={{
-            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <span style={{
-              fontFamily: FONTS.sans, fontSize: 32, fontWeight: 700,
-              color: floatAvailable > 0 ? COLORS.info : COLORS.warn, lineHeight: 1.1,
-            }}>{floatAvailable}</span>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>FLOAT AVAIL</Mono>
-            <Mono tone="dim" size="xs" style={{ marginTop: 2 }}>
-              {FLOAT_POOL.length} TOTAL POOL
-            </Mono>
-          </div>
+                  {/* Required */}
+                  <span style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: COLORS.textSecondary,
+                    textAlign: 'center',
+                    paddingTop: 2,
+                  }}>
+                    {req}
+                  </span>
 
-          {/* KPI: Next Shift Countdown */}
-          <div style={{
-            background: COLORS.surface, border: `1px solid ${COLORS.border}`,
-            borderRadius: RADIUS.sm, padding: `${SPACE.md}px ${SPACE.base}px`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-          }}>
-            <span style={{
-              fontFamily: FONTS.mono, fontSize: 30, fontWeight: 700,
-              color: COLORS.textPrimary, lineHeight: 1.1, letterSpacing: '0.02em',
-            }}>{nextShiftCountdown}</span>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>NEXT SHIFT</Mono>
-            <Mono tone="dim" size="xs" style={{ marginTop: 2 }}>
-              {SHIFT_CHANGES[0].time} {SHIFT_CHANGES[0].label.toUpperCase()}
-            </Mono>
+                  {/* Current */}
+                  <span style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: cur >= req ? COLORS.ok : COLORS.textPrimary,
+                    textAlign: 'center',
+                    paddingTop: 2,
+                  }}>
+                    {cur}
+                  </span>
+
+                  {/* Gap */}
+                  <div style={{ textAlign: 'center', paddingTop: 2 }}>
+                    {gap > 0 ? (
+                      <span style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: gapColor(gap),
+                        padding: `1px ${SPACE.xs}px`,
+                        background: `${gapColor(gap)}15`,
+                        borderRadius: RADIUS.sm,
+                      }}>
+                        -{gap}
+                      </span>
+                    ) : (
+                      <span style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: COLORS.ok,
+                      }}>
+                        OK
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Assigned staff chips */}
+                  <div style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 4,
+                    minHeight: 28,
+                    padding: 2,
+                    borderRadius: RADIUS.sm,
+                    border: isDropTarget ? `1px dashed ${COLORS.accent}60` : '1px dashed transparent',
+                    transition: `border-color ${MOTION.fast}s ease`,
+                  }}>
+                    <AnimatePresence mode="popLayout">
+                      {assigned.map(s => (
+                        <StaffChip
+                          key={s.id}
+                          member={s}
+                          isDragged={draggedId === s.id}
+                          onDragStart={handleDragStart}
+                          onDragEnd={handleDragEnd}
+                        />
+                      ))}
+                    </AnimatePresence>
+                    {assigned.length === 0 && (
+                      <Mono tone="dim" size="xs" style={{ padding: '4px 0' }}>
+                        DROP STAFF HERE
+                      </Mono>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
-        {/* ════════════════════════════════════════════════════════════════
-            3. MAIN CONTENT — 70/30 split
-        ════════════════════════════════════════════════════════════════ */}
+        {/* ── Right column: Staff Pool / Roster (~35%) ───────────────── */}
         <div style={{
-          flex: 1,
+          flex: '0 0 35%',
           display: 'flex',
+          flexDirection: 'column',
+          background: COLORS.bg,
           overflow: 'hidden',
         }}>
-          {/* ── LEFT COLUMN (70%): Filters + Unit Table + Role Breakdown ── */}
+          {/* Float Pool section */}
           <div style={{
-            flex: 7,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            borderRight: `1px solid ${COLORS.border}`,
+            padding: `${SPACE.md}px ${SPACE.lg}px`,
+            borderBottom: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            flexShrink: 0,
           }}>
-            {/* ── Filter Bar ── */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACE.sm,
-              padding: `${SPACE.sm}px ${SPACE.lg}px`,
-              borderBottom: `1px solid ${COLORS.border}`,
-              flexShrink: 0,
-              flexWrap: 'wrap',
-              background: COLORS.surface,
-            }}>
-              <Filter size={12} color={COLORS.textMuted} />
-              <Mono tone="muted" size="xs">UNIT</Mono>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+              <BracketLabel tone="info" size="xs">FLOAT POOL</BracketLabel>
+              <Mono tone="muted" size="xs">{floatPool.length} AVAILABLE</Mono>
+            </div>
+          </div>
 
-              {/* Unit filter pills */}
-              <select
-                value={unitFilter}
-                onChange={e => setUnitFilter(e.target.value)}
+          <div
+            onDragOver={(e: React.DragEvent<HTMLDivElement>) => handleDragOver(e, null)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e: React.DragEvent<HTMLDivElement>) => handleDrop(e, null)}
+            style={{
+              padding: SPACE.md,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: SPACE.xs,
+              minHeight: 80,
+              background: dropTarget === null && draggedId ? `${COLORS.info}06` : 'transparent',
+              borderBottom: `1px solid ${COLORS.border}`,
+              border: dropTarget === null && draggedId ? `1px dashed ${COLORS.info}50` : undefined,
+              transition: `background ${MOTION.fast}s ease`,
+              flexShrink: 0,
+            }}
+          >
+            <AnimatePresence mode="popLayout">
+              {floatPool.map(s => (
+                <StaffChip
+                  key={s.id}
+                  member={s}
+                  isDragged={draggedId === s.id}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  showStatus
+                />
+              ))}
+            </AnimatePresence>
+            {floatPool.length === 0 && (
+              <Mono tone="dim" size="xs" style={{ padding: SPACE.md }}>
+                // NO FLOAT STAFF AVAILABLE
+              </Mono>
+            )}
+          </div>
+
+          {/* Roster section */}
+          <div style={{
+            padding: `${SPACE.md}px ${SPACE.lg}px`,
+            borderBottom: `1px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            flexShrink: 0,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+              <button
+                onClick={() => setRosterExpanded(v => !v)}
                 style={{
-                  background: COLORS.surfaceElev,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textSecondary,
-                  fontFamily: FONTS.mono,
-                  fontSize: 11,
-                  letterSpacing: '0.08em',
-                  padding: `4px ${SPACE.sm}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  background: 'none',
+                  border: 'none',
                   cursor: 'pointer',
-                  textTransform: 'uppercase',
+                  padding: 0,
                 }}
               >
-                <option value="ALL">ALL UNITS</option>
-                {UNITS.map(u => (
-                  <option key={u.id} value={u.id}>{u.name}</option>
-                ))}
-              </select>
+                <BracketLabel tone="secondary" size="xs">ROSTER</BracketLabel>
+                {rosterExpanded
+                  ? <ChevronUp size={12} color={COLORS.textMuted} />
+                  : <ChevronDown size={12} color={COLORS.textMuted} />
+                }
+              </button>
+              <Mono tone="muted" size="xs">{filteredStaff.length} TOTAL</Mono>
+              <div style={{ flex: 1 }} />
+            </div>
+            {rosterExpanded && (
+              <div style={{
+                marginTop: SPACE.sm,
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                height: 28,
+                padding: '0 8px',
+                background: COLORS.surfaceElev,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+              }}>
+                <Search size={12} color={COLORS.textMuted} />
+                <input
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search staff..."
+                  style={{
+                    flex: 1,
+                    background: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    color: COLORS.textPrimary,
+                    fontFamily: FONTS.sans,
+                    fontSize: 12,
+                    letterSpacing: '-0.005em',
+                  }}
+                />
+              </div>
+            )}
+          </div>
 
-              <div style={{ width: 1, height: 20, background: COLORS.border }} />
-              <Mono tone="muted" size="xs">ROLE</Mono>
+          {/* Roster table */}
+          {rosterExpanded && (
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {/* Roster header */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 50px 80px 50px',
+                gap: SPACE.sm,
+                padding: `${SPACE.xs}px ${SPACE.lg}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surfaceElev,
+              }}>
+                <Mono tone="muted" size="xs">NAME</Mono>
+                <Mono tone="muted" size="xs">ROLE</Mono>
+                <Mono tone="muted" size="xs">UNIT</Mono>
+                <Mono tone="muted" size="xs" style={{ textAlign: 'right' }}>HRS</Mono>
+              </div>
 
-              {/* Role filter pills */}
-              {(['ALL', ...ALL_ROLES] as const).map(r => {
-                const isActive = roleFilter === r;
+              {rosterResults.map((s, i) => (
+                <RosterRow key={s.id} member={s} index={i} />
+              ))}
+
+              {rosterResults.length === 0 && (
+                <div style={{
+                  padding: SPACE.xl,
+                  textAlign: 'center',
+                }}>
+                  <Mono tone="dim" size="xs">// NO RESULTS</Mono>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Role breakdown (when roster collapsed) */}
+          {!rosterExpanded && (
+            <div style={{ flex: 1, overflowY: 'auto', padding: SPACE.md }}>
+              <div style={{ marginBottom: SPACE.md }}>
+                <BracketLabel tone="muted" size="xs">ROLE BREAKDOWN</BracketLabel>
+              </div>
+              {ALL_ROLES.map(r => {
+                const assigned = filteredStaff.filter(s => s.unit !== null && s.role === r).length;
+                const required = UNITS.reduce((s, u) => s + u.required[r], 0);
+                const pct = required > 0 ? Math.round((assigned / required) * 100) : 100;
                 return (
-                  <button
-                    key={r}
-                    onClick={() => setRoleFilter(r)}
-                    style={{
-                      padding: `4px ${SPACE.md}px`,
-                      background: isActive ? `${COLORS.info}20` : 'transparent',
-                      border: `1px solid ${isActive ? COLORS.info : COLORS.border}`,
+                  <div key={r} style={{ marginBottom: SPACE.md }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                        <span style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: RADIUS.full,
+                          background: ROLE_COLORS[r],
+                        }} />
+                        <Mono tone="secondary" size="xs">{r}</Mono>
+                      </div>
+                      <Mono tone={pct >= 100 ? 'ok' : pct >= 80 ? 'warn' : 'crit'} size="xs">
+                        {assigned}/{required}
+                      </Mono>
+                    </div>
+                    <div style={{
+                      height: 4,
+                      background: COLORS.border,
                       borderRadius: RADIUS.full,
-                      cursor: 'pointer',
-                      transition: `all ${MOTION.fast}s ease`,
-                    }}
-                  >
-                    <span style={{
-                      fontFamily: FONTS.mono, fontSize: 11, fontWeight: 500,
-                      letterSpacing: '0.1em', color: isActive ? COLORS.info : COLORS.textMuted,
-                      textTransform: 'uppercase',
-                    }}>{r}</span>
-                  </button>
+                      overflow: 'hidden',
+                    }}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(pct, 100)}%` }}
+                        transition={{ duration: MOTION.base, ease: MOTION.ease }}
+                        style={{
+                          height: '100%',
+                          background: ROLE_COLORS[r],
+                          borderRadius: RADIUS.full,
+                          opacity: pct >= 100 ? 1 : 0.8,
+                        }}
+                      />
+                    </div>
+                  </div>
                 );
               })}
 
-              <div style={{ flex: 1 }} />
-
-              {/* Gaps-only toggle */}
-              <button
-                onClick={() => setGapsOnly(g => !g)}
-                style={{
-                  padding: `4px ${SPACE.md}px`,
-                  background: gapsOnly ? `${COLORS.crit}20` : 'transparent',
-                  border: `1px solid ${gapsOnly ? COLORS.crit : COLORS.border}`,
-                  borderRadius: RADIUS.full,
-                  cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  transition: `all ${MOTION.fast}s ease`,
-                }}
-              >
-                <AlertTriangle size={11} color={gapsOnly ? COLORS.crit : COLORS.textMuted} />
-                <span style={{
-                  fontFamily: FONTS.mono, fontSize: 11, fontWeight: 500,
-                  letterSpacing: '0.1em', color: gapsOnly ? COLORS.crit : COLORS.textMuted,
-                }}>GAPS ONLY</span>
-              </button>
+              {/* Upcoming shift changes */}
+              <Divider style={{ margin: `${SPACE.md}px 0` }} />
+              <div style={{ marginBottom: SPACE.md }}>
+                <BracketLabel tone="muted" size="xs">SHIFT CHANGES</BracketLabel>
+              </div>
+              <TacticalCard padding="sm" style={{ marginBottom: SPACE.sm }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+                  <Clock size={12} color={COLORS.textMuted} />
+                  <Mono tone="secondary" size="xs">19:00 EVENING</Mono>
+                  <Mono tone="warn" size="xs">3H 22M</Mono>
+                </div>
+                <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+                  <ShiftBadge label="IN" value={24} tone="ok" />
+                  <ShiftBadge label="OUT" value={27} tone="warn" />
+                  <ShiftBadge label="NET" value={-3} tone="crit" />
+                </div>
+              </TacticalCard>
+              <TacticalCard padding="sm">
+                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+                  <Clock size={12} color={COLORS.textMuted} />
+                  <Mono tone="secondary" size="xs">07:00 DAY</Mono>
+                  <Mono tone="muted" size="xs">15H 22M</Mono>
+                </div>
+                <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+                  <ShiftBadge label="IN" value={30} tone="ok" />
+                  <ShiftBadge label="OUT" value={24} tone="info" />
+                  <ShiftBadge label="NET" value={+6} tone="ok" />
+                </div>
+              </TacticalCard>
             </div>
-
-            {/* ── Scrollable content area ── */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch',
-            }}>
-              {/* ── Unit Staffing TABLE ── */}
-              <div style={{ minWidth: 0 }}>
-                {/* Table header */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '160px 48px 80px 72px 72px 72px 72px 72px 72px 56px 72px',
-                  padding: `0 ${SPACE.lg}px`,
-                  background: COLORS.bgDeep,
-                  borderBottom: `1px solid ${COLORS.border}`,
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 2,
-                }}>
-                  {['UNIT', 'FLR', 'CENSUS/CAP', 'RN', 'MD', 'RT', 'TECH', 'CHARGE', 'RATIO', 'GAP', 'STATUS'].map(col => (
-                    <span key={col} style={thStyle}>{col}</span>
-                  ))}
-                </div>
-
-                {/* Table rows */}
-                {filteredUnits.map(unit => {
-                  const gap = unitGap(unit);
-                  const covPct = coveragePercent(unit);
-                  const rTone = ratioTone(unit.nursePatientRatio);
-                  const rowStatus: CoverageStatus = gap === 0 ? 'ADEQUATE' : gap <= 2 ? 'STRAINED' : 'CRITICAL';
-                  const rowBg = rowStatus === 'CRITICAL' ? `${COLORS.crit}06`
-                    : rowStatus === 'STRAINED' ? `${COLORS.warn}04`
-                    : 'transparent';
-                  const isExpanded = expandedRow === unit.id;
-
-                  return (
-                    <React.Fragment key={unit.id}>
-                      <div
-                        onClick={() => setExpandedRow(isExpanded ? null : unit.id)}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '160px 48px 80px 72px 72px 72px 72px 72px 72px 56px 72px',
-                          padding: `0 ${SPACE.lg}px`,
-                          height: 44,
-                          alignItems: 'center',
-                          background: rowBg,
-                          borderBottom: `1px solid ${COLORS.border}`,
-                          cursor: 'pointer',
-                          transition: `background ${MOTION.fast}s ease`,
-                          borderLeft: gap > 0
-                            ? `3px solid ${gap >= 3 ? COLORS.crit : COLORS.warn}`
-                            : `3px solid ${COLORS.ok}`,
-                        }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = COLORS.surfaceHover; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = rowBg; }}
-                      >
-                        {/* Unit name */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px' }}>
-                          {isExpanded
-                            ? <ChevronUp size={12} color={COLORS.textMuted} />
-                            : <ChevronDown size={12} color={COLORS.textMuted} />
-                          }
-                          <span style={{
-                            fontFamily: FONTS.sans, fontSize: 13, fontWeight: 600,
-                            color: COLORS.textPrimary,
-                          }}>{unit.name}</span>
-                        </div>
-                        {/* Floor */}
-                        <span style={tdStyle}>{unit.floor}</span>
-                        {/* Census/Cap */}
-                        <span style={{
-                          ...tdStyle,
-                          fontWeight: 600,
-                          color: unit.patients / unit.beds > 0.9 ? COLORS.warn : COLORS.textSecondary,
-                        }}>{unit.patients}/{unit.beds}</span>
-                        {/* RN */}
-                        <RoleCell s={unit.roles.RN} />
-                        {/* MD */}
-                        <RoleCell s={unit.roles.MD} />
-                        {/* RT */}
-                        <RoleCell s={unit.roles.RT} />
-                        {/* Tech */}
-                        <RoleCell s={unit.roles.Tech} />
-                        {/* Charge */}
-                        <RoleCell s={unit.roles.Charge} />
-                        {/* Ratio */}
-                        <span style={{
-                          ...tdStyle,
-                          fontWeight: 600,
-                          color: ratioColor(unit.nursePatientRatio),
-                        }}>1:{unit.nursePatientRatio.toFixed(1)}</span>
-                        {/* Gap */}
-                        <span style={{
-                          ...tdStyle,
-                          fontWeight: 700,
-                          color: gap > 0 ? COLORS.crit : COLORS.ok,
-                        }}>{gap > 0 ? `-${gap}` : '--'}</span>
-                        {/* Status */}
-                        <StatusPill
-                          label={rowStatus === 'ADEQUATE' ? 'OK' : rowStatus === 'STRAINED' ? 'WARN' : 'CRIT'}
-                          tone={rowStatus === 'ADEQUATE' ? 'ok' : rowStatus === 'STRAINED' ? 'warn' : 'crit'}
-                          size="xs"
-                        />
-                      </div>
-
-                      {/* Expanded row detail */}
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: MOTION.fast }}
-                            style={{
-                              overflow: 'hidden',
-                              background: COLORS.surfaceElev,
-                              borderBottom: `1px solid ${COLORS.border}`,
-                            }}
-                          >
-                            <div style={{
-                              padding: `${SPACE.md}px ${SPACE.lg}px ${SPACE.md}px 48px`,
-                              display: 'flex', gap: SPACE['2xl'], flexWrap: 'wrap',
-                            }}>
-                              {/* Per-role detail */}
-                              {ALL_ROLES.filter(r => unit.roles[r].required > 0).map(r => {
-                                const s = unit.roles[r];
-                                const short = s.current < s.required;
-                                const delta = s.current - s.required;
-                                return (
-                                  <div key={r} style={{
-                                    display: 'flex', flexDirection: 'column', gap: 4,
-                                    minWidth: 100,
-                                  }}>
-                                    <Mono tone="secondary" size="xs">{r}</Mono>
-                                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                                      <span style={{
-                                        fontFamily: FONTS.sans, fontSize: 22, fontWeight: 700,
-                                        color: short ? COLORS.crit : COLORS.ok,
-                                      }}>{s.current}</span>
-                                      <span style={{
-                                        fontFamily: FONTS.mono, fontSize: 11, color: COLORS.textDim,
-                                      }}>/ {s.required} req</span>
-                                    </div>
-                                    {delta !== 0 && (
-                                      <span style={{
-                                        fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
-                                        color: delta > 0 ? COLORS.ok : COLORS.crit,
-                                        padding: `1px 6px`,
-                                        background: delta > 0 ? COLORS.okDim : COLORS.critDim,
-                                        borderRadius: RADIUS.sm,
-                                        alignSelf: 'flex-start',
-                                      }}>{delta > 0 ? `+${delta} OVER` : `${delta} SHORT`}</span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                              {/* Coverage mini-bar */}
-                              <div style={{ minWidth: 140, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                <Mono tone="secondary" size="xs">COVERAGE</Mono>
-                                <div style={{
-                                  width: '100%', height: 8, background: COLORS.border,
-                                  borderRadius: RADIUS.full, overflow: 'hidden',
-                                }}>
-                                  <div style={{
-                                    width: `${covPct}%`, height: '100%',
-                                    background: covPct === 100 ? COLORS.ok : covPct >= 80 ? COLORS.warn : COLORS.crit,
-                                    borderRadius: RADIUS.full,
-                                    transition: `width ${MOTION.base}s ease`,
-                                  }} />
-                                </div>
-                                <Mono tone="muted" size="xs">{covPct}% STAFFED</Mono>
-                              </div>
-                              {/* Mandated ratio check */}
-                              <div style={{ minWidth: 120, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                <Mono tone="secondary" size="xs">MANDATED RATIO</Mono>
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                                  <span style={{
-                                    fontFamily: FONTS.mono, fontSize: 14, fontWeight: 700,
-                                    color: COLORS.textPrimary,
-                                  }}>1:{MANDATED_RATIOS[unit.name] ?? '?'}</span>
-                                  {unit.nursePatientRatio <= (MANDATED_RATIOS[unit.name] ?? 999)
-                                    ? <Shield size={12} color={COLORS.ok} />
-                                    : <AlertTriangle size={12} color={COLORS.crit} />
-                                  }
-                                </div>
-                                <Mono
-                                  tone={unit.nursePatientRatio <= (MANDATED_RATIOS[unit.name] ?? 999) ? 'ok' : 'crit'}
-                                  size="xs"
-                                >
-                                  {unit.nursePatientRatio <= (MANDATED_RATIOS[unit.name] ?? 999) ? 'COMPLIANT' : 'OUT OF COMPLIANCE'}
-                                </Mono>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </React.Fragment>
-                  );
-                })}
-
-                {filteredUnits.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: SPACE['3xl'] }}>
-                    <Mono tone="muted">NO UNITS MATCH CURRENT FILTERS</Mono>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Role Breakdown Horizontal Bar Chart ── */}
-              <div style={{
-                padding: `${SPACE.lg}px ${SPACE.lg}px ${SPACE.base}px`,
-                borderTop: `1px solid ${COLORS.border}`,
-              }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginBottom: SPACE.base,
-                }}>
-                  <BracketLabel tone="accent" size="xs">ROLE BREAKDOWN</BracketLabel>
-                  <Mono tone="muted" size="xs">FILLED VS REQUIRED — ALL UNITS</Mono>
-                </div>
-
-                <div style={{ display: 'flex', gap: SPACE.lg, flexWrap: 'wrap' }}>
-                  {roleAgg.map(({ role: r, current, required }) => {
-                    const gap = Math.max(0, required - current);
-                    const pct = required > 0 ? Math.min(100, Math.round((current / required) * 100)) : 100;
-                    const barColor = gap === 0 ? COLORS.ok : gap <= 1 ? COLORS.warn : COLORS.crit;
-                    return (
-                      <div key={r} style={{ flex: '1 1 120px', minWidth: 120 }}>
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          marginBottom: 4,
-                        }}>
-                          <Mono tone="secondary" size="xs">{r}</Mono>
-                          <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
-                            <span style={{
-                              fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600,
-                              color: barColor,
-                            }}>{current}/{required}</span>
-                            {gap > 0 && (
-                              <span style={{
-                                fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600,
-                                color: COLORS.crit, padding: '0 4px',
-                                background: COLORS.critDim, borderRadius: RADIUS.sm,
-                              }}>-{gap}</span>
-                            )}
-                          </div>
-                        </div>
-                        <div style={{
-                          position: 'relative', height: 10,
-                          background: COLORS.border, borderRadius: RADIUS.full,
-                          overflow: 'hidden',
-                        }}>
-                          <div style={{
-                            position: 'absolute', top: 0, left: 0, bottom: 0,
-                            width: `${pct}%`, background: barColor,
-                            borderRadius: RADIUS.full,
-                            transition: `width ${MOTION.base}s ease`,
-                          }} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── RIGHT SIDEBAR (30%, ~320px) ──────────────────────────── */}
-          <div style={{
-            flex: 3,
-            minWidth: 300,
-            maxWidth: 380,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            background: COLORS.bgDeep,
-          }}>
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              WebkitOverflowScrolling: 'touch',
-            }}>
-
-              {/* ── Shift Schedule Grid ── */}
-              <div style={{
-                padding: `${SPACE.base}px ${SPACE.base}px ${SPACE.md}px`,
-                borderBottom: `1px solid ${COLORS.border}`,
-              }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginBottom: SPACE.md,
-                }}>
-                  <Clock size={12} color={COLORS.accent} />
-                  <BracketLabel tone="accent" size="xs">SHIFT SCHEDULE</BracketLabel>
-                </div>
-
-                {SHIFT_CHANGES.map((shift, idx) => {
-                  const totalIn = shift.units.reduce((s, u) => s + u.incoming, 0);
-                  const totalOut = shift.units.reduce((s, u) => s + u.outgoing, 0);
-                  const totalShiftGaps = shift.units.reduce((s, u) => s + u.gapAfter, 0);
-                  const isNext = idx === 0;
-
-                  return (
-                    <div key={shift.time} style={{
-                      background: isNext ? COLORS.surface : 'transparent',
-                      border: `1px solid ${isNext ? COLORS.borderStrong : COLORS.border}`,
-                      borderRadius: RADIUS.sm,
-                      padding: SPACE.md,
-                      marginBottom: SPACE.sm,
-                    }}>
-                      <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        marginBottom: SPACE.sm,
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                          <span style={{
-                            fontFamily: FONTS.mono, fontSize: 16, fontWeight: 700,
-                            color: COLORS.textPrimary, letterSpacing: '0.02em',
-                          }}>{shift.time}</span>
-                          <Mono tone="secondary" size="xs">{shift.label}</Mono>
-                          {isNext && (
-                            <span style={{
-                              padding: '1px 6px', background: COLORS.accentDim,
-                              border: `1px solid ${COLORS.accent}30`,
-                              borderRadius: RADIUS.sm,
-                              fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600,
-                              color: COLORS.accent, letterSpacing: '0.1em',
-                            }}>NEXT</span>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: SPACE.md, marginBottom: SPACE.xs }}>
-                        <Mono tone="ok" size="xs">IN {totalIn}</Mono>
-                        <Mono tone="secondary" size="xs">OUT {totalOut}</Mono>
-                        {totalShiftGaps > 0 && <Mono tone="crit" size="xs">GAPS {totalShiftGaps}</Mono>}
-                      </div>
-                      {/* Mini unit bars */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {shift.units.map(su => (
-                          <div key={su.name} style={{
-                            display: 'flex', alignItems: 'center', gap: SPACE.xs,
-                          }}>
-                            <Mono tone="dim" size="xs" style={{ width: 74, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {su.name}
-                            </Mono>
-                            <div style={{
-                              flex: 1, height: 4, background: COLORS.border,
-                              borderRadius: RADIUS.full, overflow: 'hidden',
-                            }}>
-                              <div style={{
-                                width: su.outgoing > 0 ? `${Math.min(100, Math.round((su.incoming / su.outgoing) * 100))}%` : '100%',
-                                height: '100%',
-                                background: su.gapAfter > 0 ? COLORS.crit : su.incoming >= su.outgoing ? COLORS.ok : COLORS.warn,
-                                borderRadius: RADIUS.full,
-                              }} />
-                            </div>
-                            {su.gapAfter > 0 && (
-                              <Mono tone="crit" size="xs">-{su.gapAfter}</Mono>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* ── Float Pool & On-Call ── */}
-              <div style={{
-                padding: `${SPACE.md}px ${SPACE.base}px`,
-                borderBottom: `1px solid ${COLORS.border}`,
-              }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginBottom: SPACE.md,
-                }}>
-                  <UserPlus size={12} color={COLORS.accent} />
-                  <BracketLabel tone="accent" size="xs">FLOAT POOL &amp; ON-CALL</BracketLabel>
-                  <Mono tone="muted" size="xs">{FLOAT_POOL.length}</Mono>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
-                  {FLOAT_POOL.map(entry => (
-                    <div key={entry.id} style={{
-                      display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                      padding: `${SPACE.xs}px ${SPACE.sm}px`,
-                      background: COLORS.surface,
-                      border: `1px solid ${COLORS.border}`,
-                      borderRadius: RADIUS.sm,
-                    }}>
-                      <div style={{
-                        width: 6, height: 6, borderRadius: RADIUS.full, flexShrink: 0,
-                        background: statusDotColor(entry.status),
-                        boxShadow: `0 0 4px ${statusDotColor(entry.status)}60`,
-                      }} />
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                        <span style={{
-                          fontFamily: FONTS.sans, fontSize: 12, fontWeight: 500,
-                          color: COLORS.textPrimary,
-                          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                          display: 'block',
-                        }}>{entry.name}</span>
-                        <div style={{ display: 'flex', gap: SPACE.xs }}>
-                          <Mono tone="dim" size="xs">{entry.credentials}</Mono>
-                          <Mono tone="dim" size="xs">{entry.specialty}</Mono>
-                        </div>
-                      </div>
-                      <span style={{
-                        fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500,
-                        letterSpacing: '0.1em', textTransform: 'uppercase',
-                        color: statusDotColor(entry.status),
-                        flexShrink: 0,
-                      }}>{entry.status.toUpperCase()}</span>
-                      {entry.status === 'On-Call' && (
-                        <TacticalButton variant="primary" size="sm" onClick={() => handleCallIn(entry)}
-                          icon={<Phone size={9} />}
-                          style={{ padding: '0 8px', height: 22, fontSize: 9 }}>
-                          CALL
-                        </TacticalButton>
-                      )}
-                      {entry.status === 'Available' && (
-                        <TacticalButton variant="secondary" size="sm" onClick={() => handleReassign(entry)}
-                          icon={<ArrowRightLeft size={9} />}
-                          style={{ padding: '0 8px', height: 22, fontSize: 9 }}>
-                          ASSIGN
-                        </TacticalButton>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Call-In / Call-Off Tracker ── */}
-              <div style={{
-                padding: `${SPACE.md}px ${SPACE.base}px`,
-                borderBottom: `1px solid ${COLORS.border}`,
-              }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginBottom: SPACE.md,
-                }}>
-                  <Activity size={12} color={COLORS.accent} />
-                  <BracketLabel tone="accent" size="xs">CALL TRACKER</BracketLabel>
-                  <span style={{
-                    fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700,
-                    color: callNetImpact >= 0 ? COLORS.ok : COLORS.crit,
-                    padding: '1px 6px',
-                    background: callNetImpact >= 0 ? COLORS.okDim : COLORS.critDim,
-                    borderRadius: RADIUS.sm,
-                    letterSpacing: '0.08em',
-                  }}>NET {callNetImpact >= 0 ? '+' : ''}{callNetImpact}</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
-                  {CALL_EVENTS.map(ev => (
-                    <div key={ev.id} style={{
-                      display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                      padding: `${SPACE.xs}px ${SPACE.sm}px`,
-                      background: ev.type === 'call-off' ? `${COLORS.crit}06` : `${COLORS.ok}06`,
-                      border: `1px solid ${ev.type === 'call-off' ? `${COLORS.crit}20` : `${COLORS.ok}20`}`,
-                      borderRadius: RADIUS.sm,
-                    }}>
-                      {ev.type === 'call-in'
-                        ? <PhoneCall size={10} color={COLORS.ok} />
-                        : <PhoneOff size={10} color={COLORS.crit} />
-                      }
-                      <span style={{
-                        fontFamily: FONTS.sans, fontSize: 12, fontWeight: 500,
-                        color: COLORS.textPrimary, flex: 1,
-                      }}>{ev.name}</span>
-                      <Mono tone="dim" size="xs">{ev.role}</Mono>
-                      <Mono tone="dim" size="xs">{ev.unit}</Mono>
-                      <Mono tone="muted" size="xs">{ev.time}</Mono>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Ratio Compliance Dashboard ── */}
-              <div style={{
-                padding: `${SPACE.md}px ${SPACE.base}px ${SPACE.lg}px`,
-              }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginBottom: SPACE.md,
-                }}>
-                  <Shield size={12} color={COLORS.accent} />
-                  <BracketLabel tone="accent" size="xs">RATIO COMPLIANCE</BracketLabel>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
-                  {UNITS.map(unit => {
-                    const mandated = MANDATED_RATIOS[unit.name] ?? 999;
-                    const compliant = unit.nursePatientRatio <= mandated;
-                    const pctOfLimit = mandated > 0 ? Math.min(100, Math.round((unit.nursePatientRatio / mandated) * 100)) : 0;
-                    return (
-                      <div key={unit.id} style={{
-                        display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                      }}>
-                        <Mono tone="dim" size="xs" style={{ width: 74, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {unit.name}
-                        </Mono>
-                        <div style={{
-                          flex: 1, height: 8, background: COLORS.border,
-                          borderRadius: RADIUS.full, overflow: 'hidden',
-                          position: 'relative',
-                        }}>
-                          <div style={{
-                            width: `${pctOfLimit}%`, height: '100%',
-                            background: compliant
-                              ? (pctOfLimit >= 80 ? COLORS.warn : COLORS.ok)
-                              : COLORS.crit,
-                            borderRadius: RADIUS.full,
-                            transition: `width ${MOTION.base}s ease`,
-                          }} />
-                          {/* Mandated limit marker */}
-                          <div style={{
-                            position: 'absolute', top: -2, bottom: -2,
-                            left: '100%', width: 2,
-                            background: COLORS.textDim,
-                          }} />
-                        </div>
-                        <span style={{
-                          fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
-                          color: compliant ? COLORS.ok : COLORS.crit,
-                          width: 36, textAlign: 'right', flexShrink: 0,
-                        }}>1:{unit.nursePatientRatio.toFixed(1)}</span>
-                        {compliant
-                          ? <Shield size={10} color={COLORS.ok} />
-                          : <AlertTriangle size={10} color={COLORS.crit} />
-                        }
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.sm,
-                  marginTop: SPACE.md,
-                  padding: `${SPACE.xs}px ${SPACE.sm}px`,
-                  background: COLORS.surface,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: RADIUS.sm,
-                }}>
-                  <Mono tone="dim" size="xs">BAR = ACTUAL / MANDATED LIMIT</Mono>
-                  <div style={{ flex: 1 }} />
-                  <Mono tone={UNITS.every(u => u.nursePatientRatio <= (MANDATED_RATIOS[u.name] ?? 999)) ? 'ok' : 'crit'} size="xs">
-                    {UNITS.filter(u => u.nursePatientRatio <= (MANDATED_RATIOS[u.name] ?? 999)).length}/{UNITS.length} COMPLIANT
-                  </Mono>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
-    );
-  }
 
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="workforce-coverage"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: MOTION.fast }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: Z.modal,
-            background: COLORS.bg,
-            display: 'flex',
-            flexDirection: 'column',
-            fontFamily: FONTS.sans,
-            color: COLORS.textPrimary,
-            overflow: 'hidden',
-            paddingTop: 'env(safe-area-inset-top)',
-          }}
-        >
-          {/* ── Header strip ──────────────────────────────────────────── */}
-          <HudStrip side="top" fixed>
-            <button
-              onClick={onClose}
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 28, height: 28, background: 'transparent',
-                border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm,
-                color: COLORS.textSecondary, cursor: 'pointer',
-              }}
-            >
-              <X size={14} />
-            </button>
-            <BracketLabel tone="accent" size="sm">Workforce</BracketLabel>
-            <div style={{ flex: 1 }} />
-            <ConfidenceBadge confidence={92} ageMinutes={1} />
-          </HudStrip>
-
-          {/* ── Body ──────────────────────────────────────────────────── */}
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              paddingTop: 56,
-              paddingBottom: `max(env(safe-area-inset-bottom), ${SPACE['3xl']}px)`,
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {renderHero()}
-
-            <Divider style={{ margin: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px` }} />
-            {renderFilters()}
-
-            <Divider style={{ margin: `${SPACE.xs}px ${SPACE.base}px ${SPACE.base}px` }} />
-            {renderUnitCards()}
-
-            <Divider style={{ margin: `${SPACE.base}px ${SPACE.base}px 0` }} />
-            {renderRoleBreakdown()}
-
-            <Divider style={{ margin: `0 ${SPACE.base}px` }} />
-            {renderFloatPool()}
-
-            <Divider style={{ margin: `0 ${SPACE.base}px` }} />
-            {renderShiftChanges()}
+      {/* ── Bottom strip: Coverage metrics ────────────────────────────── */}
+      <HudStrip side="bottom" height={36}>
+        <div style={{ display: 'flex', gap: SPACE.xl, alignItems: 'center', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            <Shield size={11} color={unitsCompliant === UNITS.length ? COLORS.ok : COLORS.warn} />
+            <Mono tone={unitsCompliant === UNITS.length ? 'ok' : 'warn'} size="xs">
+              RATIO COMPLIANCE {unitsCompliant}/{UNITS.length}
+            </Mono>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+
+          <Divider variant="solid" color={COLORS.border} style={{ width: 1, height: 16, borderTop: 'none', borderLeft: `1px solid ${COLORS.border}` }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            <AlertTriangle size={11} color={ratioViolations > 0 ? COLORS.crit : COLORS.textMuted} />
+            <Mono tone={ratioViolations > 0 ? 'crit' : 'muted'} size="xs">
+              RATIO VIOLATIONS {ratioViolations}
+            </Mono>
+          </div>
+
+          <Divider variant="solid" color={COLORS.border} style={{ width: 1, height: 16, borderTop: 'none', borderLeft: `1px solid ${COLORS.border}` }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            <Clock size={11} color={overtimeStaff.length > 0 ? COLORS.warn : COLORS.textMuted} />
+            <Mono tone={overtimeStaff.length > 0 ? 'warn' : 'muted'} size="xs">
+              OVERTIME {overtimeStaff.length} STAFF &gt;10H
+            </Mono>
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            <Activity size={11} color={COLORS.ok} />
+            <Mono tone="ok" size="xs">LIVE</Mono>
+            <Mono tone="muted" size="xs">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Mono>
+          </div>
+        </div>
+      </HudStrip>
+    </div>
   );
 };
 
-WorkforceCoverage.displayName = 'WorkforceCoverage';
+// ─────────────────────────────────────────────────────────────────────────
+// StaffChip — Draggable staff pill
+// ─────────────────────────────────────────────────────────────────────────
+
+const StaffChip: React.FC<{
+  member: StaffMember;
+  isDragged: boolean;
+  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragEnd: () => void;
+  showStatus?: boolean;
+}> = ({ member, isDragged, onDragStart, onDragEnd, showStatus }) => {
+  const [hovered, setHovered] = useState(false);
+  const roleColor = ROLE_COLORS[member.role];
+  const isOvertime = (member.hoursWorked ?? 0) > 10;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: isDragged ? 0.4 : 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+      draggable
+      onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLDivElement>, member.id)}
+      onDragEnd={onDragEnd}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: `2px ${SPACE.sm}px`,
+        background: hovered ? `${roleColor}20` : COLORS.surface,
+        border: `1px solid ${hovered ? roleColor : COLORS.border}`,
+        borderRadius: RADIUS.full,
+        cursor: 'grab',
+        userSelect: 'none',
+        transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+        position: 'relative',
+      }}
+      title={`${member.name} (${member.role})${member.certifications ? ' - ' + member.certifications.join(', ') : ''}${member.hoursWorked ? ' - ' + member.hoursWorked + 'h' : ''}`}
+    >
+      <GripVertical size={8} color={COLORS.textDim} style={{ flexShrink: 0 }} />
+
+      {/* Role dot */}
+      <span style={{
+        width: 5,
+        height: 5,
+        borderRadius: RADIUS.full,
+        background: roleColor,
+        boxShadow: `0 0 4px ${roleColor}80`,
+        flexShrink: 0,
+      }} />
+
+      {/* Name */}
+      <span style={{
+        fontFamily: FONTS.sans,
+        fontSize: 11,
+        fontWeight: 500,
+        color: COLORS.textPrimary,
+        whiteSpace: 'nowrap',
+        letterSpacing: '-0.005em',
+      }}>
+        {member.name}
+      </span>
+
+      {/* Role abbreviation */}
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 9,
+        fontWeight: 600,
+        letterSpacing: '0.06em',
+        color: roleColor,
+      }}>
+        {member.role}
+      </span>
+
+      {/* Status indicator for float pool */}
+      {showStatus && member.status === 'on-call' && (
+        <span style={{
+          fontFamily: FONTS.mono,
+          fontSize: 8,
+          fontWeight: 500,
+          letterSpacing: '0.1em',
+          color: COLORS.warn,
+          textTransform: 'uppercase',
+        }}>
+          CALL
+        </span>
+      )}
+
+      {/* Overtime warning */}
+      {isOvertime && (
+        <span style={{
+          width: 4,
+          height: 4,
+          borderRadius: RADIUS.full,
+          background: COLORS.warn,
+          boxShadow: `0 0 4px ${COLORS.warn}`,
+          flexShrink: 0,
+        }} />
+      )}
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Roster Row — compact table row in roster panel
+// ─────────────────────────────────────────────────────────────────────────
+
+const RosterRow: React.FC<{
+  member: StaffMember;
+  index: number;
+}> = ({ member, index }) => {
+  const [hovered, setHovered] = useState(false);
+  const roleColor = ROLE_COLORS[member.role];
+  const unitName = member.unit
+    ? UNITS.find(u => u.id === member.unit)?.name ?? member.unit
+    : 'Float';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.015, duration: MOTION.fast }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 50px 80px 50px',
+        gap: SPACE.sm,
+        padding: `${SPACE.xs}px ${SPACE.lg}px`,
+        borderBottom: `1px solid ${COLORS.border}`,
+        alignItems: 'center',
+        background: hovered ? COLORS.surfaceHover : 'transparent',
+        transition: `background ${MOTION.fast}s ease`,
+      }}
+    >
+      <span style={{
+        fontFamily: FONTS.sans,
+        fontSize: 12,
+        fontWeight: 500,
+        color: COLORS.textPrimary,
+        letterSpacing: '-0.005em',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {member.name}
+      </span>
+
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 10,
+        fontWeight: 600,
+        color: roleColor,
+        letterSpacing: '0.06em',
+      }}>
+        {member.role}
+      </span>
+
+      <span style={{
+        fontFamily: FONTS.sans,
+        fontSize: 11,
+        color: member.unit ? COLORS.textSecondary : COLORS.textMuted,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}>
+        {unitName}
+      </span>
+
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 11,
+        fontWeight: 500,
+        color: (member.hoursWorked ?? 0) > 10 ? COLORS.warn : COLORS.textSecondary,
+        textAlign: 'right',
+        letterSpacing: '0.04em',
+      }}>
+        {(member.hoursWorked ?? 0) > 0 ? `${member.hoursWorked}h` : '\u2014'}
+      </span>
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// Small helper components
+// ─────────────────────────────────────────────────────────────────────────
+
+const StatChip: React.FC<{
+  label: string;
+  value: number;
+  tone: 'ok' | 'warn' | 'crit' | 'info';
+}> = ({ label, value, tone }) => {
+  const color = tone === 'ok' ? COLORS.ok : tone === 'warn' ? COLORS.warn : tone === 'crit' ? COLORS.crit : COLORS.info;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <Mono tone="muted" size="xs">{label}</Mono>
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 13,
+        fontWeight: 700,
+        color,
+        letterSpacing: '-0.02em',
+      }}>
+        {value}
+      </span>
+    </div>
+  );
+};
+
+const ShiftBadge: React.FC<{
+  label: string;
+  value: number;
+  tone: 'ok' | 'warn' | 'crit' | 'info';
+}> = ({ label, value, tone }) => {
+  const color = tone === 'ok' ? COLORS.ok : tone === 'warn' ? COLORS.warn : tone === 'crit' ? COLORS.crit : COLORS.info;
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 3,
+      padding: `1px ${SPACE.xs}px`,
+      background: `${color}15`,
+      border: `1px solid ${color}30`,
+      borderRadius: RADIUS.sm,
+    }}>
+      <Mono tone="muted" size="xs">{label}</Mono>
+      <span style={{
+        fontFamily: FONTS.mono,
+        fontSize: 11,
+        fontWeight: 600,
+        color,
+      }}>
+        {value > 0 ? `+${value}` : value}
+      </span>
+    </div>
+  );
+};
