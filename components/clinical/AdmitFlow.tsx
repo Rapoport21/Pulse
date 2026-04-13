@@ -56,12 +56,52 @@ import { HOSPITAL_UNITS, type BedUnit, type Bed as BedType } from '../../data/be
 // Types
 // ─────────────────────────────────────────────────────────────────────────
 
+// ── Admission queue entry — shared with App.tsx ─────────────────────
+export type AdmissionSource = 'ED' | 'OR' | 'Transfer' | 'Direct';
+export type AdmissionStatus = 'pending' | 'placing' | 'in_transit' | 'admitted';
+
+export interface AdmissionEntry {
+  id: string;
+  name: string;
+  mrn: string;
+  source: AdmissionSource;
+  acuity: number;
+  complaint: string;
+  requestedUnit: string;
+  status: AdmissionStatus;
+  waitMin: number;
+  attending: string;
+  requestedAt: string;
+  assignedBed?: string;
+  assignedUnit?: string;
+}
+
+export const INITIAL_ADMISSION_QUEUE: AdmissionEntry[] = [
+  { id: 'ADM-001', name: 'Robert Thompson', mrn: 'MRN-9923', source: 'ED', acuity: 2, complaint: 'Chest pain, elevated troponin', requestedUnit: 'ICU', status: 'pending', waitMin: 45, attending: 'Dr. Rivera', requestedAt: '08:15' },
+  { id: 'ADM-002', name: 'Linda Park', mrn: 'MRN-4412', source: 'OR', acuity: 3, complaint: 'Post-craniotomy monitoring', requestedUnit: 'Stepdown', status: 'placing', waitMin: 22, attending: 'Dr. Kim', requestedAt: '08:38' },
+  { id: 'ADM-003', name: 'Marcus Williams', mrn: 'MRN-6617', source: 'Transfer', acuity: 2, complaint: 'STEMI, needs cath lab post-PCI', requestedUnit: 'ICU', status: 'in_transit', waitMin: 68, attending: 'Dr. Chen', requestedAt: '07:52' },
+  { id: 'ADM-004', name: 'Sarah Mitchell', mrn: 'MRN-3301', source: 'ED', acuity: 3, complaint: 'Pneumonia, O2 requirement', requestedUnit: 'Med-Surg', status: 'pending', waitMin: 30, attending: 'Dr. Foster', requestedAt: '08:30' },
+  { id: 'ADM-005', name: 'James Ortiz', mrn: 'MRN-8854', source: 'Direct', acuity: 4, complaint: 'Elective hip replacement', requestedUnit: 'Med-Surg', status: 'admitted', waitMin: 0, attending: 'Dr. Adams', requestedAt: '07:00', assignedBed: '204', assignedUnit: '2-WEST' },
+  { id: 'ADM-006', name: 'Patricia Chen', mrn: 'MRN-5529', source: 'ED', acuity: 2, complaint: 'GI bleed, hemodynamically unstable', requestedUnit: 'ICU', status: 'pending', waitMin: 55, attending: 'Dr. Patel', requestedAt: '08:05' },
+  { id: 'ADM-007', name: 'David Brown', mrn: 'MRN-7746', source: 'Transfer', acuity: 3, complaint: 'Stroke, tPA administered at OSH', requestedUnit: 'Stepdown', status: 'in_transit', waitMin: 40, attending: 'Dr. Nguyen', requestedAt: '08:20' },
+];
+
 export interface AdmitFlowProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
   /** When true, renders as inline desktop layout instead of mobile overlay. */
   embedded?: boolean;
+  /** Mutable bed units from App — used for bed picker */
+  bedUnits?: BedUnit[];
+  /** Mutable admission queue from App */
+  admissionQueue?: AdmissionEntry[];
+  /** Callback to assign a bed to a queue entry */
+  onAssignBed?: (admissionId: string, bedId: string) => void;
+  /** Callback to submit a new admission */
+  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => void;
+  /** Navigate to patient tab */
+  onNavigateToPatient?: (patientId: string) => void;
 }
 
 type Step = 'identity' | 'bed' | 'confirm';
@@ -114,7 +154,7 @@ function bedStateColor(state: BedType['state']): string {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, embedded }) => {
+export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, embedded, bedUnits: externalBedUnits, admissionQueue: externalQueue, onAssignBed, onSubmitAdmission, onNavigateToPatient }) => {
   const [step, setStep] = useState<Step>('identity');
   const [selectedBed, setSelectedBed] = useState<BedType | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<BedUnit | null>(null);
@@ -473,23 +513,20 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
     requestedUnit: '', specialReqs: '', priority: 'routine',
   });
   const [queueFilter, setQueueFilter] = useState<'all' | 'pending' | 'placing' | 'in_transit' | 'admitted'>('all');
+  // Bed picker state for "Assign Bed" action
+  const [assigningAdmissionId, setAssigningAdmissionId] = useState<string | null>(null);
+  // Patient info dropdown
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
   // ── Main render ───────────────────────────────────────────────────────
 
   // ── Embedded mode: desktop admissions command center ──
   if (embedded) {
-    const ADMISSION_QUEUE = [
-      { id: 'ADM-001', name: 'Robert Thompson', mrn: 'MRN-9923', source: 'ED' as const, acuity: 2, complaint: 'Chest pain, elevated troponin', requestedUnit: 'ICU', status: 'pending' as const, waitMin: 45, attending: 'Dr. Rivera', requestedAt: '08:15' },
-      { id: 'ADM-002', name: 'Linda Park', mrn: 'MRN-4412', source: 'OR' as const, acuity: 3, complaint: 'Post-craniotomy monitoring', requestedUnit: 'Stepdown', status: 'placing' as const, waitMin: 22, attending: 'Dr. Kim', requestedAt: '08:38' },
-      { id: 'ADM-003', name: 'Marcus Williams', mrn: 'MRN-6617', source: 'Transfer' as const, acuity: 2, complaint: 'STEMI, needs cath lab post-PCI', requestedUnit: 'ICU', status: 'in_transit' as const, waitMin: 68, attending: 'Dr. Chen', requestedAt: '07:52' },
-      { id: 'ADM-004', name: 'Sarah Mitchell', mrn: 'MRN-3301', source: 'ED' as const, acuity: 3, complaint: 'Pneumonia, O2 requirement', requestedUnit: 'Med-Surg', status: 'pending' as const, waitMin: 30, attending: 'Dr. Foster', requestedAt: '08:30' },
-      { id: 'ADM-005', name: 'James Ortiz', mrn: 'MRN-8854', source: 'Direct' as const, acuity: 4, complaint: 'Elective hip replacement', requestedUnit: 'Med-Surg', status: 'admitted' as const, waitMin: 0, attending: 'Dr. Adams', requestedAt: '07:00' },
-      { id: 'ADM-006', name: 'Patricia Chen', mrn: 'MRN-5529', source: 'ED' as const, acuity: 2, complaint: 'GI bleed, hemodynamically unstable', requestedUnit: 'ICU', status: 'pending' as const, waitMin: 55, attending: 'Dr. Patel', requestedAt: '08:05' },
-      { id: 'ADM-007', name: 'David Brown', mrn: 'MRN-7746', source: 'Transfer' as const, acuity: 3, complaint: 'Stroke, tPA administered at OSH', requestedUnit: 'Stepdown', status: 'in_transit' as const, waitMin: 40, attending: 'Dr. Nguyen', requestedAt: '08:20' },
-    ];
+    const ADMISSION_QUEUE = externalQueue ?? INITIAL_ADMISSION_QUEUE;
+    const bedData = externalBedUnits ?? HOSPITAL_UNITS;
 
-    type QueueStatus = 'pending' | 'placing' | 'in_transit' | 'admitted';
-    type QueueSource = 'ED' | 'OR' | 'Transfer' | 'Direct';
+    type QueueStatus = AdmissionStatus;
+    type QueueSource = AdmissionSource;
 
     const sourceColor: Record<QueueSource, string> = {
       ED: COLORS.crit,
@@ -802,17 +839,123 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                     <div style={{ flex: 1 }} />
 
                     {/* Action buttons */}
-                    {entry.status !== 'admitted' && (
+                    {entry.status !== 'admitted' ? (
                       <div style={{ display: 'flex', gap: SPACE.sm }}>
-                        <TacticalButton variant="primary" size="sm">
+                        <TacticalButton variant="primary" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setAssigningAdmissionId(assigningAdmissionId === entry.id ? null : entry.id); setExpandedEntryId(null); }}>
                           Assign Bed
                         </TacticalButton>
-                        <TacticalButton variant="ghost" size="sm">
-                          Cancel
+                        <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id); setAssigningAdmissionId(null); }}>
+                          Info
                         </TacticalButton>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
+                        <Mono tone="ok" size="xs">{entry.assignedBed} ({entry.assignedUnit})</Mono>
+                        {onNavigateToPatient && (
+                          <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); onNavigateToPatient(entry.mrn); }}>
+                            Open Chart
+                          </TacticalButton>
+                        )}
                       </div>
                     )}
                   </div>
+
+                  {/* ── Expanded patient info dropdown ── */}
+                  <AnimatePresence>
+                    {expandedEntryId === entry.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: MOTION.fast }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{
+                          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                          gap: `${SPACE.sm}px ${SPACE.base}px`,
+                          padding: `${SPACE.md}px 0 ${SPACE.sm}px`,
+                          marginTop: SPACE.sm,
+                          borderTop: `1px solid ${COLORS.border}`,
+                        }}>
+                          <div><Mono tone="muted" size="xs">Source</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textPrimary, marginTop: 2 }}>{entry.source}</div></div>
+                          <div><Mono tone="muted" size="xs">Requested</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedUnit}</div></div>
+                          <div><Mono tone="muted" size="xs">Attending</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textPrimary, marginTop: 2 }}>{entry.attending}</div></div>
+                          <div><Mono tone="muted" size="xs">ESI Level</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: acuityColor(entry.acuity), marginTop: 2 }}>ESI {entry.acuity}</div></div>
+                          <div><Mono tone="muted" size="xs">Wait Time</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: entry.waitMin > 60 ? COLORS.crit : COLORS.textPrimary, marginTop: 2 }}>{entry.waitMin}m</div></div>
+                          <div><Mono tone="muted" size="xs">Requested At</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedAt}</div></div>
+                        </div>
+                        {onNavigateToPatient && (
+                          <TacticalButton variant="ghost" size="sm" onClick={() => onNavigateToPatient(entry.mrn)}>
+                            Open Full Chart
+                          </TacticalButton>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* ── Bed picker dropdown ── */}
+                  <AnimatePresence>
+                    {assigningAdmissionId === entry.id && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: MOTION.fast }}
+                        style={{ overflow: 'hidden' }}
+                      >
+                        <div style={{
+                          padding: `${SPACE.md}px 0 ${SPACE.sm}px`,
+                          marginTop: SPACE.sm,
+                          borderTop: `1px solid ${COLORS.accent}40`,
+                        }}>
+                          <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                            Select Available Bed
+                          </Mono>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, maxHeight: 200, overflowY: 'auto' }}>
+                            {bedData.filter(u => !u.surgeOnly).map(unit => {
+                              const readyBeds = unit.beds.filter(b => b.state === 'ready');
+                              if (readyBeds.length === 0) return null;
+                              return (
+                                <div key={unit.id}>
+                                  <Mono tone="muted" size="xs" style={{ marginBottom: 4, display: 'block' }}>{unit.shortName}</Mono>
+                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE.xs }}>
+                                    {readyBeds.map(bed => (
+                                      <button
+                                        key={bed.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (onAssignBed) {
+                                            onAssignBed(entry.id, bed.id);
+                                            setAssigningAdmissionId(null);
+                                          }
+                                        }}
+                                        style={{
+                                          padding: `4px ${SPACE.md}px`,
+                                          fontFamily: FONTS.mono,
+                                          fontSize: 11,
+                                          fontWeight: 600,
+                                          color: COLORS.ok,
+                                          background: 'rgba(16,185,129,0.08)',
+                                          border: `1px solid ${COLORS.ok}40`,
+                                          borderRadius: RADIUS.sm,
+                                          cursor: 'pointer',
+                                          transition: `all ${MOTION.fast}s ease`,
+                                        }}
+                                        onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(16,185,129,0.2)'; }}
+                                        onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(16,185,129,0.08)'; }}
+                                      >
+                                        {bed.label}{bed.assignedNurse ? ` (${bed.assignedNurse})` : ''}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </TacticalCard>
               ))}
 
@@ -1053,7 +1196,22 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 <TacticalButton
                   variant="primary"
                   fullWidth
-                  onClick={() => showToast('Admission request submitted')}
+                  onClick={() => {
+                    if (onSubmitAdmission && formData.name && formData.complaint) {
+                      onSubmitAdmission({
+                        name: formData.name,
+                        mrn: formData.mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`,
+                        source: 'ED' as AdmissionSource,
+                        acuity: formData.esi,
+                        complaint: formData.complaint,
+                        requestedUnit: formData.requestedUnit || 'Med-Surg',
+                        attending: formData.attending || 'TBD',
+                      });
+                      setFormData({ name: '', dob: '', sex: '', mrn: '', insurance: '', emergencyContact: '', complaint: '', attending: '', esi: 3, isolation: 'NONE', requestedUnit: '', specialReqs: '', priority: 'routine' });
+                    } else {
+                      showToast('Please fill in patient name and chief complaint');
+                    }
+                  }}
                   icon={<Plus size={14} />}
                 >
                   Submit Admission Request

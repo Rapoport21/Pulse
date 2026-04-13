@@ -36,7 +36,9 @@ import { CommandSidebar } from './components/CommandSidebar';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
-import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage } from './components/clinical';
+import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
+import type { AdmissionEntry } from './components/clinical';
+import type { Bed } from './data/bedMock';
 import { PatientsPage } from './components/PatientsPage';
 import { seedBedState, type BedUnit } from './data/bedMock';
 import { useRealtimeState, useRealtimePing, subscribe } from './lib/realtime';
@@ -105,6 +107,60 @@ function App() {
 
   // Patient navigation — when bed board or quick action sends user to Patients tab
   const [initialPatientId, setInitialPatientId] = useState<string | undefined>();
+
+  // ── Mutable bed state — shared between BedBoard and AdmitFlow ──
+  const [bedUnits, setBedUnits] = useState<BedUnit[]>(() => seedBedState());
+
+  // ── Admissions queue — shared state so AdmitFlow actions persist ──
+  const [admissionQueue, setAdmissionQueue] = useState<AdmissionEntry[]>(() => INITIAL_ADMISSION_QUEUE);
+
+  /** Assign a bed to an admission queue entry — updates both bed state and queue */
+  const assignBedToAdmission = (admissionId: string, bedId: string) => {
+    let bedLabel = '';
+    let unitName = '';
+    // Update bed state
+    setBedUnits(prev => prev.map(unit => ({
+      ...unit,
+      beds: unit.beds.map(bed => {
+        if (bed.id === bedId && bed.state === 'ready') {
+          const admission = admissionQueue.find(a => a.id === admissionId);
+          bedLabel = bed.label;
+          unitName = unit.shortName;
+          return {
+            ...bed,
+            state: 'occupied' as const,
+            patientName: admission?.name ?? 'Unknown',
+            mrn: admission?.mrn ?? '',
+            acuity: admission?.acuity as (1|2|3|4|5) ?? 3,
+            attending: admission?.attending ?? '',
+            admitSource: (admission?.source ?? 'ED') as Bed['admitSource'],
+            losHours: 0,
+            isolation: 'NONE' as const,
+            stateChangedMinAgo: 0,
+          };
+        }
+        return bed;
+      }),
+    })));
+    // Update queue entry status
+    setAdmissionQueue(prev => prev.map(a =>
+      a.id === admissionId ? { ...a, status: 'admitted' as const, assignedBed: bedLabel, assignedUnit: unitName, waitMin: 0 } : a
+    ));
+    showToast(`Assigned ${bedLabel} (${unitName}) — patient admitted`);
+  };
+
+  /** Add a new admission to the queue from the form */
+  const submitNewAdmission = (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => {
+    const newEntry: AdmissionEntry = {
+      ...entry,
+      id: `ADM-${String(admissionQueue.length + 1).padStart(3, '0')}`,
+      status: 'pending',
+      waitMin: 0,
+      requestedAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    };
+    setAdmissionQueue(prev => [newEntry, ...prev]);
+    showToast(`Admission request submitted for ${entry.name}`);
+  };
 
   // Live clock for the header — ticks every second in HH:MM:SS UTC
   const [now, setNow] = useState(() => new Date());
@@ -738,7 +794,7 @@ function App() {
               {activeTab === Tab.BED_BOARD && (
                 <BedBoard
                   display="full"
-                  units={seedBedState()}
+                  units={bedUnits}
                   surgeActive={isSurgeActive}
                   open
                   embedded
@@ -756,6 +812,14 @@ function App() {
                   embedded
                   onClose={() => setActiveTab(Tab.HORIZON)}
                   showToast={showToast}
+                  bedUnits={bedUnits}
+                  admissionQueue={admissionQueue}
+                  onAssignBed={assignBedToAdmission}
+                  onSubmitAdmission={submitNewAdmission}
+                  onNavigateToPatient={(patientId) => {
+                    setInitialPatientId(patientId);
+                    navigateToTab(Tab.PATIENTS);
+                  }}
                 />
               )}
               {activeTab === Tab.ALERTS && (
