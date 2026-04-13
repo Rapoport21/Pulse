@@ -46,7 +46,7 @@ import type { AdmissionEntry } from './components/clinical';
 import type { Bed } from './data/bedMock';
 import { PatientsPage } from './components/PatientsPage';
 import { MOCK_PATIENTS } from './data/clinicalMock';
-import type { Patient, Vital, Encounter } from './types';
+import type { Patient, Vital, Encounter, ClinicalNote } from './types';
 import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from './data/bedMock';
 import { useRealtimeState, useRealtimePing, subscribe, publish, broadcastReset } from './lib/realtime';
 import {
@@ -122,6 +122,97 @@ function App() {
   // Keep a ref so assignBedToAdmission always reads the latest queue
   const admissionQueueRef = useRef(admissionQueue);
   admissionQueueRef.current = admissionQueue;
+
+  // ── Additional synced state — clinical notes & alert acks ──
+  const [clinicalNotes, setClinicalNotes] = useRealtimeState<ClinicalNote[]>('clinical-notes', []);
+  const [alertAcks, setAlertAcks] = useRealtimeState<Record<string, { status: string; actor: string; at: string }>>(
+    'alert-acks', {}
+  );
+
+  /** Add a clinical note (SOAP, progress, nursing, etc.) — syncs to all devices */
+  const addClinicalNote = useCallback((note: Omit<ClinicalNote, 'id' | 'createdAt'>) => {
+    const newNote: ClinicalNote = {
+      ...note,
+      id: `NOTE-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      createdAt: new Date().toISOString(),
+    };
+    setClinicalNotes(prev => [newNote, ...prev]);
+    showToast(`Note saved for patient`, 'success');
+  }, []);
+
+  /** Update patient vitals — pushes new vitals entry and syncs to all devices */
+  const updatePatientVitals = useCallback((patientId: string, vitals: Omit<Vital, 'id' | 'timestamp'>) => {
+    const newVital: Vital = {
+      ...vitals,
+      id: `V-${patientId}-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+    };
+    setPatients(prev => prev.map(p =>
+      p.id === patientId
+        ? { ...p, vitalsHistory: [...p.vitalsHistory, newVital] }
+        : p
+    ));
+    showToast('Vitals updated', 'success');
+  }, []);
+
+  /** Discharge a patient — frees bed, updates admission queue & encounter status */
+  const dischargePatient = useCallback((patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    const bedLocation = patient.currentEncounter?.location?.bed;
+    const nowIso = new Date().toISOString();
+
+    // Free the bed
+    if (bedLocation) {
+      setBedUnits(prev => prev.map(unit => ({
+        ...unit,
+        beds: unit.beds.map(bed => {
+          if (bed.label === bedLocation && bed.state === 'occupied') {
+            return {
+              ...bed,
+              state: 'dirty' as const,
+              patientName: undefined,
+              patientId: undefined,
+              mrn: undefined,
+              acuity: undefined,
+              attending: undefined,
+              losHours: undefined,
+              stateChangedMinAgo: 0,
+            };
+          }
+          return bed;
+        }),
+      })));
+    }
+
+    // Update admission queue entry
+    setAdmissionQueue(prev => prev.map(a =>
+      a.mrn === patient.mrn ? { ...a, status: 'discharged' as const } : a
+    ));
+
+    // Update patient encounter status
+    setPatients(prev => prev.map(p =>
+      p.id === patientId
+        ? {
+            ...p,
+            currentEncounter: p.currentEncounter
+              ? { ...p.currentEncounter, status: 'finished' as const, dischargedAt: nowIso }
+              : p.currentEncounter,
+          }
+        : p
+    ));
+
+    showToast(`Discharged ${patient.name.given} ${patient.name.family}`, 'success');
+  }, [patients]);
+
+  /** Acknowledge an alert — syncs acknowledgment state to all devices */
+  const acknowledgeAlert = useCallback((alertId: string, actor: string) => {
+    setAlertAcks(prev => ({
+      ...prev,
+      [alertId]: { status: 'acknowledged', actor, at: new Date().toISOString() },
+    }));
+  }, []);
 
   /** Assign a bed to an admission queue entry — updates bed state, queue, AND patient list */
   const assignBedToAdmission = (admissionId: string, bedId: string) => {
@@ -787,6 +878,18 @@ function App() {
             setChatQuery(query || '');
             setShowChat(true);
           }}
+          // ── Cross-device shared state & callbacks ──
+          bedUnits={bedUnits}
+          admissionQueue={admissionQueue}
+          patients={patients}
+          clinicalNotes={clinicalNotes}
+          alertAcks={alertAcks}
+          onAssignBed={assignBedToAdmission}
+          onSubmitAdmission={submitNewAdmission}
+          onDischargePatient={dischargePatient}
+          onUpdateVitals={updatePatientVitals}
+          onAddNote={addClinicalNote}
+          onAcknowledgeAlert={acknowledgeAlert}
         />
       ) : (
         <div
@@ -1028,6 +1131,10 @@ function App() {
                   showToast={showToast}
                   initialPatientId={initialPatientId}
                   patients={patients}
+                  clinicalNotes={clinicalNotes}
+                  onUpdateVitals={updatePatientVitals}
+                  onAddNote={addClinicalNote}
+                  onDischargePatient={dischargePatient}
                 />
               )}
               {activeTab === Tab.LIVE_OPS && (

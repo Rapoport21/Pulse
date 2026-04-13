@@ -46,7 +46,8 @@ import {
 } from 'recharts';
 import QRCode from 'qrcode';
 import { UserProfile, UserRole } from '../types';
-import type { Patient } from '../types';
+import type { Patient, ClinicalNote } from '../types';
+import type { AdmissionEntry } from './clinical';
 import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
@@ -119,6 +120,18 @@ interface MobileViewProps {
   onLogout: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   onOpenChat: (query?: string) => void;
+  // ── Cross-device shared state & callbacks ──
+  bedUnits?: BedUnit[];
+  admissionQueue?: AdmissionEntry[];
+  patients?: Patient[];
+  clinicalNotes?: ClinicalNote[];
+  alertAcks?: Record<string, { status: string; actor: string; at: string }>;
+  onAssignBed?: (admissionId: string, bedId: string) => void;
+  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => void;
+  onDischargePatient?: (patientId: string) => void;
+  onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
+  onAddNote?: (note: Omit<ClinicalNote, 'id' | 'createdAt'>) => void;
+  onAcknowledgeAlert?: (alertId: string, actor: string) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -879,6 +892,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onLogout,
   showToast,
   onOpenChat,
+  bedUnits: sharedBedUnits,
+  admissionQueue,
+  patients: sharedPatients,
+  clinicalNotes,
+  alertAcks,
+  onAssignBed,
+  onSubmitAdmission,
+  onDischargePatient,
+  onUpdateVitals,
+  onAddNote,
+  onAcknowledgeAlert,
 }) => {
   const [activeTab, setActiveTab] = useState<
     'dashboard' | 'tasks' | 'patients' | 'alerts' | 'comms'
@@ -907,11 +931,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showEmsBoard, setShowEmsBoard] = useState(false);
 
   /**
-   * Bed Board state — mutable bed data seeded from mock.
-   * Surge-aware: escalateBedState transforms beds when surge activates.
+   * Bed Board state — prefer shared state from App.tsx (single source of truth
+   * for cross-device sync), fall back to local realtime subscription.
    */
-  const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
-  const [syncedPatients] = useRealtimeState<Patient[]>('patients', [...MOCK_PATIENTS]);
+  const [localBedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
+  const [localPatients] = useRealtimeState<Patient[]>('patients', [...MOCK_PATIENTS]);
+  const bedUnits = sharedBedUnits ?? localBedUnits;
+  const syncedPatients = sharedPatients ?? localPatients;
   const [showBedBoard, setShowBedBoard] = useState(false);
 
   /** Admit / Discharge fullscreen flow wizards. */
@@ -4540,19 +4566,26 @@ export const MobileView: React.FC<MobileViewProps> = ({
       />
 
       {/* Admit Flow — 3-step admission wizard (patient ID → bed
-          assignment → confirmation). */}
+          assignment → confirmation). Wired to shared state so admissions
+          sync across all devices. */}
       <AdmitFlow
         open={showAdmitFlow}
         onClose={() => setShowAdmitFlow(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
+        bedUnits={bedUnits}
+        admissionQueue={admissionQueue}
+        onAssignBed={onAssignBed}
+        onSubmitAdmission={onSubmitAdmission}
       />
 
       {/* Discharge Flow — readiness checklist → disposition → confirm
-          discharge. Closes encounter and frees bed. */}
+          discharge. Closes encounter and frees bed. Syncs across devices. */}
       <DischargeFlow
         open={showDischargeFlow}
         onClose={() => setShowDischargeFlow(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
+        patients={syncedPatients}
+        onDischargePatient={onDischargePatient}
       />
 
       {/* Rounding List — physician rounding view with all patients
@@ -4563,13 +4596,18 @@ export const MobileView: React.FC<MobileViewProps> = ({
         showToast={(msg: string) => showToast(msg, 'info')}
         role={currentUser.role}
         patients={syncedPatients}
+        clinicalNotes={clinicalNotes}
+        onUpdateVitals={onUpdateVitals}
+        onAddNote={onAddNote}
+        onDischargePatient={onDischargePatient}
       />
 
-      {/* Note Composer — SOAP / H&P / Progress note wizard. */}
+      {/* Note Composer — SOAP / H&P / Progress note wizard. Syncs notes across devices. */}
       <NoteComposer
         open={showNoteComposer}
         onClose={() => setShowNoteComposer(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
+        onAddNote={onAddNote}
       />
 
       {/* Order Entry (CPOE) — meds, labs, imaging, consults. */}
@@ -4609,12 +4647,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
         role={currentUser.role}
       />
 
-      {/* Alerts Center — hospital-wide alert feed. */}
+      {/* Alerts Center — hospital-wide alert feed. Acknowledgments sync across devices. */}
       <AlertsCenter
         open={showAlerts}
         onClose={() => setShowAlerts(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
         role={currentUser.role}
+        alertAcks={alertAcks}
+        onAcknowledgeAlert={onAcknowledgeAlert}
       />
 
       {/* Dept Coordination — multi-department C2 view. */}

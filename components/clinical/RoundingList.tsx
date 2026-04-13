@@ -80,6 +80,14 @@ export interface RoundingListProps {
   /** External patient list — when provided, replaces MOCK_PATIENTS so
    *  newly admitted patients (from realtime sync) appear in the list. */
   patients?: Patient[];
+  /** Synced clinical notes — shown in expanded patient detail */
+  clinicalNotes?: import('../../types').ClinicalNote[];
+  /** Cross-device vitals update — pushes new vitals to all devices */
+  onUpdateVitals?: (patientId: string, vitals: Omit<import('../../types').Vital, 'id' | 'timestamp'>) => void;
+  /** Cross-device note creation — syncs note to all devices */
+  onAddNote?: (note: Omit<import('../../types').ClinicalNote, 'id' | 'createdAt'>) => void;
+  /** Cross-device discharge — frees bed and updates status everywhere */
+  onDischargePatient?: (patientId: string) => void;
 }
 
 type SortMode = 'acuity' | 'bed' | 'name';
@@ -201,7 +209,7 @@ const MOCK_SBAR: Record<string, { s: string; b: string; a: string; r: string }> 
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast, role, patients: externalPatients }) => {
+export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast, role, patients: externalPatients, clinicalNotes, onUpdateVitals, onAddNote, onDischargePatient }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Role-aware defaults:
@@ -746,6 +754,39 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                 </div>
                               )}
 
+                              {/* Synced Clinical Notes */}
+                              {clinicalNotes && clinicalNotes.filter(n => n.patientId === patient.id).length > 0 && (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.xs }}>
+                                    <StickyNote size={11} color={COLORS.textMuted} />
+                                    <Mono tone="muted" size="xs">
+                                      Notes · {clinicalNotes.filter(n => n.patientId === patient.id).length}
+                                    </Mono>
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {clinicalNotes.filter(n => n.patientId === patient.id).slice(0, 3).map(note => (
+                                      <div
+                                        key={note.id}
+                                        style={{
+                                          padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                                          background: COLORS.surfaceElev ?? COLORS.surface,
+                                          border: `1px solid ${COLORS.border}`,
+                                          borderRadius: RADIUS.sm,
+                                        }}
+                                      >
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                          <Mono tone="accent" size="xs">{note.type}</Mono>
+                                          <Mono tone="muted" size="xs">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Mono>
+                                        </div>
+                                        <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, lineHeight: 1.3 }}>
+                                          {note.content.length > 120 ? note.content.slice(0, 120) + '…' : note.content}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               {/* Action buttons */}
                               <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
                                 <TacticalButton
@@ -760,7 +801,17 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                   variant="ghost"
                                   size="sm"
                                   icon={<StickyNote size={12} />}
-                                  onClick={() => showToast(`Note composer for ${patient.name.family}`)}
+                                  onClick={() => {
+                                    if (onAddNote) {
+                                      onAddNote({
+                                        patientId: patient.id,
+                                        type: 'PROGRESS',
+                                        authorId: 'current-user',
+                                        content: `Rounding note — ${patient.name.family}, ${patient.name.given}. Patient assessed at bedside. ${patient.currentEncounter?.chiefComplaint ? `CC: ${patient.currentEncounter.chiefComplaint}.` : ''} Vitals reviewed. Plan discussed with team.`,
+                                      });
+                                    }
+                                    showToast(`Note saved for ${patient.name.family}`);
+                                  }}
                                 >
                                   Add Note
                                 </TacticalButton>

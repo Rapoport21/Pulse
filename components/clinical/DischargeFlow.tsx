@@ -57,6 +57,10 @@ export interface DischargeFlowProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string) => void;
+  /** Synced patient list — allows selecting which patient to discharge */
+  patients?: import('../../types').Patient[];
+  /** Cross-device discharge callback — frees bed, updates queue & encounter */
+  onDischargePatient?: (patientId: string) => void;
 }
 
 type Step = 'checklist' | 'disposition' | 'confirm';
@@ -173,7 +177,7 @@ const MOCK_PATIENT = {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, showToast }) => {
+export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, showToast, patients, onDischargePatient }) => {
   const [step, setStep] = useState<Step>('checklist');
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [selectedDisposition, setSelectedDisposition] = useState<Disposition | null>(null);
@@ -217,6 +221,12 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
   const handleDischarge = () => {
     setDischarged(true);
     const dispLabel = DISPOSITIONS.find((d) => d.id === selectedDisposition)?.label ?? selectedDisposition;
+    // Fire cross-device discharge if available (updates bed, queue, patient encounter)
+    if (onDischargePatient) {
+      // Use first admitted patient from synced list, or fall back to mock
+      const target = patients?.find(p => p.currentEncounter?.status === 'in-progress');
+      if (target) onDischargePatient(target.id);
+    }
     showToast(`Discharged ${MOCK_PATIENT.name} — ${dispLabel}`);
   };
 

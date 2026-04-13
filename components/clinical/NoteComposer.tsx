@@ -57,6 +57,8 @@ export interface NoteComposerProps {
   onClose: () => void;
   showToast: (msg: string) => void;
   patientId?: string;
+  /** Cross-device note callback — syncs note to all connected devices */
+  onAddNote?: (note: Omit<import('../../types').ClinicalNote, 'id' | 'createdAt'>) => void;
 }
 
 type Step = 'compose' | 'preview';
@@ -266,6 +268,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
   onClose,
   showToast,
   patientId,
+  onAddNote,
 }) => {
   const [step, setStep] = useState<Step>('compose');
   const [noteType, setNoteType] = useState<NoteType>('soap');
@@ -305,6 +308,21 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
 
   const handleSign = () => {
     setSigned(true);
+    // Publish note to cross-device sync layer
+    if (onAddNote) {
+      const noteTypeMap: Record<string, 'SOAP' | 'H&P' | 'PROGRESS' | 'NURSING' | 'CONSULT'> = {
+        soap: 'SOAP', hp: 'H&P', progress: 'PROGRESS', nursing: 'NURSING', procedure: 'PROGRESS',
+      };
+      const noteContent = Object.values(sections).filter(Boolean).join('\n\n');
+      onAddNote({
+        patientId: patientId ?? MOCK_PATIENT.id,
+        type: noteTypeMap[noteType] ?? 'PROGRESS',
+        authorId: 'current-user',
+        content: noteContent,
+        signed: true,
+        signedAt: new Date().toISOString(),
+      });
+    }
     showToast(`${currentType.label} signed and locked for ${MOCK_PATIENT.name}`);
   };
 

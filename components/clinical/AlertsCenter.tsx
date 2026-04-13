@@ -65,6 +65,10 @@ export interface AlertsCenterProps {
   role?: UserRole;
   /** When true, renders as inline desktop layout instead of mobile overlay. */
   embedded?: boolean;
+  /** Cross-device synced alert acknowledgments */
+  alertAcks?: Record<string, { status: string; actor: string; at: string }>;
+  /** Callback to acknowledge alert across devices */
+  onAcknowledgeAlert?: (alertId: string, actor: string) => void;
 }
 
 type Severity = 'critical' | 'warning' | 'info' | 'success';
@@ -325,18 +329,36 @@ function ensureKeyframes() {
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast, role, embedded }) => {
+export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showToast, role, embedded, alertAcks, onAcknowledgeAlert }) => {
   // Inject keyframes for escalation animation
   React.useEffect(() => { ensureKeyframes(); }, []);
 
-  // ── Mobile alert state ──
+  // ── Mobile alert state — merge local state with cross-device synced acks ──
   const [alertStates, setAlertStates] = useState<Record<string, AlertState>>(() => {
     const init: Record<string, AlertState> = {};
     for (const a of MOCK_ALERTS) {
-      init[a.id] = { status: 'active', statusChangedAt: new Date().toISOString(), actor: '' };
+      // Use synced ack if available, otherwise default to active
+      const synced = alertAcks?.[a.id];
+      init[a.id] = synced
+        ? { status: synced.status as AlertStatus, statusChangedAt: synced.at, actor: synced.actor }
+        : { status: 'active', statusChangedAt: new Date().toISOString(), actor: '' };
     }
     return init;
   });
+
+  // Merge incoming synced acks into local state
+  React.useEffect(() => {
+    if (!alertAcks) return;
+    setAlertStates(prev => {
+      const next = { ...prev };
+      for (const [id, ack] of Object.entries(alertAcks)) {
+        if (next[id] && next[id].status !== ack.status) {
+          next[id] = { status: ack.status as AlertStatus, statusChangedAt: ack.at, actor: ack.actor };
+        }
+      }
+      return next;
+    });
+  }, [alertAcks]);
 
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -381,8 +403,9 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
 
   const handleAck = useCallback((id: string) => {
     changeStatus(id, 'acknowledged');
+    onAcknowledgeAlert?.(id, 'Ops Director');
     showToast('Alert acknowledged');
-  }, [changeStatus, showToast]);
+  }, [changeStatus, showToast, onAcknowledgeAlert]);
 
   const handleResolve = useCallback((id: string) => {
     changeStatus(id, 'resolved');

@@ -77,6 +77,14 @@ interface PatientDetailScreenProps {
   onSave: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   embedded?: boolean;
+  /** Synced clinical notes — shown in notes section */
+  clinicalNotes?: import('../types').ClinicalNote[];
+  /** Cross-device vitals update — pushes new vitals to all devices */
+  onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
+  /** Cross-device note creation — syncs note to all devices */
+  onAddNote?: (note: Omit<import('../types').ClinicalNote, 'id' | 'createdAt'>) => void;
+  /** Cross-device discharge — frees bed and updates status everywhere */
+  onDischargePatient?: (patientId: string) => void;
 }
 
 /** Return the FHIR Patient when the caller provided one, else undefined. */
@@ -288,6 +296,10 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
   onSave,
   showToast,
   embedded,
+  clinicalNotes,
+  onUpdateVitals,
+  onAddNote,
+  onDischargePatient,
 }) => {
   const [painScore, setPainScore] = useState(4);
   const [isSaving, setIsSaving] = useState(false);
@@ -322,6 +334,23 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
 
   const handleSave = () => {
     setIsSaving(true);
+    // Push vitals cross-device if the patient has clinical data
+    const clinicalPt = extractClinicalPatient(patient);
+    if (onUpdateVitals && clinicalPt) {
+      const latest = clinicalPt.vitalsHistory[clinicalPt.vitalsHistory.length - 1];
+      if (latest) {
+        onUpdateVitals(clinicalPt.id, {
+          heartRate: latest.heartRate,
+          systolic: latest.systolic,
+          diastolic: latest.diastolic,
+          respRate: latest.respRate,
+          spO2: latest.spO2,
+          temperature: latest.temperature,
+          painScore: painScore,
+          gcs: latest.gcs,
+        });
+      }
+    }
     setTimeout(() => {
       setIsSaving(false);
       onSave();
@@ -1382,6 +1411,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
           onClose={() => setShowNoteComposer(false)}
           showToast={(msg) => showToast(msg, 'success')}
           patientId={clinical?.id}
+          onAddNote={onAddNote}
         />
         <OrderEntry
           open={showOrderEntry}
@@ -2482,6 +2512,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
         onClose={() => setShowNoteComposer(false)}
         showToast={(msg) => showToast(msg, 'success')}
         patientId={clinical?.id}
+        onAddNote={onAddNote}
       />
       <OrderEntry
         open={showOrderEntry}

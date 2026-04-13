@@ -20,6 +20,14 @@ interface PatientsPageProps {
   initialPatientId?: string;
   /** Mutable patient list from App — includes newly admitted patients */
   patients?: Patient[];
+  /** Synced clinical notes — displayed in patient detail */
+  clinicalNotes?: import('../types').ClinicalNote[];
+  /** Cross-device vitals update — pushes new vitals to all devices */
+  onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
+  /** Cross-device note creation — syncs note to all devices */
+  onAddNote?: (note: Omit<import('../types').ClinicalNote, 'id' | 'createdAt'>) => void;
+  /** Cross-device discharge — frees bed and updates status everywhere */
+  onDischargePatient?: (patientId: string) => void;
 }
 
 type SortKey = 'acuity' | 'bed' | 'name' | 'los';
@@ -305,6 +313,10 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
   showToast,
   initialPatientId,
   patients: externalPatients,
+  clinicalNotes,
+  onUpdateVitals,
+  onAddNote,
+  onDischargePatient,
 }) => {
   // Use mutable patient list from App if provided, otherwise fall back to static mock
   const patientList = externalPatients ?? MOCK_PATIENTS;
@@ -548,6 +560,10 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
                 onSave={() => showToast('Chart saved', 'success')}
                 showToast={showToast}
                 embedded
+                clinicalNotes={clinicalNotes}
+                onUpdateVitals={onUpdateVitals}
+                onAddNote={onAddNote}
+                onDischargePatient={onDischargePatient}
               />
             </motion.div>
           ) : (
