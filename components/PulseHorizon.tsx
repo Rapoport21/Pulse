@@ -1276,23 +1276,23 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             onExpand={() => setShowBedBoard(true)}
           />
 
-          {/* ── Clinical Quick Actions ── */}
+          {/* ── Operational Quick Actions ── */}
           <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
               <Zap size={16} strokeWidth={2} color={COLORS.textSecondary} />
-              <Mono tone="primary" size="sm">Quick Actions</Mono>
+              <Mono tone="primary" size="sm">Command Actions</Mono>
               <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.sm }}>
               {[
-                { label: 'Admit', icon: <UserPlus size={16} />, color: COLORS.ok, onClick: () => onNavigateTab?.(Tab.ADMISSIONS) || setShowAdmitFlow(true) },
-                { label: 'Discharge', icon: <DoorOpen size={16} />, color: COLORS.warn, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowDischargeFlow(true) },
-                { label: 'Rounding', icon: <ClipboardList size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowRoundingList(true) },
-                { label: 'Notes', icon: <FileText size={16} />, color: COLORS.info, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowNoteComposer(true) },
-                { label: 'Orders', icon: <Pill size={16} />, color: COLORS.ok, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowOrderEntry(true) },
-                { label: 'Code Blue', icon: <Siren size={16} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowCodeBlue(true) },
-                { label: 'Handoff', icon: <ArrowRightLeft size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.PATIENTS) || setShowHandoff(true) },
-                { label: 'Comms', icon: <MessageSquare size={16} />, color: COLORS.info, onClick: () => setShowMessaging(true) },
+                { label: 'Activate Surge', icon: <ShieldAlert size={16} />, color: COLORS.crit, onClick: () => showToast?.('Surge activation requires confirmation', 'info') },
+                { label: 'Divert EMS', icon: <Ambulance size={16} />, color: COLORS.warn, onClick: () => showToast?.('Ambulance diversion toggled', 'info') },
+                { label: 'Lock Unit', icon: <Building2 size={16} />, color: '#F97316', onClick: () => showToast?.('Select unit to lock/unlock', 'info') },
+                { label: 'Page On-Call', icon: <Bell size={16} />, color: COLORS.info, onClick: () => showToast?.('Paging on-call team', 'info') },
+                { label: 'Request Float', icon: <Users size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.STAFFING) },
+                { label: 'EVS Stat', icon: <Wind size={16} />, color: COLORS.ok, onClick: () => showToast?.('EVS stat request sent', 'success') },
+                { label: 'Capacity Alert', icon: <AlertTriangle size={16} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.ALERTS) },
+                { label: 'Open Overflow', icon: <MapPin size={16} />, color: COLORS.warn, onClick: () => showToast?.('Overflow unit activation requires surge mode', 'info') },
               ].map((action) => (
                 <div
                   key={action.label}
@@ -1360,38 +1360,85 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             </div>
           </TacticalCard>
 
-          {/* ── Active Admissions & Discharges Snapshot ── */}
+          {/* ── Active Alerts Feed ── */}
           <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <UserPlus size={16} strokeWidth={2} color={COLORS.textSecondary} />
-                <Mono tone="primary" size="sm">Admissions & Discharges</Mono>
+                <Bell size={16} strokeWidth={2} color={COLORS.crit} />
+                <Mono tone="primary" size="sm">Active Alerts</Mono>
+                <StatusPill label={isSurgeActive ? '8 ACTIVE' : '4 ACTIVE'} tone="crit" pulse />
               </div>
-              <Mono tone="muted" size="xs">LAST 4 HOURS</Mono>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => onNavigateTab?.(Tab.ALERTS)}
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <Mono tone="accent" size="xs">VIEW ALL</Mono>
+                <ChevronRight size={12} color={COLORS.accent} />
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.md }}>
-              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.ok}`, borderRadius: RADIUS.sm }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <Mono tone="ok" size="sm">ADMITTED</Mono>
-                  <span style={{ fontFamily: FONTS.sans, fontSize: 28, fontWeight: 600, color: COLORS.ok }}>
-                    {loginCount > 1 && !isSurgeActive ? '4' : isSurgeActive ? '11' : '7'}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+              {[
+                { level: 'crit' as const, msg: 'ICU bed capacity at 83% — 1 bed available', time: '2m ago' },
+                { level: 'warn' as const, msg: 'ED wait time exceeds 90min threshold', time: '8m ago' },
+                { level: 'crit' as const, msg: 'Nurse:patient ratio 1:6.1 in 2-West (target 1:4)', time: '15m ago' },
+                { level: 'warn' as const, msg: 'EVS turnover backlog: 4 beds pending clean', time: '22m ago' },
+              ].map((alert, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: SPACE.md,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: alert.level === 'crit' ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)',
+                  border: `1px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}20`,
+                  borderLeft: `3px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
+                  borderRadius: RADIUS.sm,
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: RADIUS.full, flexShrink: 0,
+                    background: alert.level === 'crit' ? COLORS.crit : COLORS.warn,
+                    boxShadow: `0 0 6px ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
+                  }} />
+                  <span style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 13, color: COLORS.textPrimary }}>
+                    {alert.msg}
                   </span>
+                  <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>{alert.time}</Mono>
                 </div>
-                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '2 pending placement' : isSurgeActive ? '6 pending placement' : '3 pending placement'}
-                </Mono>
-              </div>
-              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.warn}`, borderRadius: RADIUS.sm }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <Mono tone="warn" size="sm">DISCHARGED</Mono>
-                  <span style={{ fontFamily: FONTS.sans, fontSize: 28, fontWeight: 600, color: COLORS.warn }}>
-                    {loginCount > 1 && !isSurgeActive ? '6' : isSurgeActive ? '3' : '4'}
-                  </span>
-                </div>
-                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '2 awaiting transport' : isSurgeActive ? '5 awaiting transport' : '3 awaiting transport'}
-                </Mono>
-              </div>
+              ))}
+            </div>
+          </TacticalCard>
+
+          {/* ── Department Flow Pipeline ── */}
+          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+              <ArrowRight size={16} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+              {[
+                { label: 'WAITING', count: isSurgeActive ? 14 : 6, color: COLORS.warn },
+                { label: 'IN ED', count: isSurgeActive ? 22 : 18, color: COLORS.info },
+                { label: 'BOARDING', count: isSurgeActive ? 8 : 3, color: COLORS.crit },
+                { label: 'ADMITTED', count: isSurgeActive ? 4 : 3, color: '#A855F7' },
+                { label: 'DC READY', count: isSurgeActive ? 2 : 4, color: COLORS.ok },
+              ].map((stage, i) => (
+                <React.Fragment key={stage.label}>
+                  {i > 0 && <ChevronRight size={14} color={COLORS.textDim} style={{ flexShrink: 0 }} />}
+                  <div style={{
+                    flex: 1,
+                    padding: `${SPACE.md}px ${SPACE.sm}px`,
+                    background: COLORS.bgDeep,
+                    border: `1px solid ${COLORS.border}`,
+                    borderTop: `2px solid ${stage.color}`,
+                    borderRadius: RADIUS.sm,
+                    textAlign: 'center',
+                  }}>
+                    <div style={{ fontFamily: FONTS.sans, fontSize: 28, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
+                      {stage.count}
+                    </div>
+                    <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>{stage.label}</Mono>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
           </TacticalCard>
         </div>
