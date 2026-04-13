@@ -362,7 +362,7 @@ const BedPopover: React.FC<{
             variant="primary"
             size="sm"
             fullWidth
-            onClick={() => onNavigateToPatient(bed.mrn || bed.patientId || bed.id)}
+            onClick={() => onNavigateToPatient(bed.patientId || bed.mrn || bed.id)}
           >
             <FileText size={14} style={{ marginRight: 6 }} />
             OPEN CHART
@@ -1020,7 +1020,7 @@ const FullMode: React.FC<{
                               key={bed.id}
                               onClick={() => {
                                 if (isOccupied && onNavigateToPatient && (bed.patientId || bed.mrn)) {
-                                  onNavigateToPatient(bed.mrn || bed.patientId || bed.id);
+                                  onNavigateToPatient(bed.patientId || bed.mrn || bed.id);
                                 } else {
                                   setSelectedBed(bed);
                                 }
