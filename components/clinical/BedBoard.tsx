@@ -25,7 +25,7 @@ import {
   ChevronRight, ArrowUpRight, ShieldAlert, Truck, GripVertical,
   ChevronDown, ChevronUp, RefreshCw, FileText,
 } from 'lucide-react';
-import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z } from '../design/tokens';
+import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z, SHADOW } from '../design/tokens';
 import {
   Mono, BracketLabel, StatusPill, TacticalCard, CornerBracket,
   Divider, HudStrip, ScanningLine, TacticalButton,
@@ -257,119 +257,327 @@ const BedPopover: React.FC<{
   onNavigateToPatient?: (patientId: string) => void;
 }> = ({ bed, onClose, onNavigateToPatient }) => {
   const color = STATE_COLOR[bed.state];
+  const isOccupied = bed.state === 'occupied';
+
+  // Format LOS hours as human-readable string
+  const formatLos = (hrs?: number): string => {
+    if (hrs === undefined) return '--';
+    if (hrs < 24) return `${hrs}h`;
+    const d = Math.floor(hrs / 24);
+    const h = hrs % 24;
+    return h > 0 ? `${d}d ${h}h` : `${d}d`;
+  };
+
+  const ISOLATION_BADGE_COLOR: Record<string, string> = {
+    CONTACT: '#F97316',
+    DROPLET: COLORS.warn,
+    AIRBORNE: COLORS.crit,
+    PROTECTIVE: '#A855F7',
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.98 }}
-      transition={{ duration: MOTION.fast }}
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        position: 'fixed',
-        bottom: 100,
-        left: 16,
-        right: 16,
-        maxWidth: 400,
-        margin: '0 auto',
-        background: COLORS.surface,
-        border: `1px solid ${color}40`,
-        borderRadius: RADIUS.md,
-        padding: SPACE.base,
-        zIndex: Z.toast,
-        boxShadow: `0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px ${COLORS.border}`,
-      }}
-    >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          <span style={{
-            fontFamily: FONTS.mono,
-            fontSize: 16,
-            fontWeight: 700,
-            color: COLORS.textPrimary,
-            letterSpacing: '0.04em',
-          }}>
-            {bed.label}
-          </span>
-          <StatusPill
-            label={stateLabel(bed.state)}
-            tone={bed.state === 'ready' ? 'ok' : bed.state === 'occupied' ? 'info' : bed.state === 'dirty' ? 'warn' : bed.state === 'blocked' ? 'crit' : 'neutral'}
-          />
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: COLORS.textMuted,
-            cursor: 'pointer',
-            padding: 4,
-          }}
-        >
-          <X size={16} />
-        </button>
-      </div>
+    <>
+      {/* Backdrop overlay */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: MOTION.fast }}
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          zIndex: Z.toast - 1,
+        }}
+      />
+      {/* Popover panel */}
+      <motion.div
+        initial={{ opacity: 0, y: 12, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+        transition={{ duration: MOTION.fast }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -55%)',
+          width: 480,
+          maxWidth: 'calc(100vw - 32px)',
+          maxHeight: 'calc(100vh - 80px)',
+          overflowY: 'auto',
+          background: COLORS.surface,
+          border: `1px solid ${color}40`,
+          borderRadius: RADIUS.md,
+          padding: 0,
+          zIndex: Z.toast,
+          boxShadow: `${SHADOW.modal}, 0 0 0 1px ${COLORS.border}`,
+        }}
+      >
+        {isOccupied ? (
+          /* ── Occupied bed: patient-centric view ── */
+          <>
+            {/* Header bar */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px`,
+              borderBottom: `1px solid ${COLORS.border}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.1em',
+                  color: COLORS.textMuted,
+                  flexShrink: 0,
+                }}>
+                  BED {bed.label}
+                </span>
+                <StatusPill label={stateLabel(bed.state)} tone="info" />
+                {bed.acuity && (
+                  <span style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    color: ACUITY_COLOR[bed.acuity],
+                    padding: '2px 6px',
+                    borderRadius: RADIUS.sm,
+                    background: `${ACUITY_COLOR[bed.acuity]}18`,
+                    border: `1px solid ${ACUITY_COLOR[bed.acuity]}30`,
+                  }}>
+                    ESI {bed.acuity}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none', border: 'none',
+                  color: COLORS.textMuted, cursor: 'pointer',
+                  padding: 4, borderRadius: RADIUS.sm,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
 
-      {/* Details grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: `${SPACE.sm}px ${SPACE.base}px` }}>
-        {bed.patientInitials && (
-          <DetailRow label="Patient" value={bed.patientInitials} />
-        )}
-        {bed.acuity && (
-          <DetailRow label="Acuity" value={`ESI ${bed.acuity}`} valueColor={ACUITY_COLOR[bed.acuity]} />
-        )}
-        {bed.assignedNurse && (
-          <DetailRow label="Nurse" value={bed.assignedNurse} />
-        )}
-        <DetailRow label="Last Changed" value={freshnessLabel(bed.stateChangedMinAgo)} />
-        {bed.blockReason && (
-          <DetailRow label="Block Reason" value={bed.blockReason} valueColor={COLORS.crit} />
-        )}
-        {bed.reservedFor && (
-          <DetailRow label="Reserved For" value={bed.reservedFor} valueColor={STATE_COLOR.reserved} />
-        )}
-      </div>
+            {/* Patient name + MRN */}
+            <div style={{ padding: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px` }}>
+              <div style={{
+                fontFamily: FONTS.sans,
+                fontSize: 20,
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                color: COLORS.textPrimary,
+                lineHeight: 1.2,
+              }}>
+                {bed.patientName || bed.patientInitials || '--'}
+              </div>
+              {bed.mrn && (
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: '0.06em',
+                  color: COLORS.textSecondary,
+                  marginTop: 2,
+                  display: 'inline-block',
+                }}>
+                  {bed.mrn}
+                </span>
+              )}
+            </div>
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: SPACE.sm, marginTop: SPACE.base }}>
-        {bed.state === 'dirty' && (
-          <TacticalButton variant="primary" size="sm" fullWidth>
-            Mark Clean
-          </TacticalButton>
+            {/* Quick info row */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr 1fr',
+              gap: SPACE.xs,
+              padding: `${SPACE.sm}px ${SPACE.base}px`,
+              margin: `0 ${SPACE.base}px`,
+              background: COLORS.surfaceElev,
+              borderRadius: RADIUS.sm,
+              border: `1px solid ${COLORS.border}`,
+            }}>
+              <DetailRow label="Attending" value={bed.attending || '--'} />
+              <DetailRow label="Nurse" value={bed.assignedNurse || '--'} />
+              <DetailRow label="LOS" value={formatLos(bed.losHours)} />
+              <DetailRow
+                label="Isolation"
+                value={bed.isolation || 'NONE'}
+                valueColor={bed.isolation && bed.isolation !== 'NONE' ? ISOLATION_BADGE_COLOR[bed.isolation] : undefined}
+              />
+            </div>
+
+            {/* Admit source */}
+            {bed.admitSource && (
+              <div style={{ padding: `${SPACE.sm}px ${SPACE.base}px 0` }}>
+                <DetailRow label="Admit Source" value={bed.admitSource} />
+              </div>
+            )}
+
+            {/* Discharge milestones */}
+            {bed.dischargeMilestones && (
+              <div style={{ padding: `${SPACE.sm}px ${SPACE.base}px 0` }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: 6, display: 'block' }}>
+                  Discharge Milestones
+                </Mono>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE.sm }}>
+                  {([
+                    ['dcOrderWritten', 'DC Order'],
+                    ['rideConfirmed', 'Ride Confirmed'],
+                    ['medsToeBedside', 'Meds to Bedside'],
+                  ] as const).map(([key, label]) => {
+                    const done = bed.dischargeMilestones?.[key] ?? false;
+                    return (
+                      <span key={key} style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        letterSpacing: '0.04em',
+                        color: done ? COLORS.ok : COLORS.textMuted,
+                        padding: '3px 8px',
+                        borderRadius: RADIUS.sm,
+                        background: done ? 'rgba(16,185,129,0.12)' : COLORS.surfaceElev,
+                        border: `1px solid ${done ? COLORS.ok + '30' : COLORS.border}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}>
+                        {done ? '\u2713' : '\u2012'} {label}
+                      </span>
+                    );
+                  })}
+                  {bed.dischargeMilestones.estimatedDcTime && (
+                    <span style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      fontWeight: 500,
+                      letterSpacing: '0.04em',
+                      color: COLORS.textSecondary,
+                      padding: '3px 8px',
+                      borderRadius: RADIUS.sm,
+                      background: COLORS.surfaceElev,
+                      border: `1px solid ${COLORS.border}`,
+                    }}>
+                      EST DC {bed.dischargeMilestones.estimatedDcTime}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div style={{
+              display: 'flex', gap: SPACE.sm,
+              padding: SPACE.base,
+              marginTop: SPACE.sm,
+              borderTop: `1px solid ${COLORS.border}`,
+            }}>
+              <TacticalButton variant="secondary" size="sm" fullWidth>
+                REASSIGN BED
+              </TacticalButton>
+              {onNavigateToPatient && (
+                <TacticalButton
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  onClick={() => onNavigateToPatient(bed.patientId || bed.mrn || bed.id)}
+                >
+                  <FileText size={14} style={{ marginRight: 6 }} />
+                  OPEN FULL CHART
+                </TacticalButton>
+              )}
+            </div>
+          </>
+        ) : (
+          /* ── Non-occupied bed: original-style view ── */
+          <>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px`,
+              borderBottom: `1px solid ${COLORS.border}`,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: COLORS.textPrimary,
+                  letterSpacing: '0.04em',
+                }}>
+                  {bed.label}
+                </span>
+                <StatusPill
+                  label={stateLabel(bed.state)}
+                  tone={bed.state === 'ready' ? 'ok' : bed.state === 'dirty' ? 'warn' : bed.state === 'blocked' ? 'crit' : 'neutral'}
+                />
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none', border: 'none',
+                  color: COLORS.textMuted, cursor: 'pointer',
+                  padding: 4,
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Details grid */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: `${SPACE.sm}px ${SPACE.base}px`,
+              padding: SPACE.base,
+            }}>
+              {bed.assignedNurse && (
+                <DetailRow label="Nurse" value={bed.assignedNurse} />
+              )}
+              <DetailRow label="Last Changed" value={freshnessLabel(bed.stateChangedMinAgo)} />
+              {bed.blockReason && (
+                <DetailRow label="Block Reason" value={bed.blockReason} valueColor={COLORS.crit} />
+              )}
+              {bed.reservedFor && (
+                <DetailRow label="Reserved For" value={bed.reservedFor} valueColor={STATE_COLOR.reserved} />
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{
+              display: 'flex', gap: SPACE.sm,
+              padding: `0 ${SPACE.base}px ${SPACE.base}px`,
+            }}>
+              {bed.state === 'dirty' && (
+                <TacticalButton variant="primary" size="sm" fullWidth>
+                  Mark Clean
+                </TacticalButton>
+              )}
+              {bed.state === 'ready' && (
+                <TacticalButton variant="primary" size="sm" fullWidth>
+                  Assign Patient
+                </TacticalButton>
+              )}
+              {bed.state === 'blocked' && (
+                <TacticalButton variant="danger" size="sm" fullWidth>
+                  Unblock
+                </TacticalButton>
+              )}
+              {bed.state === 'not_staffed' && (
+                <TacticalButton variant="primary" size="sm" fullWidth>
+                  Assign Nurse
+                </TacticalButton>
+              )}
+            </div>
+          </>
         )}
-        {bed.state === 'ready' && (
-          <TacticalButton variant="primary" size="sm" fullWidth>
-            Assign Patient
-          </TacticalButton>
-        )}
-        {bed.state === 'blocked' && (
-          <TacticalButton variant="danger" size="sm" fullWidth>
-            Unblock
-          </TacticalButton>
-        )}
-        {bed.state === 'not_staffed' && (
-          <TacticalButton variant="primary" size="sm" fullWidth>
-            Assign Nurse
-          </TacticalButton>
-        )}
-        {bed.state === 'occupied' && !onNavigateToPatient && (
-          <TacticalButton variant="secondary" size="sm" fullWidth>
-            View Patient
-          </TacticalButton>
-        )}
-        {bed.state === 'occupied' && onNavigateToPatient && (
-          <TacticalButton
-            variant="primary"
-            size="sm"
-            fullWidth
-            onClick={() => onNavigateToPatient(bed.patientId || bed.mrn || bed.id)}
-          >
-            <FileText size={14} style={{ marginRight: 6 }} />
-            OPEN CHART
-          </TacticalButton>
-        )}
-      </div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 };
 
@@ -1019,11 +1227,7 @@ const FullMode: React.FC<{
                             <div
                               key={bed.id}
                               onClick={() => {
-                                if (isOccupied && onNavigateToPatient && (bed.patientId || bed.mrn)) {
-                                  onNavigateToPatient(bed.patientId || bed.mrn || bed.id);
-                                } else {
-                                  setSelectedBed(bed);
-                                }
+                                setSelectedBed(bed);
                               }}
                               style={{
                                 display: 'grid',
