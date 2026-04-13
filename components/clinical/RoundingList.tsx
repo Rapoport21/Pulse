@@ -77,6 +77,9 @@ export interface RoundingListProps {
   showToast: (msg: string) => void;
   /** Current user role — drives default filter, sort, and header label. */
   role?: UserRole;
+  /** External patient list — when provided, replaces MOCK_PATIENTS so
+   *  newly admitted patients (from realtime sync) appear in the list. */
+  patients?: Patient[];
 }
 
 type SortMode = 'acuity' | 'bed' | 'name';
@@ -198,7 +201,7 @@ const MOCK_SBAR: Record<string, { s: string; b: string; a: string; r: string }> 
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
-export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast, role }) => {
+export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showToast, role, patients: externalPatients }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Role-aware defaults:
@@ -221,8 +224,9 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
     : role === UserRole.MANAGER ? 'All Units'
     : 'Rounding List';
 
+  const patientSource = externalPatients ?? MOCK_PATIENTS;
   const patients = useMemo(() => {
-    let list = [...MOCK_PATIENTS];
+    let list = [...patientSource];
 
     // Role-based pre-filter: ER sees only EMERGENCY encounters
     if (role === UserRole.ER_PERSONNEL) {
@@ -259,7 +263,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
     });
 
     return list;
-  }, [sortMode, filterMode, role]);
+  }, [sortMode, filterMode, role, patientSource]);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));

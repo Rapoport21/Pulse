@@ -911,6 +911,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
    * Surge-aware: escalateBedState transforms beds when surge activates.
    */
   const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
+  const [syncedPatients] = useRealtimeState<Patient[]>('patients', [...MOCK_PATIENTS]);
   const [showBedBoard, setShowBedBoard] = useState(false);
 
   /** Admit / Discharge fullscreen flow wizards. */
@@ -1043,14 +1044,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   const getMyPatients = () => {
     // ER personnel own the ED bays (Trauma 1, Fast Track, etc.); nurses
-    // on the floor own the inpatient rooms. MOCK_PATIENTS is grouped
-    // by encounter class so we can filter with one line.
+    // on the floor own the inpatient rooms. Uses synced patients so
+    // newly admitted patients from the desktop appear on the phone.
     const pool =
       currentUser.role === UserRole.ER_PERSONNEL
-        ? MOCK_PATIENTS.filter(
+        ? syncedPatients.filter(
             (p) => p.currentEncounter?.class === 'EMERGENCY',
           )
-        : MOCK_PATIENTS.filter(
+        : syncedPatients.filter(
             (p) => p.currentEncounter?.class !== 'EMERGENCY',
           );
     return pool.map(adaptPatientForList);
@@ -4561,6 +4562,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         onClose={() => setShowRoundingList(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
         role={currentUser.role}
+        patients={syncedPatients}
       />
 
       {/* Note Composer — SOAP / H&P / Progress note wizard. */}
