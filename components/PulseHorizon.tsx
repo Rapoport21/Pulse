@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   XAxis,
@@ -58,7 +58,8 @@ import {
   DeptCoordination,
   BriefMeScreen,
 } from './clinical';
-import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from '../data/bedMock';
+import { seedBedState, type BedUnit } from '../data/bedMock';
+import { useRealtimeState } from '../lib/realtime';
 import {
   COLORS,
   FONTS,
@@ -143,7 +144,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showManualModal, setShowManualModal] = useState(false);
   const [expandedDriverId, setExpandedDriverId] = useState<string | null>(null);
   const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
-  const [bedUnits, setBedUnits] = useState<BedUnit[]>(() => seedBedState());
+  const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
@@ -207,10 +208,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     ];
   }, [simState, isSurgeActive, systemStatus, loginCount]);
 
-  // Bed state reacts to surge activation
-  useEffect(() => {
-    setBedUnits(isSurgeActive ? escalateBedState(seedBedState()) : deescalateBedState());
-  }, [isSurgeActive]);
+  // Bed state is now synced via useRealtimeState — surge escalation
+  // is handled centrally in App.tsx activateSurge/deactivateSurge.
 
   const currentLoad = chartData[1].load;
   const projectedLoad = chartData[4].load;

@@ -19,6 +19,11 @@ import {
   ShieldAlert as ShieldAlertIcon,
   UsersRound,
   Stethoscope,
+  Ambulance,
+  RotateCcw,
+  Zap,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile } from './types';
 import { USERS } from './data/userProfiles';
@@ -32,7 +37,7 @@ import { Playbooks } from './components/Playbooks';
 import { Roster } from './components/Roster';
 import { ChatAssistant } from './components/ChatAssistant';
 import { LoginScreen } from './components/LoginScreen';
-import { CommandSidebar } from './components/CommandSidebar';
+import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
@@ -42,8 +47,8 @@ import type { Bed } from './data/bedMock';
 import { PatientsPage } from './components/PatientsPage';
 import { MOCK_PATIENTS } from './data/clinicalMock';
 import type { Patient, Vital, Encounter } from './types';
-import { seedBedState, type BedUnit } from './data/bedMock';
-import { useRealtimeState, useRealtimePing, subscribe } from './lib/realtime';
+import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from './data/bedMock';
+import { useRealtimeState, useRealtimePing, subscribe, publish, broadcastReset } from './lib/realtime';
 import {
   buildInitialUrgentTasks,
   INITIAL_SURGE_STATE,
@@ -110,17 +115,13 @@ function App() {
   // Patient navigation — when bed board or quick action sends user to Patients tab
   const [initialPatientId, setInitialPatientId] = useState<string | undefined>();
 
-  // ── Mutable bed state — shared between BedBoard and AdmitFlow ──
-  const [bedUnits, setBedUnits] = useState<BedUnit[]>(() => seedBedState());
-
-  // ── Admissions queue — shared state so AdmitFlow actions persist ──
-  const [admissionQueue, setAdmissionQueue] = useState<AdmissionEntry[]>(() => INITIAL_ADMISSION_QUEUE);
+  // ── Shared state — synced across all connected devices via Supabase broadcast ──
+  const [bedUnits, setBedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
+  const [admissionQueue, setAdmissionQueue] = useRealtimeState<AdmissionEntry[]>('admission-queue', INITIAL_ADMISSION_QUEUE);
+  const [patients, setPatients] = useRealtimeState<Patient[]>('patients', [...MOCK_PATIENTS]);
   // Keep a ref so assignBedToAdmission always reads the latest queue
   const admissionQueueRef = useRef(admissionQueue);
   admissionQueueRef.current = admissionQueue;
-
-  // ── Patient list — mutable so admitted patients appear in Patients tab ──
-  const [patients, setPatients] = useState<Patient[]>(() => [...MOCK_PATIENTS]);
 
   /** Assign a bed to an admission queue entry — updates bed state, queue, AND patient list */
   const assignBedToAdmission = (admissionId: string, bedId: string) => {
@@ -411,6 +412,7 @@ function App() {
     const tasks = buildInitialUrgentTasks();
     setSurgeState({ active: true, activatedAt: Date.now() });
     setUrgentTasks(tasks);
+    setBedUnits(escalateBedState(seedBedState()));
     sendSurgePing({ taskCount: tasks.length });
     showToast('Surge Mode Activated', 'error');
   };
@@ -419,8 +421,134 @@ function App() {
     if (!surgeState.active) return;
     setSurgeState({ active: false, activatedAt: null });
     setUrgentTasks([]);
+    setBedUnits(deescalateBedState());
     showToast('Surge Mode Deactivated — Stand Down', 'info');
   };
+
+  // ── Simulation Controls — demo power tools ──
+  const simControls = useMemo<SimControlAction[]>(() => [
+    {
+      id: 'mci-inbound',
+      label: 'MCI — Bus Accident',
+      description: '3 trauma inbound · triggers surge',
+      icon: <Ambulance size={13} strokeWidth={2} />,
+      tone: 'crit',
+      action: () => {
+        // Inject 3 MCI EMS runs across all devices
+        const mciRuns = [
+          { unit: 'Medic 41', mode: 'ground' as const, etaMinutes: 3, age: 22, sex: 'M' as const, chiefComplaint: 'MCI bus rollover, ejected, multiple rib fx, pneumothorax', activationLevel: 'TRAUMA_1' as const, fieldVitals: { heartRate: 138, systolic: 78, diastolic: 42, respRate: 32, spO2: 88, gcs: 11 }, fieldTreatment: 'Bilateral 14g IV · TXA 1g · chest seal L · c-collar', destinationBay: 'Trauma 1' },
+          { unit: 'Medic 42', mode: 'ground' as const, etaMinutes: 6, age: 34, sex: 'F' as const, chiefComplaint: 'MCI bus rollover, restrained, GCS 14, open tib-fib', activationLevel: 'TRAUMA_2' as const, fieldVitals: { heartRate: 112, systolic: 108, diastolic: 68, respRate: 22, spO2: 95, gcs: 14 }, fieldTreatment: '18g IV NS · splint R leg · fentanyl 75mcg', destinationBay: 'Trauma 2' },
+          { unit: 'Air 5', mode: 'air' as const, etaMinutes: 10, age: 8, sex: 'M' as const, chiefComplaint: 'MCI bus rollover, peds unrestrained, AMS, scalp lac', activationLevel: 'TRAUMA_1' as const, fieldVitals: { heartRate: 152, systolic: 82, diastolic: 50, respRate: 28, spO2: 93, gcs: 12 }, fieldTreatment: 'IO access · NS 20mL/kg · c-collar · pressure to scalp', destinationBay: 'Trauma 1' },
+        ];
+        mciRuns.forEach((run) => publish('ems-inject', run));
+        if (!surgeState.active) activateSurge();
+        showToast('MCI Inbound — 3 trauma patients en route', 'error');
+      },
+    },
+    {
+      id: 'fill-beds',
+      label: 'Increase Census',
+      description: 'Fill 4 empty beds with patients',
+      icon: <TrendingUp size={13} strokeWidth={2} />,
+      tone: 'warn',
+      action: () => {
+        setBedUnits((prev) => {
+          let filled = 0;
+          return prev.map((unit) => ({
+            ...unit,
+            beds: unit.beds.map((bed) => {
+              if (filled >= 4 || bed.state !== 'ready') return bed;
+              filled++;
+              const names = ['Kim, David', 'Torres, Ana', 'Patel, Raj', 'Williams, Rose'];
+              const mrns = ['P090', 'P091', 'P092', 'P093'];
+              return {
+                ...bed,
+                state: 'occupied' as const,
+                patientName: names[filled - 1],
+                patientId: mrns[filled - 1],
+                mrn: mrns[filled - 1],
+                acuity: (Math.floor(Math.random() * 3) + 2) as 1 | 2 | 3 | 4 | 5,
+                losHours: Math.floor(Math.random() * 12) + 1,
+                isolation: 'NONE' as const,
+                stateChangedMinAgo: 0,
+              };
+            }),
+          }));
+        });
+        showToast('Census increased — 4 beds filled', 'info');
+      },
+    },
+    {
+      id: 'free-beds',
+      label: 'Decrease Census',
+      description: 'Discharge 3 patients to free beds',
+      icon: <TrendingDown size={13} strokeWidth={2} />,
+      tone: 'ok',
+      action: () => {
+        setBedUnits((prev) => {
+          let freed = 0;
+          return prev.map((unit) => ({
+            ...unit,
+            beds: unit.beds.map((bed) => {
+              if (freed >= 3 || bed.state !== 'occupied') return bed;
+              // Skip first 2 occupied beds to avoid clearing key demo patients
+              freed++;
+              return {
+                ...bed,
+                state: 'dirty' as const,
+                patientName: undefined,
+                patientId: undefined,
+                mrn: undefined,
+                acuity: undefined,
+                attending: undefined,
+                losHours: undefined,
+                stateChangedMinAgo: 0,
+              };
+            }),
+          }));
+        });
+        showToast('3 patients discharged — beds turning over', 'info');
+      },
+    },
+    {
+      id: 'ems-inject',
+      label: 'Add EMS Inbound',
+      description: 'Single high-acuity run inbound',
+      icon: <Zap size={13} strokeWidth={2} />,
+      tone: 'warn',
+      action: () => {
+        const run = {
+          unit: `Medic ${Math.floor(Math.random() * 50) + 1}`,
+          mode: 'ground' as const,
+          etaMinutes: Math.floor(Math.random() * 12) + 4,
+          age: Math.floor(Math.random() * 50) + 25,
+          sex: (Math.random() > 0.5 ? 'M' : 'F') as 'M' | 'F',
+          chiefComplaint: 'Chest pain 45min, diaphoretic, ST changes anterolateral',
+          activationLevel: 'STEMI' as const,
+          fieldVitals: { heartRate: 108, systolic: 136, diastolic: 84, respRate: 22, spO2: 93 },
+          fieldTreatment: 'ASA 324 PO · NTG SL x2 · 12L transmitted · heparin 5000u',
+          destinationBay: 'Cath Lab',
+        };
+        publish('ems-inject', run);
+        showToast(`EMS inbound — ${run.unit}, ETA ${run.etaMinutes}min`, 'info');
+      },
+    },
+    {
+      id: 'reset-all',
+      label: 'Reset Simulation',
+      description: 'Return all state to baseline',
+      icon: <RotateCcw size={13} strokeWidth={2} />,
+      action: () => {
+        setSurgeState(INITIAL_SURGE_STATE);
+        setUrgentTasks([]);
+        setBedUnits(seedBedState());
+        setPatients([...MOCK_PATIENTS]);
+        setAdmissionQueue(INITIAL_ADMISSION_QUEUE);
+        publish('ems-reset');
+        showToast('Simulation reset to baseline', 'info');
+      },
+    },
+  ], [surgeState.active]);
 
   const handleConfirmPlaybook = () => {
     setShowPlaybookModal(false);
@@ -984,6 +1112,7 @@ function App() {
               urgentTasks={urgentTasks}
               onActivateSurge={activateSurge}
               onDeactivateSurge={deactivateSurge}
+              simControls={simControls}
             />
           </div>
 

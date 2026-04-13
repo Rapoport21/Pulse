@@ -11,6 +11,12 @@ import {
   CheckCircle2,
   Clock,
   Siren,
+  Gauge,
+  Ambulance,
+  RotateCcw,
+  Zap,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import {
@@ -41,12 +47,22 @@ interface ActionTask {
   assignee: string;
 }
 
+export interface SimControlAction {
+  id: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  action: () => void;
+  tone?: 'accent' | 'warn' | 'crit' | 'ok';
+}
+
 interface CommandSidebarProps {
   isSurgeActive: boolean;
   surgeActivatedAt: number | null;
   urgentTasks: UrgentTask[];
   onActivateSurge: () => void;
   onDeactivateSurge: () => void;
+  simControls?: SimControlAction[];
 }
 
 const formatActivatedTime = (ts: number | null) => {
@@ -335,8 +351,10 @@ export const CommandSidebar = ({
   urgentTasks,
   onActivateSurge,
   onDeactivateSurge,
+  simControls = [],
 }: CommandSidebarProps) => {
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
+  const [simPanelOpen, setSimPanelOpen] = useState(false);
   const [activeCall, setActiveCall] = useState<'nurse' | 'blood_bank' | null>(null);
   const [callState, setCallState] = useState<
     'calling' | 'connected' | 'ai_speaking' | 'ended'
@@ -1008,6 +1026,143 @@ export const CommandSidebar = ({
                 )}
               </div>
             </div>
+
+            {/* ═══ Simulation Controls ═══ */}
+            {simControls.length > 0 && (
+              <div
+                style={{
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  background: COLORS.surface,
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSimPanelOpen(!simPanelOpen)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSimPanelOpen(!simPanelOpen);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: `${SPACE.sm}px ${SPACE.md}px`,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+                    <Gauge size={11} strokeWidth={2} color={COLORS.info} />
+                    <Mono tone="dim" size="xs">
+                      SIM.CONTROLS
+                    </Mono>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+                    <BracketLabel tone="info" size="xs">
+                      {simControls.length}
+                    </BracketLabel>
+                    {simPanelOpen ? (
+                      <ChevronUp size={10} color={COLORS.textMuted} />
+                    ) : (
+                      <ChevronDown size={10} color={COLORS.textMuted} />
+                    )}
+                  </div>
+                </div>
+                <AnimatePresence>
+                  {simPanelOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: MOTION.base, ease: MOTION.ease }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: SPACE.xs,
+                          padding: `0 ${SPACE.sm}px ${SPACE.sm}px`,
+                        }}
+                      >
+                        {simControls.map((ctrl) => {
+                          const toneColor =
+                            ctrl.tone === 'crit' ? COLORS.accent :
+                            ctrl.tone === 'warn' ? COLORS.warn :
+                            ctrl.tone === 'ok' ? COLORS.ok :
+                            COLORS.info;
+                          return (
+                            <motion.button
+                              key={ctrl.id}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={ctrl.action}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: SPACE.sm,
+                                padding: `${SPACE.xs + 2}px ${SPACE.sm}px`,
+                                background: `${toneColor}0a`,
+                                border: `1px solid ${toneColor}33`,
+                                borderRadius: RADIUS.sm,
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                transition: `all ${MOTION.base}s ease`,
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = `${toneColor}1a`;
+                                (e.currentTarget as HTMLButtonElement).style.borderColor = `${toneColor}66`;
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = `${toneColor}0a`;
+                                (e.currentTarget as HTMLButtonElement).style.borderColor = `${toneColor}33`;
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 24,
+                                  height: 24,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: `${toneColor}14`,
+                                  borderRadius: RADIUS.sm,
+                                  color: toneColor,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {ctrl.icon}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontFamily: FONTS.sans,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    color: COLORS.textPrimary,
+                                    letterSpacing: '-0.01em',
+                                    marginBottom: 1,
+                                  }}
+                                >
+                                  {ctrl.label}
+                                </div>
+                                <Mono tone="muted" size="xs">
+                                  {ctrl.description}
+                                </Mono>
+                              </div>
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         )}
 

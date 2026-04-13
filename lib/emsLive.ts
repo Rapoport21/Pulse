@@ -19,6 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmsInbound } from '../types';
 import { seedEmsInbound } from '../data/emsMock';
+import { subscribe, publish } from './realtime';
 
 export interface EmsInboundLive extends EmsInbound {
   /** ETA in whole minutes, decremented each tick (clamped at 0). */
@@ -83,12 +84,35 @@ export const useEmsInbound = (): {
     };
   }, []);
 
+  // Listen for cross-device EMS commands via realtime broadcast
+  useEffect(() => {
+    const unsubInject = subscribe<Omit<EmsInbound, 'id' | 'createdAt'>>('ems-inject', (run) => {
+      setInbound((prev) => [
+        ...prev,
+        {
+          ...run,
+          id: `EMS-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+          createdAt: new Date().toISOString(),
+          etaSeconds: run.etaMinutes * 60,
+          arrived: false,
+        },
+      ]);
+    });
+    const unsubReset = subscribe('ems-reset', () => {
+      setInbound(liftSeed(seedEmsInbound()));
+    });
+    return () => { unsubInject(); unsubReset(); };
+  }, []);
+
   const acknowledge = (id: string) =>
     setInbound((prev) => prev.filter((r) => r.id !== id));
 
-  const reset = () => setInbound(liftSeed(seedEmsInbound()));
+  const reset = () => {
+    setInbound(liftSeed(seedEmsInbound()));
+    publish('ems-reset');
+  };
 
-  const inject = (run: Omit<EmsInbound, 'id' | 'createdAt'>) =>
+  const inject = (run: Omit<EmsInbound, 'id' | 'createdAt'>) => {
     setInbound((prev) => [
       ...prev,
       {
@@ -99,6 +123,8 @@ export const useEmsInbound = (): {
         arrived: false,
       },
     ]);
+    publish('ems-inject', run);
+  };
 
   return useMemo(
     () => ({ inbound, acknowledge, reset, inject }),

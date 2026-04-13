@@ -69,7 +69,8 @@ import {
   BriefMeScreen,
   type TriageResult,
 } from './clinical';
-import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from '../data/bedMock';
+import { seedBedState, type BedUnit } from '../data/bedMock';
+import { useRealtimeState } from '../lib/realtime';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
@@ -909,7 +910,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
    * Bed Board state — mutable bed data seeded from mock.
    * Surge-aware: escalateBedState transforms beds when surge activates.
    */
-  const [bedUnits, setBedUnits] = useState<BedUnit[]>(() => seedBedState());
+  const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
 
   /** Admit / Discharge fullscreen flow wizards. */
@@ -1089,11 +1090,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   }, [isSurgeActive]);
   const isSafe = chartData[chartData.length - 1].load < 100;
 
-  // Bed state reacts to surge activation — escalate transforms dirty → ready,
-  // not-staffed → float pool, reserves ED beds, populates overflow hall.
-  React.useEffect(() => {
-    setBedUnits(isSurgeActive ? escalateBedState(seedBedState()) : deescalateBedState());
-  }, [isSurgeActive]);
+  // Bed state is now synced via useRealtimeState — surge escalation
+  // is handled centrally in App.tsx activateSurge/deactivateSurge.
 
   const mockAlerts = [
     {
