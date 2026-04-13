@@ -105,7 +105,7 @@ function freshnessOpacity(minAgo?: number): number {
 
 const BedTile: React.FC<{
   bed: Bed;
-  onTap?: (bed: Bed) => void;
+  onTap?: (bed: Bed, anchor: DropdownAnchor) => void;
   compact?: boolean;
 }> = ({ bed, onTap, compact = false }) => {
   const color = STATE_COLOR[bed.state];
@@ -146,7 +146,7 @@ const BedTile: React.FC<{
   return (
     <motion.div
       whileTap={{ scale: 0.95 }}
-      onClick={() => onTap?.(bed)}
+      onClick={(e) => { const r = e.currentTarget.getBoundingClientRect(); onTap?.(bed, { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width }); }}
       style={{
         position: 'relative',
         width: '100%',
@@ -251,11 +251,21 @@ const BedTile: React.FC<{
 // BedPopover — quick info when tapping a bed
 // ─────────────────────────────────────────────────────────────────────────
 
+/** Anchor rect passed from the clicked row */
+interface DropdownAnchor {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+  width: number;
+}
+
 const BedPopover: React.FC<{
   bed: Bed;
+  anchor: DropdownAnchor;
   onClose: () => void;
   onNavigateToPatient?: (patientId: string) => void;
-}> = ({ bed, onClose, onNavigateToPatient }) => {
+}> = ({ bed, anchor, onClose, onNavigateToPatient }) => {
   const color = STATE_COLOR[bed.state];
   const isOccupied = bed.state === 'occupied';
 
@@ -275,42 +285,49 @@ const BedPopover: React.FC<{
     PROTECTIVE: '#A855F7',
   };
 
+  // Position dropdown below or above anchor depending on available space
+  const dropdownWidth = Math.min(480, anchor.width);
+  const spaceBelow = window.innerHeight - anchor.bottom;
+  const spaceAbove = anchor.top;
+  const maxH = 420;
+  const openBelow = spaceBelow >= maxH || spaceBelow >= spaceAbove;
+  const topPos = openBelow ? anchor.bottom + 4 : undefined;
+  const bottomPos = openBelow ? undefined : (window.innerHeight - anchor.top + 4);
+  // Horizontally align to the row's left edge, clamp to viewport
+  const leftPos = Math.max(8, Math.min(anchor.left, window.innerWidth - dropdownWidth - 8));
+
   return (
     <>
-      {/* Backdrop + centering wrapper */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: MOTION.fast }}
+      {/* Transparent click-catcher */}
+      <div
         onClick={onClose}
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.5)',
           zIndex: Z.toast,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
         }}
-      >
-      {/* Popover panel */}
+      />
+      {/* Dropdown panel */}
       <motion.div
-        initial={{ opacity: 0, y: 12, scale: 0.96 }}
+        initial={{ opacity: 0, y: openBelow ? -6 : 6, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 8, scale: 0.97 }}
+        exit={{ opacity: 0, y: openBelow ? -4 : 4, scale: 0.98 }}
         transition={{ duration: MOTION.fast }}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 520,
-          maxWidth: 'calc(100vw - 32px)',
-          maxHeight: 'calc(100vh - 80px)',
+          position: 'fixed',
+          top: topPos,
+          bottom: bottomPos,
+          left: leftPos,
+          width: dropdownWidth,
+          maxHeight: maxH,
           overflowY: 'auto',
           background: COLORS.surface,
           border: `1px solid ${color}40`,
           borderRadius: RADIUS.md,
           padding: 0,
-          boxShadow: `${SHADOW.modal}, 0 0 0 1px ${COLORS.border}`,
+          zIndex: Z.toast + 1,
+          boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.border}`,
         }}
       >
         {isOccupied ? (
@@ -575,7 +592,6 @@ const BedPopover: React.FC<{
           </>
         )}
       </motion.div>
-      </motion.div>
     </>
   );
 };
@@ -601,7 +617,7 @@ const DetailRow: React.FC<{ label: string; value: string; valueColor?: string }>
 
 const UnitRow: React.FC<{
   unit: BedUnit;
-  onBedTap: (bed: Bed) => void;
+  onBedTap: (bed: Bed, anchor: DropdownAnchor) => void;
   isNew?: boolean;
 }> = ({ unit, onBedTap, isNew = false }) => {
   const summary = summarizeUnit(unit);
@@ -806,7 +822,7 @@ const FullMode: React.FC<{
   embedded?: boolean;
   onNavigateToPatient?: (patientId: string) => void;
 }> = ({ units, surgeActive, onClose, role, embedded, onNavigateToPatient }) => {
-  const [selectedBed, setSelectedBed] = useState<Bed | null>(null);
+  const [selectedBed, setSelectedBed] = useState<{ bed: Bed; anchor: DropdownAnchor } | null>(null);
   // Role-aware default filter:
   //  - ER: default to showing occupied beds (ED focus on active patients)
   //  - Manager: show all beds (full capacity overview)
@@ -1225,8 +1241,9 @@ const FullMode: React.FC<{
                           return (
                             <div
                               key={bed.id}
-                              onClick={() => {
-                                setSelectedBed(bed);
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setSelectedBed({ bed, anchor: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width } });
                               }}
                               style={{
                                 display: 'grid',
@@ -1604,12 +1621,13 @@ const FullMode: React.FC<{
           </div>
         </div>
 
-        {/* Bed popover — BedPopover renders its own backdrop */}
+        {/* Bed dropdown — anchored below clicked row */}
         <AnimatePresence>
           {selectedBed && (
             <BedPopover
               key="popover"
-              bed={selectedBed}
+              bed={selectedBed.bed}
+              anchor={selectedBed.anchor}
               onClose={() => setSelectedBed(null)}
               onNavigateToPatient={onNavigateToPatient}
             />
@@ -1730,7 +1748,7 @@ const FullMode: React.FC<{
           <UnitRow
             key={unit.id}
             unit={unit}
-            onBedTap={setSelectedBed}
+            onBedTap={(bed, anchor) => setSelectedBed({ bed, anchor })}
             isNew={unit.surgeOnly}
           />
         ))}
@@ -1745,12 +1763,13 @@ const FullMode: React.FC<{
         )}
       </div>
 
-      {/* Bed popover — BedPopover renders its own backdrop */}
+      {/* Bed dropdown — anchored below clicked tile */}
       <AnimatePresence>
         {selectedBed && (
           <BedPopover
             key="popover"
-            bed={selectedBed}
+            bed={selectedBed.bed}
+            anchor={selectedBed.anchor}
             onClose={() => setSelectedBed(null)}
             onNavigateToPatient={onNavigateToPatient}
           />
