@@ -1,25 +1,37 @@
 /**
- * MobileAdmitFlow — phone-native admission form.
+ * MobileAdmitFlow — phone-native admission wizard.
  *
- * Unlike the desktop AdmitFlow (3-step wizard), this is a single
- * scrollable form that exposes every admission field at once:
+ * A six-step tactical wizard with a sleek progress bar, animated step
+ * transitions, and a sticky Back/Next bar. Runs as a fullscreen overlay
+ * (position: fixed, inset: 0, z-index 50) that slides up from the
+ * bottom and supports iOS-style edge-swipe-to-close.
  *
- *   1. Patient Demographics
- *   2. Clinical Info
- *   3. Admission Vitals
- *   4. Allergies (repeating rows)
- *   5. Problems / Diagnoses (repeating rows)
+ *   1. Demographics  (firstName + lastName required)
+ *   2. Clinical      (chief complaint required)
+ *   3. Vitals        (optional)
+ *   4. Allergies     (optional, repeating)
+ *   5. Problems      (optional, repeating)
+ *   6. Review        (summary + Admit)
  *
  * Admission always proceeds — bed assignment is deferred; patients land
  * in the holding area tagged `admitted-unassigned`.
- *
- * Renders as a fullscreen overlay (position: fixed, inset: 0, z-index 50)
- * that slides up from the bottom.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trash2,
+  Check,
+  UserRound,
+  Stethoscope,
+  Activity,
+  ShieldAlert,
+  ClipboardList,
+  FileCheck2,
+} from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -27,10 +39,12 @@ import {
   SPACE,
   RADIUS,
   MOTION,
+  SHADOW,
   Mono,
   BracketLabel,
   TacticalCard,
   TacticalButton,
+  CornerBracket,
   Divider,
 } from './design';
 import type {
@@ -39,6 +53,7 @@ import type {
   AdmissionProblemInput,
 } from './clinical';
 import { useSwipeBack } from '../lib/useSwipeBack';
+import { triggerHaptic } from '../lib/haptics';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Props
@@ -129,8 +144,8 @@ const INITIAL_FORM: FormState = {
   temp: '',
   pain: '',
   gcs: '15',
-  allergies: [{ ...BLANK_ALLERGY }, { ...BLANK_ALLERGY }, { ...BLANK_ALLERGY }],
-  problems: [{ ...BLANK_PROBLEM }, { ...BLANK_PROBLEM }],
+  allergies: [{ ...BLANK_ALLERGY }],
+  problems: [{ ...BLANK_PROBLEM }],
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -212,6 +227,28 @@ const PROBLEM_STATUS_OPTIONS: Array<{ value: ProblemStatus; label: string }> = [
 const ESI_OPTIONS = ['1', '2', '3', '4', '5'];
 
 // ─────────────────────────────────────────────────────────────────────────
+// Step metadata
+// ─────────────────────────────────────────────────────────────────────────
+
+type StepId = 1 | 2 | 3 | 4 | 5 | 6;
+
+interface StepMeta {
+  id: StepId;
+  label: string;       // mono caption under the bar
+  title: string;       // title rendered above the step body
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+}
+
+const STEPS: StepMeta[] = [
+  { id: 1, label: 'DEMO',     title: 'Patient Demographics',  icon: UserRound },
+  { id: 2, label: 'CLINICAL', title: 'Clinical Info',         icon: Stethoscope },
+  { id: 3, label: 'VITALS',   title: 'Admission Vitals',      icon: Activity },
+  { id: 4, label: 'ALLERGY',  title: 'Allergies',             icon: ShieldAlert },
+  { id: 5, label: 'PROBLEMS', title: 'Problems / Diagnoses',  icon: ClipboardList },
+  { id: 6, label: 'REVIEW',   title: 'Review & Admit',        icon: FileCheck2 },
+];
+
+// ─────────────────────────────────────────────────────────────────────────
 // Shared input styling
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -227,7 +264,6 @@ const baseInputStyle: React.CSSProperties = {
   color: COLORS.textPrimary,
   outline: 'none',
   boxSizing: 'border-box',
-  // Keep native elements from breaking phone layout.
   maxWidth: '100%',
 };
 
@@ -244,14 +280,12 @@ const selectInputStyle: React.CSSProperties = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// Focus-aware input primitives
+// Focus-aware input primitives (micro-interaction: accent glow on focus)
 // ─────────────────────────────────────────────────────────────────────────
 
 interface FieldProps {
   label: string;
   children: React.ReactNode;
-  /** When true, label is rendered as a small mono caption above child. */
-  monoLabel?: boolean;
   style?: React.CSSProperties;
 }
 
@@ -272,7 +306,7 @@ const Field: React.FC<FieldProps> = ({ label, children, style }) => (
   </label>
 );
 
-interface TextInputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
+type TextInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
 const TextInput: React.FC<TextInputProps> = ({ style, onFocus, onBlur, ...rest }) => {
   const [focused, setFocused] = useState(false);
@@ -290,7 +324,7 @@ const TextInput: React.FC<TextInputProps> = ({ style, onFocus, onBlur, ...rest }
       style={{
         ...baseInputStyle,
         borderColor: focused ? COLORS.accent : COLORS.border,
-        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40` : undefined,
+        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40, 0 0 12px ${COLORS.accent}22` : undefined,
         transition: `border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease`,
         ...style,
       }}
@@ -298,7 +332,7 @@ const TextInput: React.FC<TextInputProps> = ({ style, onFocus, onBlur, ...rest }
   );
 };
 
-interface SelectInputProps extends React.SelectHTMLAttributes<HTMLSelectElement> {}
+type SelectInputProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 
 const SelectInput: React.FC<SelectInputProps> = ({ style, onFocus, onBlur, ...rest }) => {
   const [focused, setFocused] = useState(false);
@@ -316,7 +350,7 @@ const SelectInput: React.FC<SelectInputProps> = ({ style, onFocus, onBlur, ...re
       style={{
         ...selectInputStyle,
         borderColor: focused ? COLORS.accent : COLORS.border,
-        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40` : undefined,
+        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40, 0 0 12px ${COLORS.accent}22` : undefined,
         transition: `border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease`,
         ...style,
       }}
@@ -324,7 +358,7 @@ const SelectInput: React.FC<SelectInputProps> = ({ style, onFocus, onBlur, ...re
   );
 };
 
-interface TextAreaInputProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+type TextAreaInputProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 const TextAreaInput: React.FC<TextAreaInputProps> = ({ style, onFocus, onBlur, ...rest }) => {
   const [focused, setFocused] = useState(false);
@@ -341,10 +375,10 @@ const TextAreaInput: React.FC<TextAreaInputProps> = ({ style, onFocus, onBlur, .
       }}
       style={{
         ...baseInputStyle,
-        minHeight: 72,
+        minHeight: 96,
         resize: 'vertical',
         borderColor: focused ? COLORS.accent : COLORS.border,
-        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40` : undefined,
+        boxShadow: focused ? `0 0 0 1px ${COLORS.accent}40, 0 0 12px ${COLORS.accent}22` : undefined,
         transition: `border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease`,
         ...style,
       }}
@@ -353,42 +387,7 @@ const TextAreaInput: React.FC<TextAreaInputProps> = ({ style, onFocus, onBlur, .
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// Section card wrapper
-// ─────────────────────────────────────────────────────────────────────────
-
-interface SectionCardProps {
-  title: string;
-  accentHeader?: boolean;
-  children: React.ReactNode;
-}
-
-const SectionCard: React.FC<SectionCardProps> = ({ title, accentHeader, children }) => (
-  <TacticalCard padding="sm">
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: SPACE.sm,
-        minHeight: 32,
-      }}
-    >
-      {accentHeader ? (
-        <BracketLabel tone="accent" size="sm">
-          {title}
-        </BracketLabel>
-      ) : (
-        <Mono tone="primary" size="sm" style={{ letterSpacing: '0.14em' }}>
-          {title}
-        </Mono>
-      )}
-    </div>
-    <Divider style={{ margin: `${SPACE.sm}px 0 ${SPACE.md}px` }} />
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>{children}</div>
-  </TacticalCard>
-);
-
-// ─────────────────────────────────────────────────────────────────────────
-// Pair row — for side-by-side fields on phone widths
+// PairRow — side-by-side grid for phone widths
 // ─────────────────────────────────────────────────────────────────────────
 
 const PairRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -405,6 +404,280 @@ const PairRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// ProgressBar — 6-segment tactical indicator
+// ─────────────────────────────────────────────────────────────────────────
+
+interface ProgressBarProps {
+  currentStep: StepId;
+  maxReached: StepId;
+  onJump: (step: StepId) => void;
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJump }) => (
+  <div
+    style={{
+      flexShrink: 0,
+      paddingTop: SPACE.md,
+      paddingBottom: SPACE.md,
+      paddingLeft: `max(${SPACE.base}px, env(safe-area-inset-left))`,
+      paddingRight: `max(${SPACE.base}px, env(safe-area-inset-right))`,
+      background: COLORS.bgDeep,
+      borderBottom: `1px solid ${COLORS.border}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: SPACE.sm,
+      position: 'relative',
+    }}
+  >
+    {/* Segment bar row */}
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {STEPS.map((step) => {
+        const done = step.id < currentStep;
+        const active = step.id === currentStep;
+        const reachable = step.id <= maxReached;
+        return (
+          <button
+            key={step.id}
+            type="button"
+            disabled={!reachable}
+            onClick={() => reachable && onJump(step.id)}
+            aria-label={`Step ${step.id}: ${step.title}`}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: reachable ? 'pointer' : 'default',
+              position: 'relative',
+            }}
+          >
+            <motion.div
+              layout
+              initial={false}
+              animate={{
+                height: active ? 6 : 3,
+                backgroundColor: done
+                  ? COLORS.accent
+                  : active
+                    ? COLORS.accent
+                    : COLORS.border,
+                boxShadow: active ? `0 0 10px ${COLORS.accentGlow}` : '0 0 0 rgba(0,0,0,0)',
+              }}
+              transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+              style={{
+                width: '100%',
+                borderRadius: RADIUS.full,
+              }}
+            />
+            {/* Corner brackets on active segment */}
+            {active && (
+              <motion.div
+                layoutId="active-step-brackets"
+                style={{
+                  position: 'absolute',
+                  inset: '-4px -3px',
+                  pointerEvents: 'none',
+                }}
+                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+              >
+                <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} inset={0} />
+                <CornerBracket position="tr" color={COLORS.accent} size={6} thickness={1} inset={0} />
+                <CornerBracket position="bl" color={COLORS.accent} size={6} thickness={1} inset={0} />
+                <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} inset={0} />
+              </motion.div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+
+    {/* Labels row */}
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {STEPS.map((step) => {
+        const active = step.id === currentStep;
+        const done = step.id < currentStep;
+        return (
+          <div
+            key={`label-${step.id}`}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              textAlign: 'center',
+              fontFamily: FONTS.mono,
+              fontSize: 9,
+              letterSpacing: '0.16em',
+              fontWeight: 600,
+              color: active ? COLORS.accent : done ? COLORS.textSecondary : COLORS.textMuted,
+              transition: `color ${MOTION.fast}s ease`,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {step.label}
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Scanline under progress — subtle ambient */}
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 1,
+        background: `linear-gradient(90deg, transparent 0%, ${COLORS.accent}88 50%, transparent 100%)`,
+        opacity: 0.4,
+        pointerEvents: 'none',
+      }}
+    />
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
+// StepHeader — renders above each step body
+// ─────────────────────────────────────────────────────────────────────────
+
+const StepHeader: React.FC<{ step: StepMeta }> = ({ step }) => {
+  const Icon = step.icon;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.md,
+        paddingBottom: SPACE.sm,
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: COLORS.accentDim,
+          border: `1px solid ${COLORS.accent}`,
+          borderRadius: RADIUS.sm,
+          color: COLORS.accent,
+          flexShrink: 0,
+          position: 'relative',
+        }}
+      >
+        <Icon size={18} strokeWidth={1.75} />
+        <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} />
+        <CornerBracket position="tr" color={COLORS.accent} size={5} thickness={1} />
+        <CornerBracket position="bl" color={COLORS.accent} size={5} thickness={1} />
+        <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+        <Mono tone="muted" size="xs">
+          STEP {step.id} / {STEPS.length}
+        </Mono>
+        <div
+          style={{
+            fontFamily: FONTS.sans,
+            fontSize: 18,
+            fontWeight: 600,
+            letterSpacing: TYPE.h4.tracking,
+            color: COLORS.textPrimary,
+            lineHeight: 1.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {step.title}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// ReviewRow — summary line used inside the Review step
+// ─────────────────────────────────────────────────────────────────────────
+
+const ReviewRow: React.FC<{ label: string; value: string; tone?: 'primary' | 'muted' }> = ({
+  label,
+  value,
+  tone = 'primary',
+}) => (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      gap: SPACE.md,
+      padding: `${SPACE.xs}px 0`,
+      borderBottom: `1px dashed ${COLORS.border}`,
+    }}
+  >
+    <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>
+      {label}
+    </Mono>
+    <div
+      style={{
+        fontFamily: FONTS.sans,
+        fontSize: 13,
+        fontWeight: 500,
+        color: tone === 'muted' ? COLORS.textSecondary : COLORS.textPrimary,
+        textAlign: 'right',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        maxWidth: '65%',
+      }}
+    >
+      {value || '—'}
+    </div>
+  </div>
+);
+
+const ReviewCard: React.FC<{
+  title: string;
+  step: StepId;
+  onJump: (step: StepId) => void;
+  children: React.ReactNode;
+}> = ({ title, step, onJump, children }) => (
+  <TacticalCard padding="sm">
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: SPACE.sm,
+      }}
+    >
+      <BracketLabel tone="accent" size="sm">
+        {title}
+      </BracketLabel>
+      <button
+        type="button"
+        onClick={() => onJump(step)}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          cursor: 'pointer',
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          letterSpacing: '0.14em',
+          fontWeight: 600,
+          color: COLORS.accent,
+        }}
+      >
+        EDIT
+      </button>
+    </div>
+    <Divider style={{ margin: `${SPACE.sm}px 0 ${SPACE.xs}px` }} />
+    <div style={{ display: 'flex', flexDirection: 'column' }}>{children}</div>
+  </TacticalCard>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -415,12 +688,35 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
   onSubmitAdmission,
 }) => {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  const [currentStep, setCurrentStep] = useState<StepId>(1);
+  const [maxReached, setMaxReached] = useState<StepId>(1);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [shake, setShake] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // iOS-style edge-swipe-to-close gesture
+  // iOS-style edge-swipe-to-close
   const swipeBackRef = useSwipeBack<HTMLDivElement>({
-    onSwipeBack: onClose,
+    onSwipeBack: () => {
+      if (currentStep === 1) onClose();
+      else goBack();
+    },
     enabled: open,
   });
+
+  // Reset wizard when opened
+  useEffect(() => {
+    if (open) {
+      setCurrentStep(1);
+      setMaxReached(1);
+      setDirection(1);
+      setShake(false);
+    }
+  }, [open]);
+
+  // Scroll to top on step change so users see the new step header
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }, [currentStep]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -466,14 +762,68 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
     setForm((prev) => ({ ...prev, problems: prev.problems.filter((_, i) => i !== idx) }));
   };
 
+  // ── Validation ─────────────────────────────────────────────────────────
   const firstName = form.firstName.trim();
   const lastName = form.lastName.trim();
   const complaint = form.complaint.trim();
-  const canSubmit = firstName.length > 0 && lastName.length > 0 && complaint.length > 0;
 
+  const stepValid = (step: StepId): boolean => {
+    switch (step) {
+      case 1:
+        return firstName.length > 0 && lastName.length > 0;
+      case 2:
+        return complaint.length > 0;
+      default:
+        return true;
+    }
+  };
+
+  const stepValidationMessage = (step: StepId): string | null => {
+    if (step === 1 && !stepValid(1)) return 'FIRST + LAST NAME REQUIRED';
+    if (step === 2 && !stepValid(2)) return 'CHIEF COMPLAINT REQUIRED';
+    return null;
+  };
+
+  const canSubmit = stepValid(1) && stepValid(2);
+
+  // ── Navigation ─────────────────────────────────────────────────────────
+  const goNext = () => {
+    if (!stepValid(currentStep)) {
+      triggerHaptic('heavy');
+      setShake(true);
+      window.setTimeout(() => setShake(false), 420);
+      return;
+    }
+    if (currentStep >= STEPS.length) return;
+    const next = (currentStep + 1) as StepId;
+    triggerHaptic('light');
+    setDirection(1);
+    setCurrentStep(next);
+    if (next > maxReached) setMaxReached(next);
+  };
+
+  const goBack = () => {
+    if (currentStep <= 1) return;
+    const prev = (currentStep - 1) as StepId;
+    triggerHaptic('light');
+    setDirection(-1);
+    setCurrentStep(prev);
+  };
+
+  const jumpTo = (target: StepId) => {
+    if (target === currentStep) return;
+    if (target > maxReached) return;
+    triggerHaptic('light');
+    setDirection(target > currentStep ? 1 : -1);
+    setCurrentStep(target);
+  };
+
+  // ── Submit ─────────────────────────────────────────────────────────────
   const handleSubmit = () => {
     if (!canSubmit) {
       showToast('Fill in name and chief complaint to admit.', 'error');
+      setShake(true);
+      window.setTimeout(() => setShake(false), 420);
       return;
     }
 
@@ -483,8 +833,8 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       form.arrivalMode === 'transfer'
         ? 'Transfer'
         : form.arrivalMode === 'direct'
-        ? 'Direct'
-        : 'ED';
+          ? 'Direct'
+          : 'ED';
 
     const toNum = (v: string): number | undefined => {
       if (!v.trim()) return undefined;
@@ -532,6 +882,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
     };
 
     onSubmitAdmission?.(entry);
+    triggerHaptic('heavy');
     showToast(`Admitted ${fullName} — BED UNASSIGNED`, 'success');
     setForm(INITIAL_FORM);
     onClose();
@@ -541,6 +892,24 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
     setForm(INITIAL_FORM);
     onClose();
   };
+
+  const step = STEPS[currentStep - 1];
+  const validationMsg = stepValidationMessage(currentStep);
+  const isLastStep = currentStep === STEPS.length;
+
+  // ── Derived summaries for Review step ──────────────────────────────────
+  const fullNameDisplay = firstName && lastName ? `${firstName} ${lastName}` : '—';
+  const vitalSummary = [
+    form.hr && `HR ${form.hr}`,
+    form.sbp && form.dbp && `BP ${form.sbp}/${form.dbp}`,
+    form.rr && `RR ${form.rr}`,
+    form.spo2 && `SpO₂ ${form.spo2}%`,
+    form.temp && `T ${form.temp}°C`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const allergyCount = form.allergies.filter((a) => a.substance.trim()).length;
+  const problemCount = form.problems.filter((p) => p.display.trim()).length;
 
   return (
     <AnimatePresence>
@@ -617,521 +986,695 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 padding: `0 ${SPACE.sm}px`,
               }}
             >
-              New Admission Request
+              New Admission
             </div>
 
-            {/* Right spacer — balances left cancel button width */}
             <div style={{ minWidth: 44, flexShrink: 0 }} aria-hidden />
           </div>
 
-          {/* ── SCROLLABLE BODY ────────────────────────────────────── */}
+          {/* ── PROGRESS BAR ───────────────────────────────────────── */}
+          <ProgressBar
+            currentStep={currentStep}
+            maxReached={maxReached}
+            onJump={jumpTo}
+          />
+
+          {/* ── SCROLLABLE STEP BODY ───────────────────────────────── */}
           <div
+            ref={scrollRef}
             style={{
               flex: 1,
               overflowY: 'auto',
               overflowX: 'hidden',
               WebkitOverflowScrolling: 'touch',
-              padding: SPACE.base,
-              paddingBottom: `calc(${SPACE.base}px + 72px + env(safe-area-inset-bottom))`,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: SPACE.lg,
+              position: 'relative',
             }}
           >
-            {/* Accent title header */}
-            <div style={{ paddingBottom: SPACE.xs }}>
-              <BracketLabel tone="accent" size="base">
-                + NEW ADMISSION REQUEST
-              </BracketLabel>
-            </div>
-
-            {/* ── 1 · PATIENT DEMOGRAPHICS ─────────────────────────── */}
-            <SectionCard title="1 · PATIENT DEMOGRAPHICS">
-              <PairRow>
-                <Field label="FIRST NAME">
-                  <TextInput
-                    value={form.firstName}
-                    onChange={(e) => set('firstName', e.target.value)}
-                    placeholder="Jane"
-                    autoComplete="given-name"
-                  />
-                </Field>
-                <Field label="LAST NAME">
-                  <TextInput
-                    value={form.lastName}
-                    onChange={(e) => set('lastName', e.target.value)}
-                    placeholder="Doe"
-                    autoComplete="family-name"
-                  />
-                </Field>
-              </PairRow>
-
-              <Field label="MRN">
-                <TextInput
-                  value={form.mrn}
-                  onChange={(e) => set('mrn', e.target.value)}
-                  placeholder="MRN-0000"
-                  inputMode="text"
-                  style={{ fontFamily: FONTS.mono, letterSpacing: '0.08em' }}
-                />
-              </Field>
-
-              <PairRow>
-                <Field label="DATE OF BIRTH">
-                  <TextInput
-                    value={form.dob}
-                    onChange={(e) => set('dob', e.target.value)}
-                    placeholder="MM/DD/YYYY"
-                    inputMode="numeric"
-                    autoComplete="bday"
-                  />
-                </Field>
-                <Field label="SEX">
-                  <SelectInput value={form.sex} onChange={(e) => set('sex', e.target.value as Sex)}>
-                    {SEX_OPTIONS.map((o) => (
-                      <option key={o.value || 'empty'} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </SelectInput>
-                </Field>
-              </PairRow>
-
-              <PairRow>
-                <Field label="WEIGHT (KG)">
-                  <TextInput
-                    value={form.weightKg}
-                    onChange={(e) => set('weightKg', e.target.value)}
-                    placeholder="70"
-                    inputMode="decimal"
-                  />
-                </Field>
-                <Field label="HEIGHT (CM)">
-                  <TextInput
-                    value={form.heightCm}
-                    onChange={(e) => set('heightCm', e.target.value)}
-                    placeholder="170"
-                    inputMode="decimal"
-                  />
-                </Field>
-              </PairRow>
-
-              <Field label="INSURANCE / PAYER">
-                <TextInput
-                  value={form.insurance}
-                  onChange={(e) => set('insurance', e.target.value)}
-                  placeholder="Medicare, BCBS, Self-pay..."
-                />
-              </Field>
-
-              <Field label="EMERGENCY CONTACT (NAME / PHONE)">
-                <TextInput
-                  value={form.emergencyContact}
-                  onChange={(e) => set('emergencyContact', e.target.value)}
-                  placeholder="John Doe / 555-1234"
-                  autoComplete="off"
-                />
-              </Field>
-
-              <Field label="LANGUAGE">
-                <SelectInput
-                  value={form.preferredLanguage}
-                  onChange={(e) => set('preferredLanguage', e.target.value)}
-                >
-                  {LANGUAGE_OPTIONS.map((lang) => (
-                    <option key={lang} value={lang}>
-                      {lang}
-                    </option>
-                  ))}
-                </SelectInput>
-              </Field>
-
-              {/* Interpreter toggle — 44px touch target */}
-              <label
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={`step-${currentStep}`}
+                initial={{ opacity: 0, x: direction * 30 }}
+                animate={{
+                  opacity: 1,
+                  x: shake ? [0, -8, 8, -6, 6, -3, 3, 0] : 0,
+                }}
+                exit={{ opacity: 0, x: direction * -30 }}
+                transition={{
+                  duration: shake ? 0.4 : MOTION.base,
+                  ease: MOTION.ease,
+                }}
                 style={{
+                  padding: SPACE.base,
+                  paddingBottom: SPACE.lg,
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  minHeight: 44,
-                  cursor: 'pointer',
-                  userSelect: 'none',
+                  flexDirection: 'column',
+                  gap: SPACE.md,
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={form.needsInterpreter}
-                  onChange={(e) => set('needsInterpreter', e.target.checked)}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    accentColor: COLORS.accent,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                  }}
-                />
-                <Mono tone="secondary" size="xs">
-                  INTERPRETER NEEDED
-                </Mono>
-              </label>
-            </SectionCard>
+                <StepHeader step={step} />
 
-            {/* ── 2 · CLINICAL INFO ────────────────────────────────── */}
-            <SectionCard title="2 · CLINICAL INFO">
-              <Field label="CHIEF COMPLAINT">
-                <TextAreaInput
-                  value={form.complaint}
-                  onChange={(e) => set('complaint', e.target.value)}
-                  placeholder="e.g. chest pain radiating to jaw"
-                />
-              </Field>
+                {/* ── STEP 1 · DEMOGRAPHICS ────────────────────────── */}
+                {currentStep === 1 && (
+                  <TacticalCard padding="sm">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                      <PairRow>
+                        <Field label="FIRST NAME *">
+                          <TextInput
+                            value={form.firstName}
+                            onChange={(e) => set('firstName', e.target.value)}
+                            placeholder="Jane"
+                            autoComplete="given-name"
+                          />
+                        </Field>
+                        <Field label="LAST NAME *">
+                          <TextInput
+                            value={form.lastName}
+                            onChange={(e) => set('lastName', e.target.value)}
+                            placeholder="Doe"
+                            autoComplete="family-name"
+                          />
+                        </Field>
+                      </PairRow>
 
-              <Field label="ATTENDING">
-                <SelectInput
-                  value={form.attending}
-                  onChange={(e) => set('attending', e.target.value)}
-                >
-                  {ATTENDING_OPTIONS.map((doc) => (
-                    <option key={doc || 'unassigned'} value={doc}>
-                      {doc || 'Unassigned'}
-                    </option>
-                  ))}
-                </SelectInput>
-              </Field>
+                      <Field label="MRN">
+                        <TextInput
+                          value={form.mrn}
+                          onChange={(e) => set('mrn', e.target.value)}
+                          placeholder="MRN-0000"
+                          inputMode="text"
+                          style={{ fontFamily: FONTS.mono, letterSpacing: '0.08em' }}
+                        />
+                      </Field>
 
-              <PairRow>
-                <Field label="ESI">
-                  <SelectInput value={form.esi} onChange={(e) => set('esi', e.target.value)}>
-                    {ESI_OPTIONS.map((e) => (
-                      <option key={e} value={e}>
-                        ESI {e}
-                      </option>
-                    ))}
-                  </SelectInput>
-                </Field>
-                <Field label="ARRIVAL">
-                  <SelectInput
-                    value={form.arrivalMode}
-                    onChange={(e) => set('arrivalMode', e.target.value)}
-                  >
-                    {ARRIVAL_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </SelectInput>
-                </Field>
-              </PairRow>
+                      <PairRow>
+                        <Field label="DATE OF BIRTH">
+                          <TextInput
+                            value={form.dob}
+                            onChange={(e) => set('dob', e.target.value)}
+                            placeholder="MM/DD/YYYY"
+                            inputMode="numeric"
+                            autoComplete="bday"
+                          />
+                        </Field>
+                        <Field label="SEX">
+                          <SelectInput value={form.sex} onChange={(e) => set('sex', e.target.value as Sex)}>
+                            {SEX_OPTIONS.map((o) => (
+                              <option key={o.value || 'empty'} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                      </PairRow>
 
-              <PairRow>
-                <Field label="ISOLATION">
-                  <SelectInput
-                    value={form.isolation}
-                    onChange={(e) => set('isolation', e.target.value)}
-                  >
-                    {ISOLATION_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </SelectInput>
-                </Field>
-                <Field label="CODE STATUS">
-                  <SelectInput
-                    value={form.codeStatus}
-                    onChange={(e) => set('codeStatus', e.target.value)}
-                  >
-                    {CODE_STATUS_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </SelectInput>
-                </Field>
-              </PairRow>
-            </SectionCard>
+                      <PairRow>
+                        <Field label="WEIGHT (KG)">
+                          <TextInput
+                            value={form.weightKg}
+                            onChange={(e) => set('weightKg', e.target.value)}
+                            placeholder="70"
+                            inputMode="decimal"
+                          />
+                        </Field>
+                        <Field label="HEIGHT (CM)">
+                          <TextInput
+                            value={form.heightCm}
+                            onChange={(e) => set('heightCm', e.target.value)}
+                            placeholder="170"
+                            inputMode="decimal"
+                          />
+                        </Field>
+                      </PairRow>
 
-            {/* ── 3 · ADMISSION VITALS ─────────────────────────────── */}
-            <SectionCard title="3 · ADMISSION VITALS">
-              <PairRow>
-                <Field label="HR (BPM)">
-                  <TextInput
-                    value={form.hr}
-                    onChange={(e) => set('hr', e.target.value)}
-                    placeholder="80"
-                    inputMode="numeric"
-                  />
-                </Field>
-                <Field label="RR (/MIN)">
-                  <TextInput
-                    value={form.rr}
-                    onChange={(e) => set('rr', e.target.value)}
-                    placeholder="16"
-                    inputMode="numeric"
-                  />
-                </Field>
-              </PairRow>
+                      <Field label="INSURANCE / PAYER">
+                        <TextInput
+                          value={form.insurance}
+                          onChange={(e) => set('insurance', e.target.value)}
+                          placeholder="Medicare, BCBS, Self-pay..."
+                        />
+                      </Field>
 
-              <PairRow>
-                <Field label="SBP (MMHG)">
-                  <TextInput
-                    value={form.sbp}
-                    onChange={(e) => set('sbp', e.target.value)}
-                    placeholder="120"
-                    inputMode="numeric"
-                  />
-                </Field>
-                <Field label="DBP (MMHG)">
-                  <TextInput
-                    value={form.dbp}
-                    onChange={(e) => set('dbp', e.target.value)}
-                    placeholder="80"
-                    inputMode="numeric"
-                  />
-                </Field>
-              </PairRow>
+                      <Field label="EMERGENCY CONTACT">
+                        <TextInput
+                          value={form.emergencyContact}
+                          onChange={(e) => set('emergencyContact', e.target.value)}
+                          placeholder="John Doe / 555-1234"
+                          autoComplete="off"
+                        />
+                      </Field>
 
-              <PairRow>
-                <Field label="SPO2 (%)">
-                  <TextInput
-                    value={form.spo2}
-                    onChange={(e) => set('spo2', e.target.value)}
-                    placeholder="98"
-                    inputMode="numeric"
-                  />
-                </Field>
-                <Field label="TEMP (°C)">
-                  <TextInput
-                    value={form.temp}
-                    onChange={(e) => set('temp', e.target.value)}
-                    placeholder="37.0"
-                    inputMode="decimal"
-                  />
-                </Field>
-              </PairRow>
+                      <Field label="LANGUAGE">
+                        <SelectInput
+                          value={form.preferredLanguage}
+                          onChange={(e) => set('preferredLanguage', e.target.value)}
+                        >
+                          {LANGUAGE_OPTIONS.map((lang) => (
+                            <option key={lang} value={lang}>
+                              {lang}
+                            </option>
+                          ))}
+                        </SelectInput>
+                      </Field>
 
-              <PairRow>
-                <Field label="PAIN (0-10)">
-                  <TextInput
-                    value={form.pain}
-                    onChange={(e) => set('pain', e.target.value)}
-                    placeholder="0"
-                    inputMode="numeric"
-                  />
-                </Field>
-                <Field label="GCS (3-15)">
-                  <TextInput
-                    value={form.gcs}
-                    onChange={(e) => set('gcs', e.target.value)}
-                    placeholder="15"
-                    inputMode="numeric"
-                  />
-                </Field>
-              </PairRow>
-            </SectionCard>
-
-            {/* ── 4 · ALLERGIES ────────────────────────────────────── */}
-            <SectionCard title="4 · ALLERGIES">
-              <Mono tone="muted" size="xs">
-                LEAVE BLANK FOR NKA
-              </Mono>
-              {form.allergies.map((allergy, idx) => (
-                <div
-                  key={`allergy-${idx}`}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: SPACE.sm,
-                    padding: SPACE.sm,
-                    background: COLORS.bgDeep,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: SPACE.sm,
-                    }}
-                  >
-                    <Mono tone="dim" size="xs">
-                      # {idx + 1}
-                    </Mono>
-                    {form.allergies.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeAllergy(idx)}
-                        aria-label={`Remove allergy row ${idx + 1}`}
+                      <label
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          background: 'transparent',
-                          border: `1px solid ${COLORS.border}`,
-                          borderRadius: RADIUS.sm,
-                          color: COLORS.textMuted,
+                          gap: SPACE.sm,
+                          minHeight: 44,
                           cursor: 'pointer',
-                          flexShrink: 0,
+                          userSelect: 'none',
                         }}
                       >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
+                        <input
+                          type="checkbox"
+                          checked={form.needsInterpreter}
+                          onChange={(e) => set('needsInterpreter', e.target.checked)}
+                          style={{
+                            width: 20,
+                            height: 20,
+                            accentColor: COLORS.accent,
+                            cursor: 'pointer',
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Mono tone="secondary" size="xs">
+                          INTERPRETER NEEDED
+                        </Mono>
+                      </label>
+                    </div>
+                  </TacticalCard>
+                )}
 
-                  <Field label="SUBSTANCE">
-                    <TextInput
-                      value={allergy.substance}
-                      onChange={(e) => updateAllergy(idx, 'substance', e.target.value)}
-                      placeholder="e.g. Penicillin"
-                    />
-                  </Field>
-                  <Field label="REACTION">
-                    <TextInput
-                      value={allergy.reaction}
-                      onChange={(e) => updateAllergy(idx, 'reaction', e.target.value)}
-                      placeholder="e.g. Anaphylaxis"
-                    />
-                  </Field>
-                  <Field label="SEVERITY">
-                    <SelectInput
-                      value={allergy.severity}
-                      onChange={(e) =>
-                        updateAllergy(idx, 'severity', e.target.value as AllergySeverity)
-                      }
-                    >
-                      {SEVERITY_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
+                {/* ── STEP 2 · CLINICAL ────────────────────────────── */}
+                {currentStep === 2 && (
+                  <TacticalCard padding="sm">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                      <Field label="CHIEF COMPLAINT *">
+                        <TextAreaInput
+                          value={form.complaint}
+                          onChange={(e) => set('complaint', e.target.value)}
+                          placeholder="e.g. chest pain radiating to jaw"
+                          autoFocus
+                        />
+                      </Field>
+
+                      <Field label="ATTENDING">
+                        <SelectInput
+                          value={form.attending}
+                          onChange={(e) => set('attending', e.target.value)}
+                        >
+                          {ATTENDING_OPTIONS.map((doc) => (
+                            <option key={doc || 'unassigned'} value={doc}>
+                              {doc || 'Unassigned'}
+                            </option>
+                          ))}
+                        </SelectInput>
+                      </Field>
+
+                      <PairRow>
+                        <Field label="ESI">
+                          <SelectInput value={form.esi} onChange={(e) => set('esi', e.target.value)}>
+                            {ESI_OPTIONS.map((e) => (
+                              <option key={e} value={e}>
+                                ESI {e}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                        <Field label="ARRIVAL">
+                          <SelectInput
+                            value={form.arrivalMode}
+                            onChange={(e) => set('arrivalMode', e.target.value)}
+                          >
+                            {ARRIVAL_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                      </PairRow>
+
+                      <PairRow>
+                        <Field label="ISOLATION">
+                          <SelectInput
+                            value={form.isolation}
+                            onChange={(e) => set('isolation', e.target.value)}
+                          >
+                            {ISOLATION_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                        <Field label="CODE STATUS">
+                          <SelectInput
+                            value={form.codeStatus}
+                            onChange={(e) => set('codeStatus', e.target.value)}
+                          >
+                            {CODE_STATUS_OPTIONS.map((o) => (
+                              <option key={o.value} value={o.value}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                      </PairRow>
+                    </div>
+                  </TacticalCard>
+                )}
+
+                {/* ── STEP 3 · VITALS ──────────────────────────────── */}
+                {currentStep === 3 && (
+                  <TacticalCard padding="sm">
+                    <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                      ALL FIELDS OPTIONAL · LEAVE BLANK IF NOT ASSESSED
+                    </Mono>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                      <PairRow>
+                        <Field label="HR (BPM)">
+                          <TextInput
+                            value={form.hr}
+                            onChange={(e) => set('hr', e.target.value)}
+                            placeholder="80"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                        <Field label="RR (/MIN)">
+                          <TextInput
+                            value={form.rr}
+                            onChange={(e) => set('rr', e.target.value)}
+                            placeholder="16"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                      </PairRow>
+
+                      <PairRow>
+                        <Field label="SBP (MMHG)">
+                          <TextInput
+                            value={form.sbp}
+                            onChange={(e) => set('sbp', e.target.value)}
+                            placeholder="120"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                        <Field label="DBP (MMHG)">
+                          <TextInput
+                            value={form.dbp}
+                            onChange={(e) => set('dbp', e.target.value)}
+                            placeholder="80"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                      </PairRow>
+
+                      <PairRow>
+                        <Field label="SPO2 (%)">
+                          <TextInput
+                            value={form.spo2}
+                            onChange={(e) => set('spo2', e.target.value)}
+                            placeholder="98"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                        <Field label="TEMP (°C)">
+                          <TextInput
+                            value={form.temp}
+                            onChange={(e) => set('temp', e.target.value)}
+                            placeholder="37.0"
+                            inputMode="decimal"
+                          />
+                        </Field>
+                      </PairRow>
+
+                      <PairRow>
+                        <Field label="PAIN (0-10)">
+                          <TextInput
+                            value={form.pain}
+                            onChange={(e) => set('pain', e.target.value)}
+                            placeholder="0"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                        <Field label="GCS (3-15)">
+                          <TextInput
+                            value={form.gcs}
+                            onChange={(e) => set('gcs', e.target.value)}
+                            placeholder="15"
+                            inputMode="numeric"
+                          />
+                        </Field>
+                      </PairRow>
+                    </div>
+                  </TacticalCard>
+                )}
+
+                {/* ── STEP 4 · ALLERGIES ───────────────────────────── */}
+                {currentStep === 4 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                    <Mono tone="muted" size="xs">
+                      LEAVE SUBSTANCE BLANK FOR NKA. ADD MORE AS NEEDED.
+                    </Mono>
+
+                    <AnimatePresence initial={false}>
+                      {form.allergies.map((allergy, idx) => (
+                        <motion.div
+                          key={`allergy-${idx}`}
+                          layout
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96, height: 0 }}
+                          transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: SPACE.sm,
+                            padding: SPACE.sm,
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: RADIUS.sm,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: SPACE.sm,
+                            }}
+                          >
+                            <Mono tone="dim" size="xs">
+                              # {idx + 1}
+                            </Mono>
+                            {form.allergies.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAllergy(idx)}
+                                aria-label={`Remove allergy row ${idx + 1}`}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 32,
+                                  height: 32,
+                                  background: 'transparent',
+                                  border: `1px solid ${COLORS.border}`,
+                                  borderRadius: RADIUS.sm,
+                                  color: COLORS.textMuted,
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+
+                          <Field label="SUBSTANCE">
+                            <TextInput
+                              value={allergy.substance}
+                              onChange={(e) => updateAllergy(idx, 'substance', e.target.value)}
+                              placeholder="e.g. Penicillin"
+                            />
+                          </Field>
+                          <Field label="REACTION">
+                            <TextInput
+                              value={allergy.reaction}
+                              onChange={(e) => updateAllergy(idx, 'reaction', e.target.value)}
+                              placeholder="e.g. Anaphylaxis"
+                            />
+                          </Field>
+                          <Field label="SEVERITY">
+                            <SelectInput
+                              value={allergy.severity}
+                              onChange={(e) =>
+                                updateAllergy(idx, 'severity', e.target.value as AllergySeverity)
+                              }
+                            >
+                              {SEVERITY_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                  {o.label}
+                                </option>
+                              ))}
+                            </SelectInput>
+                          </Field>
+                        </motion.div>
                       ))}
-                    </SelectInput>
-                  </Field>
-                </div>
-              ))}
+                    </AnimatePresence>
 
-              <TacticalButton
-                variant="secondary"
-                fullWidth
-                icon={<Plus size={14} />}
-                onClick={addAllergy}
-                style={{ minHeight: 44, height: 44 }}
-              >
-                Add Allergy
-              </TacticalButton>
-            </SectionCard>
+                    <TacticalButton
+                      variant="secondary"
+                      fullWidth
+                      icon={<Plus size={14} />}
+                      onClick={addAllergy}
+                      style={{ minHeight: 44, height: 44 }}
+                    >
+                      Add Allergy
+                    </TacticalButton>
+                  </div>
+                )}
 
-            {/* ── 5 · PROBLEMS / DIAGNOSES ────────────────────────── */}
-            <SectionCard title="5 · PROBLEMS / DIAGNOSES">
-              {form.problems.map((problem, idx) => (
-                <div
-                  key={`problem-${idx}`}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: SPACE.sm,
-                    padding: SPACE.sm,
-                    background: COLORS.bgDeep,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: SPACE.sm,
-                    }}
-                  >
-                    <Mono tone="dim" size="xs">
-                      # {idx + 1}
+                {/* ── STEP 5 · PROBLEMS ────────────────────────────── */}
+                {currentStep === 5 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                    <Mono tone="muted" size="xs">
+                      LEAVE BLANK IF NONE KNOWN. ADD MORE AS NEEDED.
                     </Mono>
-                    {form.problems.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeProblem(idx)}
-                        aria-label={`Remove problem row ${idx + 1}`}
+
+                    <AnimatePresence initial={false}>
+                      {form.problems.map((problem, idx) => (
+                        <motion.div
+                          key={`problem-${idx}`}
+                          layout
+                          initial={{ opacity: 0, scale: 0.96 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.96, height: 0 }}
+                          transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: SPACE.sm,
+                            padding: SPACE.sm,
+                            background: COLORS.surface,
+                            border: `1px solid ${COLORS.border}`,
+                            borderRadius: RADIUS.sm,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: SPACE.sm,
+                            }}
+                          >
+                            <Mono tone="dim" size="xs">
+                              # {idx + 1}
+                            </Mono>
+                            {form.problems.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeProblem(idx)}
+                                aria-label={`Remove problem row ${idx + 1}`}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 32,
+                                  height: 32,
+                                  background: 'transparent',
+                                  border: `1px solid ${COLORS.border}`,
+                                  borderRadius: RADIUS.sm,
+                                  color: COLORS.textMuted,
+                                  cursor: 'pointer',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
+
+                          <Field label="DIAGNOSIS">
+                            <TextInput
+                              value={problem.display}
+                              onChange={(e) => updateProblem(idx, 'display', e.target.value)}
+                              placeholder="e.g. Type 2 diabetes mellitus"
+                            />
+                          </Field>
+                          <PairRow>
+                            <Field label="ICD-10">
+                              <TextInput
+                                value={problem.icd10}
+                                onChange={(e) => updateProblem(idx, 'icd10', e.target.value)}
+                                placeholder="E11.9"
+                                style={{ fontFamily: FONTS.mono, letterSpacing: '0.08em' }}
+                              />
+                            </Field>
+                            <Field label="STATUS">
+                              <SelectInput
+                                value={problem.status}
+                                onChange={(e) =>
+                                  updateProblem(idx, 'status', e.target.value as ProblemStatus)
+                                }
+                              >
+                                {PROBLEM_STATUS_OPTIONS.map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </SelectInput>
+                            </Field>
+                          </PairRow>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+
+                    <TacticalButton
+                      variant="secondary"
+                      fullWidth
+                      icon={<Plus size={14} />}
+                      onClick={addProblem}
+                      style={{ minHeight: 44, height: 44 }}
+                    >
+                      Add Problem
+                    </TacticalButton>
+                  </div>
+                )}
+
+                {/* ── STEP 6 · REVIEW ──────────────────────────────── */}
+                {currentStep === 6 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                    {!canSubmit && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          background: 'transparent',
-                          border: `1px solid ${COLORS.border}`,
+                          padding: SPACE.sm,
+                          background: COLORS.critDim,
+                          border: `1px solid ${COLORS.crit}`,
                           borderRadius: RADIUS.sm,
-                          color: COLORS.textMuted,
-                          cursor: 'pointer',
-                          flexShrink: 0,
                         }}
                       >
-                        <Trash2 size={14} />
-                      </button>
+                        <Mono tone="primary" size="xs" style={{ color: COLORS.crit }}>
+                          MISSING REQUIRED FIELDS — TAP "EDIT" ON A CARD BELOW.
+                        </Mono>
+                      </motion.div>
                     )}
-                  </div>
 
-                  <Field label="DIAGNOSIS">
-                    <TextInput
-                      value={problem.display}
-                      onChange={(e) => updateProblem(idx, 'display', e.target.value)}
-                      placeholder="e.g. Type 2 diabetes mellitus"
-                    />
-                  </Field>
-                  <PairRow>
-                    <Field label="ICD-10">
-                      <TextInput
-                        value={problem.icd10}
-                        onChange={(e) => updateProblem(idx, 'icd10', e.target.value)}
-                        placeholder="E11.9"
-                        style={{ fontFamily: FONTS.mono, letterSpacing: '0.08em' }}
+                    <ReviewCard title="PATIENT" step={1} onJump={jumpTo}>
+                      <ReviewRow label="NAME" value={fullNameDisplay} />
+                      <ReviewRow label="MRN" value={form.mrn || '—'} />
+                      <ReviewRow label="DOB" value={form.dob || '—'} />
+                      <ReviewRow label="SEX" value={form.sex || '—'} />
+                      <ReviewRow label="WEIGHT" value={form.weightKg ? `${form.weightKg} kg` : '—'} />
+                      <ReviewRow label="HEIGHT" value={form.heightCm ? `${form.heightCm} cm` : '—'} />
+                      <ReviewRow label="LANGUAGE" value={form.preferredLanguage} />
+                      {form.needsInterpreter && (
+                        <ReviewRow label="INTERPRETER" value="REQUIRED" />
+                      )}
+                    </ReviewCard>
+
+                    <ReviewCard title="CLINICAL" step={2} onJump={jumpTo}>
+                      <ReviewRow label="COMPLAINT" value={complaint || '—'} />
+                      <ReviewRow label="ATTENDING" value={form.attending || 'Unassigned'} />
+                      <ReviewRow label="ESI" value={`ESI ${form.esi}`} />
+                      <ReviewRow label="ARRIVAL" value={form.arrivalMode.toUpperCase()} />
+                      <ReviewRow label="ISOLATION" value={form.isolation} />
+                      <ReviewRow label="CODE" value={form.codeStatus} />
+                    </ReviewCard>
+
+                    <ReviewCard title="VITALS" step={3} onJump={jumpTo}>
+                      <ReviewRow
+                        label="ADMISSION"
+                        value={vitalSummary || 'Not assessed'}
+                        tone={vitalSummary ? 'primary' : 'muted'}
                       />
-                    </Field>
-                    <Field label="STATUS">
-                      <SelectInput
-                        value={problem.status}
-                        onChange={(e) =>
-                          updateProblem(idx, 'status', e.target.value as ProblemStatus)
-                        }
-                      >
-                        {PROBLEM_STATUS_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </SelectInput>
-                    </Field>
-                  </PairRow>
-                </div>
-              ))}
+                      <ReviewRow label="PAIN" value={form.pain ? `${form.pain}/10` : '—'} />
+                      <ReviewRow label="GCS" value={form.gcs || '—'} />
+                    </ReviewCard>
 
-              <TacticalButton
-                variant="secondary"
-                fullWidth
-                icon={<Plus size={14} />}
-                onClick={addProblem}
-                style={{ minHeight: 44, height: 44 }}
-              >
-                Add Problem
-              </TacticalButton>
-            </SectionCard>
+                    <ReviewCard title="ALLERGIES" step={4} onJump={jumpTo}>
+                      <ReviewRow
+                        label="COUNT"
+                        value={allergyCount === 0 ? 'NKA' : `${allergyCount} recorded`}
+                      />
+                      {form.allergies
+                        .filter((a) => a.substance.trim())
+                        .slice(0, 3)
+                        .map((a, i) => (
+                          <ReviewRow
+                            key={`rev-alg-${i}`}
+                            label={`· ${a.severity.toUpperCase()}`}
+                            value={a.substance}
+                          />
+                        ))}
+                    </ReviewCard>
+
+                    <ReviewCard title="PROBLEMS" step={5} onJump={jumpTo}>
+                      <ReviewRow
+                        label="COUNT"
+                        value={problemCount === 0 ? 'None' : `${problemCount} recorded`}
+                      />
+                      {form.problems
+                        .filter((p) => p.display.trim())
+                        .slice(0, 3)
+                        .map((p, i) => (
+                          <ReviewRow
+                            key={`rev-prb-${i}`}
+                            label={`· ${p.status.toUpperCase()}`}
+                            value={p.display}
+                          />
+                        ))}
+                    </ReviewCard>
+
+                    <div
+                      style={{
+                        padding: SPACE.md,
+                        background: COLORS.accentDim,
+                        border: `1px solid ${COLORS.accent}`,
+                        borderRadius: RADIUS.sm,
+                        textAlign: 'center',
+                        position: 'relative',
+                      }}
+                    >
+                      <CornerBracket position="tl" color={COLORS.accent} size={8} />
+                      <CornerBracket position="tr" color={COLORS.accent} size={8} />
+                      <CornerBracket position="bl" color={COLORS.accent} size={8} />
+                      <CornerBracket position="br" color={COLORS.accent} size={8} />
+                      <Mono tone="primary" size="xs" style={{ color: COLORS.accent, display: 'block' }}>
+                        ADMISSION WILL PROCEED
+                      </Mono>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontFamily: FONTS.sans,
+                          fontSize: 11,
+                          color: COLORS.textSecondary,
+                        }}
+                      >
+                        Patient placed in holding · Bed assignment deferred
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          {/* ── BOTTOM ACTION BAR ──────────────────────────────────── */}
+          {/* ── BOTTOM NAV BAR ─────────────────────────────────────── */}
           <div
             style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
+              flexShrink: 0,
               paddingTop: SPACE.sm,
               paddingBottom: `calc(${SPACE.sm}px + env(safe-area-inset-bottom))`,
               paddingLeft: `max(${SPACE.base}px, env(safe-area-inset-left))`,
               paddingRight: `max(${SPACE.base}px, env(safe-area-inset-right))`,
-              background: `linear-gradient(180deg, ${COLORS.bg}00 0%, ${COLORS.bg} 40%, ${COLORS.bg} 100%)`,
+              background: COLORS.surface,
               borderTop: `1px solid ${COLORS.border}`,
               display: 'flex',
               flexDirection: 'column',
@@ -1139,19 +1682,108 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
               zIndex: 3,
             }}
           >
-            <TacticalButton
-              variant="primary"
-              fullWidth
-              disabled={!canSubmit}
-              onClick={handleSubmit}
-              style={{ minHeight: 52, height: 52, fontSize: 13 }}
-            >
-              Admit Patient
-            </TacticalButton>
-            {!canSubmit && (
-              <Mono tone="muted" size="xs" style={{ textAlign: 'center' }}>
-                NAME + CHIEF COMPLAINT REQUIRED
-              </Mono>
+            <div style={{ display: 'flex', gap: SPACE.sm }}>
+              {/* BACK button */}
+              <motion.button
+                type="button"
+                onClick={goBack}
+                disabled={currentStep === 1}
+                whileTap={{ scale: currentStep === 1 ? 1 : 0.97 }}
+                style={{
+                  flex: '0 0 auto',
+                  minWidth: 88,
+                  minHeight: 52,
+                  padding: `0 ${SPACE.base}px`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                  background: 'transparent',
+                  border: `1px solid ${currentStep === 1 ? COLORS.textDim : COLORS.borderStrong}`,
+                  borderRadius: RADIUS.sm,
+                  color: currentStep === 1 ? COLORS.textDim : COLORS.textPrimary,
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentStep === 1 ? 0.4 : 1,
+                  transition: `opacity ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+                }}
+              >
+                <ChevronLeft size={14} />
+                Back
+              </motion.button>
+
+              {/* NEXT / ADMIT button */}
+              <motion.button
+                type="button"
+                onClick={isLastStep ? handleSubmit : goNext}
+                disabled={isLastStep ? !canSubmit : false}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  flex: 1,
+                  minHeight: 52,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: SPACE.sm,
+                  background: isLastStep
+                    ? canSubmit
+                      ? `linear-gradient(180deg, ${COLORS.accent} 0%, ${COLORS.accentDeep} 100%)`
+                      : COLORS.surfaceElev
+                    : COLORS.accent,
+                  border: `1px solid ${isLastStep && !canSubmit ? COLORS.border : COLORS.accent}`,
+                  borderRadius: RADIUS.sm,
+                  color: isLastStep && !canSubmit ? COLORS.textMuted : COLORS.textPrimary,
+                  fontFamily: FONTS.mono,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  cursor: isLastStep && !canSubmit ? 'not-allowed' : 'pointer',
+                  boxShadow:
+                    isLastStep && canSubmit
+                      ? SHADOW.accentGlowSm
+                      : !isLastStep
+                        ? `0 0 8px ${COLORS.accent}44`
+                        : undefined,
+                  transition: `box-shadow ${MOTION.fast}s ease`,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}
+              >
+                {isLastStep ? (
+                  <>
+                    <Check size={16} />
+                    Admit Patient
+                  </>
+                ) : (
+                  <>
+                    Next · {STEPS[currentStep].label}
+                    <ChevronRight size={14} />
+                  </>
+                )}
+              </motion.button>
+            </div>
+
+            {validationMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -2 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: MOTION.fast }}
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  letterSpacing: '0.14em',
+                  fontWeight: 600,
+                  color: COLORS.warn,
+                  textAlign: 'center',
+                }}
+              >
+                {validationMsg}
+              </motion.div>
             )}
           </div>
         </motion.div>
