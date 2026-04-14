@@ -890,9 +890,6 @@ function App() {
           onUpdateVitals={updatePatientVitals}
           onAddNote={addClinicalNote}
           onAcknowledgeAlert={acknowledgeAlert}
-          // ── Desktop-parity props ──
-          systemStatus={systemStatus}
-          loginCount={loginCount}
         />
       ) : (
         <div

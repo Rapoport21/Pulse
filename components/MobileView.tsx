@@ -33,12 +33,6 @@ import {
   Siren,
   ArrowRightLeft,
   Network,
-  BedDouble,
-  UsersRound,
-  BookOpen,
-  Layout,
-  PlayCircle,
-  Archive,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -76,14 +70,6 @@ import {
   BriefMeScreen,
   type TriageResult,
 } from './clinical';
-import { PulseHorizon } from './PulseHorizon';
-import { LiveOps } from './LiveOps';
-import { Playbooks } from './Playbooks';
-import { ActionBoard } from './ActionBoard';
-import { Roster } from './Roster';
-import { BriefMe } from './BriefMe';
-import { Replay } from './Replay';
-import { PatientsPage } from './PatientsPage';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import { useRealtimeState } from '../lib/realtime';
 import { QRScannerModal } from './QRScannerModal';
@@ -146,9 +132,6 @@ interface MobileViewProps {
   onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
   onAddNote?: (note: Omit<ClinicalNote, 'id' | 'createdAt'>) => void;
   onAcknowledgeAlert?: (alertId: string, actor: string) => void;
-  // ── Desktop-parity props ──
-  systemStatus?: 'normal' | 'stale' | 'manual';
-  loginCount?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -920,22 +903,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onUpdateVitals,
   onAddNote,
   onAcknowledgeAlert,
-  systemStatus = 'normal',
-  loginCount = 0,
 }) => {
-  // ── Primary tabs: 5 logical groupings of all 12 desktop views ──
-  // horizon  = Horizon + Live Ops
-  // patients = Patients + Rounding + Clinical workflows
-  // ops      = Bed Board + Admissions + Staffing
-  // alerts   = Alerts + Actions + Playbooks
-  // intel    = Brief Me + Roster + Replay + Comms
   const [activeTab, setActiveTab] = useState<
-    'horizon' | 'patients' | 'ops' | 'alerts' | 'intel'
-  >('horizon');
-  // Sub-tab selectors for grouped tabs
-  const [opsSubTab, setOpsSubTab] = useState<'beds' | 'admissions' | 'staffing'>('beds');
-  const [alertsSubTab, setAlertsSubTab] = useState<'alerts' | 'actions' | 'playbooks'>('alerts');
-  const [intelSubTab, setIntelSubTab] = useState<'briefme' | 'roster' | 'replay' | 'comms'>('briefme');
+    'dashboard' | 'tasks' | 'patients' | 'alerts' | 'comms'
+  >('dashboard');
   const [showMenu, setShowMenu] = useState(false);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [taskFilter, setTaskFilter] = useState<'all' | 'stat' | 'routine'>('all');
@@ -1001,11 +972,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
     if (payload.startsWith('pulse://tab/')) {
       const tab = payload.slice('pulse://tab/'.length).split(/[?#/]/)[0];
       if (
-        tab === 'horizon' ||
+        tab === 'dashboard' ||
+        tab === 'tasks' ||
         tab === 'patients' ||
-        tab === 'ops' ||
         tab === 'alerts' ||
-        tab === 'intel'
+        tab === 'comms'
       ) {
         setActiveTab(tab);
         setShowScanner(false);
@@ -1198,16 +1169,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
   };
 
   const navItems = [
-    { id: 'horizon' as const, icon: Activity, label: 'Horizon', code: 'HRZ' },
+    { id: 'dashboard' as const, icon: LayoutDashboard, label: 'Home', code: 'HOM' },
+    { id: 'tasks' as const, icon: CheckCircle2, label: 'Actions', code: 'ACT' },
     {
       id: 'patients' as const,
-      icon: Stethoscope,
+      icon: Users,
       label: currentUser.role === UserRole.MANAGER ? 'Units' : 'Patients',
       code: currentUser.role === UserRole.MANAGER ? 'UNT' : 'PAT',
     },
-    { id: 'ops' as const, icon: BedDouble, label: 'Ops', code: 'OPS' },
-    { id: 'alerts' as const, icon: ShieldAlert, label: 'Alerts', code: 'ALR' },
-    { id: 'intel' as const, icon: Archive, label: 'Intel', code: 'INT' },
+    { id: 'alerts' as const, icon: Bell, label: 'Alerts', code: 'ALR' },
+    { id: 'comms' as const, icon: MessageSquare, label: 'Comms', code: 'COM' },
   ];
 
   const timeStr = time.toUTCString().slice(17, 25); // HH:MM:SS
@@ -1771,10 +1742,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
           scrollBehavior: 'smooth',
         }}
       >
-        {/* ────── HORIZON ─────────────────────────────────── */}
-        {activeTab === 'horizon' && (
+        {/* ────── DASHBOARD ─────────────────────────────────── */}
+        {activeTab === 'dashboard' && (
           <motion.div
-            key="horizon"
+            key="dashboard"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
@@ -2701,102 +2672,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </motion.div>
         )}
 
-        {/* ────── OPS (Bed Board + Admissions + Staffing) ──── */}
-        {activeTab === 'ops' && (
+        {/* ────── TASKS ─────────────────────────────────────── */}
+        {activeTab === 'tasks' && (
           <motion.div
-            key="ops"
+            key="tasks"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            {/* Sub-tab selector */}
-            <div style={{
-              display: 'flex',
-              gap: 4,
-              padding: `${SPACE.sm}px ${SPACE.base}px`,
-              borderBottom: `1px solid ${COLORS.border}`,
-              flexShrink: 0,
-            }}>
-              {([
-                { id: 'beds' as const, label: 'BED BOARD', icon: BedDouble },
-                { id: 'admissions' as const, label: 'ADMISSIONS', icon: UserPlus },
-                { id: 'staffing' as const, label: 'STAFFING', icon: UsersRound },
-              ]).map(sub => (
-                <motion.button
-                  key={sub.id}
-                  onClick={() => { triggerHaptic('light'); setOpsSubTab(sub.id); }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    padding: `8px 4px`,
-                    background: opsSubTab === sub.id ? COLORS.surfaceElev : 'transparent',
-                    border: `1px solid ${opsSubTab === sub.id ? COLORS.borderHover : COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                    cursor: 'pointer',
-                    color: opsSubTab === sub.id ? COLORS.textPrimary : COLORS.textMuted,
-                    fontFamily: FONTS.mono,
-                    fontSize: 10,
-                    fontWeight: 500,
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  <sub.icon size={13} strokeWidth={opsSubTab === sub.id ? 2.25 : 1.75} />
-                  {sub.label}
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Sub-tab content — renders desktop components embedded */}
-            <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-              {opsSubTab === 'beds' && (
-                <BedBoard
-                  display="full"
-                  units={bedUnits}
-                  surgeActive={isSurgeActive}
-                  open
-                  embedded
-                  onClose={() => setActiveTab('horizon')}
-                  role={currentUser.role}
-                />
-              )}
-              {opsSubTab === 'admissions' && (
-                <AdmitFlow
-                  open
-                  embedded
-                  onClose={() => setActiveTab('horizon')}
-                  showToast={showToast}
-                  bedUnits={bedUnits}
-                  admissionQueue={admissionQueue}
-                  onAssignBed={onAssignBed}
-                  onSubmitAdmission={onSubmitAdmission}
-                />
-              )}
-              {opsSubTab === 'staffing' && (
-                <WorkforceCoverage
-                  open
-                  embedded
-                  onClose={() => setActiveTab('horizon')}
-                  showToast={showToast}
-                  role={currentUser.role}
-                />
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ── (Legacy tasks content preserved below for reference, moved to alerts > actions) ── */}
-        {false && (
-          <motion.div
-            key="tasks-legacy"
             style={{
               padding: SPACE.base,
               paddingBottom: NAV_HEIGHT + SPACE['2xl'],
@@ -3966,7 +3848,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </motion.div>
         )}
 
-        {/* ────── ALERTS (Alerts + Actions + Playbooks) ───── */}
+        {/* ────── ALERTS ────────────────────────────────────── */}
         {activeTab === 'alerts' && (
           <motion.div
             key="alerts"
@@ -3974,63 +3856,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            {/* Sub-tab selector */}
-            <div style={{
-              display: 'flex',
-              gap: 4,
-              padding: `${SPACE.sm}px ${SPACE.base}px`,
-              borderBottom: `1px solid ${COLORS.border}`,
-              flexShrink: 0,
-            }}>
-              {([
-                { id: 'alerts' as const, label: 'ALERTS', icon: Bell },
-                { id: 'actions' as const, label: 'ACTIONS', icon: Layout },
-                { id: 'playbooks' as const, label: 'PLAYBOOKS', icon: BookOpen },
-              ]).map(sub => (
-                <motion.button
-                  key={sub.id}
-                  onClick={() => { triggerHaptic('light'); setAlertsSubTab(sub.id); }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 4,
-                    padding: `8px 4px`,
-                    background: alertsSubTab === sub.id ? COLORS.surfaceElev : 'transparent',
-                    border: `1px solid ${alertsSubTab === sub.id ? COLORS.borderHover : COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                    cursor: 'pointer',
-                    color: alertsSubTab === sub.id ? COLORS.textPrimary : COLORS.textMuted,
-                    fontFamily: FONTS.mono,
-                    fontSize: 10,
-                    fontWeight: 500,
-                    letterSpacing: '0.08em',
-                  }}
-                >
-                  <sub.icon size={13} strokeWidth={alertsSubTab === sub.id ? 2.25 : 1.75} />
-                  {sub.label}
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Alerts sub-tab content */}
-            {alertsSubTab === 'alerts' && (
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
               padding: SPACE.base,
               paddingBottom: NAV_HEIGHT + SPACE['2xl'],
               display: 'flex',
               flexDirection: 'column',
               gap: SPACE.lg,
-            }}>
+            }}
+          >
             <div
               style={{
                 display: 'flex',
@@ -4259,118 +4091,24 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <ChevronRight size={14} strokeWidth={2} color={COLORS.crit} />
               </motion.div>
             </TacticalCard>
-            </div>
-            )}
-
-            {/* Actions sub-tab — desktop ActionBoard embedded */}
-            {alertsSubTab === 'actions' && (
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <ActionBoard
-                  currentUser={currentUser}
-                  systemStatus={systemStatus}
-                  showToast={showToast}
-                  isSurgeActive={isSurgeActive}
-                />
-              </div>
-            )}
-
-            {/* Playbooks sub-tab — desktop Playbooks embedded */}
-            {alertsSubTab === 'playbooks' && (
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <Playbooks onActivate={(id) => showToast(`Playbook ${id} activated`, 'success')} />
-              </div>
-            )}
           </motion.div>
         )}
 
-        {/* ────── INTEL (Brief Me + Roster + Replay + Comms) ── */}
-        {activeTab === 'intel' && (
+        {/* ────── COMMS ─────────────────────────────────────── */}
+        {activeTab === 'comms' && (
           <motion.div
-            key="intel"
+            key="comms"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              height: '100%',
-            }}
-          >
-            {/* Sub-tab selector */}
-            <div style={{
-              display: 'flex',
-              gap: 4,
-              padding: `${SPACE.sm}px ${SPACE.base}px`,
-              borderBottom: `1px solid ${COLORS.border}`,
-              flexShrink: 0,
-            }}>
-              {([
-                { id: 'briefme' as const, label: 'BRIEF ME', icon: Archive },
-                { id: 'roster' as const, label: 'ROSTER', icon: Users },
-                { id: 'replay' as const, label: 'REPLAY', icon: PlayCircle },
-                { id: 'comms' as const, label: 'COMMS', icon: MessageSquare },
-              ]).map(sub => (
-                <motion.button
-                  key={sub.id}
-                  onClick={() => { triggerHaptic('light'); setIntelSubTab(sub.id); }}
-                  whileTap={{ scale: 0.95 }}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 3,
-                    padding: `8px 2px`,
-                    background: intelSubTab === sub.id ? COLORS.surfaceElev : 'transparent',
-                    border: `1px solid ${intelSubTab === sub.id ? COLORS.borderHover : COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                    cursor: 'pointer',
-                    color: intelSubTab === sub.id ? COLORS.textPrimary : COLORS.textMuted,
-                    fontFamily: FONTS.mono,
-                    fontSize: 9,
-                    fontWeight: 500,
-                    letterSpacing: '0.06em',
-                  }}
-                >
-                  <sub.icon size={12} strokeWidth={intelSubTab === sub.id ? 2.25 : 1.75} />
-                  {sub.label}
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Brief Me sub-tab */}
-            {intelSubTab === 'briefme' && (
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <BriefMe isSurgeActive={isSurgeActive} currentUser={currentUser} showToast={showToast} />
-              </div>
-            )}
-
-            {/* Roster sub-tab */}
-            {intelSubTab === 'roster' && (
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <Roster currentUser={currentUser} showToast={showToast} />
-              </div>
-            )}
-
-            {/* Replay sub-tab */}
-            {intelSubTab === 'replay' && (
-              <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-                <Replay showToast={showToast} />
-              </div>
-            )}
-
-            {/* Comms sub-tab — original comms content */}
-            {intelSubTab === 'comms' && (
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
               padding: SPACE.base,
               paddingBottom: NAV_HEIGHT + SPACE['2xl'],
               display: 'flex',
               flexDirection: 'column',
               gap: SPACE.lg,
-            }}>
-            {/* Original comms content below */}
+            }}
+          >
             <div
               style={{
                 display: 'flex',
@@ -4648,8 +4386,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
             >
               Broadcast Emergency
             </TacticalButton>
-            </div>
-            )}
           </motion.div>
         )}
       </main>
@@ -4681,9 +4417,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
             const active = activeTab === item.id;
             const Icon = item.icon;
             const hasBadge =
-              (item.id === 'alerts' && myTasks.length > 0) || item.id === 'ops';
+              (item.id === 'tasks' && myTasks.length > 0) || item.id === 'alerts';
             const badgeTone =
-              item.id === 'alerts' ? COLORS.accent : COLORS.info;
+              item.id === 'tasks' ? COLORS.accent : COLORS.info;
             return (
               <motion.button
                 key={item.id}
