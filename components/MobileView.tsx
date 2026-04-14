@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity,
@@ -905,8 +905,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onAcknowledgeAlert,
 }) => {
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'tasks' | 'patients' | 'alerts' | 'comms'
-  >('dashboard');
+    'horizon' | 'patients' | 'actions' | 'alerts' | 'comms'
+  >('horizon');
   const [showMenu, setShowMenu] = useState(false);
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [taskFilter, setTaskFilter] = useState<'all' | 'stat' | 'routine'>('all');
@@ -972,8 +972,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
     if (payload.startsWith('pulse://tab/')) {
       const tab = payload.slice('pulse://tab/'.length).split(/[?#/]/)[0];
       if (
-        tab === 'dashboard' ||
-        tab === 'tasks' ||
+        tab === 'horizon' ||
+        tab === 'actions' ||
         tab === 'patients' ||
         tab === 'alerts' ||
         tab === 'comms'
@@ -1168,18 +1168,18 @@ export const MobileView: React.FC<MobileViewProps> = ({
     showToast('Task marked complete', 'success');
   };
 
-  const navItems = [
-    { id: 'dashboard' as const, icon: LayoutDashboard, label: 'Home', code: 'HOM' },
-    { id: 'tasks' as const, icon: CheckCircle2, label: 'Actions', code: 'ACT' },
-    {
-      id: 'patients' as const,
-      icon: Users,
-      label: currentUser.role === UserRole.MANAGER ? 'Units' : 'Patients',
-      code: currentUser.role === UserRole.MANAGER ? 'UNT' : 'PAT',
-    },
-    { id: 'alerts' as const, icon: Bell, label: 'Alerts', code: 'ALR' },
-    { id: 'comms' as const, icon: MessageSquare, label: 'Comms', code: 'COM' },
-  ];
+  const navItems = useMemo(() => {
+    const isNurse = currentUser.role === UserRole.NURSE;
+    return [
+      { id: 'horizon' as const, icon: Activity, label: 'Horizon', code: 'HRZ' },
+      { id: 'patients' as const, icon: Users, label: currentUser.role === UserRole.MANAGER ? 'Units' : 'Patients', code: currentUser.role === UserRole.MANAGER ? 'UNT' : 'PAT' },
+      isNurse
+        ? { id: 'actions' as const, icon: CheckCircle2, label: 'Actions', code: 'ACT' }
+        : { id: 'actions' as const, icon: Radio, label: 'Live Ops', code: 'OPS' },
+      { id: 'alerts' as const, icon: Bell, label: 'Alerts', code: 'ALR' },
+      { id: 'comms' as const, icon: MessageSquare, label: 'Comms', code: 'COM' },
+    ];
+  }, [currentUser.role]);
 
   const timeStr = time.toUTCString().slice(17, 25); // HH:MM:SS
 
@@ -1743,9 +1743,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
         }}
       >
         {/* ────── DASHBOARD ─────────────────────────────────── */}
-        {activeTab === 'dashboard' && (
+        {activeTab === 'horizon' && (
           <motion.div
-            key="dashboard"
+            key="horizon"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
@@ -1773,7 +1773,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               }}
             >
               <Mono tone="dim" size="xs">
-                // PULSE / {currentUser.role.toUpperCase()} / SHIFT
+                // PULSE / {currentUser.role.toUpperCase()} / HORIZON
               </Mono>
               <StatusPill label="Live" tone="ok" pulse />
             </div>
@@ -2673,9 +2673,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
 
         {/* ────── TASKS ─────────────────────────────────────── */}
-        {activeTab === 'tasks' && (
+        {activeTab === 'actions' && (
           <motion.div
-            key="tasks"
+            key="actions"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
@@ -4417,9 +4417,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
             const active = activeTab === item.id;
             const Icon = item.icon;
             const hasBadge =
-              (item.id === 'tasks' && myTasks.length > 0) || item.id === 'alerts';
+              (item.id === 'actions' && myTasks.length > 0) || item.id === 'alerts';
             const badgeTone =
-              item.id === 'tasks' ? COLORS.accent : COLORS.info;
+              item.id === 'actions' ? COLORS.accent : COLORS.info;
             return (
               <motion.button
                 key={item.id}
