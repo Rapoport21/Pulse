@@ -1,7 +1,7 @@
 /**
  * MobileAdmitFlow — phone-native admission wizard.
  *
- * A six-step tactical wizard with a sleek progress bar, animated step
+ * A seven-step tactical wizard with a sleek progress bar, animated step
  * transitions, and a sticky Back/Next bar. Runs as a fullscreen overlay
  * (position: fixed, inset: 0, z-index 50) that slides up from the
  * bottom and supports iOS-style edge-swipe-to-close.
@@ -11,13 +11,15 @@
  *   3. Vitals        (optional)
  *   4. Allergies     (optional, repeating)
  *   5. Problems      (optional, repeating)
- *   6. Review        (summary + Admit)
+ *   6. Review        (summary)
+ *   7. Bed           (optional bed assignment, Admit button)
  *
- * Admission always proceeds — bed assignment is deferred; patients land
- * in the holding area tagged `admitted-unassigned`.
+ * If no bed is selected on step 7, the patient is admitted with
+ * `admitted-unassigned` status and appears on Patients tab immediately.
+ * Either way, the Patient record is created on Admit.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChevronLeft,
@@ -31,6 +33,7 @@ import {
   ShieldAlert,
   ClipboardList,
   FileCheck2,
+  BedDouble,
 } from 'lucide-react';
 import {
   COLORS,
@@ -52,6 +55,7 @@ import type {
   AdmissionAllergyInput,
   AdmissionProblemInput,
 } from './clinical';
+import type { BedUnit, Bed } from '../data/bedMock';
 import { useSwipeBack } from '../lib/useSwipeBack';
 import { triggerHaptic } from '../lib/haptics';
 
@@ -63,9 +67,18 @@ export interface MobileAdmitFlowProps {
   open: boolean;
   onClose: () => void;
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
+  /**
+   * Called when the user taps Admit. `bedId` is optional — when present,
+   * the patient is placed into that bed immediately; when absent, the
+   * patient is admitted-unassigned and shows up on Patients tab with
+   * no physical bed attached yet.
+   */
   onSubmitAdmission?: (
     entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>,
+    bedId?: string,
   ) => void;
+  /** Live bed state, used to populate the bed picker on step 7. */
+  bedUnits?: BedUnit[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -230,7 +243,7 @@ const ESI_OPTIONS = ['1', '2', '3', '4', '5'];
 // Step metadata
 // ─────────────────────────────────────────────────────────────────────────
 
-type StepId = 1 | 2 | 3 | 4 | 5 | 6;
+type StepId = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 interface StepMeta {
   id: StepId;
@@ -245,7 +258,8 @@ const STEPS: StepMeta[] = [
   { id: 3, label: 'VITALS',   title: 'Admission Vitals',      icon: Activity },
   { id: 4, label: 'ALLERGY',  title: 'Allergies',             icon: ShieldAlert },
   { id: 5, label: 'PROBLEMS', title: 'Problems / Diagnoses',  icon: ClipboardList },
-  { id: 6, label: 'REVIEW',   title: 'Review & Admit',        icon: FileCheck2 },
+  { id: 6, label: 'REVIEW',   title: 'Review',                icon: FileCheck2 },
+  { id: 7, label: 'BED',      title: 'Bed Assignment',        icon: BedDouble },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -430,7 +444,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
     }}
   >
     {/* Segment bar row */}
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
       {STEPS.map((step) => {
         const done = step.id < currentStep;
         const active = step.id === currentStep;
@@ -493,7 +507,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
     </div>
 
     {/* Labels row */}
-    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
       {STEPS.map((step) => {
         const active = step.id === currentStep;
         const done = step.id < currentStep;
@@ -505,8 +519,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
               minWidth: 0,
               textAlign: 'center',
               fontFamily: FONTS.mono,
-              fontSize: 9,
-              letterSpacing: '0.16em',
+              fontSize: 8,
+              letterSpacing: '0.12em',
               fontWeight: 600,
               color: active ? COLORS.accent : done ? COLORS.textSecondary : COLORS.textMuted,
               transition: `color ${MOTION.fast}s ease`,
@@ -686,12 +700,14 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
   onClose,
   showToast,
   onSubmitAdmission,
+  bedUnits,
 }) => {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [maxReached, setMaxReached] = useState<StepId>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [shake, setShake] = useState(false);
+  const [selectedBedId, setSelectedBedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // iOS-style edge-swipe-to-close
@@ -710,8 +726,27 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       setMaxReached(1);
       setDirection(1);
       setShake(false);
+      setSelectedBedId(null);
     }
   }, [open]);
+
+  // Compute available (ready) beds grouped by unit — used in step 7
+  const availableBedsByUnit = useMemo(() => {
+    if (!bedUnits) return [] as Array<{ unit: BedUnit; beds: Bed[] }>;
+    return bedUnits
+      .filter((u) => !u.surgeOnly)
+      .map((u) => ({ unit: u, beds: u.beds.filter((b) => b.state === 'ready') }))
+      .filter((x) => x.beds.length > 0);
+  }, [bedUnits]);
+
+  const selectedBedDisplay = useMemo(() => {
+    if (!selectedBedId || !bedUnits) return null;
+    for (const unit of bedUnits) {
+      const bed = unit.beds.find((b) => b.id === selectedBedId);
+      if (bed) return { bed, unit };
+    }
+    return null;
+  }, [selectedBedId, bedUnits]);
 
   // Scroll to top on step change so users see the new step header
   useEffect(() => {
@@ -851,9 +886,9 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       source,
       acuity: Number(form.esi) || 3,
       complaint,
-      requestedUnit: 'Med-Surg',
+      requestedUnit: selectedBedDisplay?.unit.shortName || 'Med-Surg',
       attending: form.attending || 'Unassigned',
-      bedAssignmentStatus: 'admitted-unassigned',
+      bedAssignmentStatus: selectedBedId ? 'assigned' : 'admitted-unassigned',
       demographics: {
         dob: form.dob || undefined,
         sex: form.sex === '' ? undefined : form.sex,
@@ -881,15 +916,24 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       },
     };
 
-    onSubmitAdmission?.(entry);
+    onSubmitAdmission?.(entry, selectedBedId || undefined);
     triggerHaptic('heavy');
-    showToast(`Admitted ${fullName} — BED UNASSIGNED`, 'success');
+    if (selectedBedDisplay) {
+      showToast(
+        `Admitted ${fullName} → ${selectedBedDisplay.bed.label} (${selectedBedDisplay.unit.shortName})`,
+        'success',
+      );
+    } else {
+      showToast(`Admitted ${fullName} — bed unassigned`, 'success');
+    }
     setForm(INITIAL_FORM);
+    setSelectedBedId(null);
     onClose();
   };
 
   const handleCancel = () => {
     setForm(INITIAL_FORM);
+    setSelectedBedId(null);
     onClose();
   };
 
@@ -1635,19 +1679,14 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                     <div
                       style={{
                         padding: SPACE.md,
-                        background: COLORS.accentDim,
-                        border: `1px solid ${COLORS.accent}`,
+                        background: COLORS.surface,
+                        border: `1px dashed ${COLORS.borderStrong}`,
                         borderRadius: RADIUS.sm,
                         textAlign: 'center',
-                        position: 'relative',
                       }}
                     >
-                      <CornerBracket position="tl" color={COLORS.accent} size={8} />
-                      <CornerBracket position="tr" color={COLORS.accent} size={8} />
-                      <CornerBracket position="bl" color={COLORS.accent} size={8} />
-                      <CornerBracket position="br" color={COLORS.accent} size={8} />
-                      <Mono tone="primary" size="xs" style={{ color: COLORS.accent, display: 'block' }}>
-                        ADMISSION WILL PROCEED
+                      <Mono tone="muted" size="xs" style={{ display: 'block' }}>
+                        NEXT · BED ASSIGNMENT
                       </Mono>
                       <div
                         style={{
@@ -1657,9 +1696,176 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                           color: COLORS.textSecondary,
                         }}
                       >
-                        Patient placed in holding · Bed assignment deferred
+                        Pick a bed now or skip to admit into holding.
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* ── STEP 7 · BED ASSIGNMENT ──────────────────────── */}
+                {currentStep === 7 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                    {/* Selection status card */}
+                    <motion.div
+                      layout
+                      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                      style={{
+                        padding: SPACE.md,
+                        background: selectedBedDisplay ? COLORS.accentDim : COLORS.surface,
+                        border: `1px solid ${selectedBedDisplay ? COLORS.accent : COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        position: 'relative',
+                      }}
+                    >
+                      {selectedBedDisplay && (
+                        <>
+                          <CornerBracket position="tl" color={COLORS.accent} size={8} />
+                          <CornerBracket position="tr" color={COLORS.accent} size={8} />
+                          <CornerBracket position="bl" color={COLORS.accent} size={8} />
+                          <CornerBracket position="br" color={COLORS.accent} size={8} />
+                        </>
+                      )}
+                      <Mono
+                        tone="muted"
+                        size="xs"
+                        style={{
+                          display: 'block',
+                          color: selectedBedDisplay ? COLORS.accent : COLORS.textMuted,
+                        }}
+                      >
+                        {selectedBedDisplay ? 'BED SELECTED' : 'NO BED SELECTED'}
+                      </Mono>
+                      <div
+                        style={{
+                          marginTop: 4,
+                          fontFamily: FONTS.sans,
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: COLORS.textPrimary,
+                        }}
+                      >
+                        {selectedBedDisplay
+                          ? `${selectedBedDisplay.bed.label} · ${selectedBedDisplay.unit.shortName}`
+                          : 'Patient will be admitted unassigned'}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 2,
+                          fontFamily: FONTS.sans,
+                          fontSize: 11,
+                          color: COLORS.textSecondary,
+                        }}
+                      >
+                        {selectedBedDisplay
+                          ? 'Tap bed again to deselect · Skip & admit unassigned is still available below.'
+                          : 'You can assign a bed later from the Admissions tab.'}
+                      </div>
+                    </motion.div>
+
+                    {availableBedsByUnit.length === 0 ? (
+                      <TacticalCard padding="md">
+                        <Mono tone="muted" size="xs" style={{ display: 'block', textAlign: 'center' }}>
+                          NO READY BEDS AVAILABLE
+                        </Mono>
+                        <div
+                          style={{
+                            marginTop: 4,
+                            fontFamily: FONTS.sans,
+                            fontSize: 11,
+                            color: COLORS.textSecondary,
+                            textAlign: 'center',
+                          }}
+                        >
+                          Admit unassigned — assign later from Admissions tab.
+                        </div>
+                      </TacticalCard>
+                    ) : (
+                      availableBedsByUnit.map(({ unit, beds }) => (
+                        <TacticalCard key={unit.id} padding="sm">
+                          <BracketLabel tone="accent" size="sm">
+                            {unit.shortName} · {beds.length} READY
+                          </BracketLabel>
+                          <Divider style={{ margin: `${SPACE.sm}px 0` }} />
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
+                              gap: SPACE.sm,
+                            }}
+                          >
+                            {beds.map((bed) => {
+                              const picked = selectedBedId === bed.id;
+                              return (
+                                <motion.button
+                                  key={bed.id}
+                                  type="button"
+                                  whileTap={{ scale: 0.96 }}
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    setSelectedBedId((prev) => (prev === bed.id ? null : bed.id));
+                                  }}
+                                  style={{
+                                    position: 'relative',
+                                    minHeight: 56,
+                                    padding: `${SPACE.sm}px ${SPACE.xs}px`,
+                                    background: picked ? COLORS.accentDim : COLORS.surface,
+                                    border: `1px solid ${picked ? COLORS.accent : COLORS.border}`,
+                                    borderRadius: RADIUS.sm,
+                                    color: picked ? COLORS.accent : COLORS.textPrimary,
+                                    fontFamily: FONTS.mono,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.08em',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 2,
+                                    transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
+                                  }}
+                                >
+                                  {picked && (
+                                    <>
+                                      <CornerBracket position="tl" color={COLORS.accent} size={5} />
+                                      <CornerBracket position="tr" color={COLORS.accent} size={5} />
+                                      <CornerBracket position="bl" color={COLORS.accent} size={5} />
+                                      <CornerBracket position="br" color={COLORS.accent} size={5} />
+                                    </>
+                                  )}
+                                  {bed.label}
+                                  <span
+                                    style={{
+                                      fontFamily: FONTS.mono,
+                                      fontSize: 9,
+                                      letterSpacing: '0.14em',
+                                      color: picked ? COLORS.accent : COLORS.textMuted,
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    READY
+                                  </span>
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </TacticalCard>
+                      ))
+                    )}
+
+                    {selectedBedId && (
+                      <TacticalButton
+                        variant="ghost"
+                        fullWidth
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setSelectedBedId(null);
+                        }}
+                        style={{ minHeight: 44, height: 44 }}
+                      >
+                        Clear selection
+                      </TacticalButton>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -1757,7 +1963,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 {isLastStep ? (
                   <>
                     <Check size={16} />
-                    Admit Patient
+                    {selectedBedId ? 'Admit to Bed' : 'Admit Unassigned'}
                   </>
                 ) : (
                   <>

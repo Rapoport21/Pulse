@@ -214,48 +214,16 @@ function App() {
     }));
   }, []);
 
-  /** Assign a bed to an admission queue entry — updates bed state, queue, AND patient list */
-  const assignBedToAdmission = (admissionId: string, bedId: string) => {
-    // Read from ref to always get the latest queue (avoids stale closure)
-    const admission = admissionQueueRef.current.find(a => a.id === admissionId);
-    if (!admission) return;
-
-    let bedLabel = '';
-    let unitName = '';
-    let zoneName = '';
-
-    // Update bed state
-    setBedUnits(prev => prev.map(unit => ({
-      ...unit,
-      beds: unit.beds.map(bed => {
-        if (bed.id === bedId && bed.state === 'ready') {
-          bedLabel = bed.label;
-          unitName = unit.shortName;
-          zoneName = unit.name;
-          return {
-            ...bed,
-            state: 'occupied' as const,
-            patientName: admission.name,
-            patientId: admission.mrn,
-            mrn: admission.mrn,
-            acuity: admission.acuity as (1|2|3|4|5),
-            attending: admission.attending,
-            admitSource: (admission.source ?? 'ED') as Bed['admitSource'],
-            losHours: 0,
-            isolation: 'NONE' as const,
-            stateChangedMinAgo: 0,
-          };
-        }
-        return bed;
-      }),
-    })));
-
-    // Update queue entry status
-    setAdmissionQueue(prev => prev.map(a =>
-      a.id === admissionId ? { ...a, status: 'admitted' as const, assignedBed: bedLabel, assignedUnit: unitName, waitMin: 0 } : a
-    ));
-
-    // ── Create Patient record so they appear in the Patients tab ──
+  /**
+   * Build a Patient record from an admission entry. Pure function — no state
+   * mutations. `bedContext` is optional: when present, the encounter carries
+   * a concrete bed + zone; when absent, the patient is admitted-unassigned
+   * and appears on the floor without a physical location yet.
+   */
+  const buildPatientFromAdmission = (
+    admission: AdmissionEntry,
+    bedContext?: { bedLabel: string; unitName: string; zoneName: string },
+  ): Patient => {
     const nameParts = admission.name.split(' ');
     const given = nameParts[0] ?? admission.name;
     const family = nameParts.slice(1).join(' ') || 'Unknown';
@@ -288,7 +256,10 @@ function App() {
       class: admission.source === 'ED' ? 'EMERGENCY' : 'INPATIENT',
       status: 'in-progress',
       admittedAt: nowIso,
-      location: { zone: zoneName || unitName, bed: bedLabel },
+      location: bedContext
+        ? { zone: bedContext.zoneName || bedContext.unitName, bed: bedContext.bedLabel }
+        : { zone: admission.requestedUnit, bed: 'UNASSIGNED' },
+      bedAssignmentStatus: bedContext ? 'assigned' : 'admitted-unassigned',
       chiefComplaint: admission.complaint,
       esi: admission.acuity as 1 | 2 | 3 | 4 | 5,
       attendingId: admission.attending,
@@ -326,7 +297,7 @@ function App() {
         priority: i + 1,
       }));
 
-    const newPatient: Patient = {
+    return {
       id: patientId,
       mrn: admission.mrn,
       name: { given, family },
@@ -344,27 +315,170 @@ function App() {
       currentEncounter: encounter,
       avatarInitials: `${given[0] ?? ''}${family[0] ?? ''}`.toUpperCase(),
     };
+  };
 
+  /**
+   * Assign a bed to an admission queue entry — updates bed state, queue,
+   * AND the existing Patient's encounter location. The Patient record is
+   * created at submission time (see submitNewAdmission), so this fn just
+   * moves them from "admitted-unassigned" to their concrete bed.
+   */
+  const assignBedToAdmission = (admissionId: string, bedId: string) => {
+    // Read from ref to always get the latest queue (avoids stale closure)
+    const admission = admissionQueueRef.current.find(a => a.id === admissionId);
+    if (!admission) return;
+
+    let bedLabel = '';
+    let unitName = '';
+    let zoneName = '';
+
+    // Update bed state
+    setBedUnits(prev => prev.map(unit => ({
+      ...unit,
+      beds: unit.beds.map(bed => {
+        if (bed.id === bedId && bed.state === 'ready') {
+          bedLabel = bed.label;
+          unitName = unit.shortName;
+          zoneName = unit.name;
+          return {
+            ...bed,
+            state: 'occupied' as const,
+            patientName: admission.name,
+            patientId: admission.mrn,
+            mrn: admission.mrn,
+            acuity: admission.acuity as (1|2|3|4|5),
+            attending: admission.attending,
+            admitSource: (admission.source ?? 'ED') as Bed['admitSource'],
+            losHours: 0,
+            isolation: 'NONE' as const,
+            stateChangedMinAgo: 0,
+          };
+        }
+        return bed;
+      }),
+    })));
+
+    // Update queue entry status
+    setAdmissionQueue(prev => prev.map(a =>
+      a.id === admissionId
+        ? {
+            ...a,
+            status: 'admitted' as const,
+            assignedBed: bedLabel,
+            assignedUnit: unitName,
+            bedAssignmentStatus: 'assigned' as const,
+            waitMin: 0,
+          }
+        : a
+    ));
+
+    // Update the existing Patient's encounter location. If for any reason
+    // the Patient doesn't exist yet (e.g. legacy seed data), fall back to
+    // creating one so the patient still appears on the Patients tab.
     setPatients(prev => {
-      // Don't duplicate if MRN already exists
-      if (prev.some(p => p.mrn === admission.mrn)) return prev;
+      const existing = prev.find(p => p.mrn === admission.mrn);
+      if (existing) {
+        return prev.map(p =>
+          p.mrn === admission.mrn && p.currentEncounter
+            ? {
+                ...p,
+                currentEncounter: {
+                  ...p.currentEncounter,
+                  location: { zone: zoneName || unitName, bed: bedLabel },
+                  bedAssignmentStatus: 'assigned' as const,
+                },
+              }
+            : p
+        );
+      }
+      const newPatient = buildPatientFromAdmission(admission, { bedLabel, unitName, zoneName });
       return [newPatient, ...prev];
     });
 
     showToast(`Admitted ${admission.name} → ${bedLabel} (${unitName})`);
   };
 
-  /** Add a new admission to the queue from the form */
-  const submitNewAdmission = (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => {
+  /**
+   * Add a new admission from the form. If `bedId` is provided, the patient
+   * is immediately placed in that bed (bed occupied, queue marked admitted).
+   * Otherwise the patient is admitted-unassigned — they appear on the
+   * Patients tab right away but no physical bed is tied to them until
+   * someone calls assignBedToAdmission later.
+   */
+  const submitNewAdmission = (
+    entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>,
+    bedId?: string,
+  ) => {
+    const newId = `ADM-${String(admissionQueue.length + 1).padStart(3, '0')}`;
+    const requestedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    // Resolve bed info up front if a bed was chosen
+    let bedContext: { bedLabel: string; unitName: string; zoneName: string } | undefined;
+    if (bedId) {
+      for (const unit of bedUnits) {
+        const bed = unit.beds.find(b => b.id === bedId && b.state === 'ready');
+        if (bed) {
+          bedContext = { bedLabel: bed.label, unitName: unit.shortName, zoneName: unit.name };
+          break;
+        }
+      }
+    }
+
     const newEntry: AdmissionEntry = {
       ...entry,
-      id: `ADM-${String(admissionQueue.length + 1).padStart(3, '0')}`,
-      status: 'pending',
+      id: newId,
+      status: bedContext ? 'admitted' : 'pending',
       waitMin: 0,
-      requestedAt: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+      requestedAt,
+      ...(bedContext ? {
+        assignedBed: bedContext.bedLabel,
+        assignedUnit: bedContext.unitName,
+        bedAssignmentStatus: 'assigned' as const,
+      } : {
+        bedAssignmentStatus: 'admitted-unassigned' as const,
+      }),
     };
+
+    // If a bed was chosen, flip it to occupied
+    if (bedContext && bedId) {
+      setBedUnits(prev => prev.map(unit => ({
+        ...unit,
+        beds: unit.beds.map(bed => {
+          if (bed.id === bedId && bed.state === 'ready') {
+            return {
+              ...bed,
+              state: 'occupied' as const,
+              patientName: entry.name,
+              patientId: entry.mrn,
+              mrn: entry.mrn,
+              acuity: entry.acuity as (1|2|3|4|5),
+              attending: entry.attending,
+              admitSource: (entry.source ?? 'ED') as Bed['admitSource'],
+              losHours: 0,
+              isolation: 'NONE' as const,
+              stateChangedMinAgo: 0,
+            };
+          }
+          return bed;
+        }),
+      })));
+    }
+
+    // Push the admission entry
     setAdmissionQueue(prev => [newEntry, ...prev]);
-    showToast(`Admission request submitted for ${entry.name}`);
+
+    // Always create the Patient so they appear on Patients / My Patients
+    const newPatient = buildPatientFromAdmission(newEntry, bedContext);
+    setPatients(prev => {
+      if (prev.some(p => p.mrn === entry.mrn)) return prev;
+      return [newPatient, ...prev];
+    });
+
+    if (bedContext) {
+      showToast(`Admitted ${entry.name} → ${bedContext.bedLabel} (${bedContext.unitName})`);
+    } else {
+      showToast(`Admitted ${entry.name} — bed unassigned`);
+    }
   };
 
   // Live clock for the header — ticks every second in HH:MM:SS UTC

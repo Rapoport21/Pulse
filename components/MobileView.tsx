@@ -55,11 +55,9 @@ import { PatientDetailScreen } from './PatientDetailScreen';
 import { MobilePatientDetailScreen } from './MobilePatientDetailScreen';
 import { MobileAdmitFlow } from './MobileAdmitFlow';
 import {
-  ESITriageScreen,
   EmsInboundBoard,
   BedBoard,
   DischargeFlow,
-  RoundingList,
   NoteComposer,
   OrderEntry,
   CodeBlueScreen,
@@ -69,7 +67,6 @@ import {
   AlertsCenter,
   DeptCoordination,
   BriefMeScreen,
-  type TriageResult,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
 import { useRealtimeState } from '../lib/realtime';
@@ -131,7 +128,7 @@ interface MobileViewProps {
   clinicalNotes?: ClinicalNote[];
   alertAcks?: Record<string, { status: string; actor: string; at: string }>;
   onAssignBed?: (admissionId: string, bedId: string) => void;
-  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => void;
+  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>, bedId?: string) => void;
   onDischargePatient?: (patientId: string) => void;
   onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
   onAddNote?: (note: Omit<ClinicalNote, 'id' | 'createdAt'>) => void;
@@ -920,15 +917,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [showScanner, setShowScanner] = useState(false);
   const [showTestQR, setShowTestQR] = useState(false);
   /**
-   * ESI Triage wizard modal — opens fullscreen over MobileView so a
-   * triage nurse can walk through the Gilboy/ENA ESI v4 algorithm and
-   * produce an acuity assignment + suggested bay + handoff line.
-   * Last completed result is held briefly so the next time the wizard
-   * opens we can show a "PREVIOUS · ESI X" affordance (future).
-   */
-  const [showTriage, setShowTriage] = useState(false);
-  const [lastTriage, setLastTriage] = useState<TriageResult | null>(null);
-  /**
    * EMS board fullscreen overlay state — every role can pop it open
    * via a launcher card on the Patients tab. ER personnel also see
    * the same board inline on the Dashboard tab as a tile.
@@ -948,10 +936,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [patientSearch, setPatientSearch] = useState('');
   const [patientFilter, setPatientFilter] = useState<'all' | 'critical' | 'warning' | 'ed' | 'inpatient'>('all');
 
+  /**
+   * MY PATIENTS section (bottom of Patients page) — unifies the retired
+   * Rounding List into a role-scoped worklist. Sort toggles between
+   * alphabetical (by last name) and acuity (MEWS score). Each row
+   * expands to an SBAR drawer so clinicians can orient fast without
+   * opening the full patient screen.
+   */
+  const [myPatientsSort, setMyPatientsSort] = useState<'alpha' | 'acuity'>('acuity');
+  const [expandedMyPatientId, setExpandedMyPatientId] = useState<string | null>(null);
+
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
-  const [showRoundingList, setShowRoundingList] = useState(false);
   const [showNoteComposer, setShowNoteComposer] = useState(false);
   const [showOrderEntry, setShowOrderEntry] = useState(false);
   const [showCodeBlue, setShowCodeBlue] = useState(false);
@@ -1117,6 +1114,37 @@ export const MobileView: React.FC<MobileViewProps> = ({
         : syncedPatients.filter((p) => p.currentEncounter?.class !== 'EMERGENCY');
     return pool.map(adaptPatientForList);
   }, [syncedPatients, currentUser.role]);
+
+  /**
+   * MY PATIENTS — role-scoped worklist for Nurse / ER Personnel / Trauma.
+   * Manager (= Operations Director) sees all patients in the main list
+   * above and should NOT get this section. Each entry is enriched with
+   * MEWS score so acuity sort can rank by early-warning severity.
+   */
+  const myPatientsScoped = useMemo(() => {
+    if (currentUser.role === UserRole.MANAGER) return [];
+    const pool =
+      currentUser.role === UserRole.ER_PERSONNEL || currentUser.role === UserRole.TRAUMA
+        ? syncedPatients.filter((p) => p.currentEncounter?.class === 'EMERGENCY')
+        : syncedPatients.filter((p) => p.currentEncounter?.class !== 'EMERGENCY');
+    return pool
+      .filter((p) => p.currentEncounter?.status === 'in-progress' || p.currentEncounter?.status === 'arrived')
+      .map((p) => {
+        const lastVital = p.vitalsHistory[p.vitalsHistory.length - 1];
+        const mews = lastVital ? computeMEWS(lastVital).total : 0;
+        return { patient: p, mews, lastVital };
+      });
+  }, [syncedPatients, currentUser.role]);
+
+  const myPatientsSorted = useMemo(() => {
+    const arr = [...myPatientsScoped];
+    if (myPatientsSort === 'acuity') {
+      arr.sort((a, b) => b.mews - a.mews);
+    } else {
+      arr.sort((a, b) => a.patient.name.family.localeCompare(b.patient.name.family));
+    }
+    return arr;
+  }, [myPatientsScoped, myPatientsSort]);
 
   // 4-hour forecast sampled at 15-minute intervals → 17 points gives a
   // detailed curve that still feels responsive to touch on a phone. Adds
@@ -1916,80 +1944,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 setPatientsSubTab('bedboard');
               }}
             />
-
-            {/* ESI Triage launcher — only floor staff who actually triage
-                patients see this on Horizon. ESI triage is arrival-time
-                acuity classification, distinct from the formal admission
-                flow. Kept compact so it doesn't dominate the home screen. */}
-            {(currentUser.role === UserRole.ER_PERSONNEL ||
-              currentUser.role === UserRole.NURSE) && (
-              <motion.button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowTriage(true);
-                }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.md,
-                  padding: `${SPACE.md}px ${SPACE.base}px`,
-                  background:
-                    'linear-gradient(90deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.02) 100%)',
-                  border: `1px solid ${COLORS.accent}`,
-                  borderLeft: `3px solid ${COLORS.accent}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 56,
-                }}
-              >
-                <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} inset={-1} />
-                <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} inset={-1} />
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(225,29,72,0.18)',
-                    border: `1px solid ${COLORS.accent}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.accent,
-                  }}
-                >
-                  <ClipboardList size={18} strokeWidth={2} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <BracketLabel tone="accent" size="xs">
-                    ESI · TRIAGE
-                  </BracketLabel>
-                  <div
-                    style={{
-                      marginTop: 2,
-                      fontFamily: FONTS.sans,
-                      fontSize: 15,
-                      fontWeight: 600,
-                      color: COLORS.textPrimary,
-                      letterSpacing: '-0.005em',
-                    }}
-                  >
-                    {lastTriage
-                      ? `Last · ESI ${lastTriage.esi} · ${lastTriage.suggestedBay}`
-                      : 'Classify arrival acuity'}
-                  </div>
-                </div>
-                <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
-              </motion.button>
-            )}
 
             {/* Live Ops Grid — house-wide KPIs, scannable at a glance.
                 Critical tiles now render their numeric at 40px so
@@ -3442,72 +3396,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* Rounding List launcher */}
-            <motion.button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setShowRoundingList(true);
-              }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACE.md,
-                padding: `${SPACE.md}px ${SPACE.base}px`,
-                background:
-                  'linear-gradient(90deg, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.02) 100%)',
-                border: `1px solid rgba(139,92,246,0.5)`,
-                borderLeft: `3px solid rgba(139,92,246,0.7)`,
-                borderRadius: RADIUS.sm,
-                color: COLORS.textPrimary,
-                fontFamily: FONTS.sans,
-                textAlign: 'left',
-                cursor: 'pointer',
-                overflow: 'hidden',
-                minHeight: 48,
-                width: '100%',
-              }}
-            >
-              <CornerBracket position="tl" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'rgba(139,92,246,0.18)',
-                  border: '1px solid rgba(139,92,246,0.5)',
-                  borderRadius: RADIUS.sm,
-                  color: 'rgba(139,92,246,0.9)',
-                }}
-              >
-                <ClipboardList size={18} strokeWidth={2} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>
-                  ROUNDING LIST
-                </BracketLabel>
-                <div
-                  style={{
-                    marginTop: 2,
-                    fontFamily: FONTS.sans,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: COLORS.textPrimary,
-                    letterSpacing: '-0.005em',
-                  }}
-                >
-                  All patients · sorted by acuity
-                </div>
-              </div>
-              <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
-            </motion.button>
-
             {/* Search — wired to patientSearch state */}
             <div style={{ position: 'relative' }}>
               <Search
@@ -3820,6 +3708,342 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 );
               })}
             </div>
+
+            {/* ── MY PATIENTS (role-scoped worklist) ─────────────
+                Hidden for MANAGER / Operations Director, who sees
+                all patients via the main list above. Nurses, ER
+                Personnel, and Trauma see their own caseload with
+                an MEWS-driven acuity sort + SBAR drawer. */}
+            {currentUser.role !== UserRole.MANAGER && (
+              <div
+                style={{
+                  marginTop: SPACE.lg,
+                  paddingTop: SPACE.lg,
+                  borderTop: `1px dashed ${COLORS.border}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: SPACE.md,
+                }}
+              >
+                {/* Section header row */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+                    <BracketLabel tone="accent" size="sm">
+                      MY PATIENTS
+                    </BracketLabel>
+                    <StatusPill
+                      label={`${myPatientsSorted.length}`}
+                      tone="neutral"
+                      size="xs"
+                    />
+                  </div>
+
+                  {/* Sort toggle — alpha ↔ acuity */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.full,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {(['acuity', 'alpha'] as const).map((mode) => {
+                      const active = myPatientsSort === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setMyPatientsSort(mode);
+                          }}
+                          style={{
+                            padding: `6px 12px`,
+                            minHeight: 32,
+                            background: active ? COLORS.accent : 'transparent',
+                            border: 'none',
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: '0.14em',
+                            textTransform: 'uppercase',
+                            color: active ? COLORS.bg : COLORS.textSecondary,
+                            cursor: 'pointer',
+                            transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
+                          }}
+                        >
+                          {mode === 'acuity' ? 'Acuity' : 'A-Z'}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* My Patients list */}
+                {myPatientsSorted.length === 0 ? (
+                  <TacticalCard padding="md">
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: SPACE.xs,
+                        padding: SPACE.sm,
+                      }}
+                    >
+                      <Mono tone="muted" size="xs">NO ACTIVE PATIENTS</Mono>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          textAlign: 'center',
+                        }}
+                      >
+                        Your caseload is empty. New admissions will appear here.
+                      </div>
+                    </div>
+                  </TacticalCard>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+                    {myPatientsSorted.map(({ patient: p, mews, lastVital }) => {
+                      const expanded = expandedMyPatientId === p.id;
+                      const ageYears = ageInYears(p.birthDate);
+                      const enc = p.currentEncounter;
+                      const bedLabel = enc?.location?.bed || 'UNASSIGNED';
+                      const tone = mews >= 5 ? 'crit' : mews >= 3 ? 'warn' : 'ok';
+                      const toneColor = mews >= 5 ? COLORS.crit : mews >= 3 ? COLORS.warn : COLORS.ok;
+                      const mewsLbl = mews >= 5 ? 'CRITICAL' : mews >= 3 ? 'ELEVATED' : 'LOW';
+                      return (
+                        <TacticalCard
+                          key={p.id}
+                          padding="none"
+                          style={{ overflow: 'hidden', borderLeft: `3px solid ${toneColor}` }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setExpandedMyPatientId(expanded ? null : p.id);
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: SPACE.md,
+                              background: 'transparent',
+                              border: 'none',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: SPACE.md,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: RADIUS.full,
+                                background: `${toneColor}22`,
+                                border: `1px solid ${toneColor}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontFamily: FONTS.mono,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: toneColor,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {p.avatarInitials || `${p.name.given[0] ?? ''}${p.name.family[0] ?? ''}`.toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: SPACE.xs,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    fontFamily: FONTS.sans,
+                                    fontSize: 15,
+                                    fontWeight: 600,
+                                    color: COLORS.textPrimary,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {p.name.family}, {p.name.given}
+                                </div>
+                              </div>
+                              <Mono tone="muted" size="xs">
+                                {ageYears}
+                                {p.sex ? ` · ${p.sex}` : ''} · {bedLabel}
+                              </Mono>
+                            </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-end',
+                                gap: 4,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <StatusPill
+                                label={`MEWS ${mews}`}
+                                tone={tone}
+                                size="xs"
+                                pulse={mews >= 5}
+                              />
+                              <Mono tone="muted" size="xs">
+                                {mewsLbl}
+                              </Mono>
+                            </div>
+                            <ChevronRight
+                              size={16}
+                              color={COLORS.textMuted}
+                              style={{
+                                transform: expanded ? 'rotate(90deg)' : 'none',
+                                transition: `transform ${MOTION.fast}s ease`,
+                                flexShrink: 0,
+                              }}
+                            />
+                          </button>
+
+                          {/* SBAR drawer */}
+                          <AnimatePresence initial={false}>
+                            {expanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <div
+                                  style={{
+                                    padding: SPACE.md,
+                                    paddingTop: 0,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: SPACE.sm,
+                                    borderTop: `1px dashed ${COLORS.border}`,
+                                  }}
+                                >
+                                  {/* S — Situation */}
+                                  <div>
+                                    <Mono tone="accent" size="xs">S · SITUATION</Mono>
+                                    <div
+                                      style={{
+                                        marginTop: 2,
+                                        fontSize: 12,
+                                        color: COLORS.textPrimary,
+                                        lineHeight: 1.4,
+                                      }}
+                                    >
+                                      {enc?.chiefComplaint || '—'} · ESI {enc?.esi ?? '?'}
+                                      {enc?.arrivalMode ? ` · arrived via ${enc.arrivalMode}` : ''}
+                                    </div>
+                                  </div>
+                                  {/* B — Background */}
+                                  <div>
+                                    <Mono tone="accent" size="xs">B · BACKGROUND</Mono>
+                                    <div
+                                      style={{
+                                        marginTop: 2,
+                                        fontSize: 12,
+                                        color: COLORS.textPrimary,
+                                        lineHeight: 1.4,
+                                      }}
+                                    >
+                                      {p.problems.length === 0
+                                        ? 'No known problems'
+                                        : p.problems
+                                            .slice(0, 3)
+                                            .map((pr) => pr.display)
+                                            .join(' · ')}
+                                      {p.allergies.length > 0
+                                        ? ` · Allergies: ${p.allergies
+                                            .slice(0, 2)
+                                            .map((a) => a.substance)
+                                            .join(', ')}`
+                                        : ' · NKA'}
+                                    </div>
+                                  </div>
+                                  {/* A — Assessment (vitals + MEWS) */}
+                                  <div>
+                                    <Mono tone="accent" size="xs">A · ASSESSMENT</Mono>
+                                    <div
+                                      style={{
+                                        marginTop: 2,
+                                        fontSize: 12,
+                                        color: COLORS.textPrimary,
+                                        lineHeight: 1.4,
+                                      }}
+                                    >
+                                      {lastVital
+                                        ? `HR ${lastVital.heartRate} · BP ${lastVital.systolic}/${lastVital.diastolic} · RR ${lastVital.respRate} · SpO₂ ${lastVital.spO2}% · T ${lastVital.temperature}°C · GCS ${lastVital.gcs}`
+                                        : 'No vitals yet recorded'}
+                                      <span style={{ color: toneColor, fontWeight: 600 }}>
+                                        {' · MEWS '}
+                                        {mews} ({mewsLbl})
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {/* R — Recommendation */}
+                                  <div>
+                                    <Mono tone="accent" size="xs">R · RECOMMENDATION</Mono>
+                                    <div
+                                      style={{
+                                        marginTop: 2,
+                                        fontSize: 12,
+                                        color: COLORS.textPrimary,
+                                        lineHeight: 1.4,
+                                      }}
+                                    >
+                                      {mews >= 5
+                                        ? 'Escalate — consider rapid response, reassess vitals q15min.'
+                                        : mews >= 3
+                                          ? 'Increased surveillance — reassess vitals q1h, notify attending of trend.'
+                                          : 'Continue routine monitoring. Reassess at next scheduled interval.'}
+                                    </div>
+                                  </div>
+
+                                  {/* Action buttons */}
+                                  <div style={{ display: 'flex', gap: SPACE.sm, marginTop: SPACE.xs }}>
+                                    <TacticalButton
+                                      variant="primary"
+                                      size="sm"
+                                      onClick={(e: React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        setSelectedPatient(adaptPatientForList(p));
+                                      }}
+                                      style={{ flex: 1 }}
+                                    >
+                                      Open Chart
+                                    </TacticalButton>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </TacticalCard>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             </>)}
 
@@ -4886,6 +5110,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         onClose={() => setShowAdmitFlow(false)}
         showToast={showToast}
         onSubmitAdmission={onSubmitAdmission}
+        bedUnits={bedUnits}
       />
 
       {/* Discharge Flow — readiness checklist → disposition → confirm
@@ -4895,20 +5120,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
         onClose={() => setShowDischargeFlow(false)}
         showToast={(msg: string) => showToast(msg, 'success')}
         patients={syncedPatients}
-        onDischargePatient={onDischargePatient}
-      />
-
-      {/* Rounding List — physician rounding view with all patients
-          sorted by acuity, expandable SBAR summaries. */}
-      <RoundingList
-        open={showRoundingList}
-        onClose={() => setShowRoundingList(false)}
-        showToast={(msg: string) => showToast(msg, 'info')}
-        role={currentUser.role}
-        patients={syncedPatients}
-        clinicalNotes={clinicalNotes}
-        onUpdateVitals={onUpdateVitals}
-        onAddNote={onAddNote}
         onDischargePatient={onDischargePatient}
       />
 
@@ -4980,29 +5191,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
         onClose={() => setShowBriefMe(false)}
         showToast={(msg: string) => showToast(msg, 'info')}
       />
-
-      {/* ESI Triage wizard — fullscreen modal that walks the
-          ENA/Gilboy v4 algorithm and emits a TriageResult on
-          completion. We persist the last result so the launcher
-          card can show "previous" context next time. */}
-      <AnimatePresence>
-        {showTriage && (
-          <ESITriageScreen
-            open={showTriage}
-            onClose={() => setShowTriage(false)}
-            onComplete={(result) => {
-              setLastTriage(result);
-              // ESI 1 / 2 are immediate-life-threat or high-risk —
-              // strong haptic + error tone so the operator notices.
-              triggerHaptic(result.esi <= 2 ? 'heavy' : 'medium');
-              showToast(
-                `ESI ${result.esi} ASSIGNED · ROUTE TO ${result.suggestedBay.toUpperCase()}`,
-                result.esi <= 2 ? 'error' : result.esi === 3 ? 'info' : 'success',
-              );
-            }}
-          />
-        )}
-      </AnimatePresence>
 
       {/* QR Scanner — fullscreen camera view. Animates in/out via
           AnimatePresence so the unmount transition completes before

@@ -140,8 +140,8 @@ export interface AdmitFlowProps {
   admissionQueue?: AdmissionEntry[];
   /** Callback to assign a bed to a queue entry */
   onAssignBed?: (admissionId: string, bedId: string) => void;
-  /** Callback to submit a new admission (demographics included) */
-  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>) => void;
+  /** Callback to submit a new admission (demographics included). `bedId` optional — if present, patient is placed immediately. */
+  onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>, bedId?: string) => void;
   /** Navigate to patient tab */
   onNavigateToPatient?: (patientId: string) => void;
 }
@@ -916,6 +916,54 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                     {entry.complaint}
                   </div>
 
+                  {/* ── Prominent ASSIGN BED CTA — full width, centered ── */}
+                  {entry.status !== 'admitted' && (
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: assigningAdmissionId === entry.id ? 1 : 1.005 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        setAssigningAdmissionId(assigningAdmissionId === entry.id ? null : entry.id);
+                        setExpandedEntryId(null);
+                      }}
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        minHeight: 48,
+                        marginBottom: SPACE.md,
+                        padding: `${SPACE.sm}px ${SPACE.md}px`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: SPACE.sm,
+                        background: assigningAdmissionId === entry.id
+                          ? COLORS.accentDim
+                          : `linear-gradient(180deg, ${COLORS.accent} 0%, ${COLORS.accentDeep} 100%)`,
+                        border: `1px solid ${COLORS.accent}`,
+                        borderRadius: RADIUS.sm,
+                        color: assigningAdmissionId === entry.id ? COLORS.accent : COLORS.textPrimary,
+                        fontFamily: FONTS.mono,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                        boxShadow: assigningAdmissionId === entry.id
+                          ? undefined
+                          : `0 0 14px ${COLORS.accent}44`,
+                        transition: `background ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
+                      }}
+                    >
+                      <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1.5} />
+                      <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1.5} />
+                      <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1.5} />
+                      <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1.5} />
+                      <Bed size={14} />
+                      {assigningAdmissionId === entry.id ? 'Close Bed Picker' : 'Assign Bed'}
+                    </motion.button>
+                  )}
+
                   {/* Status + meta row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexWrap: 'wrap' }}>
                     {/* Status pill with dot */}
@@ -961,16 +1009,11 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
                     <div style={{ flex: 1 }} />
 
-                    {/* Action buttons */}
+                    {/* Secondary action buttons */}
                     {entry.status !== 'admitted' ? (
-                      <div style={{ display: 'flex', gap: SPACE.sm }}>
-                        <TacticalButton variant="primary" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setAssigningAdmissionId(assigningAdmissionId === entry.id ? null : entry.id); setExpandedEntryId(null); }}>
-                          Assign Bed
-                        </TacticalButton>
-                        <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id); setAssigningAdmissionId(null); }}>
-                          Info
-                        </TacticalButton>
-                      </div>
+                      <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id); setAssigningAdmissionId(null); }}>
+                        Info
+                      </TacticalButton>
                     ) : (
                       <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
                         <Mono tone="ok" size="xs">{entry.assignedBed} ({entry.assignedUnit})</Mono>
