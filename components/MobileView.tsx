@@ -53,11 +53,11 @@ import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
 import { MobilePatientDetailScreen } from './MobilePatientDetailScreen';
+import { MobileAdmitFlow } from './MobileAdmitFlow';
 import {
   ESITriageScreen,
   EmsInboundBoard,
   BedBoard,
-  AdmitFlow,
   DischargeFlow,
   RoundingList,
   NoteComposer,
@@ -945,6 +945,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const syncedPatients = sharedPatients ?? localPatients;
   const [showBedBoard, setShowBedBoard] = useState(false);
   const [patientsSubTab, setPatientsSubTab] = useState<'list' | 'bedboard'>('list');
+  const [patientSearch, setPatientSearch] = useState('');
+  const [patientFilter, setPatientFilter] = useState<'all' | 'critical' | 'warning' | 'ed' | 'inpatient'>('all');
 
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
@@ -1074,22 +1076,47 @@ export const MobileView: React.FC<MobileViewProps> = ({
     };
   };
 
-  const getMyPatients = () => {
-    // ER personnel own the ED bays (Trauma 1, Fast Track, etc.); nurses
-    // on the floor own the inpatient rooms. Uses synced patients so
-    // newly admitted patients from the desktop appear on the phone.
+  // Show ALL patients on the Patients tab (not just role-scoped). The
+  // Patients tab is the floor-wide roster — filters + search narrow it
+  // down on demand. The old `myPatients` role-scoped list is preserved
+  // below for use by the older tasks list / dashboard snippets.
+  const allAdaptedPatients = useMemo(
+    () => syncedPatients.map(adaptPatientForList),
+    [syncedPatients],
+  );
+
+  const filteredPatients = useMemo(() => {
+    const q = patientSearch.trim().toLowerCase();
+    return allAdaptedPatients.filter((p) => {
+      // Filter pill
+      if (patientFilter === 'critical' && p.status !== 'critical') return false;
+      if (patientFilter === 'warning' && p.status !== 'warning') return false;
+      if (patientFilter === 'ed' && p.clinical.currentEncounter?.class !== 'EMERGENCY') return false;
+      if (patientFilter === 'inpatient' && p.clinical.currentEncounter?.class === 'EMERGENCY') return false;
+      // Search — name, MRN, bed/location, chief complaint
+      if (q) {
+        const hay = [
+          p.name,
+          p.mrn,
+          p.loc,
+          p.notes,
+          p.code,
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [allAdaptedPatients, patientSearch, patientFilter]);
+
+  // Legacy role-scoped list retained for dashboard/tasks snippets that
+  // still use `myPatients`. Patients tab now uses `filteredPatients`.
+  const myPatients = useMemo(() => {
     const pool =
       currentUser.role === UserRole.ER_PERSONNEL
-        ? syncedPatients.filter(
-            (p) => p.currentEncounter?.class === 'EMERGENCY',
-          )
-        : syncedPatients.filter(
-            (p) => p.currentEncounter?.class !== 'EMERGENCY',
-          );
+        ? syncedPatients.filter((p) => p.currentEncounter?.class === 'EMERGENCY')
+        : syncedPatients.filter((p) => p.currentEncounter?.class !== 'EMERGENCY');
     return pool.map(adaptPatientForList);
-  };
-
-  const myPatients = getMyPatients();
+  }, [syncedPatients, currentUser.role]);
 
   // 4-hour forecast sampled at 15-minute intervals → 17 points gives a
   // detailed curve that still feels responsive to touch on a phone. Adds
@@ -1877,13 +1904,92 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
             {/* Bed Board — all roles see this on the dashboard.
                 Compact tile shows availability %, state breakdown,
-                and mini bed grid. Tapping expands to fullscreen. */}
+                and mini bed grid. Tapping navigates to the Patients tab's
+                BedBoard sub-tab so the bottom nav stays visible. */}
             <BedBoard
               display="card"
               units={bedUnits}
               surgeActive={isSurgeActive}
-              onExpand={() => setShowBedBoard(true)}
+              onExpand={() => {
+                triggerHaptic('light');
+                setActiveTab('patients');
+                setPatientsSubTab('bedboard');
+              }}
             />
+
+            {/* ESI Triage launcher — only floor staff who actually triage
+                patients see this on Horizon. ESI triage is arrival-time
+                acuity classification, distinct from the formal admission
+                flow. Kept compact so it doesn't dominate the home screen. */}
+            {(currentUser.role === UserRole.ER_PERSONNEL ||
+              currentUser.role === UserRole.NURSE) && (
+              <motion.button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowTriage(true);
+                }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.md,
+                  padding: `${SPACE.md}px ${SPACE.base}px`,
+                  background:
+                    'linear-gradient(90deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.02) 100%)',
+                  border: `1px solid ${COLORS.accent}`,
+                  borderLeft: `3px solid ${COLORS.accent}`,
+                  borderRadius: RADIUS.sm,
+                  color: COLORS.textPrimary,
+                  fontFamily: FONTS.sans,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  overflow: 'hidden',
+                  minHeight: 56,
+                }}
+              >
+                <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} inset={-1} />
+                <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} inset={-1} />
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(225,29,72,0.18)',
+                    border: `1px solid ${COLORS.accent}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.accent,
+                  }}
+                >
+                  <ClipboardList size={18} strokeWidth={2} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <BracketLabel tone="accent" size="xs">
+                    ESI · TRIAGE
+                  </BracketLabel>
+                  <div
+                    style={{
+                      marginTop: 2,
+                      fontFamily: FONTS.sans,
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: COLORS.textPrimary,
+                      letterSpacing: '-0.005em',
+                    }}
+                  >
+                    {lastTriage
+                      ? `Last · ESI ${lastTriage.esi} · ${lastTriage.suggestedBay}`
+                      : 'Classify arrival acuity'}
+                  </div>
+                </div>
+                <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
+              </motion.button>
+            )}
 
             {/* Live Ops Grid — house-wide KPIs, scannable at a glance.
                 Critical tiles now render their numeric at 40px so
@@ -3268,78 +3374,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
             {/* ── PATIENT LIST SUB-TAB ────────────────────────── */}
             {patientsSubTab === 'list' && (<>
 
-            {/* ESI Triage launcher — only floor staff who actually
-                triage patients see this. Manager view is dashboard-only
-                so the button would be noise. */}
-            {(currentUser.role === UserRole.ER_PERSONNEL ||
-              currentUser.role === UserRole.NURSE) && (
-              <motion.button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowTriage(true);
-                }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.md,
-                  padding: `${SPACE.md}px ${SPACE.base}px`,
-                  background:
-                    'linear-gradient(90deg, rgba(225,29,72,0.10) 0%, rgba(225,29,72,0.02) 100%)',
-                  border: `1px solid ${COLORS.accent}`,
-                  borderLeft: `3px solid ${COLORS.accent}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 56,
-                }}
-              >
-                <CornerBracket position="tl" color={COLORS.accent} size={6} thickness={1} inset={-1} />
-                <CornerBracket position="br" color={COLORS.accent} size={6} thickness={1} inset={-1} />
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(225,29,72,0.18)',
-                    border: `1px solid ${COLORS.accent}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.accent,
-                  }}
-                >
-                  <ClipboardList size={18} strokeWidth={2} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <BracketLabel tone="accent" size="xs">
-                    ESI · TRIAGE
-                  </BracketLabel>
-                  <div
-                    style={{
-                      marginTop: 2,
-                      fontFamily: FONTS.sans,
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: COLORS.textPrimary,
-                      letterSpacing: '-0.005em',
-                    }}
-                  >
-                    {lastTriage
-                      ? `Last assigned · ESI ${lastTriage.esi} · ${lastTriage.suggestedBay}`
-                      : 'Start a new triage assessment'}
-                  </div>
-                </div>
-                <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
-              </motion.button>
-            )}
-
             {/* EMS Inbound launcher — every floor role can pop the
                 fullscreen radio board to see what's coming through
                 the door. ER personnel also see the same surface
@@ -3408,59 +3442,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* ── Discharge launcher (Admit moved to top CTA) ──── */}
-            <motion.button
-              type="button"
-              onClick={() => {
-                triggerHaptic('light');
-                setShowDischargeFlow(true);
-              }}
-              whileTap={{ scale: 0.97 }}
-              style={{
-                width: '100%',
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACE.sm,
-                padding: `${SPACE.md}px ${SPACE.base}px`,
-                background:
-                  'linear-gradient(90deg, rgba(251,191,36,0.10) 0%, rgba(251,191,36,0.02) 100%)',
-                border: `1px solid ${COLORS.warn}`,
-                borderLeft: `3px solid ${COLORS.warn}`,
-                borderRadius: RADIUS.sm,
-                color: COLORS.textPrimary,
-                fontFamily: FONTS.sans,
-                textAlign: 'left',
-                cursor: 'pointer',
-                overflow: 'hidden',
-                minHeight: 48,
-              }}
-            >
-              <CornerBracket position="tl" color={COLORS.warn} size={5} thickness={1} inset={-1} />
-              <CornerBracket position="br" color={COLORS.warn} size={5} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 30, height: 30, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(251,191,36,0.18)',
-                  border: `1px solid ${COLORS.warn}`,
-                  borderRadius: RADIUS.sm, color: COLORS.warn,
-                }}
-              >
-                <DoorOpen size={17} strokeWidth={2} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <BracketLabel tone="warn" size="xs">DISCHARGE</BracketLabel>
-                <div style={{
-                  marginTop: 1, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600,
-                  color: COLORS.textSecondary,
-                }}>
-                  Discharge patient
-                </div>
-              </div>
-              <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
-            </motion.button>
-
             {/* Rounding List launcher */}
             <motion.button
               type="button"
@@ -3527,144 +3508,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* ── Clinical workflow launchers (2-col row) ───────── */}
-            <div style={{ display: 'flex', gap: SPACE.sm }}>
-              {/* Note Composer */}
-              <motion.button
-                type="button"
-                onClick={() => { triggerHaptic('light'); setShowNoteComposer(true); }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: `linear-gradient(90deg, ${COLORS.info}10 0%, ${COLORS.info}02 100%)`,
-                  border: `1px solid ${COLORS.info}`,
-                  borderLeft: `3px solid ${COLORS.info}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
-                }}
-              >
-                <FileText size={16} strokeWidth={2} color={COLORS.info} />
-                <div style={{ flex: 1 }}>
-                  <Mono tone="info" size="xs">NOTE</Mono>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
-                    SOAP / H&amp;P
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Order Entry (CPOE) */}
-              <motion.button
-                type="button"
-                onClick={() => { triggerHaptic('light'); setShowOrderEntry(true); }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: `linear-gradient(90deg, ${COLORS.ok}10 0%, ${COLORS.ok}02 100%)`,
-                  border: `1px solid ${COLORS.ok}`,
-                  borderLeft: `3px solid ${COLORS.ok}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
-                }}
-              >
-                <Pill size={16} strokeWidth={2} color={COLORS.ok} />
-                <div style={{ flex: 1 }}>
-                  <Mono tone="ok" size="xs">CPOE</Mono>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
-                    Orders
-                  </div>
-                </div>
-              </motion.button>
-            </div>
-
-            <div style={{ display: 'flex', gap: SPACE.sm }}>
-              {/* Code Blue */}
-              <motion.button
-                type="button"
-                onClick={() => { triggerHaptic('heavy'); setShowCodeBlue(true); }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: `linear-gradient(90deg, ${COLORS.crit}12 0%, ${COLORS.crit}03 100%)`,
-                  border: `1px solid ${COLORS.crit}`,
-                  borderLeft: `3px solid ${COLORS.crit}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
-                }}
-              >
-                <Siren size={16} strokeWidth={2} color={COLORS.crit} />
-                <div style={{ flex: 1 }}>
-                  <Mono tone="crit" size="xs">CODE BLUE</Mono>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
-                    Emergency
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Handoff Composer */}
-              <motion.button
-                type="button"
-                onClick={() => { triggerHaptic('light'); setShowHandoff(true); }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: `linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)`,
-                  border: `1px solid rgba(139,92,246,0.5)`,
-                  borderLeft: `3px solid rgba(139,92,246,0.7)`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
-                }}
-              >
-                <ArrowRightLeft size={16} strokeWidth={2} color="rgba(139,92,246,0.9)" />
-                <div style={{ flex: 1 }}>
-                  <Mono size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>HANDOFF</Mono>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>
-                    Shift SBAR
-                  </div>
-                </div>
-              </motion.button>
-            </div>
-
-            {/* Search */}
+            {/* Search — wired to patientSearch state */}
             <div style={{ position: 'relative' }}>
               <Search
                 size={16}
@@ -3679,24 +3523,96 @@ export const MobileView: React.FC<MobileViewProps> = ({
               />
               <input
                 type="text"
-                placeholder="SEARCH MRN OR NAME"
+                value={patientSearch}
+                onChange={(e) => setPatientSearch(e.target.value)}
+                placeholder="Search name, MRN, bed, complaint…"
                 style={{
                   width: '100%',
                   minHeight: 48,
-                  padding: `0 ${SPACE.base}px 0 ${SPACE['2xl']}px`,
+                  padding: `0 ${patientSearch ? SPACE['2xl'] : SPACE.base}px 0 ${SPACE['2xl']}px`,
                   background: COLORS.surface,
                   border: `1px solid ${COLORS.border}`,
                   borderRadius: RADIUS.sm,
-                  fontFamily: FONTS.mono,
+                  fontFamily: FONTS.sans,
                   fontSize: 14,
                   fontWeight: 500,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
                   color: COLORS.textPrimary,
                   outline: 'none',
                 }}
               />
+              {patientSearch && (
+                <button
+                  type="button"
+                  onClick={() => setPatientSearch('')}
+                  aria-label="Clear search"
+                  style={{
+                    position: 'absolute', right: 8, top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 28, height: 28, borderRadius: RADIUS.full,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: COLORS.surfaceHover, border: 'none',
+                    color: COLORS.textSecondary, cursor: 'pointer',
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
+
+            {/* Filter pills */}
+            <div style={{
+              display: 'flex', gap: SPACE.xs, overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch', paddingBottom: 2,
+            }}>
+              {([
+                { id: 'all', label: 'All', count: allAdaptedPatients.length },
+                { id: 'critical', label: 'Critical', count: allAdaptedPatients.filter(p => p.status === 'critical').length },
+                { id: 'warning', label: 'Warning', count: allAdaptedPatients.filter(p => p.status === 'warning').length },
+                { id: 'ed', label: 'ED', count: allAdaptedPatients.filter(p => p.clinical.currentEncounter?.class === 'EMERGENCY').length },
+                { id: 'inpatient', label: 'Inpatient', count: allAdaptedPatients.filter(p => p.clinical.currentEncounter?.class !== 'EMERGENCY').length },
+              ] as const).map((f) => {
+                const active = patientFilter === f.id;
+                const tone = f.id === 'critical' ? COLORS.crit
+                  : f.id === 'warning' ? COLORS.warn
+                  : COLORS.accent;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => { triggerHaptic('light'); setPatientFilter(f.id); }}
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: `8px 12px`, minHeight: 36,
+                      background: active ? `${tone}20` : COLORS.surface,
+                      border: `1px solid ${active ? tone : COLORS.border}`,
+                      borderRadius: RADIUS.full,
+                      fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
+                      letterSpacing: '0.08em', textTransform: 'uppercase' as const,
+                      color: active ? tone : COLORS.textSecondary,
+                      cursor: 'pointer',
+                      transition: `all ${MOTION.fast}s ease`,
+                    }}
+                  >
+                    {f.label}
+                    <span style={{
+                      padding: '1px 6px', borderRadius: RADIUS.full,
+                      background: active ? tone : COLORS.surfaceHover,
+                      color: active ? COLORS.bg : COLORS.textMuted,
+                      fontSize: 10, fontWeight: 700,
+                    }}>
+                      {f.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Results count */}
+            {(patientSearch || patientFilter !== 'all') && (
+              <Mono tone="muted" size="xs">
+                {filteredPatients.length} of {allAdaptedPatients.length} patients
+              </Mono>
+            )}
 
             {/* Patient list */}
             <div
@@ -3706,7 +3622,21 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 gap: SPACE.md,
               }}
             >
-              {myPatients.map((patient, pIdx) => {
+              {filteredPatients.length === 0 && (
+                <TacticalCard padding="lg">
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    gap: SPACE.sm, color: COLORS.textSecondary, padding: SPACE.lg,
+                  }}>
+                    <Search size={24} color={COLORS.textMuted} />
+                    <Mono tone="muted" size="xs">NO PATIENTS MATCH</Mono>
+                    <div style={{ fontSize: 14, color: COLORS.textSecondary }}>
+                      Try a different filter or clear search.
+                    </div>
+                  </div>
+                </TacticalCard>
+              )}
+              {filteredPatients.map((patient, pIdx) => {
                 const critical = patient.status === 'critical';
                 const warning = patient.status === 'warning';
                 const tone = critical ? 'crit' : warning ? 'warn' : 'ok';
@@ -3969,7 +3899,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
                 {/* Tap "Expand" for full bed board overlay */}
                 <TacticalButton
-                  tone="accent"
+                  variant="primary"
                   size="md"
                   onClick={() => setShowBedBoard(true)}
                   style={{ width: '100%' }}
@@ -4319,18 +4249,57 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* Active Threads — preview of recent conversations.
-                Each row taps into the full Secure Messaging overlay. */}
+            {/* ── DIRECT MESSAGES ──────────────────────────────────
+                Person-to-person threads. Monogram avatars make these
+                visually distinct from channels (# prefix, group feel). */}
             <div>
-              <SectionHeader id="CH" label="ACTIVE THREADS" />
+              <SectionHeader
+                id="DM"
+                label="DIRECT MESSAGES"
+                right={
+                  <Mono tone="dim" size="xs">
+                    2 UNREAD
+                  </Mono>
+                }
+              />
               <TacticalCard padding="none">
                 {[
-                  { name: 'Trauma Team Alpha', preview: 'Dr. Jenkins: Patient stabilized, moving to CT.', time: '2M', icon: AlertCircle, iconBorder: COLORS.crit, iconColor: COLORS.crit, iconBg: COLORS.surfaceElev, unread: true, fontWeight: 600, nameColor: COLORS.textPrimary, previewColor: COLORS.textSecondary },
-                  { name: 'Charge Nurse Huddle', preview: 'RN Torres: Bed 6B ready for admit, calling report now.', time: '8M', icon: Users, iconBorder: COLORS.info, iconColor: COLORS.info, iconBg: `${COLORS.info}10`, unread: true, fontWeight: 600, nameColor: COLORS.textPrimary, previewColor: COLORS.textSecondary },
-                  { name: 'Pharmacy Consults', preview: 'Pharm: Vanco trough is 14.2, dose is good.', time: '15M', icon: Stethoscope, iconBorder: COLORS.border, iconColor: COLORS.textSecondary, iconBg: COLORS.surface, unread: false, fontWeight: 500, nameColor: COLORS.textSecondary, previewColor: COLORS.textMuted },
-                ].map((thread, i, arr) => (
+                  {
+                    id: 'dm-jenkins',
+                    name: 'Dr. Jenkins',
+                    role: 'Trauma Attending',
+                    preview: 'Patient stabilized, moving to CT.',
+                    time: '2m',
+                    status: 'online' as const,
+                    unread: true,
+                    initials: 'DJ',
+                    avatarColor: COLORS.crit,
+                  },
+                  {
+                    id: 'dm-torres',
+                    name: 'RN Torres',
+                    role: 'Charge Nurse · ED',
+                    preview: 'Bed 6B ready for admit, calling report now.',
+                    time: '8m',
+                    status: 'online' as const,
+                    unread: true,
+                    initials: 'ET',
+                    avatarColor: COLORS.info,
+                  },
+                  {
+                    id: 'dm-pharm',
+                    name: 'Pharm · Diaz',
+                    role: 'Clinical Pharmacist',
+                    preview: 'Vanco trough is 14.2, dose is good.',
+                    time: '15m',
+                    status: 'away' as const,
+                    unread: false,
+                    initials: 'MD',
+                    avatarColor: COLORS.textSecondary,
+                  },
+                ].map((dm, i, arr) => (
                   <motion.div
-                    key={thread.name}
+                    key={dm.id}
                     onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
                     whileTap={{ scale: 0.99 }}
                     initial={{ opacity: 0, x: -4 }}
@@ -4344,9 +4313,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       gap: SPACE.md,
                       borderBottom: i !== arr.length - 1 ? `1px solid ${COLORS.border}` : 'none',
                       cursor: 'pointer',
-                      background: thread.unread ? `linear-gradient(90deg, ${thread.iconColor}06 0%, transparent 50%)` : 'transparent',
+                      background: dm.unread ? `linear-gradient(90deg, ${dm.avatarColor}06 0%, transparent 50%)` : 'transparent',
                     }}
                   >
+                    {/* Round monogram avatar — clearly "a person" */}
                     <div
                       style={{
                         width: 40,
@@ -4355,58 +4325,88 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: thread.iconBg,
-                        border: `1px solid ${thread.iconBorder}`,
-                        borderRadius: RADIUS.sm,
-                        color: thread.iconColor,
+                        background: `${dm.avatarColor}18`,
+                        border: `1px solid ${dm.avatarColor}`,
+                        borderRadius: RADIUS.full,
+                        color: dm.avatarColor,
+                        fontFamily: FONTS.mono,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: '0.04em',
                         position: 'relative',
                       }}
                     >
-                      <thread.icon size={18} />
+                      {dm.initials}
+                      {/* presence dot */}
+                      <span
+                        aria-hidden
+                        style={{
+                          position: 'absolute',
+                          bottom: -2,
+                          right: -2,
+                          width: 10,
+                          height: 10,
+                          borderRadius: RADIUS.full,
+                          background: dm.status === 'online' ? COLORS.ok : COLORS.warn,
+                          border: `2px solid ${COLORS.bg}`,
+                        }}
+                      />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center',
+                          alignItems: 'baseline',
                           gap: SPACE.sm,
-                          marginBottom: 4,
+                          marginBottom: 2,
                         }}
                       >
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 16,
-                            fontWeight: thread.fontWeight,
-                            color: thread.nameColor,
+                            fontSize: 15,
+                            fontWeight: dm.unread ? 600 : 500,
+                            color: dm.unread ? COLORS.textPrimary : COLORS.textSecondary,
                             letterSpacing: '-0.01em',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {thread.name}
+                          {dm.name}
                         </div>
                         <Mono tone="dim" size="xs">
-                          {thread.time}
+                          {dm.time}
                         </Mono>
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONTS.mono,
+                          fontSize: 10,
+                          color: COLORS.textMuted,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase' as const,
+                          marginBottom: 3,
+                        }}
+                      >
+                        {dm.role}
                       </div>
                       <p
                         style={{
                           margin: 0,
                           fontFamily: FONTS.sans,
                           fontSize: TYPE.bodySm.size,
-                          color: thread.previewColor,
+                          color: dm.unread ? COLORS.textSecondary : COLORS.textMuted,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {thread.preview}
+                        {dm.preview}
                       </p>
                     </div>
-                    {thread.unread ? (
+                    {dm.unread ? (
                       <div
                         aria-hidden
                         title="Unread"
@@ -4428,7 +4428,182 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     )}
                   </motion.div>
                 ))}
-                {/* View all footer */}
+              </TacticalCard>
+            </div>
+
+            {/* ── CHANNELS ──────────────────────────────────────────
+                Team / group threads. Distinguished by square-framed
+                `#` glyphs and member counts so at a glance you know
+                these are broadcasts, not 1:1s. */}
+            <div>
+              <SectionHeader
+                id="CH"
+                label="CHANNELS"
+                right={
+                  <Mono tone="dim" size="xs">
+                    6 TOTAL · 1 UNREAD
+                  </Mono>
+                }
+              />
+              <TacticalCard padding="none">
+                {[
+                  {
+                    id: 'ch-trauma',
+                    name: 'trauma-alpha',
+                    members: 12,
+                    preview: 'Dr. Chen: Incoming MVA, ETA 7 min. Level 1.',
+                    time: '4m',
+                    unread: true,
+                    unreadCount: 3,
+                    tone: COLORS.crit,
+                  },
+                  {
+                    id: 'ch-ed',
+                    name: 'ed-floor',
+                    members: 28,
+                    preview: 'Bed 14 cleaned, ready for turnover.',
+                    time: '22m',
+                    unread: false,
+                    tone: COLORS.info,
+                  },
+                  {
+                    id: 'ch-pharmacy',
+                    name: 'pharmacy-consults',
+                    members: 6,
+                    preview: 'Pharm: Vanco trough review complete.',
+                    time: '1h',
+                    unread: false,
+                    tone: COLORS.textSecondary,
+                  },
+                ].map((ch, i, arr) => (
+                  <motion.div
+                    key={ch.id}
+                    onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                    whileTap={{ scale: 0.99 }}
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.12 + i * 0.04, duration: MOTION.base, ease: MOTION.ease }}
+                    style={{
+                      padding: SPACE.base,
+                      minHeight: 68,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.md,
+                      borderBottom: i !== arr.length - 1 ? `1px solid ${COLORS.border}` : 'none',
+                      cursor: 'pointer',
+                      background: ch.unread ? `linear-gradient(90deg, ${ch.tone}06 0%, transparent 50%)` : 'transparent',
+                    }}
+                  >
+                    {/* Square-framed # glyph — clearly "a channel" */}
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: `${ch.tone}10`,
+                        border: `1px solid ${ch.tone}`,
+                        borderRadius: RADIUS.sm,
+                        color: ch.tone,
+                        fontFamily: FONTS.mono,
+                        fontSize: 18,
+                        fontWeight: 700,
+                        position: 'relative',
+                      }}
+                    >
+                      #
+                      <CornerBracket position="tl" color={ch.tone} size={4} thickness={1} inset={-1} />
+                      <CornerBracket position="br" color={ch.tone} size={4} thickness={1} inset={-1} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'baseline',
+                          gap: SPACE.sm,
+                          marginBottom: 2,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            gap: 6,
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontFamily: FONTS.mono,
+                              fontSize: 14,
+                              fontWeight: ch.unread ? 700 : 600,
+                              color: ch.unread ? COLORS.textPrimary : COLORS.textSecondary,
+                              letterSpacing: '0.02em',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {ch.name}
+                          </div>
+                          <Mono tone="dim" size="xs">
+                            · {ch.members}
+                          </Mono>
+                        </div>
+                        <Mono tone="dim" size="xs">
+                          {ch.time}
+                        </Mono>
+                      </div>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontFamily: FONTS.sans,
+                          fontSize: TYPE.bodySm.size,
+                          color: ch.unread ? COLORS.textSecondary : COLORS.textMuted,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {ch.preview}
+                      </p>
+                    </div>
+                    {ch.unread ? (
+                      <div
+                        aria-hidden
+                        title={`${ch.unreadCount} unread`}
+                        style={{
+                          minWidth: 20,
+                          height: 20,
+                          padding: '0 6px',
+                          borderRadius: RADIUS.full,
+                          background: ch.tone,
+                          color: COLORS.bg,
+                          fontFamily: FONTS.mono,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          boxShadow: `0 0 8px ${ch.tone}80`,
+                        }}
+                      >
+                        {ch.unreadCount}
+                      </div>
+                    ) : (
+                      <ChevronRight
+                        size={16}
+                        color={COLORS.textMuted}
+                        style={{ flexShrink: 0 }}
+                      />
+                    )}
+                  </motion.div>
+                ))}
+                {/* View all channels footer */}
                 <motion.div
                   onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
                   whileTap={{ scale: 0.98 }}
@@ -4675,6 +4850,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
           onClose={() => setSelectedPatient(null)}
           onSave={() => showToast('Patient record updated', 'success')}
           showToast={showToast}
+          onOpenNote={() => { triggerHaptic('light'); setShowNoteComposer(true); }}
+          onOpenOrders={() => { triggerHaptic('light'); setShowOrderEntry(true); }}
+          onOpenDischarge={() => { triggerHaptic('light'); setShowDischargeFlow(true); }}
+          onOpenCodeBlue={() => { triggerHaptic('heavy'); setShowCodeBlue(true); }}
         />
       )}
 
@@ -4698,16 +4877,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
         role={currentUser.role}
       />
 
-      {/* Admit Flow — 3-step admission wizard (patient ID → bed
-          assignment → confirmation). Wired to shared state so admissions
-          sync across all devices. */}
-      <AdmitFlow
+      {/* Admit Flow — mobile-native single-screen admission form.
+          Unlike desktop AdmitFlow (3-step wizard), this exposes every
+          field at once. Admission proceeds with bed deferred —
+          patient lands in the holding area tagged `admitted-unassigned`. */}
+      <MobileAdmitFlow
         open={showAdmitFlow}
         onClose={() => setShowAdmitFlow(false)}
-        showToast={(msg: string) => showToast(msg, 'success')}
-        bedUnits={bedUnits}
-        admissionQueue={admissionQueue}
-        onAssignBed={onAssignBed}
+        showToast={showToast}
         onSubmitAdmission={onSubmitAdmission}
       />
 

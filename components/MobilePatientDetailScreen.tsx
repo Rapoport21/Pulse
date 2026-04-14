@@ -24,10 +24,13 @@ import {
   Activity,
   Brain,
   Eye,
+  DoorOpen,
+  Siren,
 } from 'lucide-react';
 import { Patient } from '../types';
 import { ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
+import { useSwipeBack } from '../lib/useSwipeBack';
 import {
   COLORS,
   FONTS,
@@ -39,7 +42,6 @@ import {
   BracketLabel,
   StatusPill,
   TacticalCard,
-  TacticalButton,
   Divider,
 } from './design';
 
@@ -52,6 +54,16 @@ interface MobilePatientDetailScreenProps {
   onClose: () => void;
   onSave?: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
+  /** Open SOAP / H&P note composer for this patient. */
+  onOpenNote?: () => void;
+  /** Open CPOE order entry for this patient. */
+  onOpenOrders?: () => void;
+  /** Open discharge workflow for this patient. */
+  onOpenDischarge?: () => void;
+  /** Trigger Code Blue rapid-response screen for this patient's location. */
+  onOpenCodeBlue?: () => void;
+  /** Open vitals entry for this patient. */
+  onOpenVitals?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -306,6 +318,11 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
   onClose,
   onSave: _onSave,
   showToast,
+  onOpenNote,
+  onOpenOrders,
+  onOpenDischarge,
+  onOpenCodeBlue,
+  onOpenVitals,
 }) => {
   // Accordion state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -393,10 +410,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
     return { bg: COLORS.surface, color: COLORS.textMuted };
   };
 
+  // iOS-style edge-swipe-to-close gesture
+  const swipeBackRef = useSwipeBack<HTMLDivElement>({ onSwipeBack: onClose });
+
   return (
     <AnimatePresence>
       <motion.div
         key="patient-detail-overlay"
+        ref={swipeBackRef}
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -1077,45 +1098,174 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
             bottom: 0,
             left: 0,
             right: 0,
-            height: `calc(64px + env(safe-area-inset-bottom))`,
+            height: `calc(72px + env(safe-area-inset-bottom))`,
             paddingBottom: 'env(safe-area-inset-bottom)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-around',
-            paddingLeft: `max(${SPACE.base}px, env(safe-area-inset-left))`,
-            paddingRight: `max(${SPACE.base}px, env(safe-area-inset-right))`,
+            gap: SPACE.xs,
+            paddingLeft: `max(${SPACE.sm}px, env(safe-area-inset-left))`,
+            paddingRight: `max(${SPACE.sm}px, env(safe-area-inset-right))`,
             background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
             borderTop: `1px solid ${COLORS.border}`,
             zIndex: 3,
           }}
         >
-          <TacticalButton
-            variant="ghost"
-            size="sm"
-            icon={<HeartPulse size={18} />}
-            onClick={() => showToast('Vitals workflow coming soon', 'info')}
-            style={{ flexDirection: 'column', gap: 2, height: 48, minWidth: 64 }}
+          {/* Vitals */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenVitals) onOpenVitals();
+              else showToast('Vitals workflow coming soon', 'info');
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: RADIUS.sm,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+            }}
           >
-            Vitals
-          </TacticalButton>
-          <TacticalButton
-            variant="ghost"
-            size="sm"
-            icon={<FileText size={18} />}
-            onClick={() => showToast('Note workflow coming soon', 'info')}
-            style={{ flexDirection: 'column', gap: 2, height: 48, minWidth: 64 }}
+            <HeartPulse size={18} color={COLORS.accent} strokeWidth={2} />
+            <span>Vitals</span>
+          </button>
+          {/* Note */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenNote) onOpenNote();
+              else showToast('Note workflow coming soon', 'info');
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: RADIUS.sm,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+            }}
           >
-            Note
-          </TacticalButton>
-          <TacticalButton
-            variant="ghost"
-            size="sm"
-            icon={<Pill size={18} />}
-            onClick={() => showToast('Orders workflow coming soon', 'info')}
-            style={{ flexDirection: 'column', gap: 2, height: 48, minWidth: 64 }}
+            <FileText size={18} color={COLORS.info} strokeWidth={2} />
+            <span>Note</span>
+          </button>
+          {/* Orders (CPOE) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenOrders) onOpenOrders();
+              else showToast('Orders workflow coming soon', 'info');
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: RADIUS.sm,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+            }}
           >
-            Orders
-          </TacticalButton>
+            <Pill size={18} color={COLORS.ok} strokeWidth={2} />
+            <span>Orders</span>
+          </button>
+          {/* Discharge */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenDischarge) onOpenDischarge();
+              else showToast('Discharge workflow coming soon', 'info');
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: RADIUS.sm,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+            }}
+          >
+            <DoorOpen size={18} color={COLORS.warn} strokeWidth={2} />
+            <span>Discharge</span>
+          </button>
+          {/* Code Blue */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenCodeBlue) onOpenCodeBlue();
+              else showToast('Code Blue workflow coming soon', 'error');
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 56,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              background: 'transparent',
+              border: 'none',
+              borderRadius: RADIUS.sm,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase' as const,
+              cursor: 'pointer',
+            }}
+          >
+            <Siren size={18} color={COLORS.crit} strokeWidth={2} />
+            <span>Code Blue</span>
+          </button>
         </div>
       </motion.div>
     </AnimatePresence>
