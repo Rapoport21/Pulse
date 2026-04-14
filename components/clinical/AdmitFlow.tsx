@@ -19,6 +19,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Bed,
@@ -111,6 +112,8 @@ export interface AdmissionEntry {
   requestedAt: string;
   assignedBed?: string;
   assignedUnit?: string;
+  /** Tracks whether a bed was assigned at admission time */
+  bedAssignmentStatus?: 'assigned' | 'admitted-unassigned';
   /** Extra demographics captured from the new-admission form */
   demographics?: AdmissionDemographics;
 }
@@ -239,7 +242,11 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
   const handleAdmit = () => {
     setAdmitted(true);
-    showToast(`Admitted ${MOCK_PATIENT.name} to ${selectedBed?.label} (${selectedUnit?.shortName})`);
+    if (selectedBed && selectedUnit) {
+      showToast(`Admitted ${MOCK_PATIENT.name} to ${selectedBed.label} (${selectedUnit.shortName})`);
+    } else {
+      showToast(`Admitted ${MOCK_PATIENT.name} — BED UNASSIGNED`);
+    }
   };
 
   // ── Can proceed? ──────────────────────────────────────────────────────
@@ -247,7 +254,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
     step === 'identity'
       ? true
       : step === 'bed'
-      ? selectedBed !== null
+      ? true
       : !admitted;
 
   // ── Render helpers ────────────────────────────────────────────────────
@@ -363,6 +370,18 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
+        <TacticalButton
+          variant="secondary"
+          fullWidth
+          onClick={() => {
+            setSelectedBed(null);
+            setSelectedUnit(null);
+            goNext();
+          }}
+        >
+          Skip &mdash; Assign Bed Later
+        </TacticalButton>
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Mono tone="secondary" size="sm">
             Available Beds
@@ -494,13 +513,35 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                   <InfoRow label="MRN" value={MOCK_PATIENT.mrn} />
                   <InfoRow label="Chief Complaint" value={MOCK_PATIENT.chiefComplaint} />
                   <InfoRow label="ESI" value={`Level ${MOCK_PATIENT.esi}`} valueColor={COLORS.crit} />
-                  <InfoRow label="Bed" value={`${selectedBed?.label} — ${selectedUnit?.name}`} />
+                  <InfoRow
+                    label="Bed"
+                    value={selectedBed && selectedUnit ? `${selectedBed.label} — ${selectedUnit.name}` : 'UNASSIGNED — Holding Area'}
+                    valueColor={!selectedBed ? COLORS.warn : undefined}
+                  />
                   {selectedBed?.assignedNurse && (
                     <InfoRow label="Assigned Nurse" value={selectedBed.assignedNurse} />
                   )}
                   <InfoRow label="Encounter Class" value="EMERGENCY" />
                   <InfoRow label="Arrival Mode" value={MOCK_PATIENT.arrivalMode} />
                 </div>
+
+                {!selectedBed && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.sm,
+                      marginTop: SPACE.md,
+                      padding: `${SPACE.md}px ${SPACE.base}px`,
+                      background: `${COLORS.warn}14`,
+                      border: `1px solid ${COLORS.warn}40`,
+                      borderRadius: RADIUS.sm,
+                    }}
+                  >
+                    <AlertTriangle size={14} color={COLORS.warn} style={{ flexShrink: 0 }} />
+                    <Mono tone="warn" size="xs">No bed assigned — patient in holding area</Mono>
+                  </div>
+                )}
               </div>
             </TacticalCard>
           </motion.div>
@@ -523,18 +564,42 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
             <InfoRow label="MRN" value={MOCK_PATIENT.mrn} />
             <InfoRow label="Chief Complaint" value={MOCK_PATIENT.chiefComplaint} />
             <InfoRow label="ESI" value={`Level ${MOCK_PATIENT.esi}`} valueColor={COLORS.crit} />
-            <InfoRow label="Bed" value={`${selectedBed?.label} — ${selectedUnit?.name}`} />
+            <InfoRow
+              label="Bed"
+              value={selectedBed && selectedUnit ? `${selectedBed.label} — ${selectedUnit.name}` : 'UNASSIGNED — Holding Area'}
+              valueColor={!selectedBed ? COLORS.warn : undefined}
+            />
             {selectedBed?.assignedNurse && (
               <InfoRow label="Assigned Nurse" value={selectedBed.assignedNurse} />
             )}
             <InfoRow label="Encounter Class" value="EMERGENCY" />
             <InfoRow label="Arrival Mode" value={MOCK_PATIENT.arrivalMode} />
           </div>
+
+          {!selectedBed && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                marginTop: SPACE.md,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background: `${COLORS.warn}14`,
+                border: `1px solid ${COLORS.warn}40`,
+                borderRadius: RADIUS.sm,
+              }}
+            >
+              <AlertTriangle size={14} color={COLORS.warn} style={{ flexShrink: 0 }} />
+              <Mono tone="warn" size="xs">No bed assigned — patient in holding area</Mono>
+            </div>
+          )}
         </TacticalCard>
 
         <div style={{ padding: `0 ${SPACE.xs}px` }}>
           <Mono tone="muted" size="xs">
-            This will create a new encounter and mark bed {selectedBed?.label} as occupied.
+            {selectedBed
+              ? `This will create a new encounter and mark bed ${selectedBed.label} as occupied.`
+              : 'This will create a new encounter. No bed will be assigned — patient will be in the holding area.'}
           </Mono>
         </div>
 
