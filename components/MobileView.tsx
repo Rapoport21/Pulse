@@ -52,6 +52,7 @@ import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
+import { MobilePatientDetailScreen } from './MobilePatientDetailScreen';
 import {
   ESITriageScreen,
   EmsInboundBoard,
@@ -78,6 +79,8 @@ import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
+import { MobileLiveOps } from './MobileLiveOps';
+import { BedSingle } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -120,6 +123,7 @@ interface MobileViewProps {
   onLogout: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   onOpenChat: (query?: string) => void;
+  systemStatus?: 'normal' | 'stale' | 'manual';
   // ── Cross-device shared state & callbacks ──
   bedUnits?: BedUnit[];
   admissionQueue?: AdmissionEntry[];
@@ -892,6 +896,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onLogout,
   showToast,
   onOpenChat,
+  systemStatus = 'normal',
   bedUnits: sharedBedUnits,
   admissionQueue,
   patients: sharedPatients,
@@ -939,6 +944,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const bedUnits = sharedBedUnits ?? localBedUnits;
   const syncedPatients = sharedPatients ?? localPatients;
   const [showBedBoard, setShowBedBoard] = useState(false);
+  const [patientsSubTab, setPatientsSubTab] = useState<'list' | 'bedboard'>('list');
 
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
@@ -2672,8 +2678,27 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </motion.div>
         )}
 
-        {/* ────── TASKS ─────────────────────────────────────── */}
-        {activeTab === 'actions' && (
+        {/* ────── ACTIONS / LIVE OPS (role-gated) ─────────── */}
+        {activeTab === 'actions' && currentUser.role !== UserRole.NURSE && (
+          <motion.div
+            key="liveops"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            style={{
+              paddingBottom: NAV_HEIGHT + SPACE['2xl'],
+            }}
+          >
+            <MobileLiveOps
+              currentUser={currentUser}
+              systemStatus={systemStatus}
+              showToast={showToast}
+              isSurgeActive={isSurgeActive}
+            />
+          </motion.div>
+        )}
+
+        {activeTab === 'actions' && currentUser.role === UserRole.NURSE && (
           <motion.div
             key="actions"
             initial={{ opacity: 0, y: 8 }}
@@ -3129,8 +3154,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               }}
             >
               <Mono tone="dim" size="xs">
-                // PULSE / MOBILE /{' '}
-                {currentUser.role === UserRole.MANAGER ? 'UNITS' : 'PATIENTS'}
+                // PULSE / MOBILE / PATIENTS
               </Mono>
               <h1
                 style={{
@@ -3143,11 +3167,108 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   margin: 0,
                 }}
               >
-                {currentUser.role === UserRole.MANAGER ? 'Unit Roster' : 'Assigned Patients'}
+                Patients
               </h1>
             </div>
 
-            {/* New ESI Triage launcher — only floor staff who actually
+            {/* ── BIG ADMIT PATIENT CTA ───────────────────────── */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setShowAdmitFlow(true);
+              }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                position: 'relative',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: SPACE.md,
+                padding: `${SPACE.base}px ${SPACE.lg}px`,
+                background: `linear-gradient(135deg, ${COLORS.accent}20 0%, ${COLORS.accent}08 100%)`,
+                border: `1.5px solid ${COLORS.accent}`,
+                borderRadius: RADIUS.md,
+                color: COLORS.accent,
+                fontFamily: FONTS.sans,
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 56,
+              }}
+            >
+              <CornerBracket position="tl" color={COLORS.accent} size={8} thickness={1.5} inset={-1} />
+              <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1.5} inset={-1} />
+              <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1.5} inset={-1} />
+              <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1.5} inset={-1} />
+              <div style={{
+                width: 40, height: 40, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: `${COLORS.accent}25`,
+                border: `1px solid ${COLORS.accent}`,
+                borderRadius: RADIUS.sm,
+              }}>
+                <UserPlus size={20} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, textAlign: 'left' }}>
+                <div style={{
+                  fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
+                  letterSpacing: '0.12em', textTransform: 'uppercase' as const,
+                  color: COLORS.accent, opacity: 0.8, marginBottom: 2,
+                }}>
+                  NEW ADMISSION
+                </div>
+                <div style={{
+                  fontFamily: FONTS.sans, fontSize: 18, fontWeight: 700,
+                  color: COLORS.textPrimary, letterSpacing: '-0.01em',
+                }}>
+                  Admit Patient
+                </div>
+              </div>
+              <ChevronRight size={20} strokeWidth={2} color={COLORS.accent} />
+            </motion.button>
+
+            {/* ── SEGMENTED CONTROL: Patient List / Bed Board ──── */}
+            <div style={{
+              display: 'flex',
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: RADIUS.md,
+              padding: 3,
+              gap: 3,
+            }}>
+              {(['list', 'bedboard'] as const).map((seg) => {
+                const active = patientsSubTab === seg;
+                const label = seg === 'list' ? 'Patient List' : 'Bed Board';
+                const Icon = seg === 'list' ? Users : BedSingle;
+                return (
+                  <button
+                    key={seg}
+                    onClick={() => { triggerHaptic('light'); setPatientsSubTab(seg); }}
+                    style={{
+                      flex: 1, minHeight: 44,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      background: active ? COLORS.accent : 'transparent',
+                      border: 'none', borderRadius: RADIUS.sm,
+                      fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600,
+                      letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+                      color: active ? COLORS.textPrimary : COLORS.textSecondary,
+                      cursor: 'pointer',
+                      transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
+                      boxShadow: active ? `0 0 12px ${COLORS.accentGlow}` : 'none',
+                    }}
+                  >
+                    <Icon size={14} strokeWidth={2} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── PATIENT LIST SUB-TAB ────────────────────────── */}
+            {patientsSubTab === 'list' && (<>
+
+            {/* ESI Triage launcher — only floor staff who actually
                 triage patients see this. Manager view is dashboard-only
                 so the button would be noise. */}
             {(currentUser.role === UserRole.ER_PERSONNEL ||
@@ -3287,134 +3408,58 @@ export const MobileView: React.FC<MobileViewProps> = ({
               <ChevronRight size={18} strokeWidth={2} color={COLORS.textSecondary} />
             </motion.button>
 
-            {/* ── Admit / Discharge launchers ─────────────────────── */}
-            <div style={{ display: 'flex', gap: SPACE.sm }}>
-              {/* Admit Patient launcher */}
-              <motion.button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowAdmitFlow(true);
-                }}
-                whileTap={{ scale: 0.97 }}
+            {/* ── Discharge launcher (Admit moved to top CTA) ──── */}
+            <motion.button
+              type="button"
+              onClick={() => {
+                triggerHaptic('light');
+                setShowDischargeFlow(true);
+              }}
+              whileTap={{ scale: 0.97 }}
+              style={{
+                width: '100%',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                padding: `${SPACE.md}px ${SPACE.base}px`,
+                background:
+                  'linear-gradient(90deg, rgba(251,191,36,0.10) 0%, rgba(251,191,36,0.02) 100%)',
+                border: `1px solid ${COLORS.warn}`,
+                borderLeft: `3px solid ${COLORS.warn}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textPrimary,
+                fontFamily: FONTS.sans,
+                textAlign: 'left',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                minHeight: 48,
+              }}
+            >
+              <CornerBracket position="tl" color={COLORS.warn} size={5} thickness={1} inset={-1} />
+              <CornerBracket position="br" color={COLORS.warn} size={5} thickness={1} inset={-1} />
+              <div
                 style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.md}px ${SPACE.md}px`,
-                  background:
-                    'linear-gradient(90deg, rgba(34,197,94,0.10) 0%, rgba(34,197,94,0.02) 100%)',
-                  border: `1px solid ${COLORS.ok}`,
-                  borderLeft: `3px solid ${COLORS.ok}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
-                }}
-              >
-                <CornerBracket position="tl" color={COLORS.ok} size={5} thickness={1} inset={-1} />
-                <CornerBracket position="br" color={COLORS.ok} size={5} thickness={1} inset={-1} />
-                <div
-                  style={{
-                    width: 30,
-                    height: 30,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(34,197,94,0.18)',
-                    border: `1px solid ${COLORS.ok}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.ok,
-                  }}
-                >
-                  <UserPlus size={17} strokeWidth={2} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <BracketLabel tone="ok" size="xs">ADMIT</BracketLabel>
-                  <div
-                    style={{
-                      marginTop: 1,
-                      fontFamily: FONTS.sans,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: COLORS.textSecondary,
-                    }}
-                  >
-                    New admission
-                  </div>
-                </div>
-                <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
-              </motion.button>
-
-              {/* Discharge Patient launcher */}
-              <motion.button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('light');
-                  setShowDischargeFlow(true);
-                }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  flex: 1,
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  padding: `${SPACE.md}px ${SPACE.md}px`,
-                  background:
-                    'linear-gradient(90deg, rgba(251,191,36,0.10) 0%, rgba(251,191,36,0.02) 100%)',
+                  width: 30, height: 30, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(251,191,36,0.18)',
                   border: `1px solid ${COLORS.warn}`,
-                  borderLeft: `3px solid ${COLORS.warn}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.textPrimary,
-                  fontFamily: FONTS.sans,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  overflow: 'hidden',
-                  minHeight: 48,
+                  borderRadius: RADIUS.sm, color: COLORS.warn,
                 }}
               >
-                <CornerBracket position="tl" color={COLORS.warn} size={5} thickness={1} inset={-1} />
-                <CornerBracket position="br" color={COLORS.warn} size={5} thickness={1} inset={-1} />
-                <div
-                  style={{
-                    width: 30,
-                    height: 30,
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(251,191,36,0.18)',
-                    border: `1px solid ${COLORS.warn}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.warn,
-                  }}
-                >
-                  <DoorOpen size={17} strokeWidth={2} />
+                <DoorOpen size={17} strokeWidth={2} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <BracketLabel tone="warn" size="xs">DISCHARGE</BracketLabel>
+                <div style={{
+                  marginTop: 1, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600,
+                  color: COLORS.textSecondary,
+                }}>
+                  Discharge patient
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <BracketLabel tone="warn" size="xs">D/C</BracketLabel>
-                  <div
-                    style={{
-                      marginTop: 1,
-                      fontFamily: FONTS.sans,
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: COLORS.textSecondary,
-                    }}
-                  >
-                    Discharge patient
-                  </div>
-                </div>
-                <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
-              </motion.button>
-            </div>
+              </div>
+              <ChevronRight size={16} strokeWidth={2} color={COLORS.textMuted} />
+            </motion.button>
 
             {/* Rounding List launcher */}
             <motion.button
@@ -3845,6 +3890,94 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 );
               })}
             </div>
+
+            </>)}
+
+            {/* ── BED BOARD SUB-TAB ───────────────────────────── */}
+            {patientsSubTab === 'bedboard' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                <BedBoard
+                  display="card"
+                  units={bedUnits}
+                  surgeActive={isSurgeActive}
+                  onExpand={() => setShowBedBoard(true)}
+                  role={currentUser.role}
+                  embedded
+                />
+
+                {/* Unassigned patients holding area */}
+                {(() => {
+                  const unassigned = syncedPatients.filter(p => {
+                    const enc = p.currentEncounter;
+                    if (!enc) return false;
+                    const isActive = enc.status === 'in-progress' || enc.status === 'arrived';
+                    const noBed = !enc.location?.bed;
+                    return isActive && noBed;
+                  });
+                  if (unassigned.length === 0) return null;
+                  return (
+                    <TacticalCard padding="sm" highlight>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: SPACE.sm,
+                        marginBottom: SPACE.md,
+                      }}>
+                        <AlertCircle size={16} color={COLORS.warn} style={{
+                          filter: `drop-shadow(0 0 6px ${COLORS.warn})`,
+                        }} />
+                        <BracketLabel tone="warn">HOLDING — UNASSIGNED</BracketLabel>
+                        <StatusPill label={`${unassigned.length}`} tone="warn" size="xs" />
+                      </div>
+                      {unassigned.map((p) => (
+                        <motion.button
+                          key={p.id}
+                          onClick={() => setSelectedPatient(adaptPatientForList(p))}
+                          whileTap={{ scale: 0.98 }}
+                          style={{
+                            width: '100%', textAlign: 'left',
+                            display: 'flex', alignItems: 'center', gap: SPACE.md,
+                            padding: `${SPACE.sm}px 0`,
+                            background: 'transparent', border: 'none',
+                            borderBottom: `1px solid ${COLORS.border}`,
+                            fontFamily: FONTS.sans, color: COLORS.textPrimary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <div style={{
+                            width: 32, height: 32, borderRadius: RADIUS.full,
+                            background: `${COLORS.warn}20`,
+                            border: `1px solid ${COLORS.warn}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
+                            color: COLORS.warn,
+                          }}>
+                            {p.avatarInitials || `${p.name.given[0]}${p.name.family[0]}`}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
+                              {p.name.family}, {p.name.given}
+                            </div>
+                            <Mono tone="warn" size="xs">
+                              NO BED · {p.currentEncounter?.chiefComplaint || 'Admitted'}
+                            </Mono>
+                          </div>
+                          <ChevronRight size={16} color={COLORS.textMuted} />
+                        </motion.button>
+                      ))}
+                    </TacticalCard>
+                  );
+                })()}
+
+                {/* Tap "Expand" for full bed board overlay */}
+                <TacticalButton
+                  tone="accent"
+                  size="md"
+                  onClick={() => setShowBedBoard(true)}
+                  style={{ width: '100%' }}
+                >
+                  Open Full Bed Board
+                </TacticalButton>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -4535,10 +4668,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
         </div>
       </nav>
 
-      {/* Patient Detail Overlay */}
-      {selectedPatient && (
-        <PatientDetailScreen
-          patient={selectedPatient}
+      {/* Patient Detail Overlay — mobile-native version */}
+      {selectedPatient && selectedPatient.clinical && (
+        <MobilePatientDetailScreen
+          patient={selectedPatient.clinical}
           onClose={() => setSelectedPatient(null)}
           onSave={() => showToast('Patient record updated', 'success')}
           showToast={showToast}

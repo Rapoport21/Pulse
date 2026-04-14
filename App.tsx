@@ -878,6 +878,7 @@ function App() {
             setChatQuery(query || '');
             setShowChat(true);
           }}
+          systemStatus={systemStatus}
           // ── Cross-device shared state & callbacks ──
           bedUnits={bedUnits}
           admissionQueue={admissionQueue}
