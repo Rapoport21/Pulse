@@ -26,6 +26,7 @@ import {
   Eye,
   DoorOpen,
   Siren,
+  QrCode,
 } from 'lucide-react';
 import { Patient } from '../types';
 import { ageInYears } from '../data/clinicalMock';
@@ -64,6 +65,8 @@ interface MobilePatientDetailScreenProps {
   onOpenCodeBlue?: () => void;
   /** Open vitals entry for this patient. */
   onOpenVitals?: () => void;
+  /** Open the printable QR ID-band preview for this patient. */
+  onPrintQR?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -323,6 +326,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
   onOpenDischarge,
   onOpenCodeBlue,
   onOpenVitals,
+  onPrintQR,
 }) => {
   // Accordion state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -491,6 +495,34 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           >
             {fullName}
           </div>
+
+          {/* Print QR — small action button, only rendered when the
+              parent wires an onPrintQR callback. Shows a QrCode icon
+              so it's instantly readable next to the ESI badge. */}
+          {onPrintQR && (
+            <button
+              type="button"
+              onClick={onPrintQR}
+              aria-label="Print patient QR ID band"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 28,
+                marginRight: SPACE.xs,
+                padding: 0,
+                background: COLORS.surfaceElev,
+                border: `1px solid ${COLORS.borderStrong}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.textSecondary,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              <QrCode size={14} strokeWidth={1.75} />
+            </button>
+          )}
 
           {/* ESI badge — right */}
           {enc?.esi && (

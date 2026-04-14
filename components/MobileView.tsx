@@ -72,6 +72,8 @@ import { seedBedState, type BedUnit } from '../data/bedMock';
 import { useRealtimeState } from '../lib/realtime';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
+import { PatientQRCard } from './PatientQRCard';
+import { PrintPreviewModal } from './PrintPreviewModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
@@ -916,6 +918,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   const [selectedPatient, setSelectedPatient] = useState<any | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [showTestQR, setShowTestQR] = useState(false);
+  // When set, renders the patient QR print-preview modal for this patient.
+  const [showPrintPatientQR, setShowPrintPatientQR] = useState<Patient | null>(null);
   /**
    * EMS board fullscreen overlay state — every role can pop it open
    * via a launcher card on the Patients tab. ER personnel also see
@@ -968,7 +972,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
    * QR scan handler. Parses `pulse://` deep-link payloads.
    *
    * Supported schemes today:
-   *   pulse://tab/<tabname>  → jump to the named tab
+   *   pulse://tab/<tabname>      → jump to the named tab
+   *   pulse://patient/<id>?...    → open that patient's detail screen
+   *
+   * The patient URL carries `mrn` and `name` query params so a
+   * receiving device without the patient in its local store can still
+   * surface a useful fallback toast.
    *
    * Unknown payloads close the scanner and show a toast preview of
    * the raw string so the user can see *something* scanned.
@@ -989,6 +998,34 @@ export const MobileView: React.FC<MobileViewProps> = ({
         return;
       }
     }
+
+    if (payload.startsWith('pulse://patient/')) {
+      const rest = payload.slice('pulse://patient/'.length);
+      const id = rest.split(/[?#/]/)[0];
+      const patient = syncedPatients.find((p) => p.id === id);
+      if (patient) {
+        setSelectedPatient(adaptPatientForList(patient));
+        setShowScanner(false);
+        triggerHaptic('medium');
+        showToast(
+          `OPENED ${patient.name.family.toUpperCase()}, ${patient.name.given.toUpperCase()}`,
+          'success',
+        );
+        return;
+      }
+      // Fallback — decode the query string for a friendlier message.
+      const qIdx = rest.indexOf('?');
+      const params = new URLSearchParams(qIdx >= 0 ? rest.slice(qIdx + 1) : '');
+      const name = params.get('name');
+      const mrn = params.get('mrn');
+      setShowScanner(false);
+      showToast(
+        `PATIENT NOT IN LOCAL STORE: ${name || mrn || id}`,
+        'error',
+      );
+      return;
+    }
+
     setShowScanner(false);
     const preview = payload.length > 48 ? payload.slice(0, 48) + '…' : payload;
     showToast(`QR: ${preview}`, 'info');
@@ -1131,7 +1168,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
       .filter((p) => p.currentEncounter?.status === 'in-progress' || p.currentEncounter?.status === 'arrived')
       .map((p) => {
         const lastVital = p.vitalsHistory[p.vitalsHistory.length - 1];
-        const mews = lastVital ? computeMEWS(lastVital).total : 0;
+        const mews = lastVital ? computeMEWS(lastVital).value : 0;
         return { patient: p, mews, lastVital };
       });
   }, [syncedPatients, currentUser.role]);
@@ -5078,8 +5115,40 @@ export const MobileView: React.FC<MobileViewProps> = ({
           onOpenOrders={() => { triggerHaptic('light'); setShowOrderEntry(true); }}
           onOpenDischarge={() => { triggerHaptic('light'); setShowDischargeFlow(true); }}
           onOpenCodeBlue={() => { triggerHaptic('heavy'); setShowCodeBlue(true); }}
+          onPrintQR={() => {
+            triggerHaptic('light');
+            setShowPrintPatientQR(selectedPatient.clinical as Patient);
+          }}
         />
       )}
+
+      {/* Patient QR print preview — renders the printable PatientQRCard
+          inside the tactical print-preview chrome. Tap Confirm Print to
+          invoke window.print(); the card's sharp B/W layout is designed
+          to survive being copied or laminated as a wristband. */}
+      <PrintPreviewModal
+        isOpen={!!showPrintPatientQR}
+        onClose={() => setShowPrintPatientQR(null)}
+        onPrint={() => window.print()}
+        title={
+          showPrintPatientQR
+            ? `QR Card · ${showPrintPatientQR.name.family.toUpperCase()}, ${showPrintPatientQR.name.given}`
+            : 'QR Card'
+        }
+        content={
+          showPrintPatientQR ? (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '16px 0',
+              }}
+            >
+              <PatientQRCard patient={showPrintPatientQR} cutLine />
+            </div>
+          ) : null
+        }
+      />
 
       {/* EMS Inbound Board — fullscreen overlay variant. Same hook
           source as the dashboard tile so any acknowledgement made
