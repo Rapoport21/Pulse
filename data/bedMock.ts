@@ -471,3 +471,15 @@ export const PENDING_ADMITS: PendingAdmit[] = [
 export function getPendingAdmits(): PendingAdmit[] {
   return JSON.parse(JSON.stringify(PENDING_ADMITS));
 }
+
+/** Get patients who are admitted but have no bed assigned yet. */
+export function getUnassignedPatients(patients: import('../types').Patient[]): import('../types').Patient[] {
+  return patients.filter(p => {
+    const enc = p.currentEncounter;
+    if (!enc) return false;
+    // Patient has an active encounter but no bed
+    const isActive = enc.status === 'in-progress' || enc.status === 'arrived';
+    const noBed = !enc.location?.bed;
+    return isActive && noBed;
+  });
+}

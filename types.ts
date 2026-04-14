@@ -2,7 +2,10 @@ export enum UserRole {
   MANAGER = 'Floor Manager',
   NURSE = 'Nurse',
   ER_PERSONNEL = 'ER Personnel',
+  TRAUMA = 'Trauma',
 }
+
+export type BedAssignmentStatus = 'assigned' | 'admitted-unassigned';
 
 export interface UserProfile {
   role: UserRole;
@@ -219,6 +222,7 @@ export interface Encounter {
     zone?: string;                // e.g. "ED-Acute"
     bed?: string;                 // e.g. "4A"
   };
+  bedAssignmentStatus?: BedAssignmentStatus;  // 'assigned' when bed is set, 'admitted-unassigned' when admitted without bed
   chiefComplaint?: string;
   esi?: EsiLevel;
   attendingId?: string;

@@ -18,6 +18,12 @@ export const USERS: Record<UserRole, UserProfile> = {
     name: 'Dr. Emily Rostova',
     title: 'Trauma Attending',
     avatarInitials: 'ER'
+  },
+  [UserRole.TRAUMA]: {
+    role: UserRole.TRAUMA,
+    name: 'Dr. James Park',
+    title: 'Trauma Surgery Lead',
+    avatarInitials: 'JP'
   }
 };
 
@@ -36,6 +42,11 @@ export const ROLE_METRICS: Record<UserRole, MetricDriver[]> = {
     { id: 'e1', name: 'Trauma Bays', value: '0 Available', trend: 'down', status: Status.CRITICAL, impact: 98 },
     { id: 'e2', name: 'Triage Wait', value: '125 mins', trend: 'up', status: Status.WARNING, impact: 85 },
     { id: 'e3', name: 'Ambulance ETA', value: '3 (<5m)', trend: 'up', status: Status.CRITICAL, impact: 75 },
+  ],
+  [UserRole.TRAUMA]: [
+    { id: 't1', name: 'Active Traumas', value: '2 In Bay', trend: 'up', status: Status.CRITICAL, impact: 95 },
+    { id: 't2', name: 'OR Availability', value: '1 of 4', trend: 'down', status: Status.WARNING, impact: 80 },
+    { id: 't3', name: 'Blood Bank', value: 'MTP Active', trend: 'stable', status: Status.CRITICAL, impact: 90 },
   ]
 };
 
@@ -104,6 +115,12 @@ export const ROLE_ACTIONS: Record<UserRole, ActionItem[]> = {
     { id: 'e2', title: 'Review Triage ECGs (3)', owner: 'Self', dueTime: '14:10', status: 'New', priority: 'High' },
     { id: 'e3', title: 'Consult Ortho (Bed 4)', owner: 'Resident', dueTime: '14:30', status: 'On Hold', priority: 'Medium' },
     { id: 'e4', title: 'Sign off EMS Handoffs', owner: 'Charge', dueTime: '13:50', status: 'Completed', priority: 'Low' },
+  ],
+  [UserRole.TRAUMA]: [
+    { id: 't1', title: 'Prep Trauma Bay 1 for MVC Arrival', owner: 'Trauma RN', dueTime: '14:15', status: 'In Progress', priority: 'High' },
+    { id: 't2', title: 'Request MTP — Blood Bank', owner: 'Self', dueTime: '14:10', status: 'New', priority: 'High' },
+    { id: 't3', title: 'OR Hold for Exploratory Lap', owner: 'OR Charge', dueTime: '14:45', status: 'On Hold', priority: 'Medium' },
+    { id: 't4', title: 'Review CT Head — Bed 2 Patient', owner: 'Radiology', dueTime: '14:20', status: 'In Progress', priority: 'High' },
   ]
 };
 
@@ -125,5 +142,11 @@ export const ROLE_INSIGHTS: Record<UserRole, { situation: string, background: st
     background: "Multi-vehicle accident on I-95. 3 critical patients inbound. CT scanner 2 is down for maintenance.",
     assessment: "Trauma Bay 1 is dirty. Bay 2 is occupied. Airway cart needs restocking.",
     recommendation: "1. Clear Trauma Bay 1 immediately (EVS notified).\n2. Divert non-critical imaging to CT 1.\n3. Assign resident to fast-track triage."
+  },
+  [UserRole.TRAUMA]: {
+    situation: "Level 1 trauma activation — MVC with 2 critical patients in bay. MTP initiated for Patient A.",
+    background: "Patient A: GCS 8, unstable pelvis, positive FAST. Patient B: isolated TBI, GCS 12. OR 3 is available, OR 1 finishing at 14:30.",
+    assessment: "Patient A requires emergent ex-lap within 30 minutes. Blood bank has 4 units O-neg ready. Anesthesia is standing by.",
+    recommendation: "1. Move Patient A to OR 3 immediately.\n2. Hold OR 1 for Patient B if neuro consult recommends.\n3. Activate second trauma team for any new arrivals."
   }
 };
