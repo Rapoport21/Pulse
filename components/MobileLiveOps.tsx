@@ -88,7 +88,7 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
 
   return (
     <div style={{
-      width: '100%', maxWidth: 375, minHeight: '100%',
+      width: '100%', minHeight: '100%',
       display: 'flex', flexDirection: 'column',
       background: COLORS.bg, fontFamily: FONTS.sans, color: COLORS.textPrimary,
       overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch',

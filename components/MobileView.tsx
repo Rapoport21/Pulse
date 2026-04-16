@@ -1521,6 +1521,30 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <BrainCircuit size={18} strokeWidth={1.75} />
           </motion.button>
           <motion.button
+            onClick={() => {
+              triggerHaptic('light');
+              setShowScanner(true);
+            }}
+            aria-label="Open QR scanner"
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ borderColor: COLORS.accent }}
+            transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+            style={{
+              width: 44,
+              height: 44,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: RADIUS.sm,
+              color: COLORS.accent,
+              cursor: 'pointer',
+            }}
+          >
+            <QrCode size={18} strokeWidth={1.75} />
+          </motion.button>
+          <motion.button
             onClick={() => setShowMenu(!showMenu)}
             aria-label={showMenu ? 'Close menu' : 'Open menu'}
             whileTap={{ scale: 0.92 }}
