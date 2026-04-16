@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import QrScanner from 'qr-scanner';
 import {
@@ -25,35 +25,24 @@ import { triggerHaptic } from '../lib/haptics';
 /**
  * QRScannerModal — fullscreen tactical camera view.
  *
- * Two distinct states, both rendered as a HUD over the live feed:
+ * Two distinct states:
  *
- *   HUNT   — No QR yet. A small corner-bracket reticle sweeps a
- *            5-waypoint circuit across the viewfinder (TL → TR → C →
- *            BR → BL → loop). A full-screen dimming mask follows the
- *            reticle so the bright window tracks with it. An ambient
- *            horizontal scan line races the full viewport top→bottom
- *            on a 3s loop. Viewport corner brackets anchor the edges.
- *            The bottom status strip reports the active sector.
+ *   SEARCHING — Clean camera feed. No roaming reticle. Just the HUD
+ *               backdrop (viewport corner brackets + ambient scan line)
+ *               and a "POINT AT QR CODE" status strip. The user points
+ *               the camera and the app does the work.
  *
- *   LOCK   — QR decoded. cornerPoints from qr-scanner's detailed
- *            result are mapped from video-pixel space into display
- *            coordinates (accounting for objectFit:cover scale +
- *            crop), reduced to a padded bbox, and the reticle springs
- *            onto that bbox. The acquisition sequence plays in
- *            parallel:
- *              • two radial "sonar" rings emanate from the QR center
- *              • the reticle's corner brackets scale-pulse (pop) on
- *                snap, then settle
- *              • a vertical scan sweep races across the locked bbox
- *                once (left→right), fading on exit
- *              • colour flips rose → emerald
- *              • a "LOCK" tag appears above the top-right bracket
- *              • the ambient viewfinder scan line fades out
- *            After 520ms we fire onScan.
- *
- * The init / permission / flash / retry plumbing is unchanged from
- * the prior rev — including the onScan ref trick that prevents the
- * parent's 1s clock tick from re-running the init effect.
+ *   LOCKED    — QR decoded. cornerPoints from qr-scanner's detailed
+ *               result are mapped from video-pixel space into display
+ *               coordinates (objectFit:cover scale + crop), reduced to
+ *               a padded bbox, and the snap-reticle materialises at
+ *               exactly that position. Acquisition sequence:
+ *                 • reticle scales in from 0.6 → 1.14 → 1 (pop)
+ *                 • two radial sonar rings burst from QR centre
+ *                 • vertical scan sweep races across the bbox once
+ *                 • LOCK tag slides in above top-right bracket
+ *                 • dim mask closes in around the QR
+ *               After 520 ms we fire onScan.
  */
 
 interface QRScannerModalProps {
@@ -68,10 +57,8 @@ interface Box {
   h: number;
 }
 
-const RETICLE_SIZE = 150; // baseline hunt-reticle square
-const BBOX_PAD = 18; // padding around the decoded QR bbox
-const HUNT_LOOP_SECONDS = 9; // full cycle time through all 5 waypoints
-const ACQUIRE_DELAY_MS = 520; // time from decode to onScan fire
+const BBOX_PAD = 18;        // padding around decoded QR bbox
+const ACQUIRE_DELAY_MS = 520; // ms from decode → onScan fire
 
 export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   onClose,
@@ -81,7 +68,6 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const scannerRef = useRef<QrScanner | null>(null);
   const hasDecodedRef = useRef(false);
 
-  // Hold the latest onScan in a ref so parent re-renders don't re-init.
   const onScanRef = useRef(onScan);
   useEffect(() => {
     onScanRef.current = onScan;
@@ -93,10 +79,10 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const [flashOn, setFlashOn] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  // Lock state: null → hunting; Box → snapped onto QR.
+  // null → searching; Box → locked onto QR
   const [lockedBox, setLockedBox] = useState<Box | null>(null);
 
-  // Viewport for hunt-path math + dimming-mask sizing.
+  // Viewport dimensions — used only for HudBackdrop scan-line height
   const [viewport, setViewport] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 0,
     h: typeof window !== 'undefined' ? window.innerHeight : 0,
@@ -112,55 +98,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
     };
   }, []);
 
-  // Five hunt waypoints — TL, TR, C, BR, BL, then back to TL to loop.
-  // Margins chosen so the reticle never collides with the top bar or
-  // the bottom status strip.
-  const huntPath = useMemo(() => {
-    const vw = viewport.w;
-    const vh = viewport.h;
-    if (!vw || !vh) {
-      return { xs: [0], ys: [0], waypoints: [] as Box[] };
-    }
-    const s = RETICLE_SIZE;
-    const side = 32;
-    const top = 112;
-    const bottom = 180;
-
-    const wps: Box[] = [
-      { x: side, y: top, w: s, h: s }, // sector 01 · TL
-      { x: vw - side - s, y: top, w: s, h: s }, // sector 02 · TR
-      { x: (vw - s) / 2, y: (vh - s) / 2, w: s, h: s }, // sector 03 · C
-      { x: vw - side - s, y: vh - bottom - s, w: s, h: s }, // sector 04 · BR
-      { x: side, y: vh - bottom - s, w: s, h: s }, // sector 05 · BL
-    ];
-
-    // Close the loop with the starting waypoint so the motion keyframes
-    // don't discontinuity-snap at the end of a cycle.
-    const closed = [...wps, wps[0]];
-    return {
-      xs: closed.map((w) => w.x),
-      ys: closed.map((w) => w.y),
-      waypoints: wps,
-    };
-  }, [viewport.w, viewport.h]);
-
-  // Sector label ticks alongside the reticle path so the status strip
-  // can say "SEARCHING · SECTOR 03/05". Advances at 1/5 of loop time.
-  const [sector, setSector] = useState(0);
-  useEffect(() => {
-    if (lockedBox || error || !started) return;
-    const step = (HUNT_LOOP_SECONDS * 1000) / huntPath.waypoints.length;
-    setSector(0);
-    const id = window.setInterval(() => {
-      setSector((s) => (s + 1) % huntPath.waypoints.length);
-    }, step);
-    return () => window.clearInterval(id);
-  }, [lockedBox, error, started, huntPath.waypoints.length]);
-
   // Map cornerPoints (video-pixel space) → display-pixel space, then
-  // reduce to a padded bbox. objectFit:cover means the video is
-  // uniformly scaled to cover the element then cropped equally on
-  // both overflow sides: scale = max(dW/vW, dH/vH).
+  // reduce to a padded bbox. objectFit:cover: scale = max(dW/vW, dH/vH).
   const mapCornersToBox = useCallback(
     (
       points: { x: number; y: number }[],
@@ -188,7 +127,6 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
       const maxX = Math.max(...xs);
       const maxY = Math.max(...ys);
 
-      // Enforce minimum frame size so tiny QRs still get a visible lock.
       const w = Math.max(maxX - minX + BBOX_PAD * 2, 96);
       const h = Math.max(maxY - minY + BBOX_PAD * 2, 96);
       const cx = (minX + maxX) / 2;
@@ -337,21 +275,6 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   const isLocked = !!lockedBox;
   const frameColor = isLocked ? COLORS.ok : COLORS.accent;
 
-  // Dimming mask follows the reticle: either a fixed box at the lock
-  // position, or the current waypoint (chosen by the motion keyframe
-  // system on the reticle itself). We approximate the mask target with
-  // the current sector's waypoint when hunting, which keeps the mask
-  // in sync with where the reticle *is* without needing a motion
-  // subscription.
-  const dimmingTarget: Box =
-    lockedBox ??
-    huntPath.waypoints[sector] ?? {
-      x: (viewport.w - RETICLE_SIZE) / 2,
-      y: (viewport.h - RETICLE_SIZE) / 2,
-      w: RETICLE_SIZE,
-      h: RETICLE_SIZE,
-    };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -369,7 +292,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
       aria-modal="true"
       aria-label="QR code scanner"
     >
-      {/* Live camera feed — sits behind every HUD layer */}
+      {/* Live camera feed */}
       <video
         ref={videoRef}
         style={{
@@ -384,22 +307,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         playsInline
       />
 
-      {/* ── HUD backdrop — painted across the entire viewport ────── */}
+      {/* HUD backdrop — viewport corner brackets + ambient scan line */}
       {!error && viewport.w > 0 && (
         <HudBackdrop viewport={viewport} hunting={!isLocked && started} />
       )}
 
-      {/* ── Dimming mask — keeps the active target bright, dims the
-          rest of the viewport so the user's eye tracks the reticle ── */}
-      {!error && viewport.w > 0 && (
-        <MaskOverlay
-          target={dimmingTarget}
-          viewport={viewport}
-          locked={isLocked}
-        />
-      )}
+      {/* Dim mask — only rendered on lock, closes in around the QR */}
+      <AnimatePresence>
+        {isLocked && lockedBox && viewport.w > 0 && (
+          <MaskOverlay
+            target={lockedBox}
+            viewport={viewport}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* ── Top bar: label + flash + close ──────────────────────── */}
+      {/* Top bar: label + flash + close */}
       <div
         style={{
           position: 'absolute',
@@ -477,21 +400,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         </div>
       </div>
 
-      {/* ── The reticle — wanders during hunt, springs onto the QR
-          bbox on lock ─────────────────────────────────────────── */}
-      {!error && started && (
-        <HuntReticle
-          huntPath={huntPath}
-          lockedBox={lockedBox}
-          color={frameColor}
-        />
-      )}
+      {/* Snap reticle — only renders when a QR is detected */}
+      <AnimatePresence>
+        {isLocked && lockedBox && (
+          <SnapReticle
+            key="snap-reticle"
+            lockedBox={lockedBox}
+            color={frameColor}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* ── Acquisition rings — two radial pings centred on the QR
-          when it locks. Sells the "target acquired" moment. ────── */}
+      {/* Acquisition rings — two sonar pings from QR centre on lock */}
       <AnimatePresence>
         {isLocked && lockedBox && (
           <AcquisitionRings
+            key="acq-rings"
             center={{
               x: lockedBox.x + lockedBox.w / 2,
               y: lockedBox.y + lockedBox.h / 2,
@@ -500,7 +424,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ── Error overlay ────────────────────────────────────────── */}
+      {/* Error overlay */}
       {error && (
         <div
           style={{
@@ -598,7 +522,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         </div>
       )}
 
-      {/* ── Bottom status strip ─────────────────────────────────── */}
+      {/* Bottom status strip */}
       <div
         style={{
           position: 'absolute',
@@ -613,49 +537,35 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
       >
         <AnimatePresence mode="wait">
           <motion.div
-            key={error ? 'err' : isLocked ? 'lock' : started ? 'hunt' : 'req'}
+            key={error ? 'err' : isLocked ? 'lock' : started ? 'scan' : 'req'}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: SPACE.base,
-            }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Mono
-                tone={
-                  error
-                    ? 'crit'
-                    : isLocked
-                      ? 'ok'
-                      : started
-                        ? 'accent'
-                        : 'secondary'
-                }
-                size="xs"
-              >
-                {error
-                  ? 'SCANNER OFFLINE'
+            <Mono
+              tone={
+                error
+                  ? 'crit'
                   : isLocked
-                    ? 'TARGET ACQUIRED · OPENING'
+                    ? 'ok'
                     : started
-                      ? 'SEARCHING FOR QR CODE'
-                      : 'REQUESTING CAMERA…'}
-              </Mono>
-              {!error && started && !isLocked && (
-                <Mono tone="muted" size="xs">
-                  MOVE CODE INTO VIEW · RETICLE WILL LOCK
-                </Mono>
-              )}
-            </div>
+                      ? 'accent'
+                      : 'secondary'
+              }
+              size="xs"
+            >
+              {error
+                ? 'SCANNER OFFLINE'
+                : isLocked
+                  ? 'TARGET ACQUIRED · OPENING'
+                  : started
+                    ? 'POINT CAMERA AT QR CODE'
+                    : 'REQUESTING CAMERA…'}
+            </Mono>
             {!error && started && !isLocked && (
-              <Mono tone="dim" size="xs">
-                SECTOR {String(sector + 1).padStart(2, '0')}/
-                {String(huntPath.waypoints.length).padStart(2, '0')}
+              <Mono tone="muted" size="xs" style={{ marginTop: 2 }}>
+                FRAME WILL SNAP TO CODE WHEN DETECTED
               </Mono>
             )}
           </motion.div>
@@ -666,10 +576,9 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// HudBackdrop — full-screen HUD chrome that sits over the camera feed.
-// Viewport corner brackets anchor each corner. While hunting, an
-// ambient horizontal scan line races top→bottom across the entire
-// viewport on a 3s loop — the "radar sweep" motif. Fades out on lock.
+// HudBackdrop — viewport corner brackets + ambient scan line.
+// The scan line is the only "active" indicator while searching.
+// It fades out on lock.
 // ─────────────────────────────────────────────────────────────────────
 interface HudBackdropProps {
   viewport: { w: number; h: number };
@@ -678,14 +587,11 @@ interface HudBackdropProps {
 
 const HudBackdrop: React.FC<HudBackdropProps> = ({ viewport, hunting }) => (
   <>
-    {/* Viewport corner brackets — big L marks at each corner of the
-        screen. Always present; these are the persistent HUD anchors. */}
     <ViewportCornerBracket position="tl" />
     <ViewportCornerBracket position="tr" />
     <ViewportCornerBracket position="bl" />
     <ViewportCornerBracket position="br" />
 
-    {/* Ambient full-width scan line — fades out on lock. */}
     <AnimatePresence>
       {hunting && (
         <motion.div
@@ -737,7 +643,6 @@ const ViewportCornerBracket: React.FC<{
   const inset = 16;
   return (
     <>
-      {/* Horizontal arm */}
       <div
         aria-hidden
         style={{
@@ -752,7 +657,6 @@ const ViewportCornerBracket: React.FC<{
           pointerEvents: 'none',
         }}
       />
-      {/* Vertical arm */}
       <div
         aria-hidden
         style={{
@@ -772,75 +676,43 @@ const ViewportCornerBracket: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// HuntReticle — the roaming search frame. Corner-bracket-only (no
-// rectangle border), wanders across a 5-waypoint loop while hunting,
-// springs onto the QR bbox on lock, and pops its brackets as part of
-// the acquisition animation.
+// SnapReticle — materialises at the QR's exact position on detection.
+// Scale-pops in (0.6 → 1.14 → 1), then shows the acquisition sweep
+// and LOCK tag. No pre-detection idle animation.
 // ─────────────────────────────────────────────────────────────────────
-interface HuntReticleProps {
-  huntPath: { xs: number[]; ys: number[]; waypoints: Box[] };
-  lockedBox: Box | null;
+interface SnapReticleProps {
+  lockedBox: Box;
   color: string;
 }
 
-const HuntReticle: React.FC<HuntReticleProps> = ({
-  huntPath,
-  lockedBox,
-  color,
-}) => {
-  const isLocked = !!lockedBox;
-
-  // Split props by phase. Hunt mode feeds keyframes arrays for x & y
-  // (width/height stay constant); lock mode feeds scalar targets so
-  // motion can spring onto them. `scale` is a separate keyframe that
-  // pops on lock for the acquisition accent.
-  const reticleProps = isLocked
-    ? {
-        animate: {
-          x: lockedBox!.x,
-          y: lockedBox!.y,
-          width: lockedBox!.w,
-          height: lockedBox!.h,
-          scale: [0.82, 1.14, 1],
-        },
-        transition: {
-          x: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
-          y: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
-          width: { type: 'spring' as const, stiffness: 340, damping: 28 },
-          height: { type: 'spring' as const, stiffness: 340, damping: 28 },
-          scale: {
-            duration: 0.42,
-            ease: MOTION.ease,
-            times: [0, 0.55, 1],
-          },
-        },
-      }
-    : {
-        animate: {
-          x: huntPath.xs,
-          y: huntPath.ys,
-          width: huntPath.waypoints[0]?.w ?? RETICLE_SIZE,
-          height: huntPath.waypoints[0]?.h ?? RETICLE_SIZE,
-          scale: 1,
-        },
-        transition: {
-          x: {
-            duration: HUNT_LOOP_SECONDS,
-            repeat: Infinity,
-            ease: 'easeInOut' as const,
-          },
-          y: {
-            duration: HUNT_LOOP_SECONDS,
-            repeat: Infinity,
-            ease: 'easeInOut' as const,
-          },
-        },
-      };
-
+const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color }) => {
   return (
     <motion.div
-      animate={reticleProps.animate}
-      transition={reticleProps.transition}
+      initial={{
+        x: lockedBox.x,
+        y: lockedBox.y,
+        width: lockedBox.w,
+        height: lockedBox.h,
+        scale: 0.6,
+        opacity: 0,
+      }}
+      animate={{
+        x: lockedBox.x,
+        y: lockedBox.y,
+        width: lockedBox.w,
+        height: lockedBox.h,
+        scale: [0.82, 1.14, 1],
+        opacity: 1,
+      }}
+      exit={{ scale: 0.7, opacity: 0 }}
+      transition={{
+        x: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
+        y: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
+        width: { type: 'spring' as const, stiffness: 340, damping: 28 },
+        height: { type: 'spring' as const, stiffness: 340, damping: 28 },
+        scale: { duration: 0.42, ease: MOTION.ease, times: [0, 0.55, 1] },
+        opacity: { duration: 0.18 },
+      }}
       style={{
         position: 'absolute',
         top: 0,
@@ -849,127 +721,60 @@ const HuntReticle: React.FC<HuntReticleProps> = ({
         pointerEvents: 'none',
       }}
     >
-      {/* Corner brackets — pure L marks, no rectangle border between
-          them. These are the primary visual indicator the user reads. */}
-      <CornerBracket
-        position="tl"
-        color={color}
-        size={34}
-        thickness={2.5}
-        inset={-2}
-      />
-      <CornerBracket
-        position="tr"
-        color={color}
-        size={34}
-        thickness={2.5}
-        inset={-2}
-      />
-      <CornerBracket
-        position="bl"
-        color={color}
-        size={34}
-        thickness={2.5}
-        inset={-2}
-      />
-      <CornerBracket
-        position="br"
-        color={color}
-        size={34}
-        thickness={2.5}
-        inset={-2}
+      {/* Corner brackets — pure L marks, no rectangle border */}
+      <CornerBracket position="tl" color={color} size={34} thickness={2.5} inset={-2} />
+      <CornerBracket position="tr" color={color} size={34} thickness={2.5} inset={-2} />
+      <CornerBracket position="bl" color={color} size={34} thickness={2.5} inset={-2} />
+      <CornerBracket position="br" color={color} size={34} thickness={2.5} inset={-2} />
+
+      {/* Acquisition sweep — single left→right pass across the bbox */}
+      <motion.div
+        initial={{ left: -4, opacity: 0 }}
+        animate={{ left: '100%', opacity: [0, 1, 1, 0] }}
+        transition={{
+          duration: 0.44,
+          ease: [0.16, 1, 0.3, 1],
+          delay: 0.12,
+          times: [0, 0.2, 0.8, 1],
+        }}
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          width: 3,
+          background: `linear-gradient(180deg, transparent, ${color}, transparent)`,
+          boxShadow: `0 0 18px ${color}, 0 0 36px ${color}88`,
+        }}
       />
 
-      {/* Hunt-only inner scan line — vertical sweep inside the reticle.
-          Complements the full-viewport scan and gives the reticle its
-          own "alive" pulse. */}
-      {!isLocked && (
-        <motion.div
-          initial={{ top: '0%' }}
-          animate={{ top: ['0%', '100%', '0%'] }}
-          transition={{
-            duration: 1.6,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-          style={{
-            position: 'absolute',
-            left: 8,
-            right: 8,
-            height: 2,
-            background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
-            boxShadow: `0 0 10px ${color}`,
-          }}
-        />
-      )}
-
-      {/* Lock-only acquisition sweep — a single left→right pass across
-          the locked bbox. Plays once, then the AnimatePresence exit
-          fades it as the modal unmounts. */}
-      <AnimatePresence>
-        {isLocked && (
-          <motion.div
-            key="lock-sweep"
-            initial={{ left: -4, opacity: 0 }}
-            animate={{ left: '100%', opacity: [0, 1, 1, 0] }}
-            transition={{
-              duration: 0.44,
-              ease: [0.16, 1, 0.3, 1],
-              delay: 0.12,
-              times: [0, 0.2, 0.8, 1],
-            }}
-            style={{
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              width: 3,
-              background: `linear-gradient(180deg, transparent, ${color}, transparent)`,
-              boxShadow: `0 0 18px ${color}, 0 0 36px ${color}88`,
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* LOCK tag — appears above the top-right corner on lock. Sits
-          outside the reticle so it never obscures the decoded QR. */}
-      <AnimatePresence>
-        {isLocked && (
-          <motion.div
-            key="lock-tag"
-            initial={{ opacity: 0, y: 8, scale: 0.7 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.7 }}
-            transition={{
-              duration: MOTION.base,
-              ease: MOTION.ease,
-              delay: 0.14,
-            }}
-            style={{
-              position: 'absolute',
-              top: -26,
-              right: -2,
-              padding: `2px 8px`,
-              background: COLORS.ok,
-              color: '#000',
-              fontFamily: FONTS.mono,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.16em',
-              boxShadow: `0 0 20px ${COLORS.ok}88`,
-            }}
-          >
-            LOCK
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* LOCK tag — slides in above top-right bracket */}
+      <motion.div
+        initial={{ opacity: 0, y: 8, scale: 0.7 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.7 }}
+        transition={{ duration: MOTION.base, ease: MOTION.ease, delay: 0.14 }}
+        style={{
+          position: 'absolute',
+          top: -26,
+          right: -2,
+          padding: `2px 8px`,
+          background: COLORS.ok,
+          color: '#000',
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.16em',
+          boxShadow: `0 0 20px ${COLORS.ok}88`,
+        }}
+      >
+        LOCK
+      </motion.div>
     </motion.div>
   );
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// AcquisitionRings — two concentric radial pings from the QR center
-// on lock. Each ring expands + fades independently with a staggered
-// delay to read as a "sonar acquisition" burst.
+// AcquisitionRings — two concentric radial pings from QR centre.
 // ─────────────────────────────────────────────────────────────────────
 const AcquisitionRings: React.FC<{ center: { x: number; y: number } }> = ({
   center,
@@ -1013,44 +818,36 @@ const AcquisitionRings: React.FC<{ center: { x: number; y: number } }> = ({
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// MaskOverlay — four translucent black rectangles that dim everything
-// except the active target window. Rectangles animate with the target
-// so the bright window follows the reticle as it wanders, and snaps
-// with it on lock.
+// MaskOverlay — four translucent rects that dim everything except the
+// locked QR window. Animates in with a spring on lock.
 // ─────────────────────────────────────────────────────────────────────
 interface MaskOverlayProps {
   target: Box;
   viewport: { w: number; h: number };
-  locked: boolean;
 }
 
-const MaskOverlay: React.FC<MaskOverlayProps> = ({
-  target,
-  viewport,
-  locked,
-}) => {
-  const dim = locked ? 'rgba(0,0,0,0.46)' : 'rgba(0,0,0,0.58)';
-  const tween = locked
-    ? { type: 'spring' as const, stiffness: 340, damping: 28 }
-    : { duration: HUNT_LOOP_SECONDS / 5, ease: 'easeInOut' as const };
+const MaskOverlay: React.FC<MaskOverlayProps> = ({ target, viewport }) => {
+  const dim = 'rgba(0,0,0,0.55)';
+  const tween = { type: 'spring' as const, stiffness: 340, damping: 28 };
   const base: React.CSSProperties = {
     position: 'absolute',
     background: dim,
     zIndex: 1,
     pointerEvents: 'none',
-    transition: `background ${MOTION.base}s ${MOTION.ease as unknown as string}`,
   };
 
   return (
     <>
       {/* top */}
       <motion.div
+        initial={{ height: 0 }}
         animate={{ height: Math.max(target.y, 0) }}
         transition={tween}
         style={{ ...base, top: 0, left: 0, right: 0 }}
       />
       {/* bottom */}
       <motion.div
+        initial={{ top: viewport.h, height: 0 }}
         animate={{
           top: target.y + target.h,
           height: Math.max(viewport.h - (target.y + target.h), 0),
@@ -1060,6 +857,7 @@ const MaskOverlay: React.FC<MaskOverlayProps> = ({
       />
       {/* left */}
       <motion.div
+        initial={{ width: 0 }}
         animate={{
           top: target.y,
           height: target.h,
@@ -1070,6 +868,7 @@ const MaskOverlay: React.FC<MaskOverlayProps> = ({
       />
       {/* right */}
       <motion.div
+        initial={{ width: 0 }}
         animate={{
           top: target.y,
           height: target.h,
