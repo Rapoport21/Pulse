@@ -82,6 +82,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
   // null → searching; Box → locked onto QR
   const [lockedBox, setLockedBox] = useState<Box | null>(null);
 
+  // Decoded payload — surfaced in the LOCK readout for tactile feedback
+  const [payload, setPayload] = useState<string>('');
+
+  // HUD live data — frame counter + clock tick drive the metadata strips
+  const [hudTick, setHudTick] = useState(0);
+  useEffect(() => {
+    if (!started || error) return;
+    const id = window.setInterval(() => setHudTick((n) => n + 1), 100);
+    return () => window.clearInterval(id);
+  }, [started, error]);
+
+  // Video resolution — shown in top-right HUD readout on stream start
+  const [videoRes, setVideoRes] = useState<{ w: number; h: number } | null>(
+    null,
+  );
+
   // Viewport dimensions — used only for HudBackdrop scan-line height
   const [viewport, setViewport] = useState({
     w: typeof window !== 'undefined' ? window.innerWidth : 0,
@@ -147,6 +163,8 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
     setError(null);
     setStarted(false);
     setLockedBox(null);
+    setPayload('');
+    setVideoRes(null);
     hasDecodedRef.current = false;
 
     const init = async () => {
@@ -170,6 +188,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             const el = videoRef.current;
             const bbox = el ? mapCornersToBox(result.cornerPoints, el) : null;
             if (bbox) setLockedBox(bbox);
+            setPayload(result.data);
 
             window.setTimeout(() => {
               onScanRef.current(result.data);
@@ -193,6 +212,22 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         }
 
         setStarted(true);
+
+        // Snapshot the live stream's intrinsic resolution for the HUD
+        if (videoEl.videoWidth && videoEl.videoHeight) {
+          setVideoRes({ w: videoEl.videoWidth, h: videoEl.videoHeight });
+        } else {
+          const onMeta = () => {
+            if (!cancelled) {
+              setVideoRes({
+                w: videoEl.videoWidth,
+                h: videoEl.videoHeight,
+              });
+            }
+            videoEl.removeEventListener('loadedmetadata', onMeta);
+          };
+          videoEl.addEventListener('loadedmetadata', onMeta);
+        }
 
         try {
           const flashAvailable = await scanner.hasFlash();
@@ -307,9 +342,28 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
         playsInline
       />
 
+      {/* Vignette — subtle radial darken toward edges to anchor the eye */}
+      {!error && <Vignette />}
+
+      {/* Rule-of-thirds grid — faint structure lines while searching */}
+      {!error && started && !isLocked && <RuleOfThirdsGrid />}
+
+      {/* Center AF crosshair — tiny tactical anchor while searching */}
+      {!error && started && !isLocked && <CenterAFTarget />}
+
       {/* HUD backdrop — viewport corner brackets + ambient scan line */}
       {!error && viewport.w > 0 && (
         <HudBackdrop viewport={viewport} hunting={!isLocked && started} />
+      )}
+
+      {/* HUD data readouts — live metadata in the 4 corners */}
+      {!error && started && viewport.w > 0 && (
+        <HudDataStrip
+          hudTick={hudTick}
+          viewport={viewport}
+          videoRes={videoRes}
+          isLocked={isLocked}
+        />
       )}
 
       {/* Dim mask — only rendered on lock, closes in around the QR */}
@@ -407,6 +461,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
             key="snap-reticle"
             lockedBox={lockedBox}
             color={frameColor}
+            payload={payload}
           />
         )}
       </AnimatePresence>
@@ -641,36 +696,308 @@ const ViewportCornerBracket: React.FC<{
   const L = 40;
   const thick = 2;
   const inset = 16;
+  const vAnchor = v === 't' ? 'top' : 'bottom';
+  const hAnchor = h === 'l' ? 'left' : 'right';
+  const vOffset = `calc(${inset}px + env(safe-area-inset-${vAnchor}))`;
+  // Subtle breathing pulse — sells "HUD is active" without moving the eye
   return (
-    <>
+    <motion.div
+      aria-hidden
+      animate={{ opacity: [0.45, 0.75, 0.45] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      style={{
+        position: 'absolute',
+        [vAnchor]: vOffset,
+        [hAnchor]: inset,
+        width: L,
+        height: L,
+        zIndex: 3,
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Horizontal arm */}
       <div
-        aria-hidden
         style={{
           position: 'absolute',
-          [v === 't' ? 'top' : 'bottom']: `calc(${inset}px + env(safe-area-inset-${v === 't' ? 'top' : 'bottom'}))`,
-          [h === 'l' ? 'left' : 'right']: inset,
+          [vAnchor]: 0,
+          [hAnchor]: 0,
           width: L,
           height: thick,
           background: COLORS.textSecondary,
-          opacity: 0.55,
-          zIndex: 3,
-          pointerEvents: 'none',
         }}
       />
+      {/* Vertical arm */}
       <div
-        aria-hidden
         style={{
           position: 'absolute',
-          [v === 't' ? 'top' : 'bottom']: `calc(${inset}px + env(safe-area-inset-${v === 't' ? 'top' : 'bottom'}))`,
-          [h === 'l' ? 'left' : 'right']: inset,
+          [vAnchor]: 0,
+          [hAnchor]: 0,
           width: thick,
           height: L,
           background: COLORS.textSecondary,
-          opacity: 0.55,
-          zIndex: 3,
-          pointerEvents: 'none',
         }}
       />
+      {/* Tick marks — tiny perpendicular stubs at the ends of each arm,
+          rifle-scope detail that sells the tactical fidelity */}
+      <div
+        style={{
+          position: 'absolute',
+          [vAnchor]: 0,
+          [hAnchor]: L - 1,
+          width: 1,
+          height: 4,
+          background: COLORS.textSecondary,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          [vAnchor]: L - 1,
+          [hAnchor]: 0,
+          width: 4,
+          height: 1,
+          background: COLORS.textSecondary,
+        }}
+      />
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Vignette — subtle radial darken toward corners. Focuses the eye on
+// the centre of the viewfinder without calling attention to itself.
+// ─────────────────────────────────────────────────────────────────────
+const Vignette: React.FC = () => (
+  <div
+    aria-hidden
+    style={{
+      position: 'absolute',
+      inset: 0,
+      pointerEvents: 'none',
+      zIndex: 1,
+      background:
+        'radial-gradient(ellipse at center, rgba(0,0,0,0) 42%, rgba(0,0,0,0.35) 85%, rgba(0,0,0,0.62) 100%)',
+    }}
+  />
+);
+
+// ─────────────────────────────────────────────────────────────────────
+// RuleOfThirdsGrid — four hair-thin lines at the 1/3 + 2/3 positions.
+// Only rendered while searching; barely visible but gives the
+// viewfinder compositional structure.
+// ─────────────────────────────────────────────────────────────────────
+const RuleOfThirdsGrid: React.FC = () => {
+  const lineStyle: React.CSSProperties = {
+    position: 'absolute',
+    background: 'rgba(250,250,250,0.08)',
+    pointerEvents: 'none',
+    zIndex: 2,
+  };
+  return (
+    <>
+      {/* vertical */}
+      <div style={{ ...lineStyle, top: 0, bottom: 0, left: '33.333%', width: 1 }} />
+      <div style={{ ...lineStyle, top: 0, bottom: 0, left: '66.666%', width: 1 }} />
+      {/* horizontal */}
+      <div style={{ ...lineStyle, left: 0, right: 0, top: '33.333%', height: 1 }} />
+      <div style={{ ...lineStyle, left: 0, right: 0, top: '66.666%', height: 1 }} />
+    </>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// CenterAFTarget — tiny tactical crosshair at the exact viewport centre.
+// Gives the user an anchor point while the camera is searching. Inspired
+// by rifle-scope + Fujifilm-AF-point crosshairs: 4 short tick arms around
+// a central dot, with a thin ring around them.
+// ─────────────────────────────────────────────────────────────────────
+const CenterAFTarget: React.FC = () => {
+  const SIZE = 36;
+  return (
+    <motion.div
+      aria-hidden
+      initial={{ opacity: 0, scale: 0.7 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.7 }}
+      transition={{ duration: MOTION.base, ease: MOTION.ease }}
+      style={{
+        position: 'absolute',
+        top: `calc(50% - ${SIZE / 2}px)`,
+        left: `calc(50% - ${SIZE / 2}px)`,
+        width: SIZE,
+        height: SIZE,
+        pointerEvents: 'none',
+        zIndex: 4,
+      }}
+    >
+      {/* Outer ring */}
+      <motion.div
+        animate={{ opacity: [0.35, 0.6, 0.35] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          inset: 4,
+          border: `1px solid ${COLORS.accent}`,
+          borderRadius: '50%',
+        }}
+      />
+      {/* Centre dot */}
+      <div
+        style={{
+          position: 'absolute',
+          top: SIZE / 2 - 1.5,
+          left: SIZE / 2 - 1.5,
+          width: 3,
+          height: 3,
+          background: COLORS.accent,
+          boxShadow: `0 0 6px ${COLORS.accent}`,
+        }}
+      />
+      {/* Tick arms — N, E, S, W */}
+      {[
+        { top: 0, left: SIZE / 2 - 0.5, width: 1, height: 6 },
+        { top: SIZE - 6, left: SIZE / 2 - 0.5, width: 1, height: 6 },
+        { top: SIZE / 2 - 0.5, left: 0, width: 6, height: 1 },
+        { top: SIZE / 2 - 0.5, left: SIZE - 6, width: 6, height: 1 },
+      ].map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            ...s,
+            background: COLORS.accent,
+            opacity: 0.75,
+          }}
+        />
+      ))}
+    </motion.div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// HudDataStrip — live tactical metadata in the 4 corners of the viewport.
+//   TL (below header): TIME HH:MM:SS · frame counter
+//   TR (below header): RES · viewport dims
+//   BL (above status): STATE indicator with blinking dot
+//   BR (above status): LAT + FPS readout
+// All values are faux-live (derived from hudTick) — they don't expose
+// sensitive data, just sell the "HUD is alive" feel.
+// ─────────────────────────────────────────────────────────────────────
+interface HudDataStripProps {
+  hudTick: number;
+  viewport: { w: number; h: number };
+  videoRes: { w: number; h: number } | null;
+  isLocked: boolean;
+}
+
+const HudDataStrip: React.FC<HudDataStripProps> = ({
+  hudTick,
+  viewport,
+  videoRes,
+  isLocked,
+}) => {
+  // Clock — real wall-clock HH:MM:SS
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const tick = hudTick;
+
+  // Synthesised readouts — all cycle cheaply off hudTick
+  const frame = String(tick % 100000).padStart(5, '0');
+  const lat = 6 + (tick % 5); // 6–10 ms drift
+  const scanRate = 24 + (tick % 3); // 24–26 fps — matches maxScansPerSecond bump
+
+  const res = videoRes
+    ? `${videoRes.w}×${videoRes.h}`
+    : `${viewport.w}×${viewport.h}`;
+
+  const dotColor = isLocked ? COLORS.ok : COLORS.accent;
+  const stateLabel = isLocked ? 'LOCK' : 'SCAN';
+
+  const boxStyle: React.CSSProperties = {
+    position: 'absolute',
+    zIndex: 4,
+    padding: '3px 6px',
+    background: 'rgba(0,0,0,0.55)',
+    border: '1px solid rgba(250,250,250,0.08)',
+    backdropFilter: 'blur(6px)',
+    WebkitBackdropFilter: 'blur(6px)',
+    fontFamily: FONTS.mono,
+    fontSize: 9,
+    fontWeight: 500,
+    letterSpacing: '0.14em',
+    color: COLORS.textSecondary,
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  };
+
+  return (
+    <>
+      {/* TL — time + frame */}
+      <div
+        style={{
+          ...boxStyle,
+          top: `calc(72px + env(safe-area-inset-top))`,
+          left: 16,
+        }}
+      >
+        <span style={{ color: COLORS.textPrimary }}>{hh}:{mm}:{ss}</span>
+        <span style={{ opacity: 0.5 }}>·</span>
+        <span>F{frame}</span>
+      </div>
+
+      {/* TR — resolution */}
+      <div
+        style={{
+          ...boxStyle,
+          top: `calc(72px + env(safe-area-inset-top))`,
+          right: 16,
+        }}
+      >
+        <span>RES</span>
+        <span style={{ color: COLORS.textPrimary }}>{res}</span>
+      </div>
+
+      {/* BL — live state indicator */}
+      <div
+        style={{
+          ...boxStyle,
+          bottom: `calc(110px + env(safe-area-inset-bottom))`,
+          left: 16,
+        }}
+      >
+        <motion.span
+          animate={{ opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: dotColor,
+            boxShadow: `0 0 8px ${dotColor}`,
+            display: 'inline-block',
+          }}
+        />
+        <span style={{ color: isLocked ? COLORS.ok : COLORS.accent }}>
+          {stateLabel}
+        </span>
+      </div>
+
+      {/* BR — latency + scan-rate */}
+      <div
+        style={{
+          ...boxStyle,
+          bottom: `calc(110px + env(safe-area-inset-bottom))`,
+          right: 16,
+        }}
+      >
+        <span>LAT {String(lat).padStart(2, '0')}ms</span>
+        <span style={{ opacity: 0.5 }}>·</span>
+        <span>{scanRate}/S</span>
+      </div>
     </>
   );
 };
@@ -683,9 +1010,21 @@ const ViewportCornerBracket: React.FC<{
 interface SnapReticleProps {
   lockedBox: Box;
   color: string;
+  payload: string;
 }
 
-const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color }) => {
+// Short identifier for the LOCK readout — takes a decoded payload like
+// `pulse://patient/P-123?mrn=…` and returns `PATIENT · P-123`. Falls
+// back to a truncated raw payload for non-PULSE QRs.
+const formatPayloadTag = (raw: string): string => {
+  if (!raw) return '';
+  const m = raw.match(/^pulse:\/\/([a-z]+)\/([^?#]+)/i);
+  if (m) return `${m[1].toUpperCase()} · ${m[2]}`;
+  return raw.length > 28 ? `${raw.slice(0, 25)}…` : raw;
+};
+
+const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color, payload }) => {
+  const payloadTag = formatPayloadTag(payload);
   return (
     <motion.div
       initial={{
@@ -769,6 +1108,34 @@ const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color }) => {
       >
         LOCK
       </motion.div>
+
+      {/* Decoded payload readout — terminal-style line under the bbox */}
+      {payloadTag && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: MOTION.base, ease: MOTION.ease, delay: 0.22 }}
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            marginTop: 8,
+            padding: '3px 8px',
+            background: 'rgba(0,0,0,0.78)',
+            border: `1px solid ${COLORS.ok}`,
+            fontFamily: FONTS.mono,
+            fontSize: 10,
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            color: COLORS.ok,
+            whiteSpace: 'nowrap',
+            boxShadow: `0 0 12px ${COLORS.ok}55`,
+          }}
+        >
+          &gt; DECODED · {payloadTag}
+        </motion.div>
+      )}
     </motion.div>
   );
 };
