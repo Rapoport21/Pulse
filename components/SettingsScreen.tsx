@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Check,
   Eye,
+  Type,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import {
@@ -45,6 +46,12 @@ import {
 } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import { TextDimContrastSample } from './TextDimContrastSample';
+import {
+  type UiScale,
+  readUiScale,
+  writeUiScale,
+  applyUiScale,
+} from '../lib/uiScale';
 
 /**
  * SettingsScreen — full-screen overlay for session/simulation controls.
@@ -180,9 +187,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [resetArmed, setResetArmed] = useState(false);
   const [resetJustFired, setResetJustFired] = useState(false);
   const [contrastOpen, setContrastOpen] = useState(false);
+  const [uiScale, setUiScale] = useState<UiScale>(() => readUiScale());
   const connectionStatus = useConnectionStatus();
   const presence = usePresence();
   const [now, setNow] = useState(() => new Date());
+
+  // Commit a scale change: persist + apply immediately so the operator
+  // sees the UI grow/shrink the moment they tap. No app reload needed.
+  const handleUiScaleChange = (next: UiScale) => {
+    if (next === uiScale) return;
+    triggerHaptic('light');
+    setUiScale(next);
+    writeUiScale(next);
+    applyUiScale(next);
+  };
 
   // Tick clock — only while open, to avoid background churn.
   useEffect(() => {
@@ -646,77 +664,195 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   </Mono>
                 }
               >
-                <motion.button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setContrastOpen(true);
-                  }}
-                  whileTap={{ scale: 0.99 }}
-                  transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                <div
                   style={{
-                    width: '100%',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE.md,
-                    padding: SPACE.md,
-                    background: COLORS.surface,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                    color: COLORS.textPrimary,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    fontFamily: FONTS.sans,
-                    minHeight: 44,
+                    flexDirection: 'column',
+                    gap: SPACE.sm,
                   }}
                 >
+                  {/* UI Scale — opt-in zoom. Default stays at the
+                      tuned-in baseline; "Larger" applies a +15% zoom
+                      on the document element. See lib/uiScale.ts. */}
                   <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      flexShrink: 0,
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
+                      gap: SPACE.md,
+                      padding: SPACE.md,
+                      background: COLORS.surface,
                       border: `1px solid ${COLORS.border}`,
-                      background: COLORS.surfaceElev,
                       borderRadius: RADIUS.sm,
-                      color: COLORS.textMuted,
+                      minHeight: 44,
                     }}
                   >
-                    <Eye size={16} strokeWidth={1.75} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontFamily: FONTS.sans,
-                        fontSize: 15,
-                        fontWeight: 600,
-                        letterSpacing: '-0.01em',
-                        color: COLORS.textPrimary,
-                        marginBottom: 2,
+                        width: 36,
+                        height: 36,
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `1px solid ${COLORS.border}`,
+                        background: COLORS.surfaceElev,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.textMuted,
                       }}
                     >
-                      Contrast check
+                      <Type size={16} strokeWidth={1.75} />
                     </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 15,
+                          fontWeight: 600,
+                          letterSpacing: '-0.01em',
+                          color: COLORS.textPrimary,
+                          marginBottom: 2,
+                        }}
+                      >
+                        UI scale
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Default fits more on screen. Larger is easier to
+                        read at arm's length.
+                      </div>
+                    </div>
+                    {/* Segmented toggle. Two 44-tall buttons inside a
+                        bordered pill. Active option inverts to accent. */}
                     <div
+                      role="radiogroup"
+                      aria-label="UI scale"
                       style={{
-                        fontFamily: FONTS.sans,
-                        fontSize: 12,
-                        color: COLORS.textSecondary,
-                        lineHeight: 1.4,
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        overflow: 'hidden',
+                        background: COLORS.surfaceElev,
                       }}
                     >
-                      Preview textDim candidates against the canvas. Pick
-                      the tone that reads clearest at 3am.
+                      {(['default', 'large'] as const).map((option) => {
+                        const active = uiScale === option;
+                        return (
+                          <motion.button
+                            key={option}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => handleUiScaleChange(option)}
+                            whileTap={{ scale: 0.96 }}
+                            transition={{
+                              duration: MOTION.fast,
+                              ease: MOTION.ease,
+                            }}
+                            style={{
+                              minWidth: 64,
+                              height: 32,
+                              padding: `0 ${SPACE.md}px`,
+                              background: active
+                                ? COLORS.accent
+                                : 'transparent',
+                              border: 'none',
+                              color: active
+                                ? '#FFFFFF'
+                                : COLORS.textSecondary,
+                              cursor: 'pointer',
+                              fontFamily: FONTS.mono,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: '0.12em',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {option === 'default' ? 'Default' : 'Larger'}
+                          </motion.button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <ChevronRight
-                    size={16}
-                    color={COLORS.textMuted}
-                    strokeWidth={1.75}
-                  />
-                </motion.button>
+
+                  <motion.button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setContrastOpen(true);
+                    }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.md,
+                      padding: SPACE.md,
+                      background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                      color: COLORS.textPrimary,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontFamily: FONTS.sans,
+                      minHeight: 44,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `1px solid ${COLORS.border}`,
+                        background: COLORS.surfaceElev,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.textMuted,
+                      }}
+                    >
+                      <Eye size={16} strokeWidth={1.75} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 15,
+                          fontWeight: 600,
+                          letterSpacing: '-0.01em',
+                          color: COLORS.textPrimary,
+                          marginBottom: 2,
+                        }}
+                      >
+                        Contrast check
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 12,
+                          color: COLORS.textSecondary,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        Preview textDim candidates against the canvas. Pick
+                        the tone that reads clearest at 3am.
+                      </div>
+                    </div>
+                    <ChevronRight
+                      size={16}
+                      color={COLORS.textMuted}
+                      strokeWidth={1.75}
+                    />
+                  </motion.button>
+                </div>
               </Section>
 
               {/* ── SIGN OUT ─────────────────────────────────── */}

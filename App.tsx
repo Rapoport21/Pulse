@@ -66,6 +66,7 @@ import {
 } from './lib/surgeTaskTemplates';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
+import { initUiScale } from './lib/uiScale';
 import {
   COLORS,
   FONTS,
@@ -530,6 +531,14 @@ function App() {
   // Global haptic tap on every button/selection click (native + web).
   useEffect(() => {
     return installGlobalHapticListener();
+  }, []);
+
+  // Apply the persisted UI scale (default/large) once on mount. See
+  // lib/uiScale.ts — Settings → Display wires the toggle, this reads the
+  // flag from localStorage and applies it to the document element so the
+  // operator's choice survives reloads.
+  useEffect(() => {
+    initUiScale();
   }, []);
 
   // Listen for surge-activated pings from OTHER devices and fire the

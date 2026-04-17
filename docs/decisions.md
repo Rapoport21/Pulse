@@ -12,6 +12,47 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · Opt-in "Larger UI" toggle in Settings → Display
+
+**Context.** Baseline sizing is now the morning-of-pre-bump values (see
+the entry below this one). Some operators — iPads in bright light, worn
+screens, farther viewing distance — still want a larger read without
+changing the default everyone else sees. Native iOS accessibility zoom
+works but clipping is ugly and users don't know it's there.
+
+**Decision.** Ship a single toggle under Settings → Display named
+"UI scale" with two options, **Default** and **Larger**. Default is
+the current baseline. Larger applies a **+15% zoom** to the document
+element via `document.documentElement.style.zoom`. Preference persists
+to `localStorage` under key `pulse-ui-scale` and is re-applied once on
+app mount via `initUiScale()` in `App.tsx`. All lives in `lib/uiScale.ts`.
+
+**Why `zoom` and not a token swap.** Tokens in `components/design/tokens.ts`
+are absolute `px` values imported directly by ~50 files — a runtime
+token swap would require either a React context consumed by every
+`fontSize: TYPE.mono.size` call site or a full rem refactor. `zoom` on
+`<html>` scales every descendant uniformly (fonts, icons, borders,
+padding, spacing, chart axes) and is supported in WebKit (Safari,
+Capacitor iOS WebView), Blink (Chrome/Edge), and Gecko (Firefox ≥126,
+May 2024) — all three surfaces PULSE ships on.
+
+**Trade-offs accepted.** (a) Layouts that budget against `100vh` (e.g.,
+Horizon's single-viewport fit) may overflow in Larger and need vertical
+scroll. Users opting in accept this. (b) `window.innerWidth` reports
+the pre-zoom value so breakpoint media queries keep their boundaries —
+usually what we want. (c) 15% was picked as the same magnitude as the
+afternoon Pass-2 bump Nick called "way too big" when shipped as the
+default, but is the right order of magnitude as opt-in for operators
+who genuinely want it larger.
+
+**Rejected.** (a) A separate token file per scale. Doubles the source
+of truth and doesn't automatically cover new components. (b) A rem
+refactor before adding the toggle. Too much churn for a single opt-in
+knob. (c) Three options (small/default/large). Unnecessary — nobody has
+asked to go smaller.
+
+---
+
 ## 2026-04-17 · Sizing fully reverted to baseline; simulator rewrite kept
 
 **Context.** Three size passes shipped today, each rejected:
