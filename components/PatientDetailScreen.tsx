@@ -137,7 +137,7 @@ const Section: React.FC<{
             flexShrink: 0,
           }}
         >
-          <Icon size={12} strokeWidth={2} />
+          <Icon size={13} strokeWidth={2} />
         </div>
         <div style={{ minWidth: 0 }}>
           <Mono tone="muted" size="xs">
@@ -146,7 +146,7 @@ const Section: React.FC<{
           <div
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 600,
               color: COLORS.textPrimary,
               letterSpacing: '-0.003em',
@@ -195,7 +195,7 @@ const Field: React.FC<{
             borderRadius: RADIUS.sm,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: 500,
             outline: 'none',
             transition: `all ${MOTION.fast}s ease`,
@@ -270,7 +270,7 @@ const StatBox: React.FC<{
       <div
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: 700,
           color,
           letterSpacing: '-0.01em',
@@ -421,7 +421,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 <span
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: 700,
                     color: COLORS.textPrimary,
                     letterSpacing: '-0.003em',
@@ -447,12 +447,12 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
             icon={
               isSaving ? (
                 <Loader2
-                  size={13}
+                  size={14}
                   strokeWidth={2}
                   style={{ animation: 'spin 1.2s linear infinite' }}
                 />
               ) : (
-                <Save size={13} strokeWidth={2} />
+                <Save size={14} strokeWidth={2} />
               )
             }
           >
@@ -535,7 +535,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           <Mono tone="dim" size="xs">{step.time}</Mono>
                           <span style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: step.done ? 600 : 500,
                             color: step.done ? COLORS.textPrimary : COLORS.textMuted,
                           }}>
@@ -545,7 +545,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         </div>
                         <span style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: COLORS.textSecondary,
                           lineHeight: 1.4,
                         }}>
@@ -562,7 +562,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 title="Care Team"
                 icon={UserCheck}
                 action={
-                  <TacticalButton variant="ghost" size="sm" icon={<ArrowRightLeft size={12} />} onClick={() => setShowHandoff(true)}>
+                  <TacticalButton variant="ghost" size="sm" icon={<ArrowRightLeft size={13} />} onClick={() => setShowHandoff(true)}>
                     Handoff
                   </TacticalButton>
                 }
@@ -600,7 +600,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         <div style={{ minWidth: 0 }}>
                           <div style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: 500,
                             color: COLORS.textPrimary,
                             lineHeight: 1.25,
@@ -664,7 +664,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     <span
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: 700,
                         color: COLORS.warn,
                       }}
@@ -685,7 +685,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     marginBottom: 6,
                   }}
                 >
-                  <Activity size={11} strokeWidth={2} color={COLORS.textMuted} />
+                  <Activity size={12} strokeWidth={2} color={COLORS.textMuted} />
                   <BracketLabel tone="muted" size="xs">
                     PAIN SCALE · 0–10
                   </BracketLabel>
@@ -712,7 +712,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 32,
+                        fontSize: 35,
                         fontWeight: 700,
                         color: COLORS.textPrimary,
                         fontVariantNumeric: 'tabular-nums',
@@ -783,7 +783,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   size="sm"
                   fullWidth
                   onClick={() => showToast('Add Intake dialog opened', 'info')}
-                  icon={<Plus size={12} strokeWidth={2} />}
+                  icon={<Plus size={13} strokeWidth={2} />}
                 >
                   Add Intake
                 </TacticalButton>
@@ -792,7 +792,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   size="sm"
                   fullWidth
                   onClick={() => showToast('Add Output dialog opened', 'info')}
-                  icon={<Plus size={12} strokeWidth={2} />}
+                  icon={<Plus size={13} strokeWidth={2} />}
                 >
                   Add Output
                 </TacticalButton>
@@ -823,7 +823,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     borderRadius: RADIUS.sm,
                     color: COLORS.textPrimary,
                     fontFamily: FONTS.sans,
-                    fontSize: 13,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     outline: 'none',
                     resize: 'vertical',
@@ -845,7 +845,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertTriangle size={12} strokeWidth={2} color={COLORS.crit} />
+                    <AlertTriangle size={13} strokeWidth={2} color={COLORS.crit} />
                     <BracketLabel tone="muted" size="xs">
                       ALLERGIES
                     </BracketLabel>
@@ -863,13 +863,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       color: COLORS.textSecondary,
                       cursor: 'pointer',
                       fontFamily: FONTS.mono,
-                      fontSize: 10,
+                      fontSize: 11,
                       letterSpacing: '0.14em',
                       textTransform: 'uppercase',
                       fontWeight: 500,
                     }}
                   >
-                    <Plus size={11} strokeWidth={2} /> Add
+                    <Plus size={12} strokeWidth={2} /> Add
                   </button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -903,7 +903,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => showToast('Barcode Scanner Activated', 'info')}
-                  icon={<ScanLine size={12} strokeWidth={2} />}
+                  icon={<ScanLine size={13} strokeWidth={2} />}
                 >
                   Scan to Admin
                 </TacticalButton>
@@ -917,13 +917,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     return (
                       <>
                         <MedRow
-                          icon={<CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />}
+                          icon={<CheckCircle2 size={15} color={COLORS.ok} strokeWidth={2} />}
                           title="Ondansetron (Zofran)"
                           sub="4mg IV Push · Given 14:30"
                           status="given"
                         />
                         <MedRow
-                          icon={<Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />}
+                          icon={<Syringe size={15} color={COLORS.textSecondary} strokeWidth={2} />}
                           title="Morphine Sulfate"
                           sub="2mg IV Push · Due 16:00"
                           action={
@@ -943,10 +943,10 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         key={med.id}
                         icon={
                           isCompleted
-                            ? <CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />
+                            ? <CheckCircle2 size={15} color={COLORS.ok} strokeWidth={2} />
                             : isHighAlert
-                              ? <AlertTriangle size={14} color={COLORS.warn} strokeWidth={2} />
-                              : <Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />
+                              ? <AlertTriangle size={15} color={COLORS.warn} strokeWidth={2} />
+                              : <Syringe size={15} color={COLORS.textSecondary} strokeWidth={2} />
                         }
                         title={med.medication}
                         sub={`${med.dose} ${med.route} · ${med.frequency}${med.indication ? ` · ${med.indication}` : ''}`}
@@ -1017,7 +1017,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           <div style={{ minWidth: 0 }}>
                             <div style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: 500,
                               color: isPending ? COLORS.textMuted : COLORS.textPrimary,
                               lineHeight: 1.2,
@@ -1027,13 +1027,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           </div>
                           <div style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: 600,
                             color: isPending ? COLORS.textMuted : isCritical ? COLORS.crit : isAbnormal ? COLORS.warn : COLORS.textPrimary,
                             letterSpacing: '0.04em',
                           }}>
                             {isPending ? '...' : `${lab.value}`}
-                            {lab.unit && !isPending && <span style={{ fontSize: 9, color: COLORS.textMuted, marginLeft: 2 }}>{lab.unit}</span>}
+                            {lab.unit && !isPending && <span style={{ fontSize: 10, color: COLORS.textMuted, marginLeft: 2 }}>{lab.unit}</span>}
                           </div>
                           <Mono tone="dim" size="xs">
                             {lab.referenceLow !== undefined && lab.referenceHigh !== undefined
@@ -1042,7 +1042,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           </Mono>
                           <span style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 9,
+                            fontSize: 10,
                             fontWeight: 600,
                             letterSpacing: '0.1em',
                             color: flagColor,
@@ -1068,7 +1068,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   title="Clinical Notes"
                   icon={StickyNote}
                   action={
-                    <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowNoteComposer(true)}>
+                    <TacticalButton variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setShowNoteComposer(true)}>
                       Add Note
                     </TacticalButton>
                   }
@@ -1102,7 +1102,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                             <Mono tone="muted" size="xs">{note.authorId}</Mono>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            {note.signed && <CheckCircle2 size={10} color={COLORS.ok} />}
+                            {note.signed && <CheckCircle2 size={11} color={COLORS.ok} />}
                             <Mono tone="dim" size="xs">
                               {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </Mono>
@@ -1110,7 +1110,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         </div>
                         <div style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 13,
                           color: COLORS.textSecondary,
                           lineHeight: 1.5,
                           whiteSpace: 'pre-wrap',
@@ -1147,7 +1147,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   title="Imaging"
                   icon={ImageIcon}
                   action={
-                    <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowOrderEntry(true)}>
+                    <TacticalButton variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setShowOrderEntry(true)}>
                       Order
                     </TacticalButton>
                   }
@@ -1175,7 +1175,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: 500,
                                 color: COLORS.textPrimary,
                                 lineHeight: 1.2,
@@ -1198,7 +1198,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           {img.resultSummary && (
                             <div style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 11,
+                              fontSize: 12,
                               color: COLORS.textSecondary,
                               lineHeight: 1.4,
                               padding: `${SPACE.xs}px ${SPACE.sm}px`,
@@ -1274,13 +1274,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                             transition: `all ${MOTION.fast}s ease`,
                           }}
                         >
-                          {completed && <CheckCircle2 size={11} strokeWidth={2.5} />}
+                          {completed && <CheckCircle2 size={12} strokeWidth={2.5} />}
                         </button>
                         <div style={{ minWidth: 0 }}>
                           <div
                             style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: 500,
                               color: completed ? COLORS.textMuted : COLORS.textPrimary,
                               textDecoration: completed ? 'line-through' : 'none',
@@ -1297,7 +1297,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                               marginTop: 2,
                             }}
                           >
-                            <Clock size={10} strokeWidth={2} color={COLORS.textDim} />
+                            <Clock size={11} strokeWidth={2} color={COLORS.textDim} />
                             <Mono tone="dim" size="xs">
                               Due {order.time}
                             </Mono>
@@ -1357,7 +1357,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: COLORS.textPrimary,
                         marginTop: 2,
                       }}
@@ -1480,7 +1480,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               flexShrink: 0,
             }}
           >
-            <ChevronLeft size={18} strokeWidth={2} />
+            <ChevronLeft size={20} strokeWidth={2} />
           </motion.button>
 
           <div
@@ -1505,7 +1505,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   letterSpacing: '-0.003em',
@@ -1531,12 +1531,12 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
           icon={
             isSaving ? (
               <Loader2
-                size={13}
+                size={14}
                 strokeWidth={2}
                 style={{ animation: 'spin 1.2s linear infinite' }}
               />
             ) : (
-              <Save size={13} strokeWidth={2} />
+              <Save size={14} strokeWidth={2} />
             )
           }
         >
@@ -1624,7 +1624,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         <Mono tone="dim" size="xs">{step.time}</Mono>
                         <span style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: step.done ? 600 : 500,
                           color: step.done ? COLORS.textPrimary : COLORS.textMuted,
                         }}>
@@ -1634,7 +1634,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       </div>
                       <span style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 11,
+                        fontSize: 12,
                         color: COLORS.textSecondary,
                         lineHeight: 1.4,
                       }}>
@@ -1654,7 +1654,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
               title="Care Team"
               icon={UserCheck}
               action={
-                <TacticalButton variant="ghost" size="sm" icon={<ArrowRightLeft size={12} />} onClick={() => setShowHandoff(true)}>
+                <TacticalButton variant="ghost" size="sm" icon={<ArrowRightLeft size={13} />} onClick={() => setShowHandoff(true)}>
                   Handoff
                 </TacticalButton>
               }
@@ -1692,7 +1692,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       <div style={{ minWidth: 0 }}>
                         <div style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          fontSize: 14,
                           fontWeight: 500,
                           color: COLORS.textPrimary,
                           lineHeight: 1.25,
@@ -1755,7 +1755,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   <span
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: 700,
                       color: COLORS.warn,
                     }}
@@ -1776,7 +1776,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   marginBottom: 6,
                 }}
               >
-                <Activity size={11} strokeWidth={2} color={COLORS.textMuted} />
+                <Activity size={12} strokeWidth={2} color={COLORS.textMuted} />
                 <BracketLabel tone="muted" size="xs">
                   PAIN SCALE · 0–10
                 </BracketLabel>
@@ -1803,7 +1803,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   <div
                     style={{
                       fontFamily: FONTS.mono,
-                      fontSize: 32,
+                      fontSize: 35,
                       fontWeight: 700,
                       color: COLORS.textPrimary,
                       fontVariantNumeric: 'tabular-nums',
@@ -1874,7 +1874,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 size="sm"
                 fullWidth
                 onClick={() => showToast('Add Intake dialog opened', 'info')}
-                icon={<Plus size={12} strokeWidth={2} />}
+                icon={<Plus size={13} strokeWidth={2} />}
               >
                 Add Intake
               </TacticalButton>
@@ -1883,7 +1883,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 size="sm"
                 fullWidth
                 onClick={() => showToast('Add Output dialog opened', 'info')}
-                icon={<Plus size={12} strokeWidth={2} />}
+                icon={<Plus size={13} strokeWidth={2} />}
               >
                 Add Output
               </TacticalButton>
@@ -1914,7 +1914,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   borderRadius: RADIUS.sm,
                   color: COLORS.textPrimary,
                   fontFamily: FONTS.sans,
-                  fontSize: 13,
+                  fontSize: 14,
                   lineHeight: 1.5,
                   outline: 'none',
                   resize: 'vertical',
@@ -1936,7 +1936,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <AlertTriangle size={12} strokeWidth={2} color={COLORS.crit} />
+                  <AlertTriangle size={13} strokeWidth={2} color={COLORS.crit} />
                   <BracketLabel tone="muted" size="xs">
                     ALLERGIES
                   </BracketLabel>
@@ -1954,13 +1954,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     color: COLORS.textSecondary,
                     cursor: 'pointer',
                     fontFamily: FONTS.mono,
-                    fontSize: 10,
+                    fontSize: 11,
                     letterSpacing: '0.14em',
                     textTransform: 'uppercase',
                     fontWeight: 500,
                   }}
                 >
-                  <Plus size={11} strokeWidth={2} /> Add
+                  <Plus size={12} strokeWidth={2} /> Add
                 </button>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1994,7 +1994,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => showToast('Barcode Scanner Activated', 'info')}
-                icon={<ScanLine size={12} strokeWidth={2} />}
+                icon={<ScanLine size={13} strokeWidth={2} />}
               >
                 Scan to Admin
               </TacticalButton>
@@ -2008,13 +2008,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   return (
                     <>
                       <MedRow
-                        icon={<CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />}
+                        icon={<CheckCircle2 size={15} color={COLORS.ok} strokeWidth={2} />}
                         title="Ondansetron (Zofran)"
                         sub="4mg IV Push · Given 14:30"
                         status="given"
                       />
                       <MedRow
-                        icon={<Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />}
+                        icon={<Syringe size={15} color={COLORS.textSecondary} strokeWidth={2} />}
                         title="Morphine Sulfate"
                         sub="2mg IV Push · Due 16:00"
                         action={
@@ -2034,10 +2034,10 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       key={med.id}
                       icon={
                         isCompleted
-                          ? <CheckCircle2 size={14} color={COLORS.ok} strokeWidth={2} />
+                          ? <CheckCircle2 size={15} color={COLORS.ok} strokeWidth={2} />
                           : isHighAlert
-                            ? <AlertTriangle size={14} color={COLORS.warn} strokeWidth={2} />
-                            : <Syringe size={14} color={COLORS.textSecondary} strokeWidth={2} />
+                            ? <AlertTriangle size={15} color={COLORS.warn} strokeWidth={2} />
+                            : <Syringe size={15} color={COLORS.textSecondary} strokeWidth={2} />
                       }
                       title={med.medication}
                       sub={`${med.dose} ${med.route} · ${med.frequency}${med.indication ? ` · ${med.indication}` : ''}`}
@@ -2112,7 +2112,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         <div style={{ minWidth: 0 }}>
                           <div style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: 500,
                             color: isPending ? COLORS.textMuted : COLORS.textPrimary,
                             lineHeight: 1.2,
@@ -2122,13 +2122,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         </div>
                         <div style={{
                           fontFamily: FONTS.mono,
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: 600,
                           color: isPending ? COLORS.textMuted : isCritical ? COLORS.crit : isAbnormal ? COLORS.warn : COLORS.textPrimary,
                           letterSpacing: '0.04em',
                         }}>
                           {isPending ? '...' : `${lab.value}`}
-                          {lab.unit && !isPending && <span style={{ fontSize: 9, color: COLORS.textMuted, marginLeft: 2 }}>{lab.unit}</span>}
+                          {lab.unit && !isPending && <span style={{ fontSize: 10, color: COLORS.textMuted, marginLeft: 2 }}>{lab.unit}</span>}
                         </div>
                         <Mono tone="dim" size="xs">
                           {lab.referenceLow !== undefined && lab.referenceHigh !== undefined
@@ -2137,7 +2137,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         </Mono>
                         <span style={{
                           fontFamily: FONTS.mono,
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: 600,
                           letterSpacing: '0.1em',
                           color: flagColor,
@@ -2165,7 +2165,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 title="Clinical Notes"
                 icon={StickyNote}
                 action={
-                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowNoteComposer(true)}>
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setShowNoteComposer(true)}>
                     Add Note
                   </TacticalButton>
                 }
@@ -2200,7 +2200,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           <Mono tone="muted" size="xs">{note.authorId}</Mono>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {note.signed && <CheckCircle2 size={10} color={COLORS.ok} />}
+                          {note.signed && <CheckCircle2 size={11} color={COLORS.ok} />}
                           <Mono tone="dim" size="xs">
                             {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Mono>
@@ -2209,7 +2209,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       {/* Note content — markdown-like rendering */}
                       <div style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 12,
+                        fontSize: 13,
                         color: COLORS.textSecondary,
                         lineHeight: 1.5,
                         whiteSpace: 'pre-wrap',
@@ -2248,7 +2248,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 title="Imaging"
                 icon={ImageIcon}
                 action={
-                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={12} />} onClick={() => setShowOrderEntry(true)}>
+                  <TacticalButton variant="ghost" size="sm" icon={<Plus size={13} />} onClick={() => setShowOrderEntry(true)}>
                     Order
                   </TacticalButton>
                 }
@@ -2276,7 +2276,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: 500,
                               color: COLORS.textPrimary,
                               lineHeight: 1.2,
@@ -2299,7 +2299,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                         {img.resultSummary && (
                           <div style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: COLORS.textSecondary,
                             lineHeight: 1.4,
                             padding: `${SPACE.xs}px ${SPACE.sm}px`,
@@ -2375,13 +2375,13 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           transition: `all ${MOTION.fast}s ease`,
                         }}
                       >
-                        {completed && <CheckCircle2 size={11} strokeWidth={2.5} />}
+                        {completed && <CheckCircle2 size={12} strokeWidth={2.5} />}
                       </button>
                       <div style={{ minWidth: 0 }}>
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 14,
                             fontWeight: 500,
                             color: completed ? COLORS.textMuted : COLORS.textPrimary,
                             textDecoration: completed ? 'line-through' : 'none',
@@ -2398,7 +2398,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                             marginTop: 2,
                           }}
                         >
-                          <Clock size={10} strokeWidth={2} color={COLORS.textDim} />
+                          <Clock size={11} strokeWidth={2} color={COLORS.textDim} />
                           <Mono tone="dim" size="xs">
                             Due {order.time}
                           </Mono>
@@ -2458,7 +2458,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   <div
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 13,
+                      fontSize: 14,
                       color: COLORS.textPrimary,
                       marginTop: 2,
                     }}
@@ -2563,7 +2563,7 @@ const IoBlock: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 24,
+          fontSize: 26,
           fontWeight: 700,
           color,
           fontVariantNumeric: 'tabular-nums',
@@ -2575,7 +2575,7 @@ const IoBlock: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 11,
+          fontSize: 12,
           color,
           opacity: 0.6,
         }}
@@ -2606,7 +2606,7 @@ const AllergyChip: React.FC<{ label: string; critical?: boolean }> = ({
       border: `1px solid ${critical ? COLORS.accent : COLORS.border}`,
       borderRadius: RADIUS.sm,
       fontFamily: FONTS.sans,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: 600,
       color: critical ? COLORS.accent : COLORS.textSecondary,
       boxShadow: critical ? `0 0 12px ${COLORS.accentGlow}` : 'none',
@@ -2670,7 +2670,7 @@ const MedRow: React.FC<{
         <div
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 600,
             color: COLORS.textPrimary,
             lineHeight: 1.25,

@@ -601,7 +601,7 @@ export const KbdKey: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       height: 18,
       padding: '0 5px',
       fontFamily: FONTS.mono,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: 500,
       color: COLORS.textSecondary,
       background: COLORS.surface,
@@ -833,7 +833,7 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
           alignItems: 'center',
           gap: 3,
           fontFamily: FONTS.mono,
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: 500,
           letterSpacing: '0.12em',
           color: confColor,
@@ -876,7 +876,7 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
       }} />
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: 500,
         letterSpacing: '0.14em',
         color: fColor,
@@ -886,7 +886,7 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
       </span>
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: 500,
         letterSpacing: '0.1em',
         color: confColor,
@@ -895,7 +895,7 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
       </span>
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: 500,
         letterSpacing: '0.1em',
         color: COLORS.textDim,

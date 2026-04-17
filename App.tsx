@@ -678,7 +678,7 @@ function App() {
       id: 'mci-inbound',
       label: 'MCI — Bus Accident',
       description: '3 trauma inbound · triggers surge',
-      icon: <Ambulance size={13} strokeWidth={2} />,
+      icon: <Ambulance size={14} strokeWidth={2} />,
       tone: 'crit',
       action: () => {
         // Inject 3 MCI EMS runs across all devices
@@ -696,7 +696,7 @@ function App() {
       id: 'fill-beds',
       label: 'Increase Census',
       description: 'Fill 4 empty beds with patients',
-      icon: <TrendingUp size={13} strokeWidth={2} />,
+      icon: <TrendingUp size={14} strokeWidth={2} />,
       tone: 'warn',
       action: () => {
         setBedUnits((prev) => {
@@ -729,7 +729,7 @@ function App() {
       id: 'free-beds',
       label: 'Decrease Census',
       description: 'Discharge 3 patients to free beds',
-      icon: <TrendingDown size={13} strokeWidth={2} />,
+      icon: <TrendingDown size={14} strokeWidth={2} />,
       tone: 'ok',
       action: () => {
         setBedUnits((prev) => {
@@ -761,7 +761,7 @@ function App() {
       id: 'ems-inject',
       label: 'Add EMS Inbound',
       description: 'Single high-acuity run inbound',
-      icon: <Zap size={13} strokeWidth={2} />,
+      icon: <Zap size={14} strokeWidth={2} />,
       tone: 'warn',
       action: () => {
         const run = {
@@ -784,7 +784,7 @@ function App() {
       id: 'reset-all',
       label: 'Reset Simulation',
       description: 'Return all state to baseline',
-      icon: <RotateCcw size={13} strokeWidth={2} />,
+      icon: <RotateCcw size={14} strokeWidth={2} />,
       action: () => {
         setSurgeState(INITIAL_SURGE_STATE);
         setUrgentTasks([]);
@@ -1036,11 +1036,11 @@ function App() {
               }
             />
             {toast.type === 'success' ? (
-              <CheckCircle2 size={14} color={COLORS.ok} />
+              <CheckCircle2 size={15} color={COLORS.ok} />
             ) : toast.type === 'error' ? (
-              <AlertOctagon size={14} color={COLORS.crit} />
+              <AlertOctagon size={15} color={COLORS.crit} />
             ) : (
-              <Activity size={14} color={COLORS.info} />
+              <Activity size={15} color={COLORS.info} />
             )}
             <Mono
               tone={toast.type === 'success' ? 'ok' : toast.type === 'error' ? 'crit' : 'secondary'}
@@ -1147,7 +1147,7 @@ function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 15,
                     fontWeight: 700,
                     color: COLORS.textPrimary,
                     borderRadius: RADIUS.sm,
@@ -1180,8 +1180,8 @@ function App() {
                       compact={isCompactNav}
                       title={isCompactNav ? item.label : undefined}
                     >
-                      <Icon size={16} strokeWidth={2} />
-                      {!isCompactNav && <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>}
+                      <Icon size={17} strokeWidth={2} />
+                      {!isCompactNav && <span style={{ fontSize: 14, fontWeight: 500 }}>{item.label}</span>}
                     </NavButton>
                   );
                 })}
@@ -1204,7 +1204,7 @@ function App() {
                 }}
                 label="Assistant"
               >
-                <MessageSquare size={16} strokeWidth={2} />
+                <MessageSquare size={17} strokeWidth={2} />
               </IconButton>
 
               {/* Notifications */}
@@ -1218,7 +1218,7 @@ function App() {
                   label="Alerts"
                   badge
                 >
-                  <Bell size={16} strokeWidth={2} />
+                  <Bell size={17} strokeWidth={2} />
                 </IconButton>
 
                 <AnimatePresence>
@@ -1257,7 +1257,7 @@ function App() {
                   <span
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 12,
+                      fontSize: 13,
                       fontWeight: 500,
                       color: COLORS.textPrimary,
                       letterSpacing: '-0.005em',
@@ -1280,7 +1280,7 @@ function App() {
                     border: `1px solid ${COLORS.border}`,
                     borderRadius: RADIUS.sm,
                     fontFamily: FONTS.mono,
-                    fontSize: 10,
+                    fontSize: 11,
                     letterSpacing: '0.08em',
                     color: COLORS.textPrimary,
                     fontWeight: 600,
@@ -1294,7 +1294,7 @@ function App() {
                 onClick={() => setShowSettings(true)}
                 label="Settings"
               >
-                <SlidersHorizontal size={14} strokeWidth={2} />
+                <SlidersHorizontal size={15} strokeWidth={2} />
               </IconButton>
 
               {isCompactNav ? (
@@ -1302,13 +1302,13 @@ function App() {
                   onClick={() => setShowHandoverModal(true)}
                   label="End Shift"
                 >
-                  <Clock size={14} strokeWidth={2} />
+                  <Clock size={15} strokeWidth={2} />
                 </IconButton>
               ) : (
                 <TacticalButton
                   variant="secondary"
                   size="sm"
-                  icon={<Clock size={12} strokeWidth={2} />}
+                  icon={<Clock size={13} strokeWidth={2} />}
                   onClick={() => setShowHandoverModal(true)}
                 >
                   End Shift
@@ -1320,7 +1320,7 @@ function App() {
                   onClick={() => setSystemStatus((s) => (s === 'normal' ? 'stale' : 'normal'))}
                   label="Simulate Outage"
                 >
-                  <AlertOctagon size={16} strokeWidth={2} />
+                  <AlertOctagon size={17} strokeWidth={2} />
                 </IconButton>
               )}
             </div>
@@ -1564,7 +1564,7 @@ const TacticalBootScreen: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: FONTS.sans,
-              fontSize: 36,
+              fontSize: 40,
               fontWeight: 700,
               color: COLORS.textPrimary,
               borderRadius: RADIUS.sm,
@@ -1639,7 +1639,7 @@ const TacticalBootScreen: React.FC = () => {
                 style={{
                   flex: 1,
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 13,
                   color: COLORS.textSecondary,
                   letterSpacing: '0.02em',
                 }}
@@ -1739,7 +1739,7 @@ const NavButton: React.FC<{
         borderRadius: RADIUS.sm,
         color: active ? COLORS.textPrimary : hovered ? COLORS.textSecondary : COLORS.textMuted,
         fontFamily: FONTS.sans,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 500,
         cursor: 'pointer',
         letterSpacing: '-0.003em',
@@ -1864,7 +1864,7 @@ const NotificationsDropdown: React.FC<{
           alignItems: 'center',
         }}
       >
-        <X size={14} strokeWidth={2} />
+        <X size={15} strokeWidth={2} />
       </button>
     </div>
     <div style={{ maxHeight: 400, overflowY: 'auto' }}>
@@ -1904,7 +1904,7 @@ const NotificationsDropdown: React.FC<{
           <p
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 12.5,
+              fontSize: 13.5,
               color: COLORS.textSecondary,
               lineHeight: 1.4,
               margin: 0,
@@ -1930,7 +1930,7 @@ const NotificationsDropdown: React.FC<{
           border: 'none',
           color: COLORS.textMuted,
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 500,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',

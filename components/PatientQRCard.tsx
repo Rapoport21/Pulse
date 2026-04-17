@@ -139,7 +139,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           <span
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: 800,
               letterSpacing: '-0.02em',
               color: '#000000',
@@ -181,7 +181,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           <div
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 12,
               color: '#B91C1C',
               padding: 24,
               textAlign: 'center',
@@ -193,7 +193,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           <div
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 12,
               color: '#6B7280',
               padding: 24,
             }}
@@ -208,7 +208,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
         <div
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 700,
             letterSpacing: '-0.01em',
             lineHeight: 1.15,
@@ -221,7 +221,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           style={{
             marginTop: 4,
             fontFamily: FONTS.mono,
-            fontSize: 11,
+            fontSize: 12,
             letterSpacing: '0.08em',
             color: '#000000',
           }}
@@ -241,7 +241,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           background: '#000000',
           color: '#FFFFFF',
           fontFamily: FONTS.mono,
-          fontSize: 11,
+          fontSize: 12,
           letterSpacing: '0.12em',
         }}
       >
@@ -293,7 +293,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
               background: '#000000',
               color: '#FFFFFF',
               fontFamily: FONTS.mono,
-              fontSize: 10,
+              fontSize: 11,
               letterSpacing: '0.14em',
               fontWeight: 700,
             }}
@@ -303,7 +303,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           <span
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: 600,
               color: '#000000',
               overflow: 'hidden',
@@ -324,7 +324,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
             style={{
               marginTop: 2,
               fontFamily: FONTS.sans,
-              fontSize: 12,
+              fontSize: 13,
               lineHeight: 1.35,
               color: '#000000',
             }}
@@ -345,8 +345,8 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
           gap: 8,
         }}
       >
-        <span style={{ ...monoLabel, fontSize: 9 }}>{generatedAt}</span>
-        <span style={{ ...monoLabel, fontSize: 9 }}>PULSE · CONFIDENTIAL</span>
+        <span style={{ ...monoLabel, fontSize: 10 }}>{generatedAt}</span>
+        <span style={{ ...monoLabel, fontSize: 10 }}>PULSE · CONFIDENTIAL</span>
       </div>
 
       {cutLine && (
@@ -358,7 +358,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
             paddingTop: 4,
             textAlign: 'center',
             fontFamily: FONTS.mono,
-            fontSize: 9,
+            fontSize: 10,
             letterSpacing: '0.18em',
             color: '#000000',
           }}
@@ -376,7 +376,7 @@ export const PatientQRCard: React.FC<PatientQRCardProps> = ({
 
 const monoLabel: React.CSSProperties = {
   fontFamily: FONTS.mono,
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 500,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
@@ -440,7 +440,7 @@ const StatusCell: React.FC<{
       <div
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 9,
+          fontSize: 10,
           fontWeight: 500,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
@@ -454,7 +454,7 @@ const StatusCell: React.FC<{
         style={{
           marginTop: 2,
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: isWarn || isCritical ? 700 : 600,
           letterSpacing: '-0.005em',
           color: isCritical ? '#FFFFFF' : '#000000',

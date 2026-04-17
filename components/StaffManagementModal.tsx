@@ -235,10 +235,10 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               overflow: 'hidden',
             }}
           >
-            <CornerBracket position="tl" color={COLORS.borderStrong} size={10} thickness={1} inset={-1} />
-            <CornerBracket position="tr" color={COLORS.borderStrong} size={10} thickness={1} inset={-1} />
-            <CornerBracket position="bl" color={COLORS.borderStrong} size={10} thickness={1} inset={-1} />
-            <CornerBracket position="br" color={COLORS.borderStrong} size={10} thickness={1} inset={-1} />
+            <CornerBracket position="tl" color={COLORS.borderStrong} size={11} thickness={1} inset={-1} />
+            <CornerBracket position="tr" color={COLORS.borderStrong} size={11} thickness={1} inset={-1} />
+            <CornerBracket position="bl" color={COLORS.borderStrong} size={11} thickness={1} inset={-1} />
+            <CornerBracket position="br" color={COLORS.borderStrong} size={11} thickness={1} inset={-1} />
 
             {/* Header */}
             <div
@@ -268,7 +268,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     color: COLORS.textSecondary,
                   }}
                 >
-                  <Users size={16} strokeWidth={2} />
+                  <Users size={17} strokeWidth={2} />
                 </div>
                 <div>
                   <BracketLabel tone="secondary" size="xs">
@@ -297,7 +297,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                   disabled={isAIAssigning || !ai}
                   onClick={handleAIAssign}
                   title={!ai ? 'AI offline — VITE_GEMINI_API_KEY not set' : undefined}
-                  icon={<Bot size={13} strokeWidth={2} />}
+                  icon={<Bot size={14} strokeWidth={2} />}
                 >
                   {isAIAssigning
                     ? 'Analyzing Load…'
@@ -329,7 +329,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     e.currentTarget.style.color = COLORS.textMuted;
                   }}
                 >
-                  <X size={14} strokeWidth={2} />
+                  <X size={15} strokeWidth={2} />
                 </button>
               </div>
             </div>
@@ -401,7 +401,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                         padding: SPACE['2xl'],
                         color: COLORS.textDim,
                         fontFamily: FONTS.mono,
-                        fontSize: 11,
+                        fontSize: 12,
                         letterSpacing: '0.14em',
                         textTransform: 'uppercase',
                       }}
@@ -446,7 +446,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                         }}
                       >
                         <GripVertical
-                          size={13}
+                          size={14}
                           strokeWidth={2}
                           color={COLORS.textDim}
                           style={{ flexShrink: 0 }}
@@ -464,13 +464,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             flexShrink: 0,
                           }}
                         >
-                          {isSelected && <Check size={11} strokeWidth={3} color="#fff" />}
+                          {isSelected && <Check size={12} strokeWidth={3} color="#fff" />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div
                             style={{
                               fontFamily: FONTS.sans,
-                              fontSize: 13,
+                              fontSize: 14,
                               fontWeight: 600,
                               color: COLORS.textPrimary,
                               lineHeight: 1.25,
@@ -527,7 +527,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                               borderRadius: RADIUS.sm,
                               color: COLORS.textPrimary,
                               fontFamily: FONTS.mono,
-                              fontSize: 11,
+                              fontSize: 12,
                               letterSpacing: '0.04em',
                               outline: 'none',
                               cursor: 'pointer',
@@ -621,7 +621,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                             <h4
                               style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: 600,
                                 color: COLORS.textPrimary,
                                 margin: '2px 0 0',
@@ -680,7 +680,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                 <div
                                   style={{
                                     fontFamily: FONTS.sans,
-                                    fontSize: 12,
+                                    fontSize: 13,
                                     color: COLORS.textPrimary,
                                     fontWeight: 500,
                                     whiteSpace: 'nowrap',
@@ -726,7 +726,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                   e.currentTarget.style.color = COLORS.textDim;
                                 }}
                               >
-                                <Minus size={11} strokeWidth={2.5} />
+                                <Minus size={12} strokeWidth={2.5} />
                               </button>
                             </div>
                           ))}
@@ -742,7 +742,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                 borderRadius: RADIUS.sm,
                                 color: COLORS.textDim,
                                 fontFamily: FONTS.mono,
-                                fontSize: 10,
+                                fontSize: 11,
                                 letterSpacing: '0.16em',
                                 textTransform: 'uppercase',
                                 background: COLORS.bgDeep,

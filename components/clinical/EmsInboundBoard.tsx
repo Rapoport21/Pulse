@@ -128,11 +128,11 @@ const ActivationPill: React.FC<{ level: EmsInbound['activationLevel'] }> = ({ le
         borderRadius: RADIUS.sm,
       }}
     >
-      <AlertTriangle size={10} color={color} strokeWidth={2.5} />
+      <AlertTriangle size={11} color={color} strokeWidth={2.5} />
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 700,
           color,
           letterSpacing: '0.12em',
@@ -226,7 +226,7 @@ const EtaRing: React.FC<{ etaSeconds: number; arrived: boolean; size?: number }>
           <div
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 8,
+              fontSize: 9,
               fontWeight: 500,
               color: COLORS.textMuted,
               letterSpacing: '0.1em',
@@ -298,7 +298,7 @@ const FieldVitalsStrip: React.FC<{ vitals: EmsInbound['fieldVitals'] }> = ({ vit
               <div
                 style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: 700,
                   color,
                   fontVariantNumeric: 'tabular-nums',
@@ -358,11 +358,11 @@ const EmsRow: React.FC<{
           <EtaRing etaSeconds={run.etaSeconds} arrived={run.arrived} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, flexWrap: 'wrap' }}>
-              <ModeIcon size={12} strokeWidth={2} color={COLORS.textSecondary} />
+              <ModeIcon size={13} strokeWidth={2} color={COLORS.textSecondary} />
               <span
                 style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   letterSpacing: '0.05em',
@@ -375,7 +375,7 @@ const EmsRow: React.FC<{
                 <span
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: 700,
                     color: COLORS.ok,
                     letterSpacing: '0.16em',
@@ -396,7 +396,7 @@ const EmsRow: React.FC<{
                 gap: SPACE.sm,
                 color: COLORS.textSecondary,
                 fontFamily: FONTS.sans,
-                fontSize: 12,
+                fontSize: 13,
               }}
             >
               {(run.age != null || run.sex) && (
@@ -432,7 +432,7 @@ const EmsRow: React.FC<{
               cursor: 'pointer',
             }}
           >
-            <CheckCircle2 size={14} strokeWidth={2} />
+            <CheckCircle2 size={15} strokeWidth={2} />
           </motion.button>
         </div>
 
@@ -441,7 +441,7 @@ const EmsRow: React.FC<{
           style={{
             marginTop: SPACE.md,
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: 500,
             color: COLORS.textPrimary,
             lineHeight: 1.45,
@@ -475,7 +475,7 @@ const EmsRow: React.FC<{
               style={{
                 marginTop: 3,
                 fontFamily: FONTS.mono,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 color: COLORS.textSecondary,
                 lineHeight: 1.5,
@@ -508,7 +508,7 @@ const BoardBody: React.FC<{
       >
         <EmptyState
           compact
-          icon={<Radio size={18} strokeWidth={1.8} />}
+          icon={<Radio size={20} strokeWidth={1.8} />}
           label="NO INBOUND TRAFFIC"
           description="Waiting on radio — new runs will appear here as EMS calls in."
         />
@@ -565,7 +565,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <Radio size={14} color={COLORS.accent} strokeWidth={2} />
+              <Radio size={15} color={COLORS.accent} strokeWidth={2} />
               <BracketLabel tone="accent" size="xs">
                 EMS · INBOUND
               </BracketLabel>
@@ -634,7 +634,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
                   flexShrink: 0,
                 }}
               >
-                <X size={18} strokeWidth={2} />
+                <X size={20} strokeWidth={2} />
               </motion.button>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -644,7 +644,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   letterSpacing: '-0.003em',

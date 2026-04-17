@@ -130,7 +130,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  <HeaderIcon size={16} strokeWidth={2} />
+                  <HeaderIcon size={17} strokeWidth={2} />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <BracketLabel tone="secondary" size="xs">
@@ -180,7 +180,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     e.currentTarget.style.color = COLORS.textMuted;
                   }}
                 >
-                  <X size={14} strokeWidth={2} />
+                  <X size={15} strokeWidth={2} />
                 </button>
               )}
             </div>
@@ -253,14 +253,14 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                   >
                     {surgeStable ? (
                       <CheckCircle
-                        size={16}
+                        size={17}
                         strokeWidth={2}
                         color={COLORS.ok}
                         style={{ flexShrink: 0, marginTop: 1 }}
                       />
                     ) : (
                       <AlertOctagon
-                        size={16}
+                        size={17}
                         strokeWidth={2}
                         color={COLORS.crit}
                         style={{ flexShrink: 0, marginTop: 1 }}
@@ -269,7 +269,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     <p
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 13,
+                        fontSize: 14,
                         color: COLORS.textPrimary,
                         lineHeight: 1.5,
                         margin: 0,
@@ -321,7 +321,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                         <span
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 14,
                             color: COLORS.textPrimary,
                             lineHeight: 1.45,
                           }}
@@ -360,7 +360,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     borderRadius: RADIUS.sm,
                     color: COLORS.textPrimary,
                     fontFamily: FONTS.sans,
-                    fontSize: 13,
+                    fontSize: 14,
                     lineHeight: 1.5,
                     resize: 'vertical',
                     outline: 'none',
@@ -400,9 +400,9 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                 onClick={() => onComplete(isIn ? undefined : note)}
                 icon={
                   isIn ? (
-                    <LogIn size={13} strokeWidth={2} />
+                    <LogIn size={14} strokeWidth={2} />
                   ) : (
-                    <LogOut size={13} strokeWidth={2} />
+                    <LogOut size={14} strokeWidth={2} />
                   )
                 }
               >

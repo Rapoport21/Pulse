@@ -274,7 +274,7 @@ const baseInputStyle: React.CSSProperties = {
   border: `1px solid ${COLORS.border}`,
   borderRadius: RADIUS.sm,
   fontFamily: FONTS.sans,
-  fontSize: 14,
+  fontSize: 15,
   color: COLORS.textPrimary,
   outline: 'none',
   boxSizing: 'border-box',
@@ -519,7 +519,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
               minWidth: 0,
               textAlign: 'center',
               fontFamily: FONTS.mono,
-              fontSize: 8,
+              fontSize: 9,
               letterSpacing: '0.12em',
               fontWeight: 600,
               color: active ? COLORS.accent : done ? COLORS.textSecondary : COLORS.textMuted,
@@ -581,7 +581,7 @@ const StepHeader: React.FC<{ step: StepMeta }> = ({ step }) => {
           position: 'relative',
         }}
       >
-        <Icon size={18} strokeWidth={1.75} />
+        <Icon size={20} strokeWidth={1.75} />
         <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} />
         <CornerBracket position="tr" color={COLORS.accent} size={5} thickness={1} />
         <CornerBracket position="bl" color={COLORS.accent} size={5} thickness={1} />
@@ -594,7 +594,7 @@ const StepHeader: React.FC<{ step: StepMeta }> = ({ step }) => {
         <div
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: 600,
             letterSpacing: TYPE.h4.tracking,
             color: COLORS.textPrimary,
@@ -635,7 +635,7 @@ const ReviewRow: React.FC<{ label: string; value: string; tone?: 'primary' | 'mu
     <div
       style={{
         fontFamily: FONTS.sans,
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: 500,
         color: tone === 'muted' ? COLORS.textSecondary : COLORS.textPrimary,
         textAlign: 'right',
@@ -677,7 +677,7 @@ const ReviewCard: React.FC<{
           padding: 0,
           cursor: 'pointer',
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 11,
           letterSpacing: '0.14em',
           fontWeight: 600,
           color: COLORS.accent,
@@ -1011,7 +1011,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 flexShrink: 0,
               }}
             >
-              <ChevronLeft size={18} />
+              <ChevronLeft size={20} />
               Cancel
             </button>
 
@@ -1432,7 +1432,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                                   flexShrink: 0,
                                 }}
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={15} />
                               </button>
                             )}
                           </div>
@@ -1472,7 +1472,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                     <TacticalButton
                       variant="secondary"
                       fullWidth
-                      icon={<Plus size={14} />}
+                      icon={<Plus size={15} />}
                       onClick={addAllergy}
                       style={{ minHeight: 44, height: 44 }}
                     >
@@ -1537,7 +1537,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                                   flexShrink: 0,
                                 }}
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={15} />
                               </button>
                             )}
                           </div>
@@ -1580,7 +1580,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                     <TacticalButton
                       variant="secondary"
                       fullWidth
-                      icon={<Plus size={14} />}
+                      icon={<Plus size={15} />}
                       onClick={addProblem}
                       style={{ minHeight: 44, height: 44 }}
                     >
@@ -1692,7 +1692,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                         style={{
                           marginTop: 4,
                           fontFamily: FONTS.sans,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: COLORS.textSecondary,
                         }}
                       >
@@ -1739,7 +1739,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                         style={{
                           marginTop: 4,
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
+                          fontSize: 15,
                           fontWeight: 600,
                           color: COLORS.textPrimary,
                         }}
@@ -1752,7 +1752,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                         style={{
                           marginTop: 2,
                           fontFamily: FONTS.sans,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: COLORS.textSecondary,
                         }}
                       >
@@ -1771,7 +1771,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                           style={{
                             marginTop: 4,
                             fontFamily: FONTS.sans,
-                            fontSize: 11,
+                            fontSize: 12,
                             color: COLORS.textSecondary,
                             textAlign: 'center',
                           }}
@@ -1813,7 +1813,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                                     borderRadius: RADIUS.sm,
                                     color: picked ? COLORS.accent : COLORS.textPrimary,
                                     fontFamily: FONTS.mono,
-                                    fontSize: 13,
+                                    fontSize: 14,
                                     fontWeight: 700,
                                     letterSpacing: '0.08em',
                                     cursor: 'pointer',
@@ -1837,7 +1837,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                                   <span
                                     style={{
                                       fontFamily: FONTS.mono,
-                                      fontSize: 9,
+                                      fontSize: 10,
                                       letterSpacing: '0.14em',
                                       color: picked ? COLORS.accent : COLORS.textMuted,
                                       fontWeight: 500,
@@ -1909,7 +1909,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                   borderRadius: RADIUS.sm,
                   color: currentStep === 1 ? COLORS.textDim : COLORS.textPrimary,
                   fontFamily: FONTS.mono,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',
@@ -1918,7 +1918,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                   transition: `opacity ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
                 }}
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={15} />
                 Back
               </motion.button>
 
@@ -1944,7 +1944,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                   borderRadius: RADIUS.sm,
                   color: isLastStep && !canSubmit ? COLORS.textMuted : COLORS.textPrimary,
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 700,
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',
@@ -1962,13 +1962,13 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
               >
                 {isLastStep ? (
                   <>
-                    <Check size={16} />
+                    <Check size={17} />
                     {selectedBedId ? 'Admit to Bed' : 'Admit Unassigned'}
                   </>
                 ) : (
                   <>
                     Next · {STEPS[currentStep].label}
-                    <ChevronRight size={14} />
+                    <ChevronRight size={15} />
                   </>
                 )}
               </motion.button>
@@ -1981,7 +1981,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 transition={{ duration: MOTION.fast }}
                 style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 10,
+                  fontSize: 11,
                   letterSpacing: '0.14em',
                   fontWeight: 600,
                   color: COLORS.warn,

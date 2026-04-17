@@ -130,7 +130,7 @@ const InfoChip: React.FC<{
       border: `1px solid ${color}`,
       borderRadius: RADIUS.sm,
       fontFamily: FONTS.mono,
-      fontSize: 10,
+      fontSize: 11,
       fontWeight: 600,
       letterSpacing: '0.16em',
       textTransform: 'uppercase',
@@ -165,7 +165,7 @@ const AllergyStrip: React.FC<{ allergies: Allergy[] }> = ({ allergies }) => {
           borderRadius: RADIUS.sm,
         }}
       >
-        <Shield size={13} strokeWidth={2} color={COLORS.ok} />
+        <Shield size={14} strokeWidth={2} color={COLORS.ok} />
         <Mono tone="ok" size="base">
           NKA · No Known Allergies
         </Mono>
@@ -176,9 +176,9 @@ const AllergyStrip: React.FC<{ allergies: Allergy[] }> = ({ allergies }) => {
   const hasCritical = allergies.some(allergyEmphasis);
   const borderColor = hasCritical ? COLORS.accent : COLORS.warn;
   const icon = hasCritical ? (
-    <AlertTriangle size={13} strokeWidth={2.5} color={borderColor} />
+    <AlertTriangle size={14} strokeWidth={2.5} color={borderColor} />
   ) : (
-    <AlertTriangle size={13} strokeWidth={2} color={borderColor} />
+    <AlertTriangle size={14} strokeWidth={2} color={borderColor} />
   );
 
   return (
@@ -221,7 +221,7 @@ const AllergyStrip: React.FC<{ allergies: Allergy[] }> = ({ allergies }) => {
                 border: `1px solid ${crit ? COLORS.accent : COLORS.border}`,
                 borderRadius: RADIUS.sm,
                 fontFamily: FONTS.sans,
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: 600,
                 color: crit ? COLORS.accent : COLORS.textPrimary,
                 lineHeight: 1.2,
@@ -343,7 +343,7 @@ const ScoreTile: React.FC<{ score: EarlyWarningScore | null }> = ({ score }) => 
         <span
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 30,
+            fontSize: 33,
             fontWeight: 700,
             lineHeight: 0.95,
             letterSpacing: '-0.03em',
@@ -434,7 +434,7 @@ export const PatientHeaderStrip: React.FC<PatientHeaderStripProps> = ({
             style={{
               margin: 0,
               fontFamily: FONTS.sans,
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: 700,
               color: COLORS.textPrimary,
               letterSpacing: '-0.02em',
@@ -481,7 +481,7 @@ export const PatientHeaderStrip: React.FC<PatientHeaderStripProps> = ({
                 margin: 0,
                 marginTop: 2,
                 fontFamily: FONTS.sans,
-                fontSize: 13,
+                fontSize: 14,
                 lineHeight: 1.45,
                 color: COLORS.textSecondary,
                 maxWidth: 560,
@@ -512,14 +512,14 @@ export const PatientHeaderStrip: React.FC<PatientHeaderStripProps> = ({
           label={patient.codeStatus === 'FULL' ? 'FULL CODE' : patient.codeStatus}
           color={codeMeta.color}
           background={codeMeta.bg}
-          icon={<FileHeart size={11} strokeWidth={2} color={codeMeta.color} />}
+          icon={<FileHeart size={12} strokeWidth={2} color={codeMeta.color} />}
           emphasise={patient.codeStatus !== 'FULL'}
         />
         <InfoChip
           label={isoMeta.label}
           color={isoMeta.color}
           background={isoMeta.bg}
-          icon={<isoMeta.Icon size={11} strokeWidth={2} color={isoMeta.color} />}
+          icon={<isoMeta.Icon size={12} strokeWidth={2} color={isoMeta.color} />}
           emphasise={patient.isolation !== 'NONE'}
         />
         <InfoChip
@@ -532,7 +532,7 @@ export const PatientHeaderStrip: React.FC<PatientHeaderStripProps> = ({
           background={patient.needsInterpreter ? 'rgba(245,158,11,0.08)' : COLORS.surface}
           icon={
             <Languages
-              size={11}
+              size={12}
               strokeWidth={2}
               color={patient.needsInterpreter ? COLORS.warn : COLORS.textMuted}
             />
@@ -544,7 +544,7 @@ export const PatientHeaderStrip: React.FC<PatientHeaderStripProps> = ({
             label="AD / POLST"
             color={COLORS.info}
             background="rgba(59,130,246,0.08)"
-            icon={<FileHeart size={11} strokeWidth={2} color={COLORS.info} />}
+            icon={<FileHeart size={12} strokeWidth={2} color={COLORS.info} />}
           />
         )}
         {patient.problems.length > 0 && (

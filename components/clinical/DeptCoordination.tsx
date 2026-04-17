@@ -117,7 +117,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                 {/* Census bar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: 4 }}>
                   <Mono tone="muted" size="xs">CENSUS</Mono>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: COLORS.textPrimary }}>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600, color: COLORS.textPrimary }}>
                     {dept.census}/{dept.capacity}
                   </span>
                 </div>
@@ -200,11 +200,11 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
             <span style={{
               padding: `1px ${SPACE.sm}px`, background: `${COLORS.info}20`,
               border: `1px solid ${COLORS.info}40`, borderRadius: RADIUS.sm,
-              fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600,
+              fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
               letterSpacing: '0.1em', color: COLORS.info,
             }}>{ACTIVE_TRANSFERS.length}</span>
           </div>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
+          {isOpen ? <ChevronUp size={15} color={COLORS.textMuted} /> : <ChevronDown size={15} color={COLORS.textMuted} />}
         </button>
 
         <AnimatePresence>
@@ -253,7 +253,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                             width: 24, height: 24, borderRadius: RADIUS.full,
                             background: `${statusCol}20`, border: `1px solid ${statusCol}50`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600, color: statusCol,
+                            fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600, color: statusCol,
                           }}>
                             {transfer.patientInitials}
                           </div>
@@ -273,14 +273,14 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                           animate={{ x: [0, 4, 0] }}
                           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                         >
-                          <ArrowRight size={14} color={statusCol} />
+                          <ArrowRight size={15} color={statusCol} />
                         </motion.div>
                         <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.body.size, fontWeight: 600, color: COLORS.textPrimary }}>
                           {transfer.to}
                         </span>
                         <div style={{ flex: 1 }} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Clock size={10} color={COLORS.textMuted} />
+                          <Clock size={11} color={COLORS.textMuted} />
                           <Mono tone="secondary" size="xs">{transfer.eta}</Mono>
                         </div>
                       </div>
@@ -330,7 +330,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
             <BracketLabel tone="accent" size="xs">SHARED RESOURCES</BracketLabel>
           </div>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
+          {isOpen ? <ChevronUp size={15} color={COLORS.textMuted} /> : <ChevronDown size={15} color={COLORS.textMuted} />}
         </button>
 
         <AnimatePresence>
@@ -350,14 +350,14 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                     <div key={resource.id}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                          <Layers size={11} color={COLORS.textMuted} />
+                          <Layers size={12} color={COLORS.textMuted} />
                           <span style={{
                             fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size,
                             fontWeight: 600, color: COLORS.textPrimary,
                           }}>{resource.name}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                          <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: barColor }}>
+                          <span style={{ fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600, color: barColor }}>
                             {resource.available}
                           </span>
                           <Mono tone="muted" size="xs">/ {resource.total} {resource.unit}</Mono>
@@ -405,12 +405,12 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
               <span style={{
                 padding: `1px ${SPACE.sm}px`, background: `${COLORS.crit}20`,
                 border: `1px solid ${COLORS.crit}40`, borderRadius: RADIUS.sm,
-                fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600,
+                fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
                 letterSpacing: '0.1em', color: COLORS.crit,
               }}>{critCount} CRITICAL</span>
             )}
           </div>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
+          {isOpen ? <ChevronUp size={15} color={COLORS.textMuted} /> : <ChevronDown size={15} color={COLORS.textMuted} />}
         </button>
 
         <AnimatePresence>
@@ -435,7 +435,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                       borderLeft: `3px solid ${alertCol}`,
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.xs }}>
-                        <AlertTriangle size={13} color={alertCol} />
+                        <AlertTriangle size={14} color={alertCol} />
                         <span style={{
                           fontFamily: FONTS.sans, fontSize: TYPE.body.size,
                           fontWeight: 600, color: alertCol,
@@ -450,7 +450,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                       <TacticalButton
                         variant={alert.severity === 'crit' ? 'danger' : 'secondary'}
                         size="sm"
-                        icon={<Zap size={11} />}
+                        icon={<Zap size={12} />}
                         onClick={() => showToast(`Action initiated: ${alert.action}`)}
                       >
                         {alert.action}
@@ -479,7 +479,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
             <BracketLabel tone="accent" size="xs">DEPT COMMS</BracketLabel>
             <Mono tone="muted" size="xs">{COORD_MESSAGES.length} RECENT</Mono>
           </div>
-          {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
+          {isOpen ? <ChevronUp size={15} color={COLORS.textMuted} /> : <ChevronDown size={15} color={COLORS.textMuted} />}
         </button>
 
         <AnimatePresence>
@@ -504,12 +504,12 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span style={{
-                          fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
+                          fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
                           letterSpacing: '0.08em', color: msg.fromColor,
                         }}>{msg.from}</span>
-                        <ArrowRight size={10} color={COLORS.textMuted} />
+                        <ArrowRight size={11} color={COLORS.textMuted} />
                         <span style={{
-                          fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
+                          fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
                           letterSpacing: '0.08em', color: COLORS.textSecondary,
                         }}>{msg.to}</span>
                       </div>
@@ -530,7 +530,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                   variant="ghost"
                   size="sm"
                   fullWidth
-                  icon={<MessageSquare size={11} />}
+                  icon={<MessageSquare size={12} />}
                   onClick={() => showToast('Compose coordination message')}
                 >
                   Send Coordination Message
@@ -556,7 +556,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
           <ScanningLine duration={20} />
           <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.md, marginBottom: SPACE.sm }}>
             <span style={{
-              fontFamily: FONTS.sans, fontSize: 38, fontWeight: 600,
+              fontFamily: FONTS.sans, fontSize: 42, fontWeight: 600,
               letterSpacing: '-0.04em', lineHeight: 0.9, color: COLORS.textPrimary,
             }}>
               {totalCensus}
@@ -570,7 +570,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
 
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.lg, marginTop: SPACE.sm }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-              <Activity size={12} color={COLORS.info} />
+              <Activity size={13} color={COLORS.info} />
               <Mono tone="info" size="xs">{ACTIVE_TRANSFERS.length} TRANSFERS</Mono>
             </div>
             {strainedCount > 0 && (
@@ -625,7 +625,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
                 color: COLORS.textSecondary, cursor: 'pointer',
               }}
             >
-              <X size={14} />
+              <X size={15} />
             </button>
             <BracketLabel tone="accent" size="sm">Coordination</BracketLabel>
             <div style={{ flex: 1 }} />

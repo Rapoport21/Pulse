@@ -12,6 +12,52 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · Type scale + icon sizes bumped ~10-12% for clinical legibility
+
+**Context.** UI read as too small on scratched iPads and in variable
+lighting — the base mono tier (`monoXs 11 / monoSm 12 / mono 13`) sits
+right at the threshold where glyph weight disappears on a non-perfect
+display. Tactical density is the signature, but density had crossed
+into unreadable at the base. `fontSize: 10` and `fontSize: 11` were
+also used 170 times across the codebase as raw literals — most were
+chip labels, timestamps, and metadata strips that operators look at
+most often.
+
+**Decision.** Single-pass ~10-12% bump, applied in three layers:
+
+1. **Design tokens** (`components/design/tokens.ts`). `TYPE` scale
+   shifted: body 16→17, bodySm 14→15, mono 13→14, monoSm 12→13,
+   monoXs 11→12, h4 17→19, h3 21→23, h2 26→28, h1 34→37,
+   displaySm 48→52, display 64→70. `CHROME` heights proportional:
+   header 56→60, footer 36→40, mobileNav 64→72. `SPACE` left alone
+   on purpose — tactical density stays.
+2. **Hardcoded `fontSize: N`** across 48 TSX files (520 instances)
+   lifted by the same mapping via single-pass perl substitution.
+   Below-10 values untouched (CornerBracket chrome).
+3. **Lucide icon `size={N}`** (≥10 only — protects CornerBracket
+   decoration at size={4-8}) bumped with the same mapping so icons
+   stay proportional to the labels they pair with.
+
+Applied uniformly to mobile and desktop — tokens are shared and
+splitting by breakpoint would require a `useBreakpoint` check in every
+consumer. The proportional relationships hold, so layouts don't need
+a full rework.
+
+**Rejected.** A steeper ~20% bump (body 16→19) — loses the tactical
+density signature, reads more like Epic than Palantir. Also rejected:
+separate mobile/desktop scales — forces every consumer to know which
+viewport it lives in, big ergonomics tax for small wins. Also rejected:
+root-font-size rescale — would be the cleanest fix if tokens were in
+rem, but they're absolute px today, so the token edit is the same
+surface area.
+
+**Follow-up.** Spot-check for overflow on narrow mobile screens (iPhone
+SE, small-width patient chips, truncated tab labels). Any overflow bugs
+get logged as `SPACE.md: 12 → 14` candidates — bump spacing only if a
+specific surface feels cramped after the type change, not preemptively.
+
+---
+
 ## 2026-04-17 · EmptyState primitive + role-aware zero-states
 
 **Context.** Stage 7 audit walked every screen × role (Manager / Nurse /

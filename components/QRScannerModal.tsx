@@ -395,7 +395,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
           <ScanLine
-            size={14}
+            size={15}
             strokeWidth={1.75}
             color={isLocked ? COLORS.ok : COLORS.accent}
           />
@@ -424,7 +424,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 WebkitBackdropFilter: 'blur(8px)',
               }}
             >
-              {flashOn ? <Zap size={16} /> : <ZapOff size={16} />}
+              {flashOn ? <Zap size={17} /> : <ZapOff size={17} />}
             </button>
           )}
           <button
@@ -449,7 +449,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
               WebkitBackdropFilter: 'blur(8px)',
             }}
           >
-            <X size={16} />
+            <X size={17} />
           </button>
         </div>
       </div>
@@ -497,7 +497,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
           }}
         >
           <AlertCircle
-            size={22}
+            size={24}
             color={COLORS.crit}
             style={{ margin: '0 auto', display: 'block' }}
           />
@@ -509,7 +509,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
               marginTop: SPACE.sm,
               marginBottom: SPACE.base,
               fontFamily: FONTS.sans,
-              fontSize: 13,
+              fontSize: 14,
               color: COLORS.textSecondary,
               lineHeight: 1.45,
             }}
@@ -538,13 +538,13 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 color: COLORS.accent,
                 cursor: 'pointer',
                 fontFamily: FONTS.mono,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}
             >
-              <RotateCcw size={12} />
+              <RotateCcw size={13} />
               <span>RETRY</span>
             </button>
             <button
@@ -565,7 +565,7 @@ export const QRScannerModal: React.FC<QRScannerModalProps> = ({
                 color: COLORS.textPrimary,
                 cursor: 'pointer',
                 fontFamily: FONTS.mono,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
@@ -924,7 +924,7 @@ const HudDataStrip: React.FC<HudDataStripProps> = ({
     backdropFilter: 'blur(6px)',
     WebkitBackdropFilter: 'blur(6px)',
     fontFamily: FONTS.mono,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: 500,
     letterSpacing: '0.14em',
     color: COLORS.textSecondary,
@@ -1061,10 +1061,10 @@ const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color, payload }) 
       }}
     >
       {/* Corner brackets — pure L marks, no rectangle border */}
-      <CornerBracket position="tl" color={color} size={34} thickness={2.5} inset={-2} />
-      <CornerBracket position="tr" color={color} size={34} thickness={2.5} inset={-2} />
-      <CornerBracket position="bl" color={color} size={34} thickness={2.5} inset={-2} />
-      <CornerBracket position="br" color={color} size={34} thickness={2.5} inset={-2} />
+      <CornerBracket position="tl" color={color} size={37} thickness={2.5} inset={-2} />
+      <CornerBracket position="tr" color={color} size={37} thickness={2.5} inset={-2} />
+      <CornerBracket position="bl" color={color} size={37} thickness={2.5} inset={-2} />
+      <CornerBracket position="br" color={color} size={37} thickness={2.5} inset={-2} />
 
       {/* Acquisition sweep — single left→right pass across the bbox */}
       <motion.div
@@ -1100,7 +1100,7 @@ const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color, payload }) 
           background: COLORS.ok,
           color: '#000',
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: 700,
           letterSpacing: '0.16em',
           boxShadow: `0 0 20px ${COLORS.ok}88`,
@@ -1125,7 +1125,7 @@ const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color, payload }) 
             background: 'rgba(0,0,0,0.78)',
             border: `1px solid ${COLORS.ok}`,
             fontFamily: FONTS.mono,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 500,
             letterSpacing: '0.14em',
             color: COLORS.ok,

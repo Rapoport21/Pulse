@@ -421,7 +421,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-            <Activity size={13} strokeWidth={2} color={COLORS.textMuted} />
+            <Activity size={14} strokeWidth={2} color={COLORS.textMuted} />
             <Mono tone="muted" size="xs">
               ED Capacity at Scrub Point
             </Mono>
@@ -430,7 +430,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
             <span
               style={{
                 fontFamily: FONTS.mono,
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: 600,
                 letterSpacing: '-0.02em',
                 color: capacityColor(currentCapacity),
@@ -439,11 +439,11 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               {currentCapacity}%
             </span>
             {currentCapacity >= 85 ? (
-              <TrendingUp size={14} color={COLORS.crit} />
+              <TrendingUp size={15} color={COLORS.crit} />
             ) : currentCapacity >= 75 ? (
-              <TrendingUp size={14} color={COLORS.warn} />
+              <TrendingUp size={15} color={COLORS.warn} />
             ) : (
-              <TrendingDown size={14} color={COLORS.ok} />
+              <TrendingDown size={15} color={COLORS.ok} />
             )}
             <Mono tone="muted" size="xs">
               {minutesAgoToTime(scrubMinutesAgo)}
@@ -489,15 +489,15 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
                   boxShadow: isPlaying ? `0 0 16px ${COLORS.accent}60` : 'none',
                 }}
               >
-                {isPlaying ? <Pause size={14} strokeWidth={2} /> : <Play size={14} strokeWidth={2} style={{ marginLeft: 1 }} />}
+                {isPlaying ? <Pause size={15} strokeWidth={2} /> : <Play size={15} strokeWidth={2} style={{ marginLeft: 1 }} />}
               </button>
 
               {/* Skip controls */}
               <IconBtn onClick={() => setScrubMinutes(Math.max(0, scrubMinutes - 30))} label="Back 30m">
-                <SkipBack size={13} strokeWidth={2} />
+                <SkipBack size={14} strokeWidth={2} />
               </IconBtn>
               <IconBtn onClick={() => setScrubMinutes(Math.min(TIMELINE_MINUTES, scrubMinutes + 30))} label="Forward 30m">
-                <SkipForward size={13} strokeWidth={2} />
+                <SkipForward size={14} strokeWidth={2} />
               </IconBtn>
 
               {/* Reset to live */}
@@ -505,7 +505,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
                 <TacticalButton
                   variant="ghost"
                   size="sm"
-                  icon={<RotateCcw size={12} strokeWidth={2} />}
+                  icon={<RotateCcw size={13} strokeWidth={2} />}
                   onClick={() => {
                     setScrubMinutes(TIMELINE_MINUTES);
                     setIsPlaying(false);
@@ -521,7 +521,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
               <span
                 style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: 600,
                   color: COLORS.textPrimary,
                   letterSpacing: '0.02em',
@@ -631,7 +631,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
                       bottom: 0,
                       transform: 'translateX(-50%)',
                       fontFamily: FONTS.mono,
-                      fontSize: 8,
+                      fontSize: 9,
                       fontWeight: 500,
                       letterSpacing: '0.1em',
                       color: COLORS.textMuted,
@@ -853,7 +853,7 @@ const EventCard: React.FC<{
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <Clock size={11} strokeWidth={2} color={COLORS.textMuted} />
+              <Clock size={12} strokeWidth={2} color={COLORS.textMuted} />
               <Mono tone="muted" size="xs">
                 {minutesAgoToTime(event.minutesAgo)}
               </Mono>
@@ -873,7 +873,7 @@ const EventCard: React.FC<{
                   animate={{ rotate: isExpanded ? 180 : 0 }}
                   transition={{ duration: MOTION.fast }}
                 >
-                  <ChevronDown size={12} color={COLORS.textMuted} />
+                  <ChevronDown size={13} color={COLORS.textMuted} />
                 </motion.div>
               )}
             </div>
@@ -888,7 +888,7 @@ const EventCard: React.FC<{
               marginBottom: SPACE.xs,
             }}
           >
-            <Icon size={14} strokeWidth={2} color={meta.color} />
+            <Icon size={15} strokeWidth={2} color={meta.color} />
             <span
               style={{
                 fontFamily: FONTS.sans,
@@ -935,7 +935,7 @@ const EventCard: React.FC<{
                   {/* Actor */}
                   {event.actor && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                      <User size={11} strokeWidth={2} color={COLORS.textMuted} />
+                      <User size={12} strokeWidth={2} color={COLORS.textMuted} />
                       <Mono tone="secondary" size="xs">
                         {event.actor}
                       </Mono>
@@ -970,7 +970,7 @@ const EventCard: React.FC<{
                           <div
                             style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 11,
+                              fontSize: 12,
                               color: COLORS.textSecondary,
                               lineHeight: 1.5,
                               padding: `${SPACE.xs}px ${SPACE.sm}px`,
@@ -990,7 +990,7 @@ const EventCard: React.FC<{
                           <div
                             style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 11,
+                              fontSize: 12,
                               color: COLORS.textSecondary,
                               lineHeight: 1.5,
                               padding: `${SPACE.xs}px ${SPACE.sm}px`,
@@ -1008,7 +1008,7 @@ const EventCard: React.FC<{
 
                   {/* Relative time tag */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.sm }}>
-                    <AlertTriangle size={10} strokeWidth={2} color={COLORS.textDim} />
+                    <AlertTriangle size={11} strokeWidth={2} color={COLORS.textDim} />
                     <Mono tone="dim" size="xs">
                       {minutesAgoToLabel(event.minutesAgo)} &middot; ED {event.capacityPct}%
                     </Mono>

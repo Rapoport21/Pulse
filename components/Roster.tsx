@@ -122,14 +122,14 @@ export const Roster: React.FC<RosterProps> = ({ showToast }) => {
         </div>
         <div style={{ display: 'flex', gap: SPACE.md, alignItems: 'center' }}>
           <TacticalInput
-            icon={<Search size={13} strokeWidth={2} />}
+            icon={<Search size={14} strokeWidth={2} />}
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search personnel…"
             width={240}
           />
           <TacticalSelect
-            icon={<Filter size={13} strokeWidth={2} />}
+            icon={<Filter size={14} strokeWidth={2} />}
             value={departmentFilter}
             onChange={setDepartmentFilter}
             options={departments}
@@ -223,7 +223,7 @@ export const Roster: React.FC<RosterProps> = ({ showToast }) => {
                 textAlign: 'center',
                 color: COLORS.textMuted,
                 fontFamily: FONTS.mono,
-                fontSize: 11,
+                fontSize: 12,
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
               }}
@@ -312,7 +312,7 @@ const KpiCard: React.FC<{
           flexShrink: 0,
         }}
       >
-        <Icon size={18} strokeWidth={2} color={toneColor} />
+        <Icon size={20} strokeWidth={2} color={toneColor} />
         <CornerBracket position="tl" color={toneColor} size={4} thickness={1} inset={-1} />
         <CornerBracket position="br" color={toneColor} size={4} thickness={1} inset={-1} />
       </div>
@@ -363,7 +363,7 @@ const StaffRow: React.FC<{
             border: `1px solid ${COLORS.border}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 600,
             letterSpacing: '0.08em',
             color: COLORS.textPrimary,
@@ -376,7 +376,7 @@ const StaffRow: React.FC<{
           <div
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: 500,
               color: COLORS.textPrimary,
               letterSpacing: '-0.005em',
@@ -403,7 +403,7 @@ const StaffRow: React.FC<{
             <span
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 11,
+                fontSize: 12,
                 color: COLORS.textSecondary,
               }}
             >
@@ -417,7 +417,7 @@ const StaffRow: React.FC<{
       <span
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 12,
+          fontSize: 13,
           color: COLORS.textSecondary,
         }}
       >
@@ -436,12 +436,12 @@ const StaffRow: React.FC<{
           alignItems: 'center',
           gap: 5,
           fontFamily: FONTS.sans,
-          fontSize: 12,
+          fontSize: 13,
           color: COLORS.textSecondary,
           minWidth: 0,
         }}
       >
-        <MapPin size={11} strokeWidth={2} color={COLORS.textMuted} />
+        <MapPin size={12} strokeWidth={2} color={COLORS.textMuted} />
         <span
           style={{
             overflow: 'hidden',
@@ -457,7 +457,7 @@ const StaffRow: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 12,
+          fontSize: 13,
           color: COLORS.textPrimary,
           textAlign: 'center',
           letterSpacing: '0.04em',
@@ -479,7 +479,7 @@ const StaffRow: React.FC<{
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 11,
+            fontSize: 12,
             color: COLORS.textSecondary,
             letterSpacing: '0.04em',
             overflow: 'hidden',
@@ -509,7 +509,7 @@ const StaffRow: React.FC<{
             flexShrink: 0,
           }}
         >
-          <MessageSquare size={13} strokeWidth={2} />
+          <MessageSquare size={14} strokeWidth={2} />
         </button>
       </div>
     </motion.div>
@@ -566,7 +566,7 @@ const TacticalInput: React.FC<{
           outline: 'none',
           color: COLORS.textPrimary,
           fontFamily: FONTS.sans,
-          fontSize: 12,
+          fontSize: 13,
           letterSpacing: '-0.005em',
           minWidth: 0,
         }}
@@ -617,7 +617,7 @@ const TacticalSelect: React.FC<{
           outline: 'none',
           color: COLORS.textPrimary,
           fontFamily: FONTS.sans,
-          fontSize: 12,
+          fontSize: 13,
           letterSpacing: '-0.005em',
           cursor: 'pointer',
           appearance: 'none',
