@@ -92,7 +92,7 @@ export const Playbooks: React.FC<PlaybooksProps> = ({ onActivate }) => {
         <p
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 15,
+            fontSize: 14,
             color: COLORS.textSecondary,
             maxWidth: 720,
             lineHeight: 1.55,
@@ -188,7 +188,7 @@ const PlaybookCard: React.FC<{
               flexShrink: 0,
             }}
           >
-            <Icon size={20} strokeWidth={2} />
+            <Icon size={18} strokeWidth={2} />
             <CornerBracket position="tl" color={isSurge ? COLORS.accent : COLORS.borderStrong} size={4} thickness={1} />
             <CornerBracket position="br" color={isSurge ? COLORS.accent : COLORS.borderStrong} size={4} thickness={1} />
           </div>
@@ -216,7 +216,7 @@ const PlaybookCard: React.FC<{
           <p
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 14,
+              fontSize: 13,
               color: COLORS.textSecondary,
               lineHeight: 1.5,
               margin: 0,
@@ -262,7 +262,7 @@ const PlaybookCard: React.FC<{
               cursor: 'pointer',
               color: COLORS.textMuted,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 500,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
@@ -273,9 +273,9 @@ const PlaybookCard: React.FC<{
           >
             <span>View Protocol Steps ({entry.steps.length})</span>
             {expanded ? (
-              <ChevronUp size={15} strokeWidth={2} />
+              <ChevronUp size={14} strokeWidth={2} />
             ) : (
-              <ChevronDown size={15} strokeWidth={2} />
+              <ChevronDown size={14} strokeWidth={2} />
             )}
           </button>
 
@@ -311,7 +311,7 @@ const PlaybookCard: React.FC<{
           variant={isSurge ? 'primary' : 'secondary'}
           size="md"
           fullWidth
-          icon={<ArrowRight size={15} strokeWidth={2} />}
+          icon={<ArrowRight size={14} strokeWidth={2} />}
           onClick={onActivate}
           style={{ marginTop: 'auto' }}
         >
@@ -344,7 +344,7 @@ const MetaRow: React.FC<{
     <span
       style={{
         fontFamily: FONTS.mono,
-        fontSize: 12,
+        fontSize: 11,
         color: valueColor ?? COLORS.textPrimary,
         letterSpacing: '0.04em',
         textAlign: 'right',
@@ -384,7 +384,7 @@ const StepRow: React.FC<{
         border: `1px solid ${COLORS.borderStrong}`,
         borderRadius: RADIUS.sm,
         fontFamily: FONTS.mono,
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: 600,
         color: COLORS.textSecondary,
         flexShrink: 0,
@@ -397,7 +397,7 @@ const StepRow: React.FC<{
       <p
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 12,
           color: COLORS.textPrimary,
           lineHeight: 1.4,
           margin: 0,

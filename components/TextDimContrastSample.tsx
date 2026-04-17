@@ -159,7 +159,7 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
 
     {/* (2) Info icon + faint label */}
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <Info size={12} color={dim} strokeWidth={1.75} />
+      <Info size={11} color={dim} strokeWidth={1.75} />
       <span style={monoDim(dim, 11)}>Syncs to 3 devices</span>
     </div>
 
@@ -188,7 +188,7 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: 500,
               letterSpacing: '0.14em',
               textTransform: 'uppercase',
@@ -200,7 +200,7 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 17,
+              fontSize: 16,
               color: dim,
               letterSpacing: '0.04em',
               lineHeight: 1,
@@ -214,7 +214,7 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
 
     {/* (4) Timestamp row with clock icon */}
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <Clock size={11} strokeWidth={2} color={dim} />
+      <Clock size={10} strokeWidth={2} color={dim} />
       <span style={monoDim(dim, 11)}>Last vitals · 5m ago</span>
     </div>
 
@@ -230,7 +230,7 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 500,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
@@ -239,11 +239,11 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
       >
         Floor 3
       </span>
-      <ChevronRight size={13} strokeWidth={2} color={dim} />
+      <ChevronRight size={12} strokeWidth={2} color={dim} />
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 500,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
@@ -252,11 +252,11 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
       >
         ICU North
       </span>
-      <ChevronRight size={13} strokeWidth={2} color={dim} />
+      <ChevronRight size={12} strokeWidth={2} color={dim} />
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 13,
+          fontSize: 12,
           fontWeight: 600,
           letterSpacing: '0.12em',
           textTransform: 'uppercase',
@@ -278,12 +278,12 @@ const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
         borderRadius: RADIUS.sm,
       }}
     >
-      <GripVertical size={13} color={dim} strokeWidth={2} />
+      <GripVertical size={12} color={dim} strokeWidth={2} />
       <span
         style={{
           flex: 1,
           fontFamily: FONTS.sans,
-          fontSize: 14,
+          fontSize: 13,
           color: COLORS.textPrimary,
           letterSpacing: '-0.005em',
         }}
@@ -427,13 +427,13 @@ export const TextDimContrastSample: React.FC<Props> = ({
                   color: COLORS.textSecondary,
                   cursor: 'pointer',
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 12,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                   fontWeight: 500,
                 }}
               >
-                <ChevronLeft size={15} strokeWidth={2} />
+                <ChevronLeft size={14} strokeWidth={2} />
                 Back
               </motion.button>
               <BracketLabel tone="accent" size={isMobile ? 'sm' : 'base'}>
@@ -479,7 +479,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                 <h2
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: 600,
                     letterSpacing: '-0.02em',
                     lineHeight: 1.25,
@@ -492,7 +492,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                 <p
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 13,
                     color: COLORS.textSecondary,
                     lineHeight: 1.5,
                     margin: 0,
@@ -579,7 +579,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                       <span
                         style={{
                           fontFamily: FONTS.mono,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: 600,
                           letterSpacing: '0.08em',
                           textTransform: 'uppercase',
@@ -633,7 +633,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                             }}
                           >
                             <Check
-                              size={11}
+                              size={10}
                               strokeWidth={3}
                               color={COLORS.textPrimary}
                             />
@@ -654,7 +654,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                 <p
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 13,
                     color: COLORS.textSecondary,
                     lineHeight: 1.5,
                     margin: `${SPACE.sm}px 0 0`,
@@ -739,7 +739,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                 <span
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 600,
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -779,7 +779,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                     size="md"
                     icon={
                       justApplied ? (
-                        <Check size={15} strokeWidth={2} />
+                        <Check size={14} strokeWidth={2} />
                       ) : undefined
                     }
                     onClick={handleApply}
@@ -798,7 +798,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                     variant="secondary"
                     fullWidth
                     size="md"
-                    icon={<RotateCcw size={15} strokeWidth={2} />}
+                    icon={<RotateCcw size={14} strokeWidth={2} />}
                     onClick={handleReset}
                     disabled={
                       justApplied ||

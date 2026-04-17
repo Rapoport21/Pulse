@@ -144,7 +144,7 @@ const PriorityPill: React.FC<{ priority: string }> = ({ priority }) => {
         border: `1px solid ${p.border}`,
         borderRadius: RADIUS.sm,
         fontFamily: FONTS.mono,
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: 600,
         letterSpacing: '0.16em',
         textTransform: 'uppercase',
@@ -155,7 +155,7 @@ const PriorityPill: React.FC<{ priority: string }> = ({ priority }) => {
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 9,
+          fontSize: 8,
           opacity: 0.7,
           letterSpacing: '0.1em',
         }}
@@ -198,7 +198,7 @@ const OwnerBadge: React.FC<{ owner: string }> = ({ owner }) => (
         border: `1px solid ${COLORS.borderStrong}`,
         borderRadius: RADIUS.sm,
         fontFamily: FONTS.mono,
-        fontSize: 10,
+        fontSize: 9,
         fontWeight: 600,
         color: COLORS.textPrimary,
         flexShrink: 0,
@@ -323,7 +323,7 @@ const ActionCard: React.FC<{
             <h4
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 500,
                 letterSpacing: '-0.005em',
                 lineHeight: 1.4,
@@ -355,14 +355,14 @@ const ActionCard: React.FC<{
                   alignItems: 'center',
                   gap: 4,
                   fontFamily: FONTS.mono,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 500,
                   letterSpacing: '0.1em',
                   color: isHeld ? COLORS.crit : COLORS.textSecondary,
                   flexShrink: 0,
                 }}
               >
-                <Clock size={11} strokeWidth={2} />
+                <Clock size={10} strokeWidth={2} />
                 {action.dueTime}
               </span>
             </div>
@@ -382,7 +382,7 @@ const ActionCard: React.FC<{
                 }}
               >
                 <AlertCircle
-                  size={11}
+                  size={10}
                   strokeWidth={2}
                   color={COLORS.crit}
                 />
@@ -407,7 +407,7 @@ const ActionCard: React.FC<{
                 }}
               >
                 <AlertCircle
-                  size={11}
+                  size={10}
                   strokeWidth={2}
                   color={COLORS.textMuted}
                 />
@@ -527,7 +527,7 @@ const Column: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 11,
               fontWeight: 600,
               color: COLORS.textPrimary,
               letterSpacing: '0.08em',
@@ -597,7 +597,7 @@ const Column: React.FC<{
                   borderRadius: RADIUS.sm,
                   color: COLORS.textMuted,
                   fontFamily: FONTS.mono,
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 500,
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
@@ -619,7 +619,7 @@ const Column: React.FC<{
                   e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <Plus size={13} strokeWidth={2} />
+                <Plus size={12} strokeWidth={2} />
                 New Action
               </button>
             )}
@@ -682,7 +682,7 @@ const TacticalInput: React.FC<{
           outline: 'none',
           color: COLORS.textPrimary,
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 12,
           letterSpacing: '-0.005em',
           minWidth: 0,
         }}
@@ -703,7 +703,7 @@ const TacticalInput: React.FC<{
           onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.textPrimary)}
           onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.textMuted)}
         >
-          <X size={13} strokeWidth={2} />
+          <X size={12} strokeWidth={2} />
         </button>
       )}
     </div>
@@ -984,7 +984,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <h2
         style={{
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: 700,
           borderBottom: '1px solid #000',
           paddingBottom: 8,
@@ -1001,7 +1001,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
             <div key={status} style={{ marginBottom: 16 }}>
               <h3
                 style={{
-                  fontSize: 17,
+                  fontSize: 16,
                   fontWeight: 700,
                   background: '#F3F4F6',
                   padding: 8,
@@ -1131,7 +1131,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
           }}
         >
           <TacticalInput
-            icon={<Search size={14} strokeWidth={2} />}
+            icon={<Search size={13} strokeWidth={2} />}
             value={searchQuery}
             onChange={setSearchQuery}
             onClear={() => setSearchQuery('')}
@@ -1141,7 +1141,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
             <TacticalButton
               variant="primary"
               size="md"
-              icon={<Printer size={14} strokeWidth={2} />}
+              icon={<Printer size={13} strokeWidth={2} />}
               onClick={() => setShowPrintModal(true)}
             >
               Print Board
@@ -1174,7 +1174,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
             }}
           >
             <AlertOctagon
-              size={20}
+              size={18}
               strokeWidth={2}
               color={COLORS.accentBright}
             />
@@ -1192,7 +1192,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 13,
+                  fontSize: 12,
                   color: COLORS.textSecondary,
                   lineHeight: 1.4,
                 }}
@@ -1282,25 +1282,25 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
               <CornerBracket
                 position="tl"
                 color={COLORS.borderStrong}
-                size={13}
+                size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="tr"
                 color={COLORS.borderStrong}
-                size={13}
+                size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="bl"
                 color={COLORS.borderStrong}
-                size={13}
+                size={12}
                 thickness={1.5}
               />
               <CornerBracket
                 position="br"
                 color={COLORS.borderStrong}
-                size={13}
+                size={12}
                 thickness={1.5}
               />
 
@@ -1377,7 +1377,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                     e.currentTarget.style.borderColor = COLORS.border;
                   }}
                 >
-                  <X size={15} strokeWidth={2} />
+                  <X size={14} strokeWidth={2} />
                 </button>
               </div>
 
@@ -1399,13 +1399,13 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                   active={activeTab === 'comments'}
                   onClick={() => setActiveTab('comments')}
                   label={`Comments · ${selectedAction.comments?.length || 0}`}
-                  icon={<MessageSquare size={13} strokeWidth={2} />}
+                  icon={<MessageSquare size={12} strokeWidth={2} />}
                 />
                 <TabButton
                   active={activeTab === 'history'}
                   onClick={() => setActiveTab('history')}
                   label={`History · ${selectedAction.history?.length || 0}`}
-                  icon={<History size={13} strokeWidth={2} />}
+                  icon={<History size={12} strokeWidth={2} />}
                 />
               </div>
 
@@ -1444,7 +1444,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                             border: `1px solid ${COLORS.border}`,
                             color: COLORS.textPrimary,
                             fontFamily: FONTS.sans,
-                            fontSize: 13,
+                            fontSize: 12,
                             padding: `6px ${SPACE.sm}px`,
                             borderRadius: RADIUS.sm,
                             outline: 'none',
@@ -1467,7 +1467,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                         <span
                           style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: 600,
                             color: COLORS.textPrimary,
                             letterSpacing: '0.04em',
@@ -1478,7 +1478,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                           }}
                         >
                           <Clock
-                            size={13}
+                            size={12}
                             strokeWidth={2}
                             color={COLORS.textMuted}
                           />
@@ -1562,7 +1562,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                               <span
                                 style={{
                                   fontFamily: FONTS.mono,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                   fontWeight: 500,
                                   letterSpacing: '0.12em',
                                   textTransform: 'uppercase',
@@ -1603,7 +1603,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                           padding: SPACE.md,
                           color: COLORS.textPrimary,
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
+                          fontSize: 13,
                           outline: 'none',
                           minHeight: 72,
                           resize: 'vertical',
@@ -1690,7 +1690,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                                 <p
                                   style={{
                                     fontFamily: FONTS.sans,
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: COLORS.textPrimary,
                                     margin: 0,
                                     lineHeight: 1.5,
@@ -1710,7 +1710,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                                 borderRadius: RADIUS.sm,
                                 padding: SPACE.md,
                                 fontFamily: FONTS.sans,
-                                fontSize: 14,
+                                fontSize: 13,
                                 color: COLORS.textPrimary,
                               }}
                             >
@@ -1745,7 +1745,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                           padding: `${SPACE.sm}px ${SPACE.md}px`,
                           color: COLORS.textPrimary,
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
+                          fontSize: 13,
                           outline: 'none',
                           minWidth: 0,
                           transition: `border-color ${MOTION.fast}s ease`,
@@ -1762,7 +1762,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                         size="md"
                         disabled={!newComment.trim()}
                         onClick={handleAddComment}
-                        icon={<Send size={13} strokeWidth={2} />}
+                        icon={<Send size={12} strokeWidth={2} />}
                       >
                         Send
                       </TacticalButton>
@@ -1819,7 +1819,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                               <span
                                 style={{
                                   fontFamily: FONTS.sans,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   color: COLORS.textPrimary,
                                   lineHeight: 1.4,
                                   flex: 1,
@@ -1886,7 +1886,7 @@ const StatCell: React.FC<{
     <span
       style={{
         fontFamily: FONTS.mono,
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: 600,
         color: tone,
         letterSpacing: '0.02em',
@@ -1922,7 +1922,7 @@ const TabButton: React.FC<{
       justifyContent: 'center',
       gap: 6,
       fontFamily: FONTS.mono,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: 500,
       letterSpacing: '0.14em',
       textTransform: 'uppercase',

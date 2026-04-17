@@ -162,10 +162,10 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
             }}
           />
 
-          <CornerBracket position="tl" color={COLORS.accent} size={11} thickness={1} inset={-1} />
-          <CornerBracket position="tr" color={COLORS.accent} size={11} thickness={1} inset={-1} />
-          <CornerBracket position="bl" color={COLORS.accent} size={11} thickness={1} inset={-1} />
-          <CornerBracket position="br" color={COLORS.accent} size={11} thickness={1} inset={-1} />
+          <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={1} inset={-1} />
+          <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={1} inset={-1} />
+          <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1} inset={-1} />
+          <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1} inset={-1} />
 
           {/* Header */}
           <div
@@ -208,7 +208,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                     boxShadow: `0 0 16px ${COLORS.accentGlow}`,
                   }}
                 >
-                  <ShieldAlert size={22} strokeWidth={2} />
+                  <ShieldAlert size={20} strokeWidth={2} />
                   <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} inset={-1} />
                   <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} inset={-1} />
                 </div>
@@ -271,7 +271,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                   e.currentTarget.style.color = COLORS.textMuted;
                 }}
               >
-                <X size={15} strokeWidth={2} />
+                <X size={14} strokeWidth={2} />
               </button>
             </div>
           </div>
@@ -298,7 +298,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
               <MetaBlock label="Trigger Condition" mono>
                 {mockPlaybook.triggerCondition}
               </MetaBlock>
-              <MetaBlock label="Required Approver" icon={<UserCheck size={14} color={COLORS.info} />}>
+              <MetaBlock label="Required Approver" icon={<UserCheck size={13} color={COLORS.info} />}>
                 {mockPlaybook.approverRole}
               </MetaBlock>
             </div>
@@ -314,7 +314,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                  <CheckSquare size={15} color={COLORS.textSecondary} strokeWidth={2} />
+                  <CheckSquare size={14} color={COLORS.textSecondary} strokeWidth={2} />
                   <BracketLabel tone="muted" size="xs">
                     IMMEDIATE ACTIONS REQUIRED
                   </BracketLabel>
@@ -370,7 +370,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                           transition: `all ${MOTION.fast}s ease`,
                         }}
                       >
-                        {checked && <Check size={13} strokeWidth={3} />}
+                        {checked && <Check size={12} strokeWidth={3} />}
                       </div>
                       <Mono
                         tone="muted"
@@ -383,7 +383,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                         style={{
                           flex: 1,
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
+                          fontSize: 13,
                           color: checked ? COLORS.textPrimary : COLORS.textSecondary,
                           lineHeight: 1.45,
                         }}
@@ -426,7 +426,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                   borderRadius: RADIUS.sm,
                   color: COLORS.textPrimary,
                   fontFamily: FONTS.sans,
-                  fontSize: 14,
+                  fontSize: 13,
                   outline: 'none',
                   transition: `border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease`,
                   boxShadow: nameFocused ? `0 0 0 3px ${COLORS.accentGlow}` : 'none',
@@ -449,7 +449,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <Clock size={13} color={COLORS.textMuted} strokeWidth={2} />
+              <Clock size={12} color={COLORS.textMuted} strokeWidth={2} />
               <Mono tone="muted" size="xs" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 Review Time · {mm}:{ss}
               </Mono>
@@ -466,12 +466,12 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                 icon={
                   isSubmitting ? (
                     <Loader2
-                      size={15}
+                      size={14}
                       strokeWidth={2}
                       style={{ animation: 'spin 1.2s linear infinite' }}
                     />
                   ) : (
-                    <ArrowRight size={15} strokeWidth={2} />
+                    <ArrowRight size={14} strokeWidth={2} />
                   )
                 }
               >

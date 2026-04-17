@@ -287,7 +287,7 @@ const DriverBar: React.FC<{
         <span
           style={{
             color: COLORS.textSecondary,
-            fontSize: 13,
+            fontSize: 12,
             fontFamily: FONTS.sans,
             fontWeight: 500,
           }}
@@ -298,7 +298,7 @@ const DriverBar: React.FC<{
           style={{
             color,
             fontFamily: FONTS.mono,
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 600,
             letterSpacing: '0.08em',
           }}
@@ -374,7 +374,7 @@ const VitalStatBox: React.FC<{
       <div
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 26,
+          fontSize: 24,
           fontWeight: 600,
           color,
           letterSpacing: '-0.02em',
@@ -386,7 +386,7 @@ const VitalStatBox: React.FC<{
       <div
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 9,
           color,
           opacity: 0.8,
           marginTop: 6,
@@ -415,7 +415,7 @@ const HouseRow: React.FC<{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        fontSize: 13,
+        fontSize: 12,
       }}
     >
       <span style={{ color: COLORS.textSecondary }}>{label}</span>
@@ -428,7 +428,7 @@ const HouseRow: React.FC<{
           border: `1px solid ${tone === 'neutral' ? COLORS.border : color + '33'}`,
           padding: '3px 8px',
           borderRadius: RADIUS.sm,
-          fontSize: 11,
+          fontSize: 10,
           letterSpacing: '0.06em',
         }}
       >
@@ -778,7 +778,7 @@ ${urgentTasks
       }>;
       return (
         <VisualFrame
-          icon={<AlertTriangle size={13} strokeWidth={2} />}
+          icon={<AlertTriangle size={12} strokeWidth={2} />}
           label="IMMEDIATE · PRIORITY MATRIX"
           tone="accent"
         >
@@ -823,7 +823,7 @@ ${urgentTasks
                   >
                     <span
                       style={{
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: 600,
                         color: COLORS.textPrimary,
                         letterSpacing: '-0.01em',
@@ -835,7 +835,7 @@ ${urgentTasks
                   </div>
                   <p
                     style={{
-                      fontSize: 13,
+                      fontSize: 12,
                       color: COLORS.textSecondary,
                       margin: 0,
                       marginBottom: SPACE.sm,
@@ -854,12 +854,12 @@ ${urgentTasks
                       border: `1px solid ${COLORS.info}33`,
                       borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono,
-                      fontSize: 12,
+                      fontSize: 11,
                       color: COLORS.info,
                       letterSpacing: '0.04em',
                     }}
                   >
-                    <BrainCircuit size={12} strokeWidth={1.75} />
+                    <BrainCircuit size={11} strokeWidth={1.75} />
                     <span>{p.action}</span>
                   </div>
                 </div>
@@ -880,7 +880,7 @@ ${urgentTasks
       }>;
       return (
         <VisualFrame
-          icon={<Wind size={13} strokeWidth={2} />}
+          icon={<Wind size={12} strokeWidth={2} />}
           label="PRESSURE · DRIVERS"
           tone="accent"
         >
@@ -908,7 +908,7 @@ ${urgentTasks
       }>;
       return (
         <VisualFrame
-          icon={<Network size={13} strokeWidth={2} />}
+          icon={<Network size={12} strokeWidth={2} />}
           label="NETWORK · STATUS"
           tone="info"
         >
@@ -958,13 +958,13 @@ ${urgentTasks
                           alignItems: 'center',
                           gap: SPACE.xs + 2,
                           color: COLORS.textPrimary,
-                          fontSize: 13,
+                          fontSize: 12,
                           fontWeight: 500,
                         }}
                       >
                         {h.name}
                         {h.status === 'Divert' && (
-                          <ShieldAlert size={12} strokeWidth={2} color={COLORS.crit} />
+                          <ShieldAlert size={11} strokeWidth={2} color={COLORS.crit} />
                         )}
                       </div>
                       <div
@@ -973,13 +973,13 @@ ${urgentTasks
                           alignItems: 'center',
                           gap: 4,
                           fontFamily: FONTS.mono,
-                          fontSize: 11,
+                          fontSize: 10,
                           color: COLORS.textMuted,
                           marginTop: 2,
                           letterSpacing: '0.08em',
                         }}
                       >
-                        <MapPin size={11} strokeWidth={2} />
+                        <MapPin size={10} strokeWidth={2} />
                         {h.time}
                       </div>
                     </div>
@@ -1003,7 +1003,7 @@ ${urgentTasks
       };
       return (
         <VisualFrame
-          icon={<Activity size={13} strokeWidth={2} />}
+          icon={<Activity size={12} strokeWidth={2} />}
           label="SYSTEM · VITALS"
           tone="ok"
         >
@@ -1049,7 +1049,7 @@ ${urgentTasks
                   marginBottom: SPACE.xs,
                 }}
               >
-                <Building2 size={12} strokeWidth={2} color={COLORS.info} />
+                <Building2 size={11} strokeWidth={2} color={COLORS.info} />
                 <Mono tone="secondary" size="xs" style={{ color: COLORS.info }}>
                   HOUSE STATUS
                 </Mono>
@@ -1072,12 +1072,12 @@ ${urgentTasks
                 border: `1px solid ${COLORS.info}33`,
                 borderRadius: RADIUS.sm,
                 color: COLORS.info,
-                fontSize: 12,
+                fontSize: 11,
                 fontFamily: FONTS.mono,
                 letterSpacing: '0.04em',
               }}
             >
-              <AlertTriangle size={12} strokeWidth={2} style={{ flexShrink: 0 }} />
+              <AlertTriangle size={11} strokeWidth={2} style={{ flexShrink: 0 }} />
               <span>{v.inboundEMS}</span>
             </div>
           </div>
@@ -1094,7 +1094,7 @@ ${urgentTasks
       };
       return (
         <VisualFrame
-          icon={<UserCircle size={13} strokeWidth={2} />}
+          icon={<UserCircle size={12} strokeWidth={2} />}
           label="PATIENT · INFORMATION"
           tone="info"
         >
@@ -1119,7 +1119,7 @@ ${urgentTasks
                     margin: 0,
                     paddingLeft: 18,
                     color: COLORS.textSecondary,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontFamily: FONTS.mono,
                     letterSpacing: '0.04em',
                     lineHeight: 1.7,
@@ -1133,7 +1133,7 @@ ${urgentTasks
                   <div
                     style={{
                       fontFamily: FONTS.mono,
-                      fontSize: 12,
+                      fontSize: 11,
                       color: COLORS.warn,
                       letterSpacing: '0.08em',
                     }}
@@ -1145,7 +1145,7 @@ ${urgentTasks
                   variant="primary"
                   size="sm"
                   fullWidth
-                  icon={<AlertTriangle size={13} strokeWidth={2} />}
+                  icon={<AlertTriangle size={12} strokeWidth={2} />}
                   onClick={() => handleSend('Escalate transport and pharmacy for these patients')}
                 >
                   Escalate Discharges
@@ -1167,7 +1167,7 @@ ${urgentTasks
                 <Mono tone="muted" size="xs">
                   ATTENDING
                 </Mono>
-                <div style={{ color: COLORS.textPrimary, fontSize: 14, fontWeight: 500 }}>
+                <div style={{ color: COLORS.textPrimary, fontSize: 13, fontWeight: 500 }}>
                   {data.attending}
                 </div>
                 {data.status && (
@@ -1177,12 +1177,12 @@ ${urgentTasks
                       alignItems: 'center',
                       gap: SPACE.xs,
                       fontFamily: FONTS.mono,
-                      fontSize: 12,
+                      fontSize: 11,
                       color: COLORS.ok,
                       letterSpacing: '0.06em',
                     }}
                   >
-                    <CheckCircle2 size={12} strokeWidth={2} />
+                    <CheckCircle2 size={11} strokeWidth={2} />
                     {data.status}
                   </div>
                 )}
@@ -1190,7 +1190,7 @@ ${urgentTasks
                   variant="secondary"
                   size="sm"
                   fullWidth
-                  icon={<Send size={13} strokeWidth={2} />}
+                  icon={<Send size={12} strokeWidth={2} />}
                   onClick={() => handleSend(`Page ${data.attending} to pull patient to ICU`)}
                 >
                   Page Attending
@@ -1200,7 +1200,7 @@ ${urgentTasks
             {data.info && (
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 12,
                   color: COLORS.textMuted,
                   fontStyle: 'italic',
                   padding: SPACE.sm,
@@ -1275,10 +1275,10 @@ ${urgentTasks
             }}
           >
             {/* Corner brackets — neutral frame, drawer isn't urgent */}
-            <CornerBracket position="tl" color={COLORS.borderStrong} size={11} thickness={1} />
-            <CornerBracket position="tr" color={COLORS.borderStrong} size={11} thickness={1} />
-            <CornerBracket position="bl" color={COLORS.borderStrong} size={11} thickness={1} />
-            <CornerBracket position="br" color={COLORS.borderStrong} size={11} thickness={1} />
+            <CornerBracket position="tl" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="tr" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="bl" color={COLORS.borderStrong} size={10} thickness={1} />
+            <CornerBracket position="br" color={COLORS.borderStrong} size={10} thickness={1} />
 
             {/* Header */}
             <div
@@ -1309,7 +1309,7 @@ ${urgentTasks
                     color: COLORS.info,
                   }}
                 >
-                  <BrainCircuit size={20} strokeWidth={1.75} />
+                  <BrainCircuit size={18} strokeWidth={1.75} />
                 </div>
                 <div>
                   <div
@@ -1336,7 +1336,7 @@ ${urgentTasks
                   variant="ghost"
                   size="sm"
                   onClick={handleClearChat}
-                  icon={<Trash2 size={15} strokeWidth={2} />}
+                  icon={<Trash2 size={14} strokeWidth={2} />}
                   title="Clear chat"
                 >
                   CLEAR
@@ -1345,7 +1345,7 @@ ${urgentTasks
                   variant="ghost"
                   size="sm"
                   onClick={onClose}
-                  icon={<X size={15} strokeWidth={2} />}
+                  icon={<X size={14} strokeWidth={2} />}
                   title="Close"
                 >
                   CLOSE
@@ -1412,7 +1412,7 @@ ${urgentTasks
                             marginTop: 2,
                           }}
                         >
-                          <Bot size={15} strokeWidth={2} />
+                          <Bot size={14} strokeWidth={2} />
                         </div>
                       )}
                       <div
@@ -1426,7 +1426,7 @@ ${urgentTasks
                           }`,
                           borderRadius: RADIUS.sm,
                           color: COLORS.textPrimary,
-                          fontSize: 14,
+                          fontSize: 13,
                           lineHeight: 1.55,
                           boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
                         }}
@@ -1472,7 +1472,7 @@ ${urgentTasks
                         color: COLORS.info,
                       }}
                     >
-                      <Bot size={15} strokeWidth={2} />
+                      <Bot size={14} strokeWidth={2} />
                     </div>
                     <div
                       style={{
@@ -1556,7 +1556,7 @@ ${urgentTasks
                     background: COLORS.warnDim,
                     border: `1px solid ${COLORS.warn}33`,
                     borderRadius: RADIUS.sm,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontFamily: FONTS.mono,
                     color: COLORS.warn,
                     letterSpacing: '0.06em',
@@ -1565,7 +1565,7 @@ ${urgentTasks
                     gap: SPACE.xs,
                   }}
                 >
-                  <AlertTriangle size={12} strokeWidth={2} />
+                  <AlertTriangle size={11} strokeWidth={2} />
                   ASSISTANT DISABLED — VITE_GEMINI_API_KEY NOT SET
                 </div>
               )}
@@ -1599,7 +1599,7 @@ ${urgentTasks
                     outline: 'none',
                     color: COLORS.textPrimary,
                     // 16px prevents iOS Safari auto-zoom on focus
-                    fontSize: 17,
+                    fontSize: 16,
                     fontFamily: FONTS.sans,
                     letterSpacing: '-0.003em',
                   }}
@@ -1633,7 +1633,7 @@ ${urgentTasks
                       !input.trim() || isTyping || !ai ? 'none' : SHADOW.accentGlowSm,
                   }}
                 >
-                  <Send size={15} strokeWidth={2} />
+                  <Send size={14} strokeWidth={2} />
                 </button>
               </div>
               <div

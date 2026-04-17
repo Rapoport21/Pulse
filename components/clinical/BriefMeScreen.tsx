@@ -32,10 +32,10 @@ interface HistoryEntry { time: string; summary: string }
 const EXEC_SUMMARY = 'ED operating at 82% capacity with 3 critical patients. ICU has 1 bed available \u2014 expect 2 transfers from ED within the next 90 minutes. Staffing is adequate for current census but night shift will be 2 RNs short in ICU. Blood bank inventory is sufficient; OR utilization is at 67% with 2 rooms available.';
 
 const METRICS: Array<{ label: string; value: string; trend: 'up' | 'down' | 'stable'; tone: 'ok' | 'warn' | 'crit' | 'info'; icon: React.ReactNode }> = [
-  { label: 'Census', value: '42/52', trend: 'up', tone: 'info', icon: <Users size={14} /> },
-  { label: 'Capacity', value: '81%', trend: 'up', tone: 'warn', icon: <Gauge size={14} /> },
-  { label: 'MEWS>3', value: '2 pts', trend: 'stable', tone: 'crit', icon: <Activity size={14} /> },
-  { label: 'Avg Wait', value: '34min', trend: 'up', tone: 'warn', icon: <Timer size={14} /> },
+  { label: 'Census', value: '42/52', trend: 'up', tone: 'info', icon: <Users size={13} /> },
+  { label: 'Capacity', value: '81%', trend: 'up', tone: 'warn', icon: <Gauge size={13} /> },
+  { label: 'MEWS>3', value: '2 pts', trend: 'stable', tone: 'crit', icon: <Activity size={13} /> },
+  { label: 'Avg Wait', value: '34min', trend: 'up', tone: 'warn', icon: <Timer size={13} /> },
 ];
 
 const PRIORITY_ACTIONS: PriorityAction[] = [
@@ -72,14 +72,14 @@ const mewsCol = (m: number) => m >= 5 ? COLORS.crit : m >= 3 ? COLORS.warn : COL
 const tCol = (t: 'ok' | 'warn' | 'crit' | 'info') => t === 'ok' ? COLORS.ok : t === 'warn' ? COLORS.warn : t === 'crit' ? COLORS.crit : COLORS.info;
 
 const TrendIcon: React.FC<{ trend: 'up' | 'down' | 'stable'; color: string }> = ({ trend, color }) =>
-  trend === 'up' ? <TrendingUp size={12} color={color} /> : trend === 'down' ? <TrendingDown size={12} color={color} /> : <Minus size={12} color={color} />;
+  trend === 'up' ? <TrendingUp size={11} color={color} /> : trend === 'down' ? <TrendingDown size={11} color={color} /> : <Minus size={11} color={color} />;
 
 const VitalChip: React.FC<{ label: string; value: string; tone: 'ok' | 'warn' | 'crit' }> = ({ label, value, tone }) => {
   const c = tone === 'ok' ? COLORS.ok : tone === 'warn' ? COLORS.warn : COLORS.crit;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: COLORS.textMuted, textTransform: 'uppercase' }}>{label}</span>
-      <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: c }}>{value}</span>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 8, fontWeight: 500, letterSpacing: '0.12em', color: COLORS.textMuted, textTransform: 'uppercase' }}>{label}</span>
+      <span style={{ fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600, color: c }}>{value}</span>
     </div>
   );
 };
@@ -145,7 +145,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
         >
           {/* Header */}
           <HudStrip side="top" fixed>
-            <button onClick={handleClose} style={closeBtnStyle}><X size={15} /></button>
+            <button onClick={handleClose} style={closeBtnStyle}><X size={14} /></button>
             <BracketLabel tone="accent" size="sm">Brief Me</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={91} ageMinutes={2} />
@@ -160,12 +160,12 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                 <div>
                   <BracketLabel tone="accent" size="base">Operational Brief</BracketLabel>
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.xs }}>
-                    <Clock size={12} color={COLORS.textMuted} />
+                    <Clock size={11} color={COLORS.textMuted} />
                     <Mono tone="muted" size="xs">Generated 2 minutes ago</Mono>
                   </div>
                 </div>
                 <TacticalButton variant="secondary" size="sm" onClick={handleRegenerate} disabled={regenerating}
-                  icon={<RefreshCw size={13} style={regenerating ? { animation: 'spin 1s linear infinite' } : undefined} />}
+                  icon={<RefreshCw size={12} style={regenerating ? { animation: 'spin 1s linear infinite' } : undefined} />}
                 >Regenerate</TacticalButton>
               </div>
 
@@ -175,7 +175,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               >
                 <ScanningLine duration={8} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <BrainCircuit size={15} color={COLORS.accent} />
+                  <BrainCircuit size={14} color={COLORS.accent} />
                   <Mono tone="accent" size="xs">AI Synthesis</Mono>
                 </div>
                 <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.body.size + 1, fontWeight: 400, lineHeight: 1.65, color: COLORS.textPrimary, minHeight: 72, letterSpacing: '-0.005em' }}>
@@ -183,7 +183,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                     {!ready || regenerating ? (
                       <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                        <RefreshCw size={15} color={COLORS.info} style={{ animation: 'spin 1.4s linear infinite' }} />
+                        <RefreshCw size={14} color={COLORS.info} style={{ animation: 'spin 1.4s linear infinite' }} />
                         <Mono tone="secondary" size="sm">Synthesizing hospital data...</Mono>
                       </motion.div>
                     ) : (
@@ -223,7 +223,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 4. Priority Actions */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <AlertTriangle size={14} color={COLORS.warn} />
+                  <AlertTriangle size={13} color={COLORS.warn} />
                   <Mono tone="secondary" size="sm">Priority Actions</Mono>
                   <div style={{ flex: 1 }} />
                   <Mono tone="muted" size="xs">{PRIORITY_ACTIONS.length} items</Mono>
@@ -238,7 +238,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                       <StatusPill label={action.severity.toUpperCase()} tone={sevTone(action.severity)} size="xs" />
                       <span style={{ flex: 1, minWidth: 0, fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textPrimary, lineHeight: 1.4 }}>{action.text}</span>
                       <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>{action.department}</Mono>
-                      <TacticalButton variant="primary" size="sm" onClick={() => handleAct(action)} icon={<ChevronRight size={12} />} style={{ flexShrink: 0 }}>Act</TacticalButton>
+                      <TacticalButton variant="primary" size="sm" onClick={() => handleAct(action)} icon={<ChevronRight size={11} />} style={{ flexShrink: 0 }}>Act</TacticalButton>
                     </motion.div>
                   ))}
                 </div>
@@ -249,7 +249,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 5. Patient Spotlight */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <Activity size={14} color={COLORS.crit} />
+                  <Activity size={13} color={COLORS.crit} />
                   <Mono tone="secondary" size="sm">Patient Spotlight</Mono>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -261,7 +261,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: SPACE.md }}>
                           {/* MEWS badge */}
                           <div style={{ width: 36, height: 36, borderRadius: RADIUS.sm, background: `${mewsCol(pt.mews)}12`, border: `1.5px solid ${mewsCol(pt.mews)}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontFamily: FONTS.mono, fontSize: 15, fontWeight: 700, color: mewsCol(pt.mews), lineHeight: 1 }}>{pt.mews}</span>
+                            <span style={{ fontFamily: FONTS.mono, fontSize: 14, fontWeight: 700, color: mewsCol(pt.mews), lineHeight: 1 }}>{pt.mews}</span>
                             <span style={{ fontFamily: FONTS.mono, fontSize: 7, fontWeight: 500, color: mewsCol(pt.mews), letterSpacing: '0.1em', textTransform: 'uppercase', lineHeight: 1, marginTop: 1 }}>MEWS</span>
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
@@ -279,7 +279,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                           </div>
                           <button onClick={() => showToast(`Opening chart for ${pt.name}`)}
                             style={{ ...closeBtnStyle, flexShrink: 0, alignSelf: 'center' }}>
-                            <ChevronRight size={15} />
+                            <ChevronRight size={14} />
                           </button>
                         </div>
                       </TacticalCard>
@@ -293,7 +293,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 6. Forecast */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <TrendingUp size={14} color={COLORS.info} />
+                  <TrendingUp size={13} color={COLORS.info} />
                   <Mono tone="secondary" size="sm">Next 90 Minutes</Mono>
                 </div>
                 <TacticalCard padding="md">
@@ -317,7 +317,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 7. Briefing History */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <Clock size={14} color={COLORS.textMuted} />
+                  <Clock size={13} color={COLORS.textMuted} />
                   <Mono tone="secondary" size="sm">Briefing History</Mono>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -329,7 +329,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, width: '100%' }}>
                           <Mono tone="accent" size="xs" style={{ flexShrink: 0 }}>{entry.time}</Mono>
                           <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, flex: 1 }}>{entry.summary}</span>
-                          <ChevronDown size={13} color={COLORS.textMuted} style={{ transition: `transform ${MOTION.fast}s ease`, transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
+                          <ChevronDown size={12} color={COLORS.textMuted} style={{ transition: `transform ${MOTION.fast}s ease`, transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
                         </div>
                         <AnimatePresence>
                           {expanded && (
@@ -349,7 +349,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
 
               {/* Footer attribution */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: SPACE.sm, padding: `${SPACE.lg}px 0 ${SPACE.base}px` }}>
-                <BrainCircuit size={13} color={COLORS.textDim} />
+                <BrainCircuit size={12} color={COLORS.textDim} />
                 <Mono tone="dim" size="xs">Powered by PULSE AI</Mono>
               </div>
             </div>

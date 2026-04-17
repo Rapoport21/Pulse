@@ -186,7 +186,7 @@ const RoleCard: React.FC<{
               border: `1px solid ${COLORS.borderStrong}`,
               borderRadius: RADIUS.sm,
               fontFamily: FONTS.mono,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 600,
               letterSpacing: '0.08em',
               color: COLORS.textPrimary,
@@ -198,7 +198,7 @@ const RoleCard: React.FC<{
             <div
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 19,
+                fontSize: 17,
                 fontWeight: 600,
                 letterSpacing: '-0.01em',
                 color: COLORS.textPrimary,
@@ -220,7 +220,7 @@ const RoleCard: React.FC<{
         <p
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 14,
+            fontSize: 13,
             color: COLORS.textSecondary,
             lineHeight: 1.45,
             margin: 0,
@@ -262,7 +262,7 @@ const RoleCard: React.FC<{
           >
             <Mono tone={hovered ? 'accent' : 'secondary'}>Enter</Mono>
             <ArrowRight
-              size={15}
+              size={14}
               color={hovered ? COLORS.accent : COLORS.textSecondary}
               strokeWidth={2}
             />

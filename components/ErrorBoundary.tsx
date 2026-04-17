@@ -245,9 +245,9 @@ export class ErrorBoundary extends React.Component<
                 boxShadow: `0 0 28px ${COLORS.crit}55`,
               }}
             >
-              <BracketFrame color={COLORS.crit} size={13} />
+              <BracketFrame color={COLORS.crit} size={12} />
               <AlertOctagon
-                size={44}
+                size={40}
                 strokeWidth={1.5}
                 color={COLORS.crit}
               />
@@ -265,7 +265,7 @@ export class ErrorBoundary extends React.Component<
               <h1
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 40,
+                  fontSize: 36,
                   fontWeight: 700,
                   letterSpacing: '-0.03em',
                   lineHeight: 1.05,
@@ -296,7 +296,7 @@ export class ErrorBoundary extends React.Component<
                 <span
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: 600,
                     letterSpacing: '-0.01em',
                     color: held ? COLORS.textMuted : COLORS.crit,
@@ -347,7 +347,7 @@ export class ErrorBoundary extends React.Component<
                     variant="danger"
                     fullWidth
                     size="md"
-                    icon={<RotateCcw size={15} strokeWidth={2} />}
+                    icon={<RotateCcw size={14} strokeWidth={2} />}
                     onClick={this.handleRestartNow}
                     style={{ height: 44 }}
                   >
@@ -360,7 +360,7 @@ export class ErrorBoundary extends React.Component<
                       variant="secondary"
                       fullWidth
                       size="md"
-                      icon={<Pause size={15} strokeWidth={2} />}
+                      icon={<Pause size={14} strokeWidth={2} />}
                       onClick={this.handleHold}
                       style={{ height: 44 }}
                     >
@@ -381,7 +381,7 @@ export class ErrorBoundary extends React.Component<
                 <pre
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 12,
+                    fontSize: 11,
                     color: COLORS.textPrimary,
                     lineHeight: 1.5,
                     whiteSpace: 'pre-wrap',

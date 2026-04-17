@@ -50,7 +50,7 @@ const DebugSection: React.FC<{
     <Mono
       tone="muted"
       size="xs"
-      style={{ display: 'block', marginBottom: 6, fontSize: 10 }}
+      style={{ display: 'block', marginBottom: 6, fontSize: 9 }}
     >
       {title}
     </Mono>
@@ -67,7 +67,7 @@ const KeyValueRow: React.FC<{
     style={{
       display: 'flex',
       gap: SPACE.xs,
-      fontSize: 12,
+      fontSize: 11,
       color: COLORS.textSecondary,
       fontFamily: FONTS.mono,
       letterSpacing: '0.03em',
@@ -101,7 +101,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
         width: 420,
         maxWidth: 'calc(100vw - 32px)',
         fontFamily: FONTS.mono,
-        fontSize: 12,
+        fontSize: 11,
         color: COLORS.textSecondary,
         background: 'rgba(2, 2, 2, 0.92)',
         backdropFilter: 'blur(8px)',
@@ -151,9 +151,9 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
           </Mono>
         </div>
         {collapsed ? (
-          <ChevronUp size={13} strokeWidth={2} color={COLORS.textMuted} />
+          <ChevronUp size={12} strokeWidth={2} color={COLORS.textMuted} />
         ) : (
-          <ChevronDown size={13} strokeWidth={2} color={COLORS.textMuted} />
+          <ChevronDown size={12} strokeWidth={2} color={COLORS.textMuted} />
         )}
       </div>
 
@@ -267,7 +267,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
             variant="danger"
             size="sm"
             fullWidth
-            icon={<RotateCcw size={13} strokeWidth={2} />}
+            icon={<RotateCcw size={12} strokeWidth={2} />}
             onClick={() => broadcastReset()}
           >
             Reset Demo State
@@ -316,7 +316,7 @@ export const ConnectionIndicator: React.FC = () => {
           boxShadow: `0 0 6px ${dotColor}`,
         }}
       />
-      <Mono tone="muted" size="xs" style={{ fontSize: 10 }}>
+      <Mono tone="muted" size="xs" style={{ fontSize: 9 }}>
         {status}
       </Mono>
     </div>

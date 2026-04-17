@@ -81,7 +81,7 @@ const SortPill: React.FC<{
       border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
       borderRadius: RADIUS.md,
       fontFamily: FONTS.mono,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: 500,
       letterSpacing: '0.1em',
       textTransform: 'uppercase' as const,
@@ -116,7 +116,7 @@ const FilterPill: React.FC<{
       border: `1px solid ${active ? COLORS.borderStrong : COLORS.border}`,
       borderRadius: RADIUS.md,
       fontFamily: FONTS.mono,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: 500,
       letterSpacing: '0.1em',
       textTransform: 'uppercase' as const,
@@ -195,7 +195,7 @@ const PatientRow: React.FC<{
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 17,
+            fontSize: 16,
             fontWeight: 600,
             color: mewsColor(mewsScore),
           }}
@@ -210,7 +210,7 @@ const PatientRow: React.FC<{
           <span
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 600,
               color: COLORS.textPrimary,
               whiteSpace: 'nowrap',
@@ -223,7 +223,7 @@ const PatientRow: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 11,
               color: COLORS.textMuted,
               letterSpacing: '0.06em',
               flexShrink: 0,
@@ -235,7 +235,7 @@ const PatientRow: React.FC<{
         <div
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 12,
+            fontSize: 11,
             color: COLORS.textSecondary,
             letterSpacing: '0.04em',
             marginBottom: 2,
@@ -247,7 +247,7 @@ const PatientRow: React.FC<{
         <div
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 12,
             color: COLORS.textMuted,
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -272,7 +272,7 @@ const PatientRow: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 11,
               letterSpacing: '0.06em',
               color: hrColor(latestVitals.heartRate),
             }}
@@ -284,7 +284,7 @@ const PatientRow: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 11,
               letterSpacing: '0.06em',
               color: spo2Color(latestVitals.spO2),
             }}
@@ -296,7 +296,7 @@ const PatientRow: React.FC<{
 
       {/* Chevron */}
       <ChevronRight
-        size={15}
+        size={14}
         color={selected ? COLORS.accent : COLORS.textDim}
         style={{ flexShrink: 0 }}
       />
@@ -434,7 +434,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
         <div style={{ padding: `${SPACE.sm}px ${SPACE.md}px` }}>
           <div style={{ position: 'relative' }}>
             <Search
-              size={15}
+              size={14}
               color={COLORS.textMuted}
               style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
             />
@@ -452,7 +452,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
                 border: `1px solid ${COLORS.border}`,
                 borderRadius: RADIUS.sm,
                 fontFamily: FONTS.mono,
-                fontSize: 14,
+                fontSize: 13,
                 color: COLORS.textPrimary,
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -582,7 +582,7 @@ export const PatientsPage: React.FC<PatientsPageProps> = ({
                 gap: SPACE.base,
               }}
             >
-              <Users size={52} color={COLORS.textDim} strokeWidth={1.2} />
+              <Users size={48} color={COLORS.textDim} strokeWidth={1.2} />
               <Mono tone="muted" size="base">
                 Select a patient from the list
               </Mono>

@@ -318,7 +318,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                 cursor: 'pointer',
               }}
             >
-              <X size={15} />
+              <X size={14} />
             </button>
             <BracketLabel tone="accent" size="sm">{headerSubtitle}</BracketLabel>
             <div style={{ flex: 1 }} />
@@ -350,7 +350,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
             >
               {/* Sort pills */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <ArrowUpDown size={12} color={COLORS.textMuted} />
+                <ArrowUpDown size={11} color={COLORS.textMuted} />
                 {(['acuity', 'bed', 'name'] as SortMode[]).map((mode) => (
                   <button
                     key={mode}
@@ -361,7 +361,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                       border: `1px solid ${sortMode === mode ? COLORS.accent : COLORS.border}`,
                       borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono,
-                      fontSize: 11,
+                      fontSize: 10,
                       fontWeight: 600,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase',
@@ -385,7 +385,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
 
               {/* Filter pills */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Filter size={12} color={COLORS.textMuted} />
+                <Filter size={11} color={COLORS.textMuted} />
                 {(['all', 'critical', 'warning', 'stable'] as FilterMode[]).map((mode) => {
                   const toneColor =
                     mode === 'critical'
@@ -406,7 +406,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                         border: `1px solid ${filterMode === mode ? toneColor : COLORS.border}`,
                         borderRadius: RADIUS.sm,
                         fontFamily: FONTS.mono,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: 600,
                         letterSpacing: '0.08em',
                         textTransform: 'uppercase',
@@ -493,7 +493,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                           <span
                             style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 17,
+                              fontSize: 16,
                               fontWeight: 700,
                               color,
                               lineHeight: 1,
@@ -504,7 +504,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                           <span
                             style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 8,
+                              fontSize: 7,
                               fontWeight: 600,
                               color,
                               letterSpacing: '0.05em',
@@ -578,9 +578,9 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                               flexShrink: 0,
                             }}
                           >
-                            <VitalChip icon={<Heart size={11} />} value={`${v.heartRate}`} alert={v.heartRate > 110 || v.heartRate < 50} />
-                            <VitalChip icon={<Activity size={11} />} value={`${v.systolic}/${v.diastolic}`} alert={v.systolic < 90} />
-                            <VitalChip icon={<Droplets size={11} />} value={`${v.spO2}%`} alert={v.spO2 < 94} />
+                            <VitalChip icon={<Heart size={10} />} value={`${v.heartRate}`} alert={v.heartRate > 110 || v.heartRate < 50} />
+                            <VitalChip icon={<Activity size={10} />} value={`${v.systolic}/${v.diastolic}`} alert={v.systolic < 90} />
+                            <VitalChip icon={<Droplets size={10} />} value={`${v.spO2}%`} alert={v.spO2 < 94} />
                           </div>
                         )}
 
@@ -603,9 +603,9 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
 
                         {/* Expand chevron */}
                         {isExpanded ? (
-                          <ChevronUp size={15} color={COLORS.textMuted} />
+                          <ChevronUp size={14} color={COLORS.textMuted} />
                         ) : (
-                          <ChevronDown size={15} color={COLORS.textMuted} />
+                          <ChevronDown size={14} color={COLORS.textMuted} />
                         )}
                       </button>
 
@@ -656,7 +656,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                               {flagged.length > 0 && (
                                 <div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.xs }}>
-                                    <FlaskConical size={12} color={COLORS.crit} />
+                                    <FlaskConical size={11} color={COLORS.crit} />
                                     <Mono tone="crit" size="xs">Flagged Labs</Mono>
                                   </div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -669,7 +669,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                           border: `1px solid ${(lab.flag === 'HH' || lab.flag === 'LL') ? COLORS.crit : COLORS.warn}30`,
                                           borderRadius: RADIUS.sm,
                                           fontFamily: FONTS.mono,
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           fontWeight: 600,
                                           color: (lab.flag === 'HH' || lab.flag === 'LL') ? COLORS.crit : COLORS.warn,
                                         }}
@@ -710,7 +710,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                               {tasks && (
                                 <div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.xs }}>
-                                    <CheckCircle2 size={12} color={COLORS.textMuted} />
+                                    <CheckCircle2 size={11} color={COLORS.textMuted} />
                                     <Mono tone="muted" size="xs">
                                       Tasks · {tasks.done}/{tasks.total} complete
                                     </Mono>
@@ -758,7 +758,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                               {clinicalNotes && clinicalNotes.filter(n => n.patientId === patient.id).length > 0 && (
                                 <div>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.xs }}>
-                                    <StickyNote size={12} color={COLORS.textMuted} />
+                                    <StickyNote size={11} color={COLORS.textMuted} />
                                     <Mono tone="muted" size="xs">
                                       Notes · {clinicalNotes.filter(n => n.patientId === patient.id).length}
                                     </Mono>
@@ -792,7 +792,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                 <TacticalButton
                                   variant="ghost"
                                   size="sm"
-                                  icon={<FileText size={13} />}
+                                  icon={<FileText size={12} />}
                                   onClick={() => showToast(`Opening chart for ${patient.name.family}`)}
                                 >
                                   Chart
@@ -800,7 +800,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                 <TacticalButton
                                   variant="ghost"
                                   size="sm"
-                                  icon={<StickyNote size={13} />}
+                                  icon={<StickyNote size={12} />}
                                   onClick={() => {
                                     if (onAddNote) {
                                       onAddNote({
@@ -818,7 +818,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                 <TacticalButton
                                   variant="ghost"
                                   size="sm"
-                                  icon={<FlaskConical size={13} />}
+                                  icon={<FlaskConical size={12} />}
                                   onClick={() => showToast(`Orders for ${patient.name.family}`)}
                                 >
                                   Orders
@@ -827,7 +827,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                   <TacticalButton
                                     variant="danger"
                                     size="sm"
-                                    icon={<AlertTriangle size={13} />}
+                                    icon={<AlertTriangle size={12} />}
                                     onClick={() => showToast(`Rapid Response called for ${patient.name.family}`)}
                                   >
                                     Rapid Response
@@ -884,7 +884,7 @@ const VitalChip: React.FC<{
     <span
       style={{
         fontFamily: FONTS.mono,
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 600,
       }}
     >
@@ -912,7 +912,7 @@ const VitalTile: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: 700,
           color: alert ? COLORS.crit : COLORS.textPrimary,
         }}
@@ -922,7 +922,7 @@ const VitalTile: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 9,
           color: COLORS.textMuted,
         }}
       >
@@ -941,7 +941,7 @@ const SbarLine: React.FC<{ letter: string; color: string; text: string }> = ({
     <span
       style={{
         fontFamily: FONTS.mono,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 700,
         color,
         width: 12,

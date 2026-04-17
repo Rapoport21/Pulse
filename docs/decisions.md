@@ -12,47 +12,47 @@ New entries go at the top. Most recent first.
 
 ---
 
-## 2026-04-17 · Simulator controls rewritten (sizing bump reverted)
+## 2026-04-17 · Sizing fully reverted to baseline; simulator rewrite kept
 
-**Context.** Two Nick-reported issues in one message: (a) "the UI
-(the whole pulse) is still too tiny" after the morning's 10-12% bump;
-(b) "sim. controls do not work" — the What-If Sim sliders in Horizon
-weren't responding to touch input.
+**Context.** Three size passes shipped today, each rejected:
 
-**Decision (simulator, kept).** Replaced the native `<input type="range">`
-inside `LeverSlider` with a stepper pattern: ± buttons (44×44, iOS
-HIG minimum tap target) flanking a segmented fill bar (one cell per
-step, accent-glow on active). Rationale: the native range thumb is
-effectively invisible on the near-black tactical surface in the
-Capacitor iOS WebView, and touch drags frequently fail to register
-because WebKit treats the thin track as a scroll-gesture candidate.
-The stepper has discrete taps, a visible current-state indicator, and
-works identically across mouse, touch, and keyboard.
+1. **Morning Pass 1** (+10-12%, commit `e0748d4`). Nick: "still too tiny".
+2. **Afternoon Pass 2** (+15% on Pass 1, commit `2fcc5cd`). Nick: "way
+   too big."
+3. **Pass-2 revert** (back to Pass-1 values, commit `64367f6`). Nick:
+   "things are too large. need to be closer to what is was before."
 
-**Decision (sizing, reverted).** A +15% second-pass bump was shipped
-(commit `2fcc5cd`) on TYPE tokens, CHROME heights, and every hardcoded
-`fontSize: N` / icon `size={N}` literal across the codebase. Nick's
-immediate feedback: "things are too big. way too big now." The whole
-sizing portion of `2fcc5cd` was reverted on top in a follow-up commit.
-Net effect: the simulator stepper is kept; every numeric size is back
-at the morning's Pass-1 values (mono 12/13/14, body 15/17, h 19/23/28/37,
-CHROME 60/40/72).
+At that point the right read was: the Pass-1 bump itself was also
+too far. The original pre-bump scale is what Nick actually wants
+(mono 11/12/13, body 14/16, h 17/21/26/34, display 48/64, CHROME
+56/36/64).
 
-**Takeaway.** Pass 1 read "still too tiny" and Pass 2 read "way too
-big", so the sweet spot is a modest top-up — single-digit px, not
-15%. Future tuning should either (a) target specific legibility
-offenders (iPad chart labels, ticker text) rather than a global
-multiplier, or (b) do one small global bump and pause for eyes-on
-review before compounding.
+**Decision (sizing, reverted fully).** Rolled everything back to the
+pre-`e0748d4` state — TYPE tokens, CHROME heights, every `fontSize: N`
+literal (48 files, 520 instances), and every lucide `size={N}` ≥ 11
+prop. Three net commits today end at the same sizing state the repo
+was in this morning before any bump touched it.
 
-**Rejected.** (a) Keep the bump and trim the chrome back down
-proportionally — the text itself was also flagged too big, not just
-the header. (b) Leave the bump in tokens.ts but revert only the
-perl-pass literals — the perl-pass was what made the change uniformly
-visible; reverting only tokens would leave a bimodal feel. (c) Apply
-a halfway bump (midpoint between Pass 1 and Pass 2) without Nick
-eyeballing it — "way too big" is strong language and midpoint could
-still land on the wrong side of the line.
+**Decision (simulator, kept).** The LeverSlider stepper rewrite from
+`2fcc5cd` is preserved through every revert. The native
+`<input type="range">` it replaced was genuinely broken in the
+Capacitor iOS WebView (invisible thumb on the dark surface, dragged
+gestures eaten by WebKit scroll handling). Replaced with ± stepper
+buttons (44×44, iOS HIG) flanking a segmented fill bar. Unrelated to
+sizing, no reason to drop the fix.
+
+**Takeaway.** Don't apply a global multiplier to a typography scale
+without an in-hand eyes-on review. The proportional relationships
+looked fine in isolation but the absolute feel had a much narrower
+tolerance window than the percentage suggested. If a specific surface
+reads "too small" going forward, bump *that surface* — not the whole
+scale.
+
+**Rejected.** (a) Keep Pass 1 and do a CHROME-only revert (mobile
+navbar tall, text unchanged). The user's feedback was about text and
+chrome, not just chrome. (b) Apply a midpoint bump (half of Pass 1).
+Needed eyes-on review, faster to revert fully and iterate upward if
+requested than keep guessing downward.
 
 ---
 

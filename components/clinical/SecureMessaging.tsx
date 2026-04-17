@@ -388,7 +388,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
             borderRadius: RADIUS.sm,
           }}
         >
-          <Search size={15} color={COLORS.textMuted} />
+          <Search size={14} color={COLORS.textMuted} />
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -400,7 +400,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               outline: 'none',
               color: COLORS.textPrimary,
               fontFamily: FONTS.sans,
-              fontSize: 15,
+              fontSize: 14,
             }}
           />
         </div>
@@ -453,15 +453,15 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
             flexWrap: 'wrap',
           }}
         >
-          <TacticalButton variant="ghost" onClick={handlePageOnCall} icon={<Phone size={13} />}>
+          <TacticalButton variant="ghost" onClick={handlePageOnCall} icon={<Phone size={12} />}>
             Page On-Call
           </TacticalButton>
-          <TacticalButton variant="ghost" onClick={handleSharePatient} icon={<Share2 size={13} />}>
+          <TacticalButton variant="ghost" onClick={handleSharePatient} icon={<Share2 size={12} />}>
             Share Patient
           </TacticalButton>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-            <Users size={12} color={COLORS.textMuted} />
+            <Users size={11} color={COLORS.textMuted} />
             <Mono tone="muted" size="xs">{activeChannel.members}</Mono>
             <Circle size={5} fill={COLORS.ok} color={COLORS.ok} style={{ marginLeft: 2 }} />
             <Mono tone="ok" size="xs">{activeChannel.online}</Mono>
@@ -484,7 +484,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
           {activeChannel.messages.length === 0 && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ textAlign: 'center' }}>
-                <MessageSquare size={31} color={COLORS.textDim} style={{ marginBottom: SPACE.sm }} />
+                <MessageSquare size={28} color={COLORS.textDim} style={{ marginBottom: SPACE.sm }} />
                 <Mono tone="muted" size="sm">No messages yet</Mono>
               </div>
             </div>
@@ -586,7 +586,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 >
                   {msg.urgent && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.xs }}>
-                      <AlertTriangle size={12} color={COLORS.crit} />
+                      <AlertTriangle size={11} color={COLORS.crit} />
                       <StatusPill label="URGENT" tone="crit" />
                     </div>
                   )}
@@ -596,7 +596,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 {/* read receipt */}
                 {isOwn && msg.read && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 2 }}>
-                    <CheckCheck size={13} color={COLORS.ok} />
+                    <CheckCheck size={12} color={COLORS.ok} />
                     <span style={{ fontFamily: FONTS.mono, fontSize: TYPE.monoXs.size, color: COLORS.ok }}>
                       Read
                     </span>
@@ -671,7 +671,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 cursor: 'pointer',
               }}
             >
-              <AlertTriangle size={11} />
+              <AlertTriangle size={10} />
               URGENT
             </button>
             <button
@@ -693,7 +693,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 cursor: 'pointer',
               }}
             >
-              <Phone size={11} />
+              <Phone size={10} />
               PAGE
             </button>
           </div>
@@ -713,7 +713,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 borderRadius: RADIUS.sm,
                 color: COLORS.textPrimary,
                 fontFamily: FONTS.sans,
-                fontSize: 17,
+                fontSize: 16,
                 outline: 'none',
               }}
             />
@@ -735,7 +735,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 flexShrink: 0,
               }}
             >
-              <Send size={17} />
+              <Send size={16} />
             </button>
           </div>
         </div>
@@ -785,7 +785,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                   cursor: 'pointer',
                 }}
               >
-                <ArrowLeft size={15} />
+                <ArrowLeft size={14} />
               </button>
             ) : (
               <button
@@ -803,7 +803,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                   cursor: 'pointer',
                 }}
               >
-                <X size={15} />
+                <X size={14} />
               </button>
             )}
             <BracketLabel tone="accent" size="sm">COMMS</BracketLabel>
@@ -918,7 +918,7 @@ const ChannelRow: React.FC<{
         color: active ? COLORS.accent : COLORS.textMuted,
       }}
     >
-      {channel.kind === 'channel' ? <Hash size={15} /> : <User size={15} />}
+      {channel.kind === 'channel' ? <Hash size={14} /> : <User size={14} />}
     </div>
 
     {/* name + preview */}

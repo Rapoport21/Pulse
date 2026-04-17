@@ -161,10 +161,10 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
             }}
           >
             {/* Corner brackets around the ring */}
-            <CornerBracket position="tl" color={COLORS.accent} size={11} thickness={1} />
-            <CornerBracket position="tr" color={COLORS.accent} size={11} thickness={1} />
-            <CornerBracket position="bl" color={COLORS.accent} size={11} thickness={1} />
-            <CornerBracket position="br" color={COLORS.accent} size={11} thickness={1} />
+            <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1} />
+            <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1} />
 
             {/* Concentric ping rings */}
             {[0, 0.4, 0.8].map((delay, i) => (
@@ -198,7 +198,7 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
               }}
             >
               <Activity
-                size={24}
+                size={22}
                 strokeWidth={2}
                 style={{ animation: 'pulse-dot 1.6s ease-in-out infinite' }}
               />
@@ -227,7 +227,7 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
               transition={{ duration: MOTION.fast, ease: MOTION.ease }}
               style={{
                 fontFamily: FONTS.mono,
-                fontSize: 13,
+                fontSize: 12,
                 letterSpacing: '0.2em',
                 fontWeight: 500,
                 color: COLORS.accent,
@@ -323,14 +323,14 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
                   }}
                 >
                   <Icon
-                    size={13}
+                    size={12}
                     strokeWidth={2}
                     color={active ? COLORS.accent : COLORS.textDim}
                   />
                   <span
                     style={{
                       fontFamily: FONTS.mono,
-                      fontSize: 11,
+                      fontSize: 10,
                       letterSpacing: '0.16em',
                       color: active ? COLORS.accent : COLORS.textDim,
                       textTransform: 'uppercase',

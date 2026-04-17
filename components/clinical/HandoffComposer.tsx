@@ -104,7 +104,7 @@ const InfoRow: React.FC<{ label: string; value: string; valueColor?: string }> =
 
 const Checkbox: React.FC<{ checked: boolean; color: string }> = ({ checked, color }) => (
   <div style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: checked ? `${color}18` : COLORS.surface, border: `1.5px solid ${checked ? color : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: `all ${MOTION.fast}s ease` }}>
-    {checked && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: 13, color, lineHeight: 1 }}>{'\u2713'}</motion.span>}
+    {checked && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: 12, color, lineHeight: 1 }}>{'\u2713'}</motion.span>}
   </div>
 );
 
@@ -168,7 +168,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
           <React.Fragment key={s}>
             {i > 0 && <div style={{ flex: 1, height: 1, background: done ? COLORS.accent : COLORS.border }} />}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ width: 22, height: 22, borderRadius: RADIUS.full, background: done ? COLORS.accent : cur ? COLORS.accentDim : COLORS.surface, border: `1.5px solid ${done || cur ? COLORS.accent : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontFamily: FONTS.mono, fontWeight: 600, color: done ? COLORS.textPrimary : cur ? COLORS.accent : COLORS.textMuted }}>
+              <div style={{ width: 22, height: 22, borderRadius: RADIUS.full, background: done ? COLORS.accent : cur ? COLORS.accentDim : COLORS.surface, border: `1.5px solid ${done || cur ? COLORS.accent : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontFamily: FONTS.mono, fontWeight: 600, color: done ? COLORS.textPrimary : cur ? COLORS.accent : COLORS.textMuted }}>
                 {done ? '\u2713' : i + 1}
               </div>
               <Mono tone={cur ? 'accent' : done ? 'primary' : 'muted'} size="xs">{STEP_LABELS[s]}</Mono>
@@ -184,10 +184,10 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
     <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          <Users size={15} color={COLORS.textMuted} />
+          <Users size={14} color={COLORS.textMuted} />
           <Mono tone="secondary" size="sm">Assigned Patients</Mono>
         </div>
-        <motion.button onClick={toggleAll} whileTap={{ scale: 0.96 }} style={{ background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, padding: `4px ${SPACE.sm}px`, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 11, color: COLORS.accent, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
+        <motion.button onClick={toggleAll} whileTap={{ scale: 0.96 }} style={{ background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, padding: `4px ${SPACE.sm}px`, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 10, color: COLORS.accent, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
           {selected.size === MOCK_PATIENTS.length ? 'Deselect All' : 'Select All'}
         </motion.button>
       </div>
@@ -241,15 +241,15 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
                 <Mono tone="muted" size="xs">Bed {p.currentEncounter?.location?.bed ?? '--'}</Mono>
                 {mews && <StatusPill label={`MEWS ${mews.value}`} tone={tone} />}
               </div>
-              <motion.button onClick={() => setSbarNotes((prev) => ({ ...prev, [p.id]: aiDraft(p) }))} whileTap={{ scale: 0.95 }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `4px ${SPACE.sm}px`, background: `${COLORS.accent}10`, border: `1px solid ${COLORS.accent}40`, borderRadius: RADIUS.sm, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 11, color: COLORS.accent, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
-                <BrainCircuit size={13} /> AI Draft
+              <motion.button onClick={() => setSbarNotes((prev) => ({ ...prev, [p.id]: aiDraft(p) }))} whileTap={{ scale: 0.95 }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: `4px ${SPACE.sm}px`, background: `${COLORS.accent}10`, border: `1px solid ${COLORS.accent}40`, borderRadius: RADIUS.sm, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 10, color: COLORS.accent, letterSpacing: 0.5, textTransform: 'uppercase' as const }}>
+                <BrainCircuit size={12} /> AI Draft
               </motion.button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
               {SBAR_SECTIONS.map((sec) => (
                 <div key={sec.key}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: 4 }}>
-                    <span style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: `${sec.tone}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONTS.mono, fontSize: 11, fontWeight: 700, color: sec.tone }}>{sec.prefix}</span>
+                    <span style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: `${sec.tone}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700, color: sec.tone }}>{sec.prefix}</span>
                     <Mono tone="secondary" size="xs">{sec.label}</Mono>
                   </div>
                   <textarea
@@ -285,7 +285,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
                 <ScanningLine duration={6} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginBottom: SPACE.base }}>
                   <div style={{ width: 36, height: 36, borderRadius: RADIUS.full, background: `${COLORS.ok}18`, border: `1.5px solid ${COLORS.ok}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CheckCircle2 size={20} color={COLORS.ok} />
+                    <CheckCircle2 size={18} color={COLORS.ok} />
                   </div>
                   <div>
                     <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: COLORS.ok }}>Handoff Sent</div>
@@ -332,7 +332,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
               </div>
               {SBAR_SECTIONS.map((sec) => (
                 <div key={sec.key} style={{ marginBottom: SPACE.sm }}>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 700, color: sec.tone }}>[{sec.prefix}]</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: 10, fontWeight: 700, color: sec.tone }}>[{sec.prefix}]</span>
                   <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: note[sec.key] ? COLORS.textSecondary : COLORS.textMuted, lineHeight: 1.5, fontStyle: note[sec.key] ? 'normal' : 'italic' }}>
                     {note[sec.key] || '(not filled)'}
                   </div>
@@ -343,10 +343,10 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
         })}
 
         <div style={{ display: 'flex', gap: SPACE.sm }}>
-          <TacticalButton variant="ghost" onClick={handleCopy} icon={<ClipboardCopy size={15} />}>Copy</TacticalButton>
-          <TacticalButton variant="ghost" onClick={handlePrint} icon={<Printer size={15} />}>Print</TacticalButton>
+          <TacticalButton variant="ghost" onClick={handleCopy} icon={<ClipboardCopy size={14} />}>Copy</TacticalButton>
+          <TacticalButton variant="ghost" onClick={handlePrint} icon={<Printer size={14} />}>Print</TacticalButton>
         </div>
-        <TacticalButton variant="primary" fullWidth onClick={handleSend} icon={<Send size={15} />}>Send to Incoming Team</TacticalButton>
+        <TacticalButton variant="primary" fullWidth onClick={handleSend} icon={<Send size={14} />}>Send to Incoming Team</TacticalButton>
       </div>
     );
   };
@@ -359,7 +359,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
           {/* Header */}
           <HudStrip side="top" fixed>
             <button onClick={handleClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, color: COLORS.textSecondary, cursor: 'pointer' }}>
-              <X size={15} />
+              <X size={14} />
             </button>
             <BracketLabel tone="accent" size="sm">Shift Handoff</BracketLabel>
             <div style={{ flex: 1 }} />
@@ -381,9 +381,9 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
           {/* Footer nav */}
           {!sent && (
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `${SPACE.md}px ${SPACE.base}px`, paddingBottom: `max(${SPACE.md}px, env(safe-area-inset-bottom))`, background: `linear-gradient(180deg, ${COLORS.bg}00 0%, ${COLORS.bg} 20%)`, borderTop: `1px solid ${COLORS.border}`, zIndex: Z.modal + 1 }}>
-              {stepIndex > 0 && <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={15} />}>Back</TacticalButton>}
+              {stepIndex > 0 && <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={14} />}>Back</TacticalButton>}
               <div style={{ flex: 1 }} />
-              {step !== 'review' && <TacticalButton variant="primary" onClick={goNext} disabled={!canProceed} icon={<ArrowRight size={15} />}>{step === 'sbar' ? 'Review' : 'Next'}</TacticalButton>}
+              {step !== 'review' && <TacticalButton variant="primary" onClick={goNext} disabled={!canProceed} icon={<ArrowRight size={14} />}>{step === 'sbar' ? 'Review' : 'Next'}</TacticalButton>}
             </div>
           )}
         </motion.div>

@@ -93,7 +93,7 @@ const NOTE_TYPES: NoteTypeOption[] = [
   {
     id: 'soap',
     label: 'SOAP Note',
-    icon: <FileText size={17} />,
+    icon: <FileText size={16} />,
     sections: [
       {
         key: 'S',
@@ -132,7 +132,7 @@ const NOTE_TYPES: NoteTypeOption[] = [
   {
     id: 'hp',
     label: 'H&P',
-    icon: <Stethoscope size={17} />,
+    icon: <Stethoscope size={16} />,
     sections: [
       {
         key: 'HPI',
@@ -167,7 +167,7 @@ const NOTE_TYPES: NoteTypeOption[] = [
   {
     id: 'progress',
     label: 'Progress Note',
-    icon: <ClipboardList size={17} />,
+    icon: <ClipboardList size={16} />,
     sections: [
       {
         key: 'INT',
@@ -195,7 +195,7 @@ const NOTE_TYPES: NoteTypeOption[] = [
   {
     id: 'nursing',
     label: 'Nursing Assessment',
-    icon: <Activity size={17} />,
+    icon: <Activity size={16} />,
     sections: [
       {
         key: 'ASSESS',
@@ -223,7 +223,7 @@ const NOTE_TYPES: NoteTypeOption[] = [
   {
     id: 'procedure',
     label: 'Procedure Note',
-    icon: <Syringe size={17} />,
+    icon: <Syringe size={16} />,
     sections: [
       {
         key: 'IND',
@@ -371,7 +371,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontFamily: FONTS.mono,
                   fontWeight: 600,
                   color: isDone
@@ -502,12 +502,12 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                     cursor: 'pointer',
                     color: showAi ? COLORS.info : COLORS.textMuted,
                     fontFamily: FONTS.mono,
-                    fontSize: 12,
+                    fontSize: 11,
                     outline: 'none',
                     transition: `all ${MOTION.fast}s ease`,
                   }}
                 >
-                  <BrainCircuit size={13} />
+                  <BrainCircuit size={12} />
                   AI
                 </motion.button>
               </div>
@@ -540,7 +540,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                         marginBottom: SPACE.sm,
                       }}
                     >
-                      <BrainCircuit size={13} color={COLORS.info} />
+                      <BrainCircuit size={12} color={COLORS.info} />
                       <Mono tone="info" size="xs">
                         AI-Generated Draft
                       </Mono>
@@ -655,7 +655,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                       justifyContent: 'center',
                     }}
                   >
-                    <Lock size={20} color={COLORS.ok} />
+                    <Lock size={18} color={COLORS.ok} />
                   </div>
                   <div>
                     <div
@@ -817,7 +817,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   <Mono tone={active ? 'accent' : 'secondary'} size="xs">
                     {cs}
                   </Mono>
-                  {active && <CheckCircle2 size={15} color={COLORS.accent} />}
+                  {active && <CheckCircle2 size={14} color={COLORS.accent} />}
                 </motion.button>
               );
             })}
@@ -825,7 +825,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
         </div>
 
         {/* Sign button */}
-        <TacticalButton variant="primary" fullWidth onClick={handleSign} icon={<Lock size={15} />}>
+        <TacticalButton variant="primary" fullWidth onClick={handleSign} icon={<Lock size={14} />}>
           Sign & Lock Note
         </TacticalButton>
 
@@ -877,7 +877,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 cursor: 'pointer',
               }}
             >
-              <X size={15} />
+              <X size={14} />
             </button>
             <BracketLabel tone="accent" size="sm">
               Clinical Note
@@ -934,7 +934,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                 <TacticalButton
                   variant="ghost"
                   onClick={() => setStep('compose')}
-                  icon={<ArrowLeft size={15} />}
+                  icon={<ArrowLeft size={14} />}
                 >
                   Back
                 </TacticalButton>
@@ -945,7 +945,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   variant="primary"
                   onClick={() => setStep('preview')}
                   disabled={!hasContent}
-                  icon={<ArrowRight size={15} />}
+                  icon={<ArrowRight size={14} />}
                 >
                   Preview
                 </TacticalButton>
