@@ -274,6 +274,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            // Safe-area insets sit on the outer container so the
+            // HudStrips inside the flex column stay clear of the
+            // dynamic island / home indicator while the body
+            // naturally fills the middle (no fixed-positioning).
+            paddingTop: isMobile ? 'env(safe-area-inset-top)' : 0,
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
           }}
         >
           {/* Ambient background */}
@@ -286,7 +293,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <ScanningLine color={COLORS.accent} duration={18} />
 
           {/* ── TOP HUD ─────────────────────────────────────────── */}
-          <HudStrip side="top" fixed={isMobile} height={isMobile ? 52 : 44}>
+          <HudStrip side="top" height={isMobile ? 48 : 44}>
             <div
               style={{
                 display: 'flex',
@@ -358,14 +365,17 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           <div
             style={{
               flex: 1,
+              // minHeight:0 lets this flex child shrink below intrinsic
+              // content size so the scroll container actually scrolls
+              // instead of pushing the bottom HudStrip off-screen.
+              minHeight: 0,
               overflowY: 'auto',
+              overflowX: 'hidden',
               WebkitOverflowScrolling: 'touch',
               position: 'relative',
               zIndex: 1,
               padding: isMobile ? SPACE.base : SPACE.xl,
-              paddingBottom: isMobile
-                ? `calc(${SPACE['3xl']}px + env(safe-area-inset-bottom))`
-                : SPACE['2xl'],
+              paddingBottom: isMobile ? SPACE.xl : SPACE['2xl'],
             }}
           >
             <div
@@ -424,13 +434,16 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       <span
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: 600,
                           letterSpacing: '-0.01em',
                           color: COLORS.textPrimary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          // Wrap long names onto a second line instead
+                          // of truncating — operator identity is the
+                          // most important piece of context on this
+                          // screen and must read in full.
+                          lineHeight: 1.25,
+                          wordBreak: 'break-word',
                         }}
                       >
                         {currentUser.name}
@@ -651,28 +664,38 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 
           {/* ── BOTTOM HUD (mobile only — desktop has its own footer) ── */}
           {isMobile && (
-            <HudStrip side="bottom" fixed height={36}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.md,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
+            <div
+              style={{
+                flexShrink: 0,
+                // Reserve space for home-indicator below the strip
+                // content so the TLS/Node line stays readable.
+                paddingBottom: 'env(safe-area-inset-bottom)',
+                background: COLORS.surface,
+              }}
+            >
+              <HudStrip side="bottom" height={32}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.md,
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Mono tone="dim" size="xs">
+                    Node ER-01
+                  </Mono>
+                  <span style={{ color: COLORS.textDim }}>│</span>
+                  <Mono tone="dim" size="xs">
+                    TLS 1.3
+                  </Mono>
+                </div>
                 <Mono tone="dim" size="xs">
-                  Node ER-01
+                  PULSE v1.2.4
                 </Mono>
-                <span style={{ color: COLORS.textDim }}>│</span>
-                <Mono tone="dim" size="xs">
-                  TLS 1.3
-                </Mono>
-              </div>
-              <Mono tone="dim" size="xs">
-                PULSE v1.2.4
-              </Mono>
-            </HudStrip>
+              </HudStrip>
+            </div>
           )}
         </motion.div>
       )}

@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { Patient } from '../types';
 import { ageInYears } from '../data/clinicalMock';
-import { computeMEWS } from '../lib/clinicalScores';
+import { computeAllScores } from '../lib/clinicalScores';
+import type { EarlyWarningScore } from '../types';
 import { useSwipeBack } from '../lib/useSwipeBack';
 import {
   COLORS,
@@ -280,6 +281,195 @@ const VitalMiniCard: React.FC<{
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// Early-warning score chip + breakdown
+//
+// ScoreChip is the compact tile the clinician sees in the Vitals
+// section — three of them sit in a grid (MEWS · NEWS2 · qSOFA).
+// Tapping it toggles the expanded ScoreBreakdown which explains
+// *why* the number is what it is, parameter-by-parameter, plus a
+// one-line action guidance pulled from the score definition.
+//
+// The components are deliberately dumb. All score computation
+// happens upstream in `lib/clinicalScores.ts`. These only render
+// the result.
+// ─────────────────────────────────────────────────────────────────────────
+
+const ScoreChip: React.FC<{
+  score: EarlyWarningScore;
+  active: boolean;
+  onClick: () => void;
+}> = ({ score, active, onClick }) => {
+  const color = riskColor(score.risk);
+  const tone = riskTone(score.risk);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`${score.name} score ${score.value}, ${score.risk} risk — tap to ${active ? 'collapse' : 'expand'} breakdown`}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 4,
+        padding: SPACE.sm,
+        background: active ? `${color}14` : `${color}08`,
+        border: `1px solid ${active ? color : `${color}25`}`,
+        borderRadius: RADIUS.sm,
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'background 120ms ease, border-color 120ms ease',
+        minWidth: 0,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, width: '100%' }}>
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 22,
+            fontWeight: 700,
+            color,
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {score.value}
+        </span>
+        <Mono tone="muted" size="xs">
+          /{score.maxValue}
+        </Mono>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+        <Mono tone={tone} size="xs">
+          {score.name}
+        </Mono>
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.1em',
+            color: COLORS.textMuted,
+            textTransform: 'uppercase',
+          }}
+        >
+          {score.risk}
+        </span>
+      </div>
+    </button>
+  );
+};
+
+const ScoreBreakdown: React.FC<{ score: EarlyWarningScore }> = ({ score }) => {
+  const color = riskColor(score.risk);
+  const tone = riskTone(score.risk);
+  return (
+    <div
+      style={{
+        marginTop: SPACE.xs,
+        padding: SPACE.md,
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.sm,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: SPACE.sm,
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: SPACE.sm,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xs }}>
+          <Mono tone={tone} size="sm">
+            {score.name}
+          </Mono>
+          <Mono tone="muted" size="xs">
+            {score.value} / {score.maxValue}
+          </Mono>
+        </div>
+        <BracketLabel tone={tone} size="xs">
+          {score.risk.toUpperCase()} RISK
+        </BracketLabel>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {score.breakdown.map((row, i) => {
+          const contributes = row.points > 0;
+          return (
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: SPACE.sm,
+                padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                background: contributes ? `${color}08` : 'transparent',
+                borderRadius: RADIUS.sm,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: FONTS.sans,
+                  fontSize: 12,
+                  color: COLORS.textSecondary,
+                  flex: 1,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {row.parameter}
+              </span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.xs, flexShrink: 0 }}>
+                {row.rawValue != null && (
+                  <Mono tone="muted" size="xs">
+                    {String(row.rawValue)}
+                  </Mono>
+                )}
+                <span
+                  style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: contributes ? color : COLORS.textMuted,
+                    fontVariantNumeric: 'tabular-nums',
+                    minWidth: 22,
+                    textAlign: 'right',
+                  }}
+                >
+                  {row.points > 0 ? `+${row.points}` : '0'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div
+        style={{
+          padding: SPACE.sm,
+          background: `${color}10`,
+          border: `1px solid ${color}30`,
+          borderRadius: RADIUS.sm,
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          lineHeight: 1.4,
+          color: COLORS.textPrimary,
+        }}
+      >
+        <Mono tone={tone} size="xs">
+          ACTION
+        </Mono>
+        <span style={{ marginLeft: 6 }}>{score.action}</span>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
 // Safety banner pills
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -347,10 +537,18 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
     [patient.vitalsHistory],
   );
 
-  const mews = useMemo(
-    () => (latestVitals ? computeMEWS(latestVitals) : null),
+  const scores = useMemo(
+    () => (latestVitals ? computeAllScores(latestVitals) : null),
     [latestVitals],
   );
+  // Back-compat alias so the header badge still reads from the MEWS
+  // result — NEWS2 and qSOFA render inside the Vitals section panel.
+  const mews = scores?.mews ?? null;
+
+  // Which early-warning score's "why this score" breakdown is
+  // currently expanded inside the Vitals panel. null = all three show
+  // as a compact strip; 'mews' | 'news2' | 'qsofa' = one expanded.
+  const [openScore, setOpenScore] = useState<'mews' | 'news2' | 'qsofa' | null>(null);
 
   const enc = patient.currentEncounter;
   const age = ageInYears(patient.birthDate);
@@ -840,38 +1038,72 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                         />
                       </div>
 
-                      {/* MEWS score badge */}
-                      {mews && (
+                      {/* Early-warning triad — MEWS, NEWS2, qSOFA.
+                          Tapping a tile expands a "why this score"
+                          breakdown (per-parameter contribution + one-
+                          line action guidance) so the bedside
+                          clinician can justify the number without
+                          leaving the patient detail screen. */}
+                      {scores && (
                         <div
                           style={{
                             marginTop: SPACE.md,
-                            padding: SPACE.md,
-                            background: `${riskColor(mews.risk)}08`,
-                            border: `1px solid ${riskColor(mews.risk)}25`,
-                            borderRadius: RADIUS.sm,
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
+                            flexDirection: 'column',
+                            gap: SPACE.sm,
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                            <span
-                              style={{
-                                fontFamily: FONTS.mono,
-                                fontSize: 24,
-                                fontWeight: 700,
-                                color: riskColor(mews.risk),
-                                lineHeight: 1,
-                              }}
-                            >
-                              {mews.value}
-                            </span>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                              <Mono tone={riskTone(mews.risk)} size="sm">MEWS</Mono>
-                              <Mono tone="muted" size="xs">{mews.risk.toUpperCase()} RISK</Mono>
-                            </div>
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: '1fr 1fr 1fr',
+                              gap: SPACE.xs,
+                            }}
+                          >
+                            <ScoreChip
+                              score={scores.mews}
+                              active={openScore === 'mews'}
+                              onClick={() =>
+                                setOpenScore(openScore === 'mews' ? null : 'mews')
+                              }
+                            />
+                            <ScoreChip
+                              score={scores.news2}
+                              active={openScore === 'news2'}
+                              onClick={() =>
+                                setOpenScore(openScore === 'news2' ? null : 'news2')
+                              }
+                            />
+                            <ScoreChip
+                              score={scores.qsofa}
+                              active={openScore === 'qsofa'}
+                              onClick={() =>
+                                setOpenScore(openScore === 'qsofa' ? null : 'qsofa')
+                              }
+                            />
                           </div>
-                          <BracketLabel tone={riskTone(mews.risk)} size="xs">{mews.risk.toUpperCase()}</BracketLabel>
+                          <AnimatePresence initial={false}>
+                            {openScore && (
+                              <motion.div
+                                key={`score-breakdown-${openScore}`}
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <ScoreBreakdown
+                                  score={
+                                    openScore === 'mews'
+                                      ? scores.mews
+                                      : openScore === 'news2'
+                                      ? scores.news2
+                                      : scores.qsofa
+                                  }
+                                />
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
 
