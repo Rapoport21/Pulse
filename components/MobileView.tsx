@@ -33,6 +33,7 @@ import {
   Siren,
   ArrowRightLeft,
   Network,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   AreaChart,
@@ -120,6 +121,7 @@ interface MobileViewProps {
   onAcknowledgeTask: (taskId: string, deviceId: string) => void;
   onActivateSurge: () => void;
   onLogout: () => void;
+  onOpenSettings?: () => void;
   showToast: (message: string, type?: 'success' | 'info' | 'error') => void;
   onOpenChat: (query?: string) => void;
   systemStatus?: 'normal' | 'stale' | 'manual';
@@ -893,6 +895,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onAcknowledgeTask,
   onActivateSurge,
   onLogout,
+  onOpenSettings,
   showToast,
   onOpenChat,
   systemStatus = 'normal',
@@ -1822,6 +1825,86 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 </div>
               </TacticalCard>
             </motion.div>
+
+            {/* Settings — opens the full-screen settings overlay (demo
+                controls, reset, sign out). Only render when App.tsx wired
+                the handler so older callers don't break. */}
+            {onOpenSettings && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: MOTION.base, ease: MOTION.ease }}
+                style={{ position: 'relative', zIndex: 1 }}
+              >
+                <TacticalCard
+                  interactive
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowMenu(false);
+                    onOpenSettings();
+                  }}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      triggerHaptic('light');
+                      setShowMenu(false);
+                      onOpenSettings();
+                    }
+                  }}
+                  padding="none"
+                  style={{ cursor: 'pointer', padding: SPACE.base }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.base,
+                      minHeight: 56,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `1px solid ${COLORS.border}`,
+                        background: COLORS.surface,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.textSecondary,
+                      }}
+                    >
+                      <SlidersHorizontal size={20} />
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 4,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: FONTS.sans,
+                          fontSize: 17,
+                          fontWeight: 600,
+                          color: COLORS.textPrimary,
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
+                        Settings
+                      </div>
+                      <Mono tone="muted">Session · Reset · Sign Out</Mono>
+                    </div>
+                    <ChevronRight size={18} color={COLORS.textMuted} />
+                  </div>
+                </TacticalCard>
+              </motion.div>
+            )}
 
             <div style={{ flex: 1 }} />
 

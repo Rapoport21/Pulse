@@ -24,6 +24,7 @@ import {
   Zap,
   TrendingUp,
   TrendingDown,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile } from './types';
 import { USERS } from './data/userProfiles';
@@ -40,6 +41,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
+import { SettingsScreen } from './components/SettingsScreen';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -94,6 +96,7 @@ function App() {
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [chatQuery, setChatQuery] = useState('');
   const [systemStatus, setSystemStatus] = useState<'normal' | 'stale' | 'manual'>('normal');
   const [actionFilter, setActionFilter] = useState<string>('');
@@ -799,8 +802,49 @@ function App() {
     setSystemStatus('normal');
     setShowHandoverModal(false);
     setShowShiftBriefing(false);
+    setShowSettings(false);
     setActionFilter('');
   };
+
+  /**
+   * Reset everything to a clean baseline — used by the Settings screen
+   * between visitors at the demo stand. Resets all shared (realtime) state
+   * plus the local-only state that would otherwise carry "the last
+   * visitor's choices" into the next walk-up. `broadcastReset` signals
+   * other connected devices so they all land on a fresh mock together.
+   */
+  const resetSimulation = useCallback(() => {
+    // Shared state — restored to initial values, broadcasts to peers
+    setSurgeState(INITIAL_SURGE_STATE);
+    setUrgentTasks([]);
+    setBedUnits(seedBedState());
+    setAdmissionQueue(INITIAL_ADMISSION_QUEUE);
+    setPatients([...MOCK_PATIENTS]);
+    setClinicalNotes([]);
+    setAlertAcks({});
+
+    // Local-only state
+    setGlobalHandoverNotes(null);
+    setInitialPatientId(undefined);
+    setActionFilter('');
+    setSystemStatus('normal');
+    setChatQuery('');
+
+    // Clear any side-effect state from the EMS board / notifications
+    publish('ems-reset');
+    // Notify any other devices to clear their own realtime caches too
+    broadcastReset();
+
+    showToast('Simulation reset to baseline', 'info');
+  }, [
+    setSurgeState,
+    setUrgentTasks,
+    setBedUnits,
+    setAdmissionQueue,
+    setPatients,
+    setClinicalNotes,
+    setAlertAcks,
+  ]);
 
   const handleConfirmHandover = (notes: string) => {
     if (notes.trim() && currentUser) {
@@ -978,6 +1022,19 @@ function App() {
         loginCount={loginCount}
       />
 
+      {/* Settings screen — shared between mobile and desktop, full-screen overlay. */}
+      <SettingsScreen
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        currentUser={currentUser}
+        onReset={resetSimulation}
+        onLogout={() => {
+          setShowSettings(false);
+          handleLogout();
+        }}
+        variant={isMobile ? 'mobile' : 'desktop'}
+      />
+
       {isMobile ? (
         <MobileView
           currentUser={currentUser}
@@ -987,6 +1044,7 @@ function App() {
           onAcknowledgeTask={acknowledgeTask}
           onActivateSurge={activateSurge}
           onLogout={handleLogout}
+          onOpenSettings={() => setShowSettings(true)}
           showToast={showToast}
           onOpenChat={(query) => {
             setChatQuery(query || '');
@@ -1192,6 +1250,13 @@ function App() {
                   {currentUser.avatarInitials}
                 </div>
               )}
+
+              <IconButton
+                onClick={() => setShowSettings(true)}
+                label="Settings"
+              >
+                <SlidersHorizontal size={14} strokeWidth={2} />
+              </IconButton>
 
               {isCompactNav ? (
                 <IconButton
