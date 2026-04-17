@@ -1458,123 +1458,14 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         </TacticalCard>
       </div>
 
-      {/* ── Patient Flow Strip (full-width, single-line) ──
-          2026-04-17: collapsed from a full 5-tile card (~180px tall, the
-          last thing overflowing the viewport) into a single horizontal
-          HUD strip. Keeps the signal — per-stage count, total in motion,
-          bottleneck callout — and the proportional colored bar, but fits
-          in ~46px so the whole Horizon fits one viewport on 1440p.        */}
-      {(() => {
-        const flowStages = [
-          { label: 'WAITING',  count: isSurgeActive ? 14 : 6,  color: COLORS.warn },
-          { label: 'IN ED',    count: isSurgeActive ? 22 : 18, color: COLORS.info },
-          { label: 'BOARDING', count: isSurgeActive ? 8 : 3,   color: COLORS.crit },
-          { label: 'ADMITTED', count: isSurgeActive ? 4 : 3,   color: '#A855F7' },
-          { label: 'DC READY', count: isSurgeActive ? 2 : 4,   color: COLORS.ok },
-        ];
-        const flowTotal = flowStages.reduce((n, s) => n + s.count, 0);
-        const bottleneck =
-          isSurgeActive
-            ? flowStages.find(s => s.label === 'BOARDING')
-            : flowStages.find(s => s.label === 'BOARDING' && s.count >= 3);
-        return (
-          <TacticalCard padding="sm" style={{ padding: `${SPACE.sm}px ${SPACE.md}px` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexWrap: 'nowrap', minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                <ArrowRight size={14} strokeWidth={2} color={COLORS.textSecondary} />
-                <Mono tone="primary" size="xs">PT FLOW</Mono>
-              </div>
-
-              {/* Stage chips */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                {flowStages.map((stage) => {
-                  const isBottleneck = bottleneck?.label === stage.label;
-                  return (
-                    <div
-                      key={stage.label}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        flexShrink: 0,
-                        position: 'relative',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: RADIUS.full,
-                          background: stage.color,
-                          boxShadow: isBottleneck ? `0 0 8px ${stage.color}` : 'none',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 16,
-                          fontWeight: 600,
-                          color: isBottleneck ? stage.color : COLORS.textPrimary,
-                          lineHeight: 1,
-                          letterSpacing: '-0.01em',
-                        }}
-                      >
-                        {stage.count}
-                      </span>
-                      <Mono tone={isBottleneck ? 'crit' : 'muted'} size="xs">
-                        {stage.label}
-                      </Mono>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Right-side meta + bottleneck pill */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, flexShrink: 0 }}>
-                <Mono tone="muted" size="xs" style={{ whiteSpace: 'nowrap' }}>
-                  {flowTotal} IN MOTION
-                </Mono>
-                {bottleneck && (
-                  <StatusPill
-                    label={`BOTTLENECK · ${bottleneck.label}`}
-                    tone="crit"
-                    pulse
-                    size="xs"
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Thin proportional flow bar — fat segments = where patients pile up */}
-            <div
-              style={{
-                display: 'flex',
-                height: 3,
-                marginTop: SPACE.sm,
-                borderRadius: RADIUS.full,
-                overflow: 'hidden',
-                background: COLORS.bgDeep,
-              }}
-              aria-hidden
-            >
-              {flowStages.map((stage) => (
-                <motion.div
-                  key={`bar-${stage.label}`}
-                  initial={{ flex: 0 }}
-                  animate={{ flex: stage.count }}
-                  transition={{ duration: MOTION.slow, ease: MOTION.ease }}
-                  style={{
-                    background: stage.color,
-                    opacity: bottleneck?.label === stage.label ? 1 : 0.7,
-                    boxShadow: bottleneck?.label === stage.label ? `0 0 6px ${stage.color}` : 'none',
-                  }}
-                />
-              ))}
-            </div>
-          </TacticalCard>
-        );
-      })()}
+      {/* Patient Flow Pipeline removed 2026-04-17: its 5 stage counts
+          (WAITING / IN ED / BOARDING / ADMITTED / DC READY) duplicated
+          signal already surfaced by Census & Throughput (wait time,
+          total census), Bed Board (availability), and Active Alerts
+          (boarding threshold, ED wait ≥ 90m). Horizon is the forecast
+          tab; current-state ED throughput belongs on an Operations tab
+          if we add one. Strip had also become the consistent overflow
+          offender at the bottom of the viewport. See docs/decisions.md. */}
 
       {/* Bed Board fullscreen overlay */}
       <BedBoard

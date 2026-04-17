@@ -12,6 +12,47 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · Patient Flow Pipeline removed from Horizon
+
+**Context.** Horizon had a full-width Patient Flow Pipeline card
+showing per-stage ED patient counts (WAITING / IN ED / BOARDING /
+ADMITTED / DC READY), total in motion, and a bottleneck indicator.
+Card went through three iterations (tile strip → rich card with
+dwell/velocity metrics → thin HUD strip) trying to both fit the
+viewport and justify its footprint. None of them stuck — Nick
+repeatedly flagged the widget as unclear and consistently getting
+clipped by the 40px bottom HudStrip ticker.
+
+**Decision.** Delete the widget from Horizon. Its signal was already
+surfaced elsewhere on the page:
+
+| Stage count     | Already covered by               |
+| --------------- | -------------------------------- |
+| WAITING         | ER WAIT TIME (Census & Throughput) |
+| IN ED           | TOTAL CENSUS (Census & Throughput) |
+| BOARDING        | Active Alerts (boarding threshold) |
+| DC READY        | Bed Board (availability)           |
+| Bottleneck pill | Active Alerts (ED wait ≥ 90m etc.) |
+
+Horizon is the **forecast** tab — what's coming in the next 4 hours.
+Current-state ED throughput belongs on a dedicated Operations tab
+(T2.x candidate) where the flow stages can be first-class citizens
+alongside triage scores, RN assignments, and door-to-doc timers.
+
+**Rejected.** (a) Keep the thin strip but cut viewport further —
+still duplicative, still fighting the ticker. (b) Move the Pipeline
+to the top of the page — steals focus from the Saturation Forecast
+chart which is Horizon's actual purpose. (c) Build a synthetic
+"boarding alert" into Active Alerts when the count crosses
+threshold — the Alerts feed already does this in practice.
+
+**Follow-up.** If we ship an Operations tab, port the Pipeline there
+as a full-fidelity card (stages, dwell times, velocity arrows,
+bottleneck detection). The design work from this round is in git
+history (commit `901e0b6`) for reuse.
+
+---
+
 ## 2026-04-17 · Type scale + icon sizes bumped ~10-12% for clinical legibility
 
 **Context.** UI read as too small on scratched iPads and in variable
