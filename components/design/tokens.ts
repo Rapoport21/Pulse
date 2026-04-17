@@ -12,6 +12,24 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────
+// Runtime overrides — Settings → Contrast check writes a textDim choice
+// into localStorage under `pulse-text-dim`. Reading at module load lets the
+// whole app pick up the override on refresh without touching every usage.
+// ─────────────────────────────────────────────────────────────────────────
+const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
+const TEXT_DIM_DEFAULT = '#2E2E2E';
+const readTextDimOverride = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const v = window.localStorage.getItem('pulse-text-dim');
+    return v && HEX_RE.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+};
+export const TEXT_DIM_DEFAULT_HEX = TEXT_DIM_DEFAULT;
+
+// ─────────────────────────────────────────────────────────────────────────
 // Colors
 // ─────────────────────────────────────────────────────────────────────────
 export const COLORS = {
@@ -33,7 +51,7 @@ export const COLORS = {
   textPrimary: '#FAFAFA',
   textSecondary: '#A3A3A3',
   textMuted: '#525252',
-  textDim: '#2E2E2E',
+  textDim: readTextDimOverride() ?? TEXT_DIM_DEFAULT,
   textFaint: '#1A1A1A',
 
   // Brand accent — rose-600 (matches boot screen + login)

@@ -1,6 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, Info, Clock, ChevronRight, GripVertical } from 'lucide-react';
+import {
+  ChevronLeft,
+  Info,
+  Clock,
+  ChevronRight,
+  GripVertical,
+  Check,
+  RotateCcw,
+} from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -12,24 +20,23 @@ import {
   StatusPill,
   HudStrip,
   TacticalCard,
+  TacticalButton,
   DotGridBg,
   GlowBg,
   ScanningLine,
+  TEXT_DIM_DEFAULT_HEX,
 } from './design';
+import { triggerHaptic } from '../lib/haptics';
 
 /**
- * TextDimContrastSample — side-by-side preview of every candidate for
- * COLORS.textDim so Nick can eyeball legibility on device before committing
- * a new value to components/design/tokens.ts.
+ * TextDimContrastSample — interactive preview of every candidate for
+ * COLORS.textDim. Tap a card to select, then tap APPLY to write the hex
+ * into localStorage and reload so the whole app picks up the override
+ * via tokens.ts at module load time.
  *
  * Tracks T3.4 (Contrast audit) in docs/improvement-ideas.md. The current
- * textDim is #2E2E2E at ~1.5:1 contrast on the #050505 canvas — well below
- * WCAG AA (4.5:1). Proposed: #5A5A5A.
- *
- * Each candidate card shows the five real-world contexts where textDim
- * currently appears in the app (HUD metadata, info+label row, empty-state
- * dashes, timestamps, breadcrumb separators) so the preview matches what
- * the operator will actually read at 3am.
+ * textDim default is #2E2E2E at ~1.5:1 contrast on the #050505 canvas —
+ * well below WCAG AA (4.5:1). Proposed: #5A5A5A at ~5.0:1.
  */
 
 interface Props {
@@ -37,6 +44,8 @@ interface Props {
   onClose: () => void;
   variant?: 'mobile' | 'desktop';
 }
+
+const STORAGE_KEY = 'pulse-text-dim';
 
 // ─────────────────────────────────────────────────────────────────────────
 // WCAG 2.x relative luminance + contrast ratio
@@ -80,13 +89,30 @@ interface Candidate {
   role: CandidateRole;
 }
 const CANDIDATES: Candidate[] = [
-  { id: 'cur',  hex: '#2E2E2E', note: 'Current',       role: 'current'  },
+  { id: 'cur',  hex: '#2E2E2E', note: 'Default',       role: 'current'  },
   { id: 's1',   hex: '#3A3A3A', note: '+1 step',       role: 'step'     },
   { id: 's2',   hex: '#4A4A4A', note: '+2 steps',      role: 'step'     },
   { id: 'mute', hex: '#525252', note: '= textMuted',   role: 'muted'    },
   { id: 'prop', hex: '#5A5A5A', note: 'Proposed',      role: 'proposed' },
   { id: 'aaa',  hex: '#707070', note: 'AAA',           role: 'aaa'      },
 ];
+
+function readActiveOverride(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function findCandidateForHex(hex: string | null): string {
+  if (!hex) return 'cur';
+  const match = CANDIDATES.find(
+    (c) => c.hex.toLowerCase() === hex.toLowerCase(),
+  );
+  return match?.id ?? 'cur';
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // SampleBlock — one card showing textDim in its five real contexts.
@@ -102,169 +128,175 @@ const monoDim = (dim: string, size: number): React.CSSProperties => ({
 });
 
 const SampleBlock: React.FC<{ dim: string }> = ({ dim }) => (
-  <TacticalCard padding="md">
+  <div
+    style={{
+      padding: SPACE.md,
+      background: COLORS.surface,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: SPACE.md,
+    }}
+  >
+    {/* (1) HUD-strip metadata row with separator pipes */}
     <div
-      style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: SPACE.sm,
+        paddingBottom: SPACE.sm,
+        borderBottom: `1px dashed ${COLORS.border}`,
+      }}
     >
-      {/* (1) HUD-strip style metadata row with separator pipes */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: SPACE.sm,
-          paddingBottom: SPACE.sm,
-          borderBottom: `1px dashed ${COLORS.border}`,
-        }}
-      >
-        <span style={monoDim(dim, 11)}>Node ER-01</span>
-        <span style={{ color: dim, lineHeight: 1 }}>│</span>
-        <span style={monoDim(dim, 11)}>TLS 1.3</span>
-        <span style={{ color: dim, lineHeight: 1 }}>│</span>
-        <span style={monoDim(dim, 11)}>PULSE v1.2.4</span>
-      </div>
+      <span style={monoDim(dim, 11)}>Node ER-01</span>
+      <span style={{ color: dim, lineHeight: 1 }}>│</span>
+      <span style={monoDim(dim, 11)}>TLS 1.3</span>
+      <span style={{ color: dim, lineHeight: 1 }}>│</span>
+      <span style={monoDim(dim, 11)}>PULSE v1.2.4</span>
+    </div>
 
-      {/* (2) Info icon + faint label (e.g. "Syncs to N devices") */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Info size={11} color={dim} strokeWidth={1.75} />
-        <span style={monoDim(dim, 11)}>Syncs to 3 devices</span>
-      </div>
+    {/* (2) Info icon + faint label */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <Info size={11} color={dim} strokeWidth={1.75} />
+      <span style={monoDim(dim, 11)}>Syncs to 3 devices</span>
+    </div>
 
-      {/* (3) Empty-state dashes (bed board / vitals without data) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: SPACE.sm,
-        }}
-      >
-        {['BP', 'HR', 'SPO2', 'TEMP'].map((k) => (
-          <div
-            key={k}
+    {/* (3) Empty-state dashes */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: SPACE.sm,
+      }}
+    >
+      {['BP', 'HR', 'SPO2', 'TEMP'].map((k) => (
+        <div
+          key={k}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            padding: SPACE.sm,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.sm,
+            background: COLORS.surfaceElev,
+            minWidth: 0,
+          }}
+        >
+          <span
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              padding: SPACE.sm,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: RADIUS.sm,
-              background: COLORS.surfaceElev,
-              minWidth: 0,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              fontWeight: 500,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: COLORS.textMuted,
             }}
           >
-            <span
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: 10,
-                fontWeight: 500,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                color: COLORS.textMuted,
-              }}
-            >
-              {k}
-            </span>
-            <span
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: 16,
-                color: dim,
-                letterSpacing: '0.04em',
-                lineHeight: 1,
-              }}
-            >
-              --
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* (4) Timestamp row with clock icon */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Clock size={10} strokeWidth={2} color={dim} />
-        <span style={monoDim(dim, 11)}>Last vitals · 5m ago</span>
-      </div>
-
-      {/* (5) Breadcrumb with dim chevron separators */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: SPACE.sm,
-          flexWrap: 'wrap',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: 12,
-            fontWeight: 500,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: COLORS.textSecondary,
-          }}
-        >
-          Floor 3
-        </span>
-        <ChevronRight size={12} strokeWidth={2} color={dim} />
-        <span
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: 12,
-            fontWeight: 500,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: COLORS.textSecondary,
-          }}
-        >
-          ICU North
-        </span>
-        <ChevronRight size={12} strokeWidth={2} color={dim} />
-        <span
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: COLORS.textPrimary,
-          }}
-        >
-          Bed 12
-        </span>
-      </div>
-
-      {/* (6) Drag handle + caption row (list affordance) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: SPACE.sm,
-          padding: SPACE.sm,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: RADIUS.sm,
-        }}
-      >
-        <GripVertical size={12} color={dim} strokeWidth={2} />
-        <span
-          style={{
-            flex: 1,
-            fontFamily: FONTS.sans,
-            fontSize: 13,
-            color: COLORS.textPrimary,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          Discharge summary
-        </span>
-        <span style={monoDim(dim, 10)}>Draft · 02:14 UTC</span>
-      </div>
+            {k}
+          </span>
+          <span
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: 16,
+              color: dim,
+              letterSpacing: '0.04em',
+              lineHeight: 1,
+            }}
+          >
+            --
+          </span>
+        </div>
+      ))}
     </div>
-  </TacticalCard>
+
+    {/* (4) Timestamp row with clock icon */}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <Clock size={10} strokeWidth={2} color={dim} />
+      <span style={monoDim(dim, 11)}>Last vitals · 5m ago</span>
+    </div>
+
+    {/* (5) Breadcrumb */}
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.sm,
+        flexWrap: 'wrap',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 12,
+          fontWeight: 500,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: COLORS.textSecondary,
+        }}
+      >
+        Floor 3
+      </span>
+      <ChevronRight size={12} strokeWidth={2} color={dim} />
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 12,
+          fontWeight: 500,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: COLORS.textSecondary,
+        }}
+      >
+        ICU North
+      </span>
+      <ChevronRight size={12} strokeWidth={2} color={dim} />
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 12,
+          fontWeight: 600,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: COLORS.textPrimary,
+        }}
+      >
+        Bed 12
+      </span>
+    </div>
+
+    {/* (6) Drag handle + caption */}
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE.sm,
+        padding: SPACE.sm,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.sm,
+      }}
+    >
+      <GripVertical size={12} color={dim} strokeWidth={2} />
+      <span
+        style={{
+          flex: 1,
+          fontFamily: FONTS.sans,
+          fontSize: 13,
+          color: COLORS.textPrimary,
+          letterSpacing: '-0.005em',
+        }}
+      >
+        Discharge summary
+      </span>
+      <span style={monoDim(dim, 10)}>Draft · 02:14 UTC</span>
+    </div>
+  </div>
 );
 
 // ─────────────────────────────────────────────────────────────────────────
-// Main component — list of candidate cards, each with its own SampleBlock.
+// Main component
 // ─────────────────────────────────────────────────────────────────────────
 export const TextDimContrastSample: React.FC<Props> = ({
   open,
@@ -274,7 +306,15 @@ export const TextDimContrastSample: React.FC<Props> = ({
   const isMobile = variant === 'mobile';
   const bg = COLORS.bg;
 
-  // Precompute ratios so we can reuse in the summary row.
+  // Active hex = whatever COLORS.textDim currently resolves to (localStorage
+  // override or default). selectedId tracks the user's tentative pick until
+  // they tap APPLY.
+  const activeHex = COLORS.textDim;
+  const [selectedId, setSelectedId] = useState<string>(() =>
+    findCandidateForHex(readActiveOverride()),
+  );
+  const [justApplied, setJustApplied] = useState(false);
+
   const rows = useMemo(
     () =>
       CANDIDATES.map((c) => {
@@ -283,6 +323,49 @@ export const TextDimContrastSample: React.FC<Props> = ({
       }),
     [bg],
   );
+
+  const selected = rows.find((r) => r.id === selectedId) ?? rows[0];
+  const selectedIsActive =
+    selected.hex.toLowerCase() === activeHex.toLowerCase();
+
+  const handleSelect = (id: string) => {
+    triggerHaptic('light');
+    setSelectedId(id);
+    setJustApplied(false);
+  };
+
+  const handleApply = () => {
+    triggerHaptic('medium');
+    try {
+      if (selected.hex === TEXT_DIM_DEFAULT_HEX) {
+        // Selecting the default = clearing the override.
+        window.localStorage.removeItem(STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(STORAGE_KEY, selected.hex);
+      }
+    } catch {
+      // If localStorage is unavailable the reload still won't hurt.
+    }
+    setJustApplied(true);
+    // Small delay so the user sees the "applied" flash before the reload
+    // wipes the screen.
+    setTimeout(() => {
+      window.location.reload();
+    }, 420);
+  };
+
+  const handleReset = () => {
+    triggerHaptic('medium');
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    setJustApplied(true);
+    setTimeout(() => {
+      window.location.reload();
+    }, 420);
+  };
 
   return (
     <AnimatePresence>
@@ -299,7 +382,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
             background: bg,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
-            zIndex: 250, // above SettingsScreen (200)
+            zIndex: 250,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -373,7 +456,9 @@ export const TextDimContrastSample: React.FC<Props> = ({
               position: 'relative',
               zIndex: 1,
               padding: isMobile ? SPACE.base : SPACE.xl,
-              paddingBottom: isMobile ? SPACE.xl : SPACE['2xl'],
+              // Reserve room for the sticky APPLY footer so the last
+              // candidate card isn't hidden under it.
+              paddingBottom: isMobile ? 120 : 140,
             }}
           >
             <div
@@ -389,7 +474,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
               {/* Intro card */}
               <TacticalCard padding="md">
                 <Mono tone="accent" size="xs">
-                  // S05 · DISPLAY
+                  // S04 · DISPLAY
                 </Mono>
                 <h2
                   style={{
@@ -413,111 +498,78 @@ export const TextDimContrastSample: React.FC<Props> = ({
                     margin: 0,
                   }}
                 >
-                  textDim is the palette's quietest text tone — separator
-                  pipes, timestamps, empty-state dashes. Scroll through
-                  the candidates and pick the one that reads comfortably
-                  on this device. WCAG AA requires 4.5:1 on normal text.
+                  Tap a candidate to pick it, then tap APPLY. The app
+                  reloads with that value for <span
+                    style={{
+                      fontFamily: FONTS.mono,
+                      color: COLORS.textPrimary,
+                    }}
+                  >
+                    COLORS.textDim
+                  </span>{' '}
+                  wired everywhere — HUD pipes, timestamps, dashes. WCAG AA
+                  wants 4.5:1 on normal text.
                 </p>
-
-                {/* Summary grid */}
-                <div
-                  style={{
-                    marginTop: SPACE.md,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: SPACE.sm,
-                  }}
-                >
-                  {rows.map((r) => (
-                    <div
-                      key={`sum-${r.id}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: SPACE.sm,
-                        padding: `${SPACE.sm}px ${SPACE.sm}px`,
-                        background: COLORS.surfaceElev,
-                        border: `1px solid ${
-                          r.role === 'proposed'
-                            ? COLORS.accent
-                            : COLORS.border
-                        }`,
-                        borderRadius: RADIUS.sm,
-                        minWidth: 0,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 14,
-                          height: 14,
-                          flexShrink: 0,
-                          background: r.hex,
-                          border: `1px solid ${COLORS.borderStrong}`,
-                          borderRadius: RADIUS.sm,
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontFamily: FONTS.mono,
-                          fontSize: 11,
-                          fontWeight: 500,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase',
-                          color: COLORS.textPrimary,
-                          flex: 1,
-                          minWidth: 0,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {r.ratio.toFixed(2)}:1
-                      </span>
-                      <StatusPill
-                        label={r.grade.grade}
-                        tone={r.grade.tone}
-                        size="xs"
-                      />
-                    </div>
-                  ))}
-                </div>
               </TacticalCard>
 
-              {/* One card per candidate */}
+              {/* One tappable card per candidate */}
               {rows.map((r) => {
-                const isCurrent = r.role === 'current';
-                const isProposed = r.role === 'proposed';
-                const borderCol = isProposed
+                const isSelected = r.id === selectedId;
+                const isActive =
+                  r.hex.toLowerCase() === activeHex.toLowerCase();
+                const borderCol = isSelected
                   ? COLORS.accent
-                  : isCurrent
-                  ? COLORS.crit
+                  : isActive
+                  ? COLORS.ok
                   : COLORS.borderStrong;
                 return (
-                  <div
+                  <motion.button
                     key={r.id}
+                    type="button"
+                    onClick={() => handleSelect(r.id)}
+                    whileTap={{ scale: 0.995 }}
+                    transition={{
+                      duration: MOTION.fast,
+                      ease: MOTION.ease,
+                    }}
+                    aria-pressed={isSelected}
+                    aria-label={`Select ${r.hex} for textDim`}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
                       gap: SPACE.sm,
+                      padding: SPACE.sm,
+                      background: isSelected
+                        ? COLORS.accentDim
+                        : 'transparent',
+                      border: `1px solid ${borderCol}`,
+                      borderRadius: RADIUS.sm,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: FONTS.sans,
+                      color: COLORS.textPrimary,
+                      // outline ring when selected for bolder confirmation
+                      boxShadow: isSelected
+                        ? `0 0 0 1px ${COLORS.accent} inset, 0 0 16px ${COLORS.accentGlow}`
+                        : isActive
+                        ? `0 0 0 1px ${COLORS.ok} inset`
+                        : 'none',
                     }}
                   >
-                    {/* Header row */}
+                    {/* Header row — hex, ratio, grade, badges */}
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         flexWrap: 'wrap',
                         gap: SPACE.sm,
-                        padding: `${SPACE.sm}px ${SPACE.md}px`,
-                        background: COLORS.surface,
-                        border: `1px solid ${borderCol}`,
-                        borderRadius: RADIUS.sm,
+                        padding: `${SPACE.sm}px ${SPACE.sm}px`,
                       }}
                     >
                       <span
                         style={{
-                          width: 18,
-                          height: 18,
+                          width: 20,
+                          height: 20,
                           flexShrink: 0,
                           background: r.hex,
                           border: `1px solid ${COLORS.borderStrong}`,
@@ -544,33 +596,60 @@ export const TextDimContrastSample: React.FC<Props> = ({
                         tone={r.grade.tone}
                         size="xs"
                       />
-                      <span style={{ marginLeft: 'auto' }}>
-                        {isCurrent && (
-                          <Mono tone="crit" size="xs">
-                            IN USE
+                      <span
+                        style={{
+                          marginLeft: 'auto',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.sm,
+                        }}
+                      >
+                        {isActive && (
+                          <Mono tone="ok" size="xs">
+                            ACTIVE
                           </Mono>
                         )}
-                        {isProposed && (
+                        {isSelected && !isActive && (
                           <Mono tone="accent" size="xs">
-                            RECOMMENDED
+                            SELECTED
                           </Mono>
                         )}
-                        {!isCurrent && !isProposed && (
+                        {!isSelected && !isActive && (
                           <Mono tone="dim" size="xs">
                             {r.note}
                           </Mono>
                         )}
+                        {isSelected && (
+                          <span
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: RADIUS.full,
+                              background: COLORS.accent,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Check
+                              size={10}
+                              strokeWidth={3}
+                              color={COLORS.textPrimary}
+                            />
+                          </span>
+                        )}
                       </span>
                     </div>
                     <SampleBlock dim={r.hex} />
-                  </div>
+                  </motion.button>
                 );
               })}
 
               {/* Footer note */}
-              <TacticalCard padding="md" style={{ borderColor: COLORS.accent }}>
+              <TacticalCard padding="md">
                 <Mono tone="accent" size="xs">
-                  // RECOMMENDATION
+                  // RUNTIME OVERRIDE
                 </Mono>
                 <p
                   style={{
@@ -581,16 +660,16 @@ export const TextDimContrastSample: React.FC<Props> = ({
                     margin: `${SPACE.sm}px 0 0`,
                   }}
                 >
-                  Approved value gets set in{' '}
+                  APPLY writes the pick to{' '}
                   <span
                     style={{
                       fontFamily: FONTS.mono,
                       color: COLORS.textPrimary,
                     }}
                   >
-                    components/design/tokens.ts
+                    localStorage['{STORAGE_KEY}']
                   </span>{' '}
-                  under{' '}
+                  and reloads. The app rehydrates{' '}
                   <span
                     style={{
                       fontFamily: FONTS.mono,
@@ -598,55 +677,142 @@ export const TextDimContrastSample: React.FC<Props> = ({
                     }}
                   >
                     COLORS.textDim
-                  </span>
-                  . Backlog T3.4 proposes{' '}
+                  </span>{' '}
+                  from that value at module load. Tap RESET to clear and
+                  fall back to the default{' '}
                   <span
                     style={{
                       fontFamily: FONTS.mono,
                       color: COLORS.textPrimary,
                     }}
                   >
-                    #5A5A5A
-                  </span>{' '}
-                  — AA-compliant without losing the tactical "quiet data" feel.
+                    {TEXT_DIM_DEFAULT_HEX}
+                  </span>
+                  .
                 </p>
               </TacticalCard>
             </div>
           </div>
 
-          {/* ── BOTTOM HUD (mobile only) ─────────────────────── */}
-          {isMobile && (
+          {/* ── STICKY APPLY FOOTER ──────────────────────────── */}
+          <div
+            style={{
+              flexShrink: 0,
+              paddingBottom: 'env(safe-area-inset-bottom)',
+              background: COLORS.surface,
+              borderTop: `1px solid ${COLORS.border}`,
+              zIndex: 2,
+              position: 'relative',
+            }}
+          >
             <div
               style={{
-                flexShrink: 0,
-                paddingBottom: 'env(safe-area-inset-bottom)',
-                background: COLORS.surface,
+                padding: SPACE.md,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: SPACE.sm,
               }}
             >
-              <HudStrip side="bottom" height={32}>
-                <div
+              {/* Current selection line */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  paddingBottom: SPACE.sm,
+                  borderBottom: `1px solid ${COLORS.border}`,
+                }}
+              >
+                <Mono tone="dim" size="xs">
+                  Selected
+                </Mono>
+                <span
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE.md,
-                    flex: 1,
-                    minWidth: 0,
+                    width: 16,
+                    height: 16,
+                    flexShrink: 0,
+                    background: selected.hex,
+                    border: `1px solid ${COLORS.borderStrong}`,
+                    borderRadius: RADIUS.sm,
+                  }}
+                />
+                <span
+                  style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: COLORS.textPrimary,
                   }}
                 >
-                  <Mono tone="dim" size="xs">
-                    Display audit
-                  </Mono>
-                  <span style={{ color: COLORS.textDim }}>│</span>
-                  <Mono tone="dim" size="xs">
-                    WCAG AA
-                  </Mono>
-                </div>
-                <Mono tone="dim" size="xs">
-                  {CANDIDATES.length} candidates
+                  {selected.hex}
+                </span>
+                <Mono tone="muted" size="xs">
+                  {selected.ratio.toFixed(2)}:1
                 </Mono>
-              </HudStrip>
+                <StatusPill
+                  label={selected.grade.grade}
+                  tone={selected.grade.tone}
+                  size="xs"
+                />
+                {selectedIsActive && (
+                  <span style={{ marginLeft: 'auto' }}>
+                    <Mono tone="ok" size="xs">
+                      Already active
+                    </Mono>
+                  </span>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: SPACE.sm,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <TacticalButton
+                    variant="primary"
+                    fullWidth
+                    size="md"
+                    icon={
+                      justApplied ? (
+                        <Check size={14} strokeWidth={2} />
+                      ) : undefined
+                    }
+                    onClick={handleApply}
+                    disabled={selectedIsActive || justApplied}
+                    style={{ height: 44 }}
+                  >
+                    {justApplied
+                      ? 'Applied · reloading'
+                      : selectedIsActive
+                      ? 'Already applied'
+                      : 'Apply & reload'}
+                  </TacticalButton>
+                </div>
+                <div style={{ flexShrink: 0, width: 120 }}>
+                  <TacticalButton
+                    variant="secondary"
+                    fullWidth
+                    size="md"
+                    icon={<RotateCcw size={14} strokeWidth={2} />}
+                    onClick={handleReset}
+                    disabled={
+                      justApplied ||
+                      activeHex.toLowerCase() ===
+                        TEXT_DIM_DEFAULT_HEX.toLowerCase()
+                    }
+                    style={{ height: 44 }}
+                  >
+                    Reset
+                  </TacticalButton>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
