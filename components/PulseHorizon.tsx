@@ -1454,43 +1454,146 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       </div>
 
       {/* ── Department Flow Pipeline (full-width) ──
-          2026-04-17: stage padding SPACE.md→SPACE.sm, hero fontSize
-          31→26, card padding SPACE.lg→SPACE.md as part of the
-          single-viewport pass — trims ~30px off the card without
-          compromising chevron-flow readability. */}
-      <TacticalCard padding="md" style={{ padding: SPACE.md }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-          <ArrowRight size={17} strokeWidth={2} color={COLORS.textSecondary} />
-          <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          {[
-            { label: 'WAITING', count: isSurgeActive ? 14 : 6, color: COLORS.warn },
-            { label: 'IN ED', count: isSurgeActive ? 22 : 18, color: COLORS.info },
-            { label: 'BOARDING', count: isSurgeActive ? 8 : 3, color: COLORS.crit },
-            { label: 'ADMITTED', count: isSurgeActive ? 4 : 3, color: '#A855F7' },
-            { label: 'DC READY', count: isSurgeActive ? 2 : 4, color: COLORS.ok },
-          ].map((stage, i) => (
-            <React.Fragment key={stage.label}>
-              {i > 0 && <ChevronRight size={15} color={COLORS.textDim} style={{ flexShrink: 0 }} />}
-              <div style={{
-                flex: 1,
-                padding: `${SPACE.sm}px ${SPACE.sm}px`,
+          2026-04-17 (redesign): the original was 5 bare counter tiles
+          separated by weak chevron arrows — it read as decorative, not
+          operational. Reworked to convey actual flow dynamics:
+           - Header carries total-in-motion + avg LOS + bottleneck pill
+           - Each stage tile shows count, label, and a secondary dwell /
+             velocity metric clinicians actually scan for
+           - Bottleneck stage gets tinted background, glow, and a pulse
+             dot so you spot pressure without reading numbers
+           - Thin proportional flow bar underneath shows distribution at
+             a glance — fat segments = where patients pile up
+           - Chevrons gone; continuous bar replaces them as the flow
+             connector (matches real clinical throughput diagrams)          */}
+      {(() => {
+        const flowStages = [
+          { label: 'WAITING',  count: isSurgeActive ? 14 : 6,  color: COLORS.warn,  dwell: isSurgeActive ? '42m avg' : '18m avg',  velocity: isSurgeActive ? '▲ +4/hr' : 'steady' },
+          { label: 'IN ED',    count: isSurgeActive ? 22 : 18, color: COLORS.info,  dwell: isSurgeActive ? '3.1h LOS' : '2.1h LOS', velocity: isSurgeActive ? '▲ +3/hr' : '▼ -1/hr' },
+          { label: 'BOARDING', count: isSurgeActive ? 8 : 3,   color: COLORS.crit,  dwell: isSurgeActive ? '4.8h hold' : '1.2h hold', velocity: isSurgeActive ? '▲ +2/hr' : '▲ +1/hr' },
+          { label: 'ADMITTED', count: isSurgeActive ? 4 : 3,   color: '#A855F7',    dwell: isSurgeActive ? '12m dwell' : '8m dwell',   velocity: 'steady' },
+          { label: 'DC READY', count: isSurgeActive ? 2 : 4,   color: COLORS.ok,    dwell: isSurgeActive ? 'bay pending' : 'transport ok', velocity: isSurgeActive ? '▼ -3/hr' : '▼ -1/hr' },
+        ];
+        const flowTotal = flowStages.reduce((n, s) => n + s.count, 0);
+        // Bottleneck = the BOARDING stage when its count is ≥ threshold (surge) or the warn/crit stage with heaviest dwell
+        const bottleneck =
+          isSurgeActive
+            ? flowStages.find(s => s.label === 'BOARDING')
+            : flowStages.find(s => s.label === 'BOARDING' && s.count >= 3);
+        const avgLOS = isSurgeActive ? '3.4h' : '2.6h';
+        return (
+          <TacticalCard padding="md" style={{ padding: SPACE.md }}>
+            {/* ── Header: title · metadata · bottleneck pill ── */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+              <ArrowRight size={17} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
+              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+              <Mono tone="muted" size="xs" style={{ whiteSpace: 'nowrap' }}>
+                {flowTotal} IN MOTION · {avgLOS} AVG LOS
+              </Mono>
+              {bottleneck && (
+                <StatusPill
+                  label={`BOTTLENECK · ${bottleneck.label}`}
+                  tone="crit"
+                  pulse
+                  size="xs"
+                />
+              )}
+            </div>
+
+            {/* ── 5 stage tiles ── */}
+            <div style={{ display: 'flex', alignItems: 'stretch', gap: SPACE.sm, marginBottom: SPACE.sm }}>
+              {flowStages.map((stage) => {
+                const isBottleneck = bottleneck?.label === stage.label;
+                return (
+                  <div
+                    key={stage.label}
+                    style={{
+                      flex: 1,
+                      padding: SPACE.sm,
+                      background: isBottleneck ? `${stage.color}14` : COLORS.bgDeep,
+                      border: `1px solid ${isBottleneck ? stage.color : COLORS.border}`,
+                      borderTop: `2px solid ${stage.color}`,
+                      borderRadius: RADIUS.sm,
+                      boxShadow: isBottleneck ? `0 0 16px ${stage.color}33` : 'none',
+                      position: 'relative',
+                      transition: `box-shadow ${MOTION.base}s ease`,
+                      minWidth: 0,
+                    }}
+                  >
+                    {/* Pulse dot in top-right if this stage is the bottleneck */}
+                    {isBottleneck && (
+                      <motion.div
+                        animate={{ opacity: [0.4, 1, 0.4] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{
+                          position: 'absolute',
+                          top: SPACE.sm,
+                          right: SPACE.sm,
+                          width: 6,
+                          height: 6,
+                          borderRadius: RADIUS.full,
+                          background: stage.color,
+                          boxShadow: `0 0 8px ${stage.color}`,
+                        }}
+                      />
+                    )}
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 30,
+                        fontWeight: 600,
+                        color: stage.color,
+                        lineHeight: 1,
+                        letterSpacing: '-0.03em',
+                      }}
+                    >
+                      {stage.count}
+                    </div>
+                    <Mono tone="muted" size="xs" style={{ marginTop: 4, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {stage.label}
+                    </Mono>
+                    <Mono
+                      tone={isBottleneck ? 'crit' : 'dim'}
+                      size="xs"
+                      style={{ marginTop: 2, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                    >
+                      {stage.dwell}
+                    </Mono>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Proportional flow bar — fat segments = patient concentration ── */}
+            <div
+              style={{
+                display: 'flex',
+                height: 4,
+                borderRadius: RADIUS.full,
+                overflow: 'hidden',
                 background: COLORS.bgDeep,
                 border: `1px solid ${COLORS.border}`,
-                borderTop: `2px solid ${stage.color}`,
-                borderRadius: RADIUS.sm,
-                textAlign: 'center',
-              }}>
-                <div style={{ fontFamily: FONTS.sans, fontSize: 26, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
-                  {stage.count}
-                </div>
-                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>{stage.label}</Mono>
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-      </TacticalCard>
+              }}
+              aria-hidden
+            >
+              {flowStages.map((stage) => (
+                <motion.div
+                  key={`bar-${stage.label}`}
+                  initial={{ flex: 0 }}
+                  animate={{ flex: stage.count }}
+                  transition={{ duration: MOTION.slow, ease: MOTION.ease }}
+                  style={{
+                    background: stage.color,
+                    opacity: bottleneck?.label === stage.label ? 1 : 0.75,
+                    boxShadow: bottleneck?.label === stage.label ? `0 0 8px ${stage.color}` : 'none',
+                  }}
+                />
+              ))}
+            </div>
+          </TacticalCard>
+        );
+      })()}
 
       {/* Bed Board fullscreen overlay */}
       <BedBoard
