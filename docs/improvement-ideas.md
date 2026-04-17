@@ -1467,6 +1467,57 @@ charts. A print output that looks terrible is a credibility hole.
 - A "print banner" button in the patient header for explicit
   triggering.
 
+### T3.10 · Typography tuning — eventual modest bump
+
+**Where.** `components/design/tokens.ts` (`TYPE` + `CHROME`) and
+hardcoded `fontSize: N` / lucide `size={N}` literals across 50 files.
+
+**Now.** As of 2026-04-17 evening, sizing is at the **pre-bump
+baseline**:
+
+| Tier      | Current (baseline) | Approx future target |
+| --------- | ------------------ | -------------------- |
+| monoXs    | 11                 | 12                   |
+| monoSm    | 12                 | 13                   |
+| mono      | 13                 | 14                   |
+| bodySm    | 14                 | 15                   |
+| body      | 16                 | 17                   |
+| h4        | 17                 | 19                   |
+| h3        | 21                 | 23                   |
+| h2        | 26                 | 28                   |
+| h1        | 34                 | 37                   |
+| displaySm | 48                 | 52                   |
+| display   | 64                 | 70                   |
+| headerH   | 56                 | 60                   |
+| footerH   | 36                 | 40                   |
+| mobNavH   | 64                 | 72                   |
+
+The "future target" column is roughly the morning's Pass-1 state
+(commit `e0748d4`, later reverted in `c81bb68`). Nick flagged Pass-1
+as "still too tiny" at the time, but on reflection the baseline
+feels right today and the Pass-1 values are close to where a future
+modest nudge might land. This is a reference point, not a
+commitment — don't apply unless a specific surface reads too small
+in actual use.
+
+**Why it matters.** We burned three commits today learning that
+global typography bumps have a very narrow tolerance window. The
+Pass-1 → Pass-2 → revert-to-Pass-1 → revert-to-baseline sequence
+is documented in `docs/decisions.md` (2026-04-17 entries).
+
+**What to do — when the time comes:**
+1. **Don't do another global multiplier.** The evidence says ±10-15%
+   lands outside the tolerance band.
+2. **Target the actual offender.** If a specific surface reads small
+   (chart axis labels, ticker copy, EMS inbound labels), bump *that
+   surface's* inline `fontSize` rather than the token.
+3. **If it genuinely is global, do it in single-px steps.** Apply
+   the table above by lifting each tier by exactly 1-2px (not a
+   percentage). Review between each pass, not after all of them.
+4. **The `TYPE` comment in `tokens.ts` mentions this history** —
+   update it if the bump happens so the next contributor doesn't
+   repeat the loop.
+
 ---
 
 ## T4 · Bets
