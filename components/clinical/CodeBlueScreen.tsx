@@ -352,7 +352,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                 cursor: 'pointer',
               }}
             >
-              <X size={17} />
+              <X size={15} />
             </button>
             <span style={{ animation: 'codeblue-flash 1.2s ease-in-out infinite' }}>
               <BracketLabel tone="crit" size="sm">Code Blue</BracketLabel>
@@ -391,7 +391,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                 <div
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 64,
+                    fontSize: 56,
                     fontWeight: 600,
                     color: COLORS.crit,
                     textShadow: `0 0 24px ${COLORS.crit}80, 0 0 48px ${COLORS.crit}30`,
@@ -405,19 +405,19 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'center', gap: SPACE.xl }}>
                   <div>
                     <Mono tone="muted" size="xs">Code Called</Mono>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 16, color: COLORS.textSecondary, marginTop: 2 }}>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary, marginTop: 2 }}>
                       {fmtTimerShort(codeCalledAt)}
                     </div>
                   </div>
                   <div>
                     <Mono tone="muted" size="xs">Cycle</Mono>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 16, color: COLORS.textSecondary, marginTop: 2 }}>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary, marginTop: 2 }}>
                       {cycle} / CPR
                     </div>
                   </div>
                   <div>
                     <Mono tone="muted" size="xs">Shocks</Mono>
-                    <div style={{ fontFamily: FONTS.mono, fontSize: 16, color: COLORS.crit, marginTop: 2 }}>
+                    <div style={{ fontFamily: FONTS.mono, fontSize: 14, color: COLORS.crit, marginTop: 2 }}>
                       {shockCount}
                     </div>
                   </div>
@@ -455,7 +455,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                   borderRadius: RADIUS.sm,
                 }}
               >
-                <Activity size={17} color={COLORS.warn} />
+                <Activity size={15} color={COLORS.warn} />
                 <Mono tone="warn" size="sm">{nextAction}</Mono>
               </div>
               <AnimatePresence>
@@ -477,7 +477,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                         borderRadius: RADIUS.sm,
                         color: COLORS.warn,
                         fontFamily: FONTS.mono,
-                        fontSize: 17,
+                        fontSize: 15,
                         fontWeight: 600,
                         letterSpacing: '0.12em',
                         textTransform: 'uppercase',
@@ -486,7 +486,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                         animation: 'codeblue-flash 1s ease-in-out infinite',
                       }}
                     >
-                      <Heart size={19} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
+                      <Heart size={17} style={{ display: 'inline', marginRight: 8, verticalAlign: 'middle' }} />
                       Pulse Check
                     </motion.button>
                   </motion.div>
@@ -523,7 +523,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                           ? isShockable ? COLORS.crit : COLORS.warn
                           : COLORS.textSecondary,
                         fontFamily: FONTS.mono,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: 600,
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
@@ -533,7 +533,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                     >
                       {r}
                       {isShockable && isActive && (
-                        <Zap size={13} style={{ marginLeft: 4, display: 'inline', verticalAlign: 'middle' }} />
+                        <Zap size={11} style={{ marginLeft: 4, display: 'inline', verticalAlign: 'middle' }} />
                       )}
                     </motion.button>
                   );
@@ -555,7 +555,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                     borderRadius: RADIUS.sm,
                     color: COLORS.crit,
                     fontFamily: FONTS.mono,
-                    fontSize: 19,
+                    fontSize: 17,
                     fontWeight: 700,
                     letterSpacing: '0.14em',
                     textTransform: 'uppercase',
@@ -569,14 +569,14 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                     overflow: 'hidden',
                   }}
                 >
-                  <Zap size={25} />
+                  <Zap size={22} />
                   Shock Delivered
                   <span
                     style={{
                       position: 'absolute',
                       right: SPACE.base,
                       fontFamily: FONTS.mono,
-                      fontSize: 15,
+                      fontSize: 13,
                       opacity: 0.7,
                     }}
                   >
@@ -596,7 +596,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
             {/* ── Medication Log ─────────────────────────────────────── */}
             <div style={{ padding: `0 ${SPACE.base}px ${SPACE.md}px` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                <Syringe size={15} color={COLORS.textMuted} />
+                <Syringe size={13} color={COLORS.textMuted} />
                 <Mono tone="secondary" size="xs">Medications</Mono>
                 <div style={{ flex: 1 }} />
                 <Mono tone="muted" size="xs">{meds.length} given</Mono>
@@ -617,7 +617,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                         borderRadius: RADIUS.sm,
                         color: COLORS.textSecondary,
                         fontFamily: FONTS.mono,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: 500,
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
@@ -696,7 +696,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
             {/* ── Event Log ──────────────────────────────────────────── */}
             <div style={{ padding: `0 ${SPACE.base}px ${SPACE.md}px` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                <Clock size={15} color={COLORS.textMuted} />
+                <Clock size={13} color={COLORS.textMuted} />
                 <Mono tone="secondary" size="xs">Event Log</Mono>
                 <div style={{ flex: 1 }} />
                 {!resolution && (
@@ -716,13 +716,13 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                       borderRadius: RADIUS.sm,
                       color: COLORS.textSecondary,
                       fontFamily: FONTS.mono,
-                      fontSize: 11,
+                      fontSize: 10,
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
                       cursor: 'pointer',
                     }}
                   >
-                    <Plus size={13} />
+                    <Plus size={11} />
                     Log Event
                   </motion.button>
                 )}
@@ -784,7 +784,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
             {/* ── Team Roles ─────────────────────────────────────────── */}
             <div style={{ padding: `0 ${SPACE.base}px ${SPACE.md}px` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                <Users size={15} color={COLORS.textMuted} />
+                <Users size={13} color={COLORS.textMuted} />
                 <Mono tone="secondary" size="xs">Team Roles</Mono>
               </div>
               <div
@@ -849,7 +849,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                       borderRadius: RADIUS.sm,
                       color: COLORS.ok,
                       fontFamily: FONTS.mono,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: 700,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
@@ -861,7 +861,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                       gap: SPACE.sm,
                     }}
                   >
-                    <CheckCircle2 size={19} />
+                    <CheckCircle2 size={17} />
                     ROSC
                   </motion.button>
                   <motion.button
@@ -886,7 +886,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                       gap: SPACE.sm,
                     }}
                   >
-                    <AlertTriangle size={17} />
+                    <AlertTriangle size={15} />
                     {confirmDeath ? 'Confirm TOD' : 'Time of Death'}
                   </motion.button>
                 </div>

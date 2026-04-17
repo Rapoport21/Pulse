@@ -85,34 +85,29 @@ export const FONTS = {
 
 /** Consistent type scale — use these rather than arbitrary sizes
  *
- * 2026-04-17 · Two-pass bump this cycle:
- *  • Pass 1 (morning): ~10-12% global for clinical legibility on scratched iPads
- *  • Pass 2 (afternoon): +15% on top of that. Nick called the whole UI
- *    "still too tiny" after pass 1 — this pass brings the base mono tier
- *    into the 14/15/16 range and the body/h-scale up to near-desktop
- *    dashboard conventions. Tactical density still signature, but now
- *    legible at arm's length on 10.9" iPads.
- * See docs/decisions.md.
+ * 2026-04-17 · ~10-12% global bump for clinical legibility. Tactical
+ * density is still the signature, but the base tier (mono 11/12/13)
+ * was borderline on scratched iPads at 3am. See docs/decisions.md.
  */
 export const TYPE = {
   // Display — hero numerics and headlines
-  display: { size: 80, weight: 600, tracking: '-0.05em', lineHeight: 0.9 },
-  displaySm: { size: 60, weight: 600, tracking: '-0.04em', lineHeight: 0.95 },
+  display: { size: 70, weight: 600, tracking: '-0.05em', lineHeight: 0.9 },
+  displaySm: { size: 52, weight: 600, tracking: '-0.04em', lineHeight: 0.95 },
 
   // Section titles
-  h1: { size: 42, weight: 600, tracking: '-0.02em', lineHeight: 1.15 },
-  h2: { size: 32, weight: 600, tracking: '-0.02em', lineHeight: 1.2 },
-  h3: { size: 26, weight: 600, tracking: '-0.015em', lineHeight: 1.25 },
-  h4: { size: 22, weight: 600, tracking: '-0.01em', lineHeight: 1.3 },
+  h1: { size: 37, weight: 600, tracking: '-0.02em', lineHeight: 1.15 },
+  h2: { size: 28, weight: 600, tracking: '-0.02em', lineHeight: 1.2 },
+  h3: { size: 23, weight: 600, tracking: '-0.015em', lineHeight: 1.25 },
+  h4: { size: 19, weight: 600, tracking: '-0.01em', lineHeight: 1.3 },
 
   // Body
-  body: { size: 19, weight: 400, tracking: '-0.005em', lineHeight: 1.5 },
-  bodySm: { size: 17, weight: 400, tracking: '-0.003em', lineHeight: 1.45 },
+  body: { size: 17, weight: 400, tracking: '-0.005em', lineHeight: 1.5 },
+  bodySm: { size: 15, weight: 400, tracking: '-0.003em', lineHeight: 1.45 },
 
   // Mono (data, labels, metadata)
-  mono: { size: 16, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
-  monoSm: { size: 15, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
-  monoXs: { size: 14, weight: 500, tracking: '0.14em', lineHeight: 1.25 },
+  mono: { size: 14, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
+  monoSm: { size: 13, weight: 500, tracking: '0.12em', lineHeight: 1.25 },
+  monoXs: { size: 12, weight: 500, tracking: '0.14em', lineHeight: 1.25 },
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -173,10 +168,10 @@ export const MOTION = {
 // Chrome heights — ensures boot/login/shell align to the same grid
 // ─────────────────────────────────────────────────────────────────────────
 export const CHROME = {
-  headerHeight: 68,    // top HUD strip / desktop header (56 → 60 → 68 across type bumps)
-  footerHeight: 46,    // bottom HUD ticker (36 → 40 → 46)
-  mobileNavHeight: 82, // mobile bottom tab bar (64 → 72 → 82)
-  sidebarWidth: 300,   // command sidebar (kept — width is fine, not text-dependent)
+  headerHeight: 60,    // top HUD strip / desktop header (was 56 pre type-bump)
+  footerHeight: 40,    // bottom HUD ticker (was 36)
+  mobileNavHeight: 72, // mobile bottom tab bar (was 64)
+  sidebarWidth: 300,   // command sidebar (kept — width is fine)
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────

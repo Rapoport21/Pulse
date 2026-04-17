@@ -323,7 +323,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                   borderRadius: RADIUS.sm,
                   cursor: 'pointer',
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 11,
                   fontWeight: 500,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase' as const,
@@ -436,7 +436,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: 600,
                       color: COLORS.textPrimary,
                       letterSpacing: '-0.005em',
@@ -472,7 +472,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                   {/* Required */}
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: 600,
                     color: COLORS.textSecondary,
                     textAlign: 'center',
@@ -484,7 +484,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                   {/* Current */}
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: 600,
                     color: cur >= req ? COLORS.ok : COLORS.textPrimary,
                     textAlign: 'center',
@@ -498,7 +498,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                     {gap > 0 ? (
                       <span style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: 700,
                         color: gapColor(gap),
                         padding: `1px ${SPACE.xs}px`,
@@ -510,7 +510,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                     ) : (
                       <span style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: 600,
                         color: COLORS.ok,
                       }}>
@@ -632,8 +632,8 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
               >
                 <BracketLabel tone="secondary" size="xs">ROSTER</BracketLabel>
                 {rosterExpanded
-                  ? <ChevronUp size={15} color={COLORS.textMuted} />
-                  : <ChevronDown size={15} color={COLORS.textMuted} />
+                  ? <ChevronUp size={13} color={COLORS.textMuted} />
+                  : <ChevronDown size={13} color={COLORS.textMuted} />
                 }
               </button>
               <Mono tone="muted" size="xs">{filteredStaff.length} TOTAL</Mono>
@@ -651,7 +651,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                 border: `1px solid ${COLORS.border}`,
                 borderRadius: RADIUS.sm,
               }}>
-                <Search size={15} color={COLORS.textMuted} />
+                <Search size={13} color={COLORS.textMuted} />
                 <input
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -663,7 +663,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                     outline: 'none',
                     color: COLORS.textPrimary,
                     fontFamily: FONTS.sans,
-                    fontSize: 15,
+                    fontSize: 13,
                     letterSpacing: '-0.005em',
                   }}
                 />
@@ -759,7 +759,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
               </div>
               <TacticalCard padding="sm" style={{ marginBottom: SPACE.sm }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                  <Clock size={15} color={COLORS.textMuted} />
+                  <Clock size={13} color={COLORS.textMuted} />
                   <Mono tone="secondary" size="xs">19:00 EVENING</Mono>
                   <Mono tone="warn" size="xs">3H 22M</Mono>
                 </div>
@@ -771,7 +771,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
               </TacticalCard>
               <TacticalCard padding="sm">
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                  <Clock size={15} color={COLORS.textMuted} />
+                  <Clock size={13} color={COLORS.textMuted} />
                   <Mono tone="secondary" size="xs">07:00 DAY</Mono>
                   <Mono tone="muted" size="xs">15H 22M</Mono>
                 </div>
@@ -790,7 +790,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
       <HudStrip side="bottom" height={36}>
         <div style={{ display: 'flex', gap: SPACE.xl, alignItems: 'center', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <Shield size={14} color={unitsCompliant === UNITS.length ? COLORS.ok : COLORS.warn} />
+            <Shield size={12} color={unitsCompliant === UNITS.length ? COLORS.ok : COLORS.warn} />
             <Mono tone={unitsCompliant === UNITS.length ? 'ok' : 'warn'} size="xs">
               RATIO COMPLIANCE {unitsCompliant}/{UNITS.length}
             </Mono>
@@ -799,7 +799,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
           <Divider variant="solid" color={COLORS.border} style={{ width: 1, height: 16, borderTop: 'none', borderLeft: `1px solid ${COLORS.border}` }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <AlertTriangle size={14} color={ratioViolations > 0 ? COLORS.crit : COLORS.textMuted} />
+            <AlertTriangle size={12} color={ratioViolations > 0 ? COLORS.crit : COLORS.textMuted} />
             <Mono tone={ratioViolations > 0 ? 'crit' : 'muted'} size="xs">
               RATIO VIOLATIONS {ratioViolations}
             </Mono>
@@ -808,7 +808,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
           <Divider variant="solid" color={COLORS.border} style={{ width: 1, height: 16, borderTop: 'none', borderLeft: `1px solid ${COLORS.border}` }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <Clock size={14} color={overtimeStaff.length > 0 ? COLORS.warn : COLORS.textMuted} />
+            <Clock size={12} color={overtimeStaff.length > 0 ? COLORS.warn : COLORS.textMuted} />
             <Mono tone={overtimeStaff.length > 0 ? 'warn' : 'muted'} size="xs">
               OVERTIME {overtimeStaff.length} STAFF &gt;10H
             </Mono>
@@ -817,7 +817,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
           <div style={{ flex: 1 }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <Activity size={14} color={COLORS.ok} />
+            <Activity size={12} color={COLORS.ok} />
             <Mono tone="ok" size="xs">LIVE</Mono>
             <Mono tone="muted" size="xs">{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</Mono>
           </div>
@@ -884,7 +884,7 @@ const StaffChip: React.FC<{
       {/* Name */}
       <span style={{
         fontFamily: FONTS.sans,
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 500,
         color: COLORS.textPrimary,
         whiteSpace: 'nowrap',
@@ -896,7 +896,7 @@ const StaffChip: React.FC<{
       {/* Role abbreviation */}
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 11,
+        fontSize: 10,
         fontWeight: 600,
         letterSpacing: '0.06em',
         color: roleColor,
@@ -908,7 +908,7 @@ const StaffChip: React.FC<{
       {showStatus && member.status === 'on-call' && (
         <span style={{
           fontFamily: FONTS.mono,
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: 500,
           letterSpacing: '0.1em',
           color: COLORS.warn,
@@ -967,7 +967,7 @@ const RosterRow: React.FC<{
     >
       <span style={{
         fontFamily: FONTS.sans,
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: 500,
         color: COLORS.textPrimary,
         letterSpacing: '-0.005em',
@@ -980,7 +980,7 @@ const RosterRow: React.FC<{
 
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 13,
+        fontSize: 11,
         fontWeight: 600,
         color: roleColor,
         letterSpacing: '0.06em',
@@ -990,7 +990,7 @@ const RosterRow: React.FC<{
 
       <span style={{
         fontFamily: FONTS.sans,
-        fontSize: 14,
+        fontSize: 12,
         color: member.unit ? COLORS.textSecondary : COLORS.textMuted,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
@@ -1001,7 +1001,7 @@ const RosterRow: React.FC<{
 
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 500,
         color: (member.hoursWorked ?? 0) > 10 ? COLORS.warn : COLORS.textSecondary,
         textAlign: 'right',
@@ -1028,7 +1028,7 @@ const StatChip: React.FC<{
       <Mono tone="muted" size="xs">{label}</Mono>
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 700,
         color,
         letterSpacing: '-0.02em',
@@ -1058,7 +1058,7 @@ const ShiftBadge: React.FC<{
       <Mono tone="muted" size="xs">{label}</Mono>
       <span style={{
         fontFamily: FONTS.mono,
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 600,
         color,
       }}>

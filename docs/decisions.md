@@ -12,28 +12,14 @@ New entries go at the top. Most recent first.
 
 ---
 
-## 2026-04-17 · Type scale +15% second pass + simulator controls rewritten
+## 2026-04-17 · Simulator controls rewritten (sizing bump reverted)
 
 **Context.** Two Nick-reported issues in one message: (a) "the UI
-(the whole pulse) is still too tiny. top navbar, text, all of it" —
-the morning's 10-12% bump wasn't enough; the chrome and text still
-felt undersized at arm's length on a 10.9" iPad. (b) "sim. controls
-do not work" — the What-If Sim sliders in Horizon weren't responding
-to touch input.
+(the whole pulse) is still too tiny" after the morning's 10-12% bump;
+(b) "sim. controls do not work" — the What-If Sim sliders in Horizon
+weren't responding to touch input.
 
-**Decision (sizing).** Second pass, +15% on top of the morning bump,
-applied to:
-- `TYPE` tokens (mono 14/15/16 base; body 17/19; h-scale 22/26/32/42;
-  display 60/80)
-- `CHROME` heights (header 60 → 68, footer 40 → 46, mobileNav 72 → 82)
-- Hardcoded `fontSize: N` literals across the codebase via perl-pass
-  mapping (12→14, 13→15, 14→16, 15→17, 17→19, and up through 70→80)
-- Lucide icon `size={N}` props ≥ 11 by the same mapping
-  (11→13, 12→14, 13→15, up through 52→60). Values ≤ 10 left alone —
-  those are mostly `CornerBracket` chrome sized for their visual role,
-  not semantic icon sizes.
-
-**Decision (simulator).** Replaced the native `<input type="range">`
+**Decision (simulator, kept).** Replaced the native `<input type="range">`
 inside `LeverSlider` with a stepper pattern: ± buttons (44×44, iOS
 HIG minimum tap target) flanking a segmented fill bar (one cell per
 step, accent-glow on active). Rationale: the native range thumb is
@@ -43,19 +29,30 @@ because WebKit treats the thin track as a scroll-gesture candidate.
 The stepper has discrete taps, a visible current-state indicator, and
 works identically across mouse, touch, and keyboard.
 
-**Rejected.** (a) Keep the range input but add custom `::-webkit-
-slider-thumb` CSS — WebKit pseudo-element styling is brittle across
-Capacitor versions and still leaves drag-gesture conflicts unsolved.
-(b) Use a Framer-motion drag slider — overkill for 5-step lever
-controls, adds animation complexity we don't need. (c) Auto-compute
-token bumps via a multiplier — easier to review explicit mappings
-than trust a `Math.round(size * 1.15)` chain.
+**Decision (sizing, reverted).** A +15% second-pass bump was shipped
+(commit `2fcc5cd`) on TYPE tokens, CHROME heights, and every hardcoded
+`fontSize: N` / icon `size={N}` literal across the codebase. Nick's
+immediate feedback: "things are too big. way too big now." The whole
+sizing portion of `2fcc5cd` was reverted on top in a follow-up commit.
+Net effect: the simulator stepper is kept; every numeric size is back
+at the morning's Pass-1 values (mono 12/13/14, body 15/17, h 19/23/28/37,
+CHROME 60/40/72).
 
-**Follow-up.** If Horizon overflows viewport after the bump, trim the
-chart height further (was 220px after this morning's passes) or move
-Census & Throughput out of the 3-col ops row. Single-viewport fit was
-a previous constraint — it may now yield to legibility. The sidebar
-width (300px) was left alone — width is not text-height-dependent.
+**Takeaway.** Pass 1 read "still too tiny" and Pass 2 read "way too
+big", so the sweet spot is a modest top-up — single-digit px, not
+15%. Future tuning should either (a) target specific legibility
+offenders (iPad chart labels, ticker text) rather than a global
+multiplier, or (b) do one small global bump and pause for eyes-on
+review before compounding.
+
+**Rejected.** (a) Keep the bump and trim the chrome back down
+proportionally — the text itself was also flagged too big, not just
+the header. (b) Leave the bump in tokens.ts but revert only the
+perl-pass literals — the perl-pass was what made the change uniformly
+visible; reverting only tokens would leave a bimodal feel. (c) Apply
+a halfway bump (midpoint between Pass 1 and Pass 2) without Nick
+eyeballing it — "way too big" is strong language and midpoint could
+still land on the wrong side of the line.
 
 ---
 

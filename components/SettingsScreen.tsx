@@ -102,7 +102,7 @@ const Section: React.FC<{
       <h2
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 23,
+          fontSize: 20,
           fontWeight: 600,
           letterSpacing: '-0.02em',
           lineHeight: 1.2,
@@ -154,7 +154,7 @@ const InfoRow: React.FC<{
     <span
       style={{
         fontFamily: FONTS.mono,
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: 500,
         letterSpacing: '0.08em',
         color: COLORS.textPrimary,
@@ -324,13 +324,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   color: COLORS.textSecondary,
                   cursor: 'pointer',
                   fontFamily: FONTS.mono,
-                  fontSize: 15,
+                  fontSize: 13,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                   fontWeight: 500,
                 }}
               >
-                <ChevronLeft size={17} strokeWidth={2} />
+                <ChevronLeft size={15} strokeWidth={2} />
                 Back
               </motion.button>
               <BracketLabel tone="accent" size={isMobile ? 'sm' : 'base'}>
@@ -417,7 +417,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         border: `1px solid ${COLORS.borderStrong}`,
                         borderRadius: RADIUS.sm,
                         fontFamily: FONTS.mono,
-                        fontSize: 19,
+                        fontSize: 17,
                         fontWeight: 600,
                         letterSpacing: '0.08em',
                         color: COLORS.textPrimary,
@@ -438,7 +438,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       <span
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 19,
+                          fontSize: 17,
                           fontWeight: 600,
                           letterSpacing: '-0.01em',
                           color: COLORS.textPrimary,
@@ -516,18 +516,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         }}
                       >
                         {resetArmed ? (
-                          <AlertTriangle size={23} strokeWidth={2} />
+                          <AlertTriangle size={20} strokeWidth={2} />
                         ) : resetJustFired ? (
-                          <Check size={23} strokeWidth={2} />
+                          <Check size={20} strokeWidth={2} />
                         ) : (
-                          <RotateCcw size={23} strokeWidth={1.75} />
+                          <RotateCcw size={20} strokeWidth={1.75} />
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: 600,
                             letterSpacing: '-0.01em',
                             color: COLORS.textPrimary,
@@ -539,7 +539,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         <div
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 16,
+                            fontSize: 14,
                             color: COLORS.textSecondary,
                             lineHeight: 1.45,
                           }}
@@ -556,11 +556,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       size="md"
                       icon={
                         resetJustFired ? (
-                          <Check size={17} strokeWidth={2} />
+                          <Check size={15} strokeWidth={2} />
                         ) : resetArmed ? (
-                          <AlertTriangle size={17} strokeWidth={2} />
+                          <AlertTriangle size={15} strokeWidth={2} />
                         ) : (
-                          <RotateCcw size={17} strokeWidth={2} />
+                          <RotateCcw size={15} strokeWidth={2} />
                         )
                       }
                       onClick={handleResetClick}
@@ -581,7 +581,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       }}
                     >
                       <Info
-                        size={14}
+                        size={12}
                         color={COLORS.textDim}
                         strokeWidth={1.75}
                       />
@@ -604,21 +604,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   }}
                 >
                   <InfoRow
-                    icon={<Cpu size={15} strokeWidth={1.75} />}
+                    icon={<Cpu size={13} strokeWidth={1.75} />}
                     label="Device"
                     value={deviceShort}
                   />
                   <InfoRow
-                    icon={<Radio size={15} strokeWidth={1.75} />}
+                    icon={<Radio size={13} strokeWidth={1.75} />}
                     label="Peers online"
                     value={`${deviceCount}`}
                   />
                   <InfoRow
                     icon={
                       connectionStatus === 'connected' ? (
-                        <Wifi size={15} strokeWidth={1.75} />
+                        <Wifi size={13} strokeWidth={1.75} />
                       ) : (
-                        <WifiOff size={15} strokeWidth={1.75} />
+                        <WifiOff size={13} strokeWidth={1.75} />
                       )
                     }
                     label="Uplink"
@@ -629,7 +629,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     }
                   />
                   <InfoRow
-                    icon={<ShieldCheck size={15} strokeWidth={1.75} />}
+                    icon={<ShieldCheck size={13} strokeWidth={1.75} />}
                     label="Build"
                     value={buildDate}
                   />
@@ -684,13 +684,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       color: COLORS.textMuted,
                     }}
                   >
-                    <Eye size={19} strokeWidth={1.75} />
+                    <Eye size={17} strokeWidth={1.75} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: 600,
                         letterSpacing: '-0.01em',
                         color: COLORS.textPrimary,
@@ -702,7 +702,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 15,
+                        fontSize: 13,
                         color: COLORS.textSecondary,
                         lineHeight: 1.4,
                       }}
@@ -712,7 +712,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     </div>
                   </div>
                   <ChevronRight
-                    size={19}
+                    size={17}
                     color={COLORS.textMuted}
                     strokeWidth={1.75}
                   />
@@ -725,7 +725,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   <div
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 16,
+                      fontSize: 14,
                       color: COLORS.textSecondary,
                       lineHeight: 1.45,
                       marginBottom: SPACE.base,
@@ -738,7 +738,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                     variant="danger"
                     fullWidth
                     size="md"
-                    icon={<LogOut size={17} strokeWidth={2} />}
+                    icon={<LogOut size={15} strokeWidth={2} />}
                     onClick={handleLogoutClick}
                     style={{ height: 44 }}
                   >

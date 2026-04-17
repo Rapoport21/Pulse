@@ -110,7 +110,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          <QrCode size={17} strokeWidth={1.75} color={COLORS.info} />
+          <QrCode size={15} strokeWidth={1.75} color={COLORS.info} />
           <BracketLabel tone="primary">TEST SCAN TARGET</BracketLabel>
         </div>
         <button
@@ -133,7 +133,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
             cursor: 'pointer',
           }}
         >
-          <X size={19} />
+          <X size={17} />
         </button>
       </div>
 
@@ -154,7 +154,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
           gap: SPACE.md,
         }}
       >
-        <BracketFrame color={COLORS.info} size={17} />
+        <BracketFrame color={COLORS.info} size={15} />
         <div
           style={{
             width: 280,
@@ -183,7 +183,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
             <div
               style={{
                 fontFamily: FONTS.mono,
-                fontSize: 14,
+                fontSize: 12,
                 color: COLORS.crit,
                 textAlign: 'center',
               }}
@@ -194,7 +194,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
             <div
               style={{
                 fontFamily: FONTS.mono,
-                fontSize: 14,
+                fontSize: 12,
                 color: COLORS.textMuted,
               }}
             >
@@ -212,7 +212,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
             style={{
               marginTop: 4,
               fontFamily: FONTS.sans,
-              fontSize: 15,
+              fontSize: 13,
               color: COLORS.textSecondary,
               letterSpacing: '-0.005em',
             }}

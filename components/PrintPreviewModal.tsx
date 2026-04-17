@@ -107,7 +107,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     flexShrink: 0,
                   }}
                 >
-                  <FileText size={17} strokeWidth={2} />
+                  <FileText size={15} strokeWidth={2} />
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <BracketLabel tone="secondary" size="xs">
@@ -116,7 +116,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   <div
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 17,
+                      fontSize: 15,
                       fontWeight: 600,
                       color: COLORS.textPrimary,
                       letterSpacing: '-0.003em',
@@ -157,7 +157,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   e.currentTarget.style.color = COLORS.textMuted;
                 }}
               >
-                <X size={17} strokeWidth={2} />
+                <X size={15} strokeWidth={2} />
               </button>
             </div>
 
@@ -188,7 +188,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     <h1
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 36,
+                        fontSize: 31,
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '-0.01em',
@@ -201,7 +201,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     <p
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 15,
+                        fontSize: 13,
                         color: '#4B5563',
                         margin: '4px 0 0',
                       }}
@@ -213,7 +213,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 23,
+                        fontSize: 20,
                         fontWeight: 700,
                         color: '#000000',
                       }}
@@ -223,7 +223,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     <div
                       style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 13,
+                        fontSize: 11,
                         color: '#6B7280',
                         letterSpacing: '0.08em',
                       }}
@@ -235,7 +235,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                 <div
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 17,
+                    fontSize: 15,
                     color: '#000000',
                     lineHeight: 1.6,
                   }}
@@ -267,7 +267,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   color: COLORS.warn,
                 }}
               >
-                <AlertTriangle size={15} strokeWidth={2} />
+                <AlertTriangle size={13} strokeWidth={2} />
                 <Mono tone="warn" size="xs">
                   Verify printer online · paper loaded
                 </Mono>
@@ -283,7 +283,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                     onPrint();
                     onClose();
                   }}
-                  icon={<Printer size={16} strokeWidth={2} />}
+                  icon={<Printer size={14} strokeWidth={2} />}
                 >
                   Confirm Print
                 </TacticalButton>

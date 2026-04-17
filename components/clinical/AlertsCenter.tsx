@@ -285,11 +285,11 @@ const SEV_BG: Record<Severity, string> = {
 };
 
 const CAT_ICON: Record<Category, React.ReactNode> = {
-  clinical: <HeartPulse size={16} />,
-  system: <Server size={16} />,
-  staffing: <Users size={16} />,
-  safety: <AlertTriangle size={16} />,
-  general: <Bell size={16} />,
+  clinical: <HeartPulse size={14} />,
+  system: <Server size={14} />,
+  staffing: <Users size={14} />,
+  safety: <AlertTriangle size={14} />,
+  general: <Bell size={14} />,
 };
 
 const timeLabel = (mins: number): string => {
@@ -626,7 +626,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 background: COLORS.crit,
                 borderRadius: RADIUS.full,
                 fontFamily: FONTS.mono,
-                fontSize: 14,
+                fontSize: 12,
                 fontWeight: 700,
                 color: '#fff',
                 letterSpacing: '0.04em',
@@ -673,7 +673,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 transition: `all ${MOTION.fast}s ease`,
               }}
             >
-              <div style={{ fontSize: 46, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.info, lineHeight: 1 }}>
+              <div style={{ fontSize: 40, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.info, lineHeight: 1 }}>
                 {deskStatusCounts.active}
               </div>
               <Mono tone="info" size="xs">ACTIVE</Mono>
@@ -694,7 +694,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 transition: `all ${MOTION.fast}s ease`,
               }}
             >
-              <div style={{ fontSize: 46, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.crit, lineHeight: 1 }}>
+              <div style={{ fontSize: 40, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.crit, lineHeight: 1 }}>
                 {deskStatusCounts.escalated}
               </div>
               <Mono tone="crit" size="xs">ESCALATED</Mono>
@@ -715,7 +715,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 transition: `all ${MOTION.fast}s ease`,
               }}
             >
-              <div style={{ fontSize: 46, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.warn, lineHeight: 1 }}>
+              <div style={{ fontSize: 40, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.warn, lineHeight: 1 }}>
                 {deskStatusCounts.acknowledged}
               </div>
               <Mono tone="warn" size="xs">ACKNOWLEDGED</Mono>
@@ -736,7 +736,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 transition: `all ${MOTION.fast}s ease`,
               }}
             >
-              <div style={{ fontSize: 46, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.ok, lineHeight: 1 }}>
+              <div style={{ fontSize: 40, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.ok, lineHeight: 1 }}>
                 {deskStatusCounts.resolved}
               </div>
               <Mono tone="ok" size="xs">RESOLVED</Mono>
@@ -769,7 +769,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                     border: 'none',
                     borderBottom: `2px solid ${isActive ? tabColor : 'transparent'}`,
                     fontFamily: FONTS.mono,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 700,
                     letterSpacing: '0.1em',
                     textTransform: 'uppercase' as const,
@@ -869,7 +869,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                     <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, marginBottom: alert.patient || alert.escalation ? SPACE.sm : 0 }}>
                       <Mono tone="muted" size="xs">Source: {alert.source}</Mono>
                       <Mono tone="muted" size="xs">
-                        <Clock size={13} style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                        <Clock size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />
                         {timeLabel(alert.minutesAgo)}
                       </Mono>
                     </div>
@@ -891,7 +891,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                     {/* Row 5: Escalation info */}
                     {(alert.escalation || isEscalated) && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.sm }}>
-                        <ArrowUpRight size={14} color={COLORS.crit} style={{ flexShrink: 0 }} />
+                        <ArrowUpRight size={12} color={COLORS.crit} style={{ flexShrink: 0 }} />
                         <span
                           style={{
                             fontFamily: FONTS.sans,
@@ -910,7 +910,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                     {/* Resolved/Acknowledged metadata */}
                     {(isResolved || isAck) && stState.actor && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: SPACE.sm }}>
-                        <CheckCircle2 size={14} color={isResolved ? COLORS.ok : COLORS.warn} style={{ flexShrink: 0 }} />
+                        <CheckCircle2 size={12} color={isResolved ? COLORS.ok : COLORS.warn} style={{ flexShrink: 0 }} />
                         <Mono tone={isResolved ? 'ok' : 'warn'} size="xs">
                           {isResolved ? 'Resolved' : 'Acknowledged'} by {stState.actor} at {formatTimestamp(stState.statusChangedAt)}
                         </Mono>
@@ -924,7 +924,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                           <TacticalButton
                             variant="secondary"
                             size="sm"
-                            icon={<CheckCircle2 size={15} />}
+                            icon={<CheckCircle2 size={13} />}
                             onClick={() => deskHandleAck(alert.id)}
                           >
                             ACKNOWLEDGE
@@ -934,7 +934,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                           <TacticalButton
                             variant="danger"
                             size="sm"
-                            icon={<ArrowUpRight size={15} />}
+                            icon={<ArrowUpRight size={13} />}
                             onClick={() => deskHandleEscalate(alert.id)}
                           >
                             ESCALATE
@@ -943,7 +943,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                         <TacticalButton
                           variant="primary"
                           size="sm"
-                          icon={<Shield size={15} />}
+                          icon={<Shield size={13} />}
                           onClick={() => deskHandleResolve(alert.id)}
                         >
                           RESOLVE
@@ -1006,7 +1006,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 cursor: 'pointer',
               }}
             >
-              <X size={17} />
+              <X size={15} />
             </button>
             <BracketLabel tone="accent" size="sm">Alerts</BracketLabel>
             <div style={{ flex: 1 }} />
@@ -1017,7 +1017,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                   background: COLORS.crit,
                   borderRadius: RADIUS.full,
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 11,
                   fontWeight: 700,
                   color: '#fff',
                 }}
@@ -1111,7 +1111,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                       border: `1px solid ${isActive ? tColor : COLORS.border}`,
                       borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: 600,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase' as const,
@@ -1127,7 +1127,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                           padding: '1px 5px',
                           background: isActive ? tColor : COLORS.border,
                           borderRadius: RADIUS.full,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: 700,
                           color: isActive ? '#fff' : COLORS.textMuted,
                         }}
@@ -1170,7 +1170,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                       border: `1px solid ${isActive ? tColor : COLORS.border}`,
                       borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: 600,
                       letterSpacing: '0.08em',
                       textTransform: 'uppercase' as const,
@@ -1186,7 +1186,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                           padding: '1px 5px',
                           background: isActive ? tColor : COLORS.border,
                           borderRadius: RADIUS.full,
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: 700,
                           color: isActive ? '#fff' : COLORS.textMuted,
                         }}
@@ -1275,7 +1275,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                             marginTop: 1,
                           }}
                         >
-                          {isEscalated ? <ArrowUpRight size={16} /> : CAT_ICON[alert.category]}
+                          {isEscalated ? <ArrowUpRight size={14} /> : CAT_ICON[alert.category]}
                         </div>
 
                         {/* Content */}
@@ -1309,7 +1309,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                               marginBottom: 2,
                             }}
                           >
-                            {isResolved && <CheckCircle2 size={15} color={COLORS.ok} style={{ marginRight: 4, verticalAlign: 'middle' }} />}
+                            {isResolved && <CheckCircle2 size={13} color={COLORS.ok} style={{ marginRight: 4, verticalAlign: 'middle' }} />}
                             {alert.title}
                           </div>
                           {alert.patientRef && (
@@ -1335,7 +1335,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                         {/* Time + chevron */}
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                           <Mono tone="muted" size="xs">{timeLabel(alert.minutesAgo)}</Mono>
-                          {isExp ? <ChevronUp size={15} color={COLORS.textMuted} /> : <ChevronDown size={15} color={COLORS.textMuted} />}
+                          {isExp ? <ChevronUp size={13} color={COLORS.textMuted} /> : <ChevronDown size={13} color={COLORS.textMuted} />}
                         </div>
                       </button>
 
@@ -1370,7 +1370,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                                   <TacticalButton
                                     variant="secondary"
                                     size="sm"
-                                    icon={<CheckCircle2 size={15} />}
+                                    icon={<CheckCircle2 size={13} />}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleAck(alert.id);
@@ -1383,7 +1383,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                                   <TacticalButton
                                     variant="danger"
                                     size="sm"
-                                    icon={<ArrowUpRight size={15} />}
+                                    icon={<ArrowUpRight size={13} />}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleEscalate(alert.id);
@@ -1396,7 +1396,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                                   <TacticalButton
                                     variant="primary"
                                     size="sm"
-                                    icon={<Shield size={15} />}
+                                    icon={<Shield size={13} />}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleResolve(alert.id);

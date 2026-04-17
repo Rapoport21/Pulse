@@ -280,7 +280,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 13,
+                  fontSize: 11,
                   fontFamily: FONTS.mono,
                   fontWeight: 600,
                   color: isDone ? COLORS.textPrimary : isCurrent ? COLORS.accent : COLORS.textMuted,
@@ -315,7 +315,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
               justifyContent: 'center',
             }}
           >
-            <User size={23} color={COLORS.accent} />
+            <User size={20} color={COLORS.accent} />
           </div>
           <div>
             <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: COLORS.textPrimary }}>
@@ -346,7 +346,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
       <TacticalCard padding="md">
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-          <ClipboardList size={17} color={COLORS.textMuted} />
+          <ClipboardList size={15} color={COLORS.textMuted} />
           <Mono tone="muted" size="xs">Pre-Admission Checklist</Mono>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -430,7 +430,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         <CornerBracket position="br" size={8} />
                       </>
                     )}
-                    <Bed size={19} color={isSelected ? COLORS.accent : COLORS.ok} />
+                    <Bed size={17} color={isSelected ? COLORS.accent : COLORS.ok} />
                     <Mono tone={isSelected ? 'accent' : 'primary'} size="sm">{bed.label}</Mono>
                     {bed.assignedNurse && (
                       <Mono tone="muted" size="xs">{bed.assignedNurse}</Mono>
@@ -450,7 +450,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
           >
             <TacticalCard highlight padding="md">
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
-                <CheckCircle2 size={17} color={COLORS.ok} />
+                <CheckCircle2 size={15} color={COLORS.ok} />
                 <Mono tone="ok" size="sm">Selected Bed</Mono>
               </div>
               <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: COLORS.textPrimary }}>
@@ -494,7 +494,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       justifyContent: 'center',
                     }}
                   >
-                    <CheckCircle2 size={23} color={COLORS.ok} />
+                    <CheckCircle2 size={20} color={COLORS.ok} />
                   </div>
                   <div>
                     <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: COLORS.ok }}>
@@ -538,7 +538,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       borderRadius: RADIUS.sm,
                     }}
                   >
-                    <AlertTriangle size={17} color={COLORS.warn} style={{ flexShrink: 0 }} />
+                    <AlertTriangle size={15} color={COLORS.warn} style={{ flexShrink: 0 }} />
                     <Mono tone="warn" size="xs">No bed assigned — patient in holding area</Mono>
                   </div>
                 )}
@@ -589,7 +589,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 borderRadius: RADIUS.sm,
               }}
             >
-              <AlertTriangle size={17} color={COLORS.warn} style={{ flexShrink: 0 }} />
+              <AlertTriangle size={15} color={COLORS.warn} style={{ flexShrink: 0 }} />
               <Mono tone="warn" size="xs">No bed assigned — patient in holding area</Mono>
             </div>
           )}
@@ -789,7 +789,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 flexShrink: 0,
               }}
             >
-              <Filter size={15} color={COLORS.textMuted} />
+              <Filter size={13} color={COLORS.textMuted} />
               {FILTER_TABS.map(tab => (
                 <button
                   key={tab.key}
@@ -801,7 +801,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                     height: 28,
                     padding: `0 ${SPACE.md}px`,
                     fontFamily: FONTS.mono,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 500,
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
@@ -873,7 +873,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         height: 20,
                         padding: `0 ${SPACE.sm}px`,
                         fontFamily: FONTS.mono,
-                        fontSize: 11,
+                        fontSize: 10,
                         fontWeight: 600,
                         letterSpacing: '0.14em',
                         textTransform: 'uppercase',
@@ -894,7 +894,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         width: 24,
                         height: 24,
                         fontFamily: FONTS.mono,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: 700,
                         color: acuityColor(entry.acuity),
                         background: `${acuityColor(entry.acuity)}18`,
@@ -944,7 +944,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         borderRadius: RADIUS.sm,
                         color: assigningAdmissionId === entry.id ? COLORS.accent : COLORS.textPrimary,
                         fontFamily: FONTS.mono,
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: 700,
                         letterSpacing: '0.14em',
                         textTransform: 'uppercase',
@@ -959,7 +959,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       <CornerBracket position="tr" color={COLORS.accent} size={8} thickness={1.5} />
                       <CornerBracket position="bl" color={COLORS.accent} size={8} thickness={1.5} />
                       <CornerBracket position="br" color={COLORS.accent} size={8} thickness={1.5} />
-                      <Bed size={17} />
+                      <Bed size={15} />
                       {assigningAdmissionId === entry.id ? 'Close Bed Picker' : 'Assign Bed'}
                     </motion.button>
                   )}
@@ -972,7 +972,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       alignItems: 'center',
                       gap: 6,
                       fontFamily: FONTS.mono,
-                      fontSize: 13,
+                      fontSize: 11,
                       fontWeight: 500,
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
@@ -997,12 +997,12 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         alignItems: 'center',
                         gap: 4,
                         fontFamily: FONTS.mono,
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: 500,
                         letterSpacing: '0.1em',
                         color: entry.waitMin > 60 ? COLORS.crit : entry.waitMin > 30 ? COLORS.warn : COLORS.textMuted,
                       }}>
-                        <Clock size={13} />
+                        <Clock size={11} />
                         {entry.waitMin}m
                       </span>
                     )}
@@ -1043,12 +1043,12 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                           marginTop: SPACE.sm,
                           borderTop: `1px solid ${COLORS.border}`,
                         }}>
-                          <div><Mono tone="muted" size="xs">Source</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: COLORS.textPrimary, marginTop: 2 }}>{entry.source}</div></div>
-                          <div><Mono tone="muted" size="xs">Requested</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedUnit}</div></div>
-                          <div><Mono tone="muted" size="xs">Attending</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: COLORS.textPrimary, marginTop: 2 }}>{entry.attending}</div></div>
-                          <div><Mono tone="muted" size="xs">ESI Level</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: acuityColor(entry.acuity), marginTop: 2 }}>ESI {entry.acuity}</div></div>
-                          <div><Mono tone="muted" size="xs">Wait Time</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: entry.waitMin > 60 ? COLORS.crit : COLORS.textPrimary, marginTop: 2 }}>{entry.waitMin}m</div></div>
-                          <div><Mono tone="muted" size="xs">Requested At</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 15, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedAt}</div></div>
+                          <div><Mono tone="muted" size="xs">Source</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, marginTop: 2 }}>{entry.source}</div></div>
+                          <div><Mono tone="muted" size="xs">Requested</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedUnit}</div></div>
+                          <div><Mono tone="muted" size="xs">Attending</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, marginTop: 2 }}>{entry.attending}</div></div>
+                          <div><Mono tone="muted" size="xs">ESI Level</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: acuityColor(entry.acuity), marginTop: 2 }}>ESI {entry.acuity}</div></div>
+                          <div><Mono tone="muted" size="xs">Wait Time</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: entry.waitMin > 60 ? COLORS.crit : COLORS.textPrimary, marginTop: 2 }}>{entry.waitMin}m</div></div>
+                          <div><Mono tone="muted" size="xs">Requested At</Mono><div style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, marginTop: 2 }}>{entry.requestedAt}</div></div>
                         </div>
                         {onNavigateToPatient && (
                           <TacticalButton variant="ghost" size="sm" onClick={() => onNavigateToPatient(entry.mrn)}>
@@ -1098,7 +1098,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                                         style={{
                                           padding: `4px ${SPACE.md}px`,
                                           fontFamily: FONTS.mono,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: 600,
                                           color: COLORS.ok,
                                           background: 'rgba(16,185,129,0.08)',
@@ -1158,7 +1158,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 flexShrink: 0,
               }}
             >
-              <Plus size={17} color={COLORS.accent} />
+              <Plus size={15} color={COLORS.accent} />
               <BracketLabel tone="accent" size="xs">New Admission Request</BracketLabel>
             </div>
 
@@ -1244,7 +1244,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       </select>
                     </div>
                     <div style={{ flex: 0, display: 'flex', alignItems: 'flex-end', gap: SPACE.sm, paddingBottom: 6 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 13, letterSpacing: '0.08em', color: COLORS.textSecondary }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: FONTS.mono, fontSize: 11, letterSpacing: '0.08em', color: COLORS.textSecondary }}>
                         <input type="checkbox" checked={formData.needsInterpreter} onChange={e => setFormData(p => ({ ...p, needsInterpreter: e.target.checked }))} style={{ accentColor: COLORS.accent }} />
                         INTERPRETER
                       </label>
@@ -1581,7 +1581,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       showToast('Please fill in first name, last name, and chief complaint');
                     }
                   }}
-                  icon={<Plus size={17} />}
+                  icon={<Plus size={15} />}
                 >
                   Submit Admission Request
                 </TacticalButton>
@@ -1631,7 +1631,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 cursor: 'pointer',
               }}
             >
-              <X size={17} />
+              <X size={15} />
             </button>
             <BracketLabel tone="accent" size="sm">Admit Patient</BracketLabel>
             <div style={{ flex: 1 }} />
@@ -1684,7 +1684,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
               }}
             >
               {stepIndex > 0 && (
-                <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={17} />}>
+                <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={15} />}>
                   Back
                 </TacticalButton>
               )}
@@ -1694,7 +1694,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                   variant="primary"
                   onClick={goNext}
                   disabled={!canProceed}
-                  icon={<ArrowRight size={17} />}
+                  icon={<ArrowRight size={15} />}
                 >
                   {step === 'bed' ? 'Review' : 'Next'}
                 </TacticalButton>
@@ -1722,7 +1722,7 @@ const SummaryStatDesktop: React.FC<{ label: string; value: number; color: string
     <span
       style={{
         fontFamily: FONTS.sans,
-        fontSize: 40,
+        fontSize: 35,
         fontWeight: 700,
         letterSpacing: '-0.03em',
         lineHeight: 1,
@@ -1767,7 +1767,7 @@ const CheckItem: React.FC<{ checked: boolean; label: string }> = ({ checked, lab
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 13,
+        fontSize: 11,
         color: COLORS.ok,
       }}
     >
