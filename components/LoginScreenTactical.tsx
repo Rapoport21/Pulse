@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, ScanFace, Check, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowRight } from 'lucide-react';
 import { UserRole } from '../types';
 import {
   COLORS,
@@ -16,7 +16,6 @@ import {
   HudStrip,
   DotGridBg,
   GlowBg,
-  ScanningLine,
   TacticalCard,
 } from './design';
 
@@ -34,11 +33,10 @@ interface LoginScreenProps {
  * Built entirely on the shared tactical design system in `./design`.
  *
  * Fidelity layer — each role card now carries a named operator (avatar +
- * full name) so the login reads like a real identity provider instead of
- * three abstract role slots. Selecting a role drops a biometric auth
- * overlay ("SCANNING BIOMETRIC" → "AUTHENTICATED") that holds for ~1.6s
- * before the dashboard mounts. The overlay is not a demo affordance —
- * it's the same chrome the rest of PULSE uses, extended one screen back.
+ * full name + last-active) so the login reads like a real identity
+ * provider instead of three abstract role slots. Names match
+ * data/userProfiles.ts so the dashboard headers reflect whoever signed
+ * in here. Selection is immediate — no interstitial modal.
  */
 
 // Simple viewport-width hook — mobile breakpoint = 640px.
@@ -114,42 +112,33 @@ const ROLES: RoleEntry[] = [
 
 // ─────────────────────────────────────────────────────────────────────────
 // RoleCard — the main interactive element. Shows personnel identity +
-// role chrome. Dim + disable other cards while one is authenticating.
+// role chrome. Clicking fires onSelect immediately — no interstitial.
 // ─────────────────────────────────────────────────────────────────────────
 const RoleCard: React.FC<{
   entry: RoleEntry;
   index: number;
   onSelect: (role: UserRole) => void;
-  selected: boolean;
-  anyAuthenticating: boolean;
-}> = ({ entry, index, onSelect, selected, anyAuthenticating }) => {
+}> = ({ entry, index, onSelect }) => {
   const [hovered, setHovered] = useState(false);
-  const disabled = anyAuthenticating && !selected;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
-      animate={{
-        opacity: disabled ? 0.28 : 1,
-        y: 0,
-      }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{
         delay: 0.35 + index * 0.08,
         duration: 0.45,
         ease: MOTION.ease,
       }}
-      onHoverStart={() => !anyAuthenticating && setHovered(true)}
+      onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >
       <TacticalCard
-        interactive={!anyAuthenticating}
-        highlight={selected}
+        interactive
         role="button"
-        aria-pressed={selected}
-        tabIndex={anyAuthenticating ? -1 : 0}
-        onClick={() => !anyAuthenticating && onSelect(entry.role)}
+        tabIndex={0}
+        onClick={() => onSelect(entry.role)}
         onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => {
-          if (anyAuthenticating) return;
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             onSelect(entry.role);
@@ -159,8 +148,7 @@ const RoleCard: React.FC<{
         style={{
           width: '100%',
           textAlign: 'left',
-          cursor: disabled ? 'default' : 'pointer',
-          pointerEvents: disabled ? 'none' : undefined,
+          cursor: 'pointer',
           padding: '18px 20px 16px',
         }}
       >
@@ -174,11 +162,7 @@ const RoleCard: React.FC<{
           }}
         >
           <Mono tone="secondary">// {entry.id}</Mono>
-          <StatusPill
-            label={selected ? 'Authenticating' : 'Ready'}
-            tone={selected ? 'warn' : 'ok'}
-            pulse={selected}
-          />
+          <StatusPill label="Ready" tone="ok" />
         </div>
 
         {/* Identity row: avatar + name + title */}
@@ -199,24 +183,16 @@ const RoleCard: React.FC<{
               alignItems: 'center',
               justifyContent: 'center',
               background: COLORS.surfaceElev,
-              border: `1px solid ${selected ? COLORS.accent : COLORS.borderStrong}`,
+              border: `1px solid ${COLORS.borderStrong}`,
               borderRadius: RADIUS.sm,
               fontFamily: FONTS.mono,
               fontSize: 14,
               fontWeight: 600,
               letterSpacing: '0.08em',
-              color: selected ? COLORS.accent : COLORS.textPrimary,
-              position: 'relative',
-              transition: `color ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+              color: COLORS.textPrimary,
             }}
           >
             {entry.personnelInitials}
-            {selected && (
-              <>
-                <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1.25} inset={-2} />
-                <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1.25} inset={-2} />
-              </>
-            )}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
@@ -255,7 +231,7 @@ const RoleCard: React.FC<{
           {entry.description}
         </p>
 
-        {/* Footer row: access / scope / last active / enter */}
+        {/* Footer row: access / last-active / enter */}
         <div
           style={{
             display: 'flex',
@@ -276,7 +252,7 @@ const RoleCard: React.FC<{
             </div>
           </div>
           <motion.div
-            animate={{ x: hovered && !anyAuthenticating ? 4 : 0 }}
+            animate={{ x: hovered ? 4 : 0 }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               display: 'flex',
@@ -284,252 +260,15 @@ const RoleCard: React.FC<{
               gap: 6,
             }}
           >
-            <Mono tone={hovered && !anyAuthenticating ? 'accent' : 'secondary'}>
-              {selected ? 'Scanning' : 'Enter'}
-            </Mono>
-            {selected ? (
-              <Loader2
-                size={14}
-                color={COLORS.accent}
-                strokeWidth={2}
-                style={{ animation: 'spin 1s linear infinite' }}
-              />
-            ) : (
-              <ArrowRight
-                size={14}
-                color={hovered && !anyAuthenticating ? COLORS.accent : COLORS.textSecondary}
-                strokeWidth={2}
-              />
-            )}
+            <Mono tone={hovered ? 'accent' : 'secondary'}>Enter</Mono>
+            <ArrowRight
+              size={14}
+              color={hovered ? COLORS.accent : COLORS.textSecondary}
+              strokeWidth={2}
+            />
           </motion.div>
         </div>
       </TacticalCard>
-    </motion.div>
-  );
-};
-
-// ─────────────────────────────────────────────────────────────────────────
-// BiometricAuthOverlay — Face ID lookalike that plays out after a role
-// card is selected. Three phases on a tight timeline so the screen feels
-// alive without keeping the user waiting:
-//
-//   phase 1 "scanning"      — scanning line sweeps through a bracketed
-//                             square, face icon pulses (~700 ms)
-//   phase 2 "matching"      — scanning line stills, line copy flips,
-//                             spinner shows we're locking a match (~450 ms)
-//   phase 3 "authenticated" — green checkmark replaces the face icon,
-//                             corner brackets flash emerald (~450 ms)
-//
-// Total runway ≈ 1.6 s — long enough to read as "biometric handshake",
-// short enough that the operator never feels stalled.
-// ─────────────────────────────────────────────────────────────────────────
-type AuthPhase = 'scanning' | 'matching' | 'authenticated';
-
-const BiometricAuthOverlay: React.FC<{
-  entry: RoleEntry;
-  onComplete: () => void;
-}> = ({ entry, onComplete }) => {
-  const [phase, setPhase] = useState<AuthPhase>('scanning');
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase('matching'), 700);
-    const t2 = setTimeout(() => setPhase('authenticated'), 1150);
-    const t3 = setTimeout(() => onComplete(), 1600);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-    };
-  }, [onComplete]);
-
-  const phaseColor =
-    phase === 'authenticated'
-      ? COLORS.ok
-      : phase === 'matching'
-      ? COLORS.info
-      : COLORS.accent;
-
-  const phaseLabel =
-    phase === 'authenticated'
-      ? 'AUTHENTICATED'
-      : phase === 'matching'
-      ? 'MATCHING CREDENTIAL'
-      : 'SCANNING BIOMETRIC';
-
-  return (
-    <motion.div
-      key="biometric-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: `${COLORS.bg}F5`,
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        zIndex: 120,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: SPACE.xl,
-        paddingLeft: SPACE.base,
-        paddingRight: SPACE.base,
-      }}
-    >
-      {/* Operator identity — reminds the user whose credential is being verified */}
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: MOTION.ease }}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 6,
-        }}
-      >
-        <Mono tone="dim" size="xs">
-          // {entry.id}
-        </Mono>
-        <span
-          style={{
-            fontFamily: FONTS.sans,
-            fontSize: 18,
-            fontWeight: 600,
-            letterSpacing: '-0.01em',
-            color: COLORS.textPrimary,
-          }}
-        >
-          {entry.personnelName}
-        </span>
-        <Mono tone="muted" size="xs">
-          {entry.title}
-        </Mono>
-      </motion.div>
-
-      {/* Scanner frame */}
-      <motion.div
-        initial={{ scale: 0.94, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.35, ease: MOTION.ease }}
-        style={{
-          position: 'relative',
-          width: 176,
-          height: 176,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Inner frame fill */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 8,
-            background: COLORS.surface,
-            border: `1px solid ${phaseColor}55`,
-            borderRadius: RADIUS.sm,
-            boxShadow: `inset 0 0 32px ${phaseColor}22`,
-            transition: `border-color ${MOTION.base}s ease, box-shadow ${MOTION.base}s ease`,
-          }}
-        />
-
-        {/* Corner brackets — larger, accent color */}
-        <CornerBracket position="tl" color={phaseColor} size={20} thickness={2} inset={0} />
-        <CornerBracket position="tr" color={phaseColor} size={20} thickness={2} inset={0} />
-        <CornerBracket position="bl" color={phaseColor} size={20} thickness={2} inset={0} />
-        <CornerBracket position="br" color={phaseColor} size={20} thickness={2} inset={0} />
-
-        {/* Sweeping scan line — only during phase 1 */}
-        <AnimatePresence>
-          {phase === 'scanning' && (
-            <motion.div
-              key="scan-line"
-              initial={{ y: '-50%', opacity: 0 }}
-              animate={{ y: '50%', opacity: [0, 1, 1, 0] }}
-              transition={{
-                duration: 0.7,
-                ease: 'linear',
-                times: [0, 0.1, 0.9, 1],
-              }}
-              style={{
-                position: 'absolute',
-                left: 8,
-                right: 8,
-                height: 2,
-                background: `linear-gradient(90deg, transparent, ${phaseColor}, transparent)`,
-                boxShadow: `0 0 12px ${phaseColor}`,
-                pointerEvents: 'none',
-              }}
-            />
-          )}
-        </AnimatePresence>
-
-        {/* Center icon — ScanFace → Check */}
-        <AnimatePresence mode="wait">
-          {phase === 'authenticated' ? (
-            <motion.div
-              key="check"
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-              style={{
-                position: 'relative',
-                color: COLORS.ok,
-                filter: `drop-shadow(0 0 12px ${COLORS.ok}88)`,
-              }}
-            >
-              <Check size={64} strokeWidth={2} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="face"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-              style={{
-                position: 'relative',
-                color: phaseColor,
-                filter: `drop-shadow(0 0 8px ${phaseColor}66)`,
-                animation: phase === 'scanning' ? 'pulse-dot 1s ease-in-out infinite' : undefined,
-              }}
-            >
-              <ScanFace size={72} strokeWidth={1.5} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-
-      {/* Phase label */}
-      <motion.div
-        key={phaseLabel}
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, ease: MOTION.ease }}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-        }}
-      >
-        <BracketLabel tone={phase === 'authenticated' ? 'ok' : phase === 'matching' ? 'info' : 'accent'}>
-          {phaseLabel}
-        </BracketLabel>
-        <Mono tone="dim" size="xs">
-          {phase === 'authenticated'
-            ? 'Session established · dispatching shell'
-            : phase === 'matching'
-            ? 'Confirming identity against personnel registry'
-            : 'Hold still — capturing biometric signature'}
-        </Mono>
-      </motion.div>
     </motion.div>
   );
 };
@@ -540,7 +279,6 @@ const BiometricAuthOverlay: React.FC<{
 export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const isMobile = useIsMobile();
   const [now, setNow] = useState(() => new Date());
-  const [authenticatingRole, setAuthenticatingRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -550,26 +288,17 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
   const timeStr = now.toUTCString().slice(17, 25); // HH:MM:SS
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '.'); // YYYY.MM.DD
 
-  const authenticatingEntry = authenticatingRole
-    ? ROLES.find((r) => r.role === authenticatingRole) ?? null
-    : null;
-
   const handleSelect = (role: UserRole) => {
-    // Trigger haptic on supported devices
+    // Gentle haptic acknowledgement on supported devices — some embedded
+    // webviews throw, so wrap it defensively.
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate?.(8);
       } catch {
-        // Safari + some embedded webviews throw — ignore.
+        /* ignore */
       }
     }
-    setAuthenticatingRole(role);
-  };
-
-  const handleAuthComplete = () => {
-    if (authenticatingRole !== null) {
-      onLogin(authenticatingRole);
-    }
+    onLogin(role);
   };
 
   return (
@@ -732,8 +461,6 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
                 entry={entry}
                 index={i}
                 onSelect={handleSelect}
-                selected={authenticatingRole === entry.role}
-                anyAuthenticating={authenticatingRole !== null}
               />
             ))}
           </div>
@@ -754,7 +481,7 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
               gap: 8,
             }}
           >
-            <Mono tone="dim">Biometric auth · TLS 1.3 · Session-bound</Mono>
+            <Mono tone="dim">TLS 1.3 · Session-bound</Mono>
             <Mono tone="dim">
               Node ER-01 · Uplink{' '}
               <span style={{ color: COLORS.ok }}>STABLE</span>
@@ -804,16 +531,6 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
           <StatusPill label="Stable" tone="ok" />
         </div>
       </HudStrip>
-
-      {/* ── BIOMETRIC AUTH OVERLAY ──────────────────────────── */}
-      <AnimatePresence>
-        {authenticatingEntry && (
-          <BiometricAuthOverlay
-            entry={authenticatingEntry}
-            onComplete={handleAuthComplete}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 };
