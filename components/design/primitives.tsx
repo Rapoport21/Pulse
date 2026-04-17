@@ -905,3 +905,157 @@ export const ConfidenceBadge: React.FC<ConfidenceBadgeProps> = ({
     </span>
   );
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// EmptyState — centered zero-data placeholder
+//
+// One primitive for every "nothing to show" surface in the app. Before
+// this existed, every screen hand-rolled its own empty block with slightly
+// different padding, icon sizes, label casing, and copy. That produced
+// visual drift and — worse — a handful of empty surfaces that just went
+// blank and left a stranded title above nothing.
+//
+// The component renders INSIDE a TacticalCard (does not wrap one) so it
+// composes cleanly in both standalone cards and inside existing list
+// cards (e.g. a "Queue Clear" state that lives inside the Actions card).
+//
+// Tone tints the icon frame and the mono label. Default `muted` reads
+// neutral ("no data yet"); use `ok` for positive zero-states ("queue
+// clear — nothing to do"), `warn` / `crit` for concerning zero-states
+// ("no EMS inbound" during a code, "no staff assigned to unit").
+// ─────────────────────────────────────────────────────────────────────────
+type EmptyStateTone = 'ok' | 'info' | 'warn' | 'crit' | 'muted' | 'accent';
+
+const emptyStateToneColor = (tone: EmptyStateTone): string => {
+  switch (tone) {
+    case 'ok':
+      return COLORS.ok;
+    case 'info':
+      return COLORS.info;
+    case 'warn':
+      return COLORS.warn;
+    case 'crit':
+      return COLORS.crit;
+    case 'accent':
+      return COLORS.accent;
+    case 'muted':
+      return COLORS.textMuted;
+  }
+};
+
+const emptyStateToneMonoTone = (tone: EmptyStateTone): MonoTone => {
+  switch (tone) {
+    case 'ok':
+      return 'ok';
+    case 'info':
+      return 'info';
+    case 'warn':
+      return 'warn';
+    case 'crit':
+      return 'crit';
+    case 'accent':
+      return 'accent';
+    case 'muted':
+      return 'muted';
+  }
+};
+
+export interface EmptyStateProps {
+  /** Optional icon rendered inside a 48×48 framed tile above the label. */
+  icon?: React.ReactNode;
+  /** Mono all-caps label — e.g. "QUEUE CLEAR", "NO PATIENTS MATCH". */
+  label: string;
+  /** Optional sans title below the label — e.g. "All actions complete". */
+  title?: string;
+  /** Optional helper text explaining the state or next step. */
+  description?: string | React.ReactNode;
+  /** Tone tints the icon frame + mono label. Default `muted`. */
+  tone?: EmptyStateTone;
+  /** Optional action node — button / link. */
+  action?: React.ReactNode;
+  /** Compact mode for inline use inside small cards (less vertical padding). */
+  compact?: boolean;
+  style?: React.CSSProperties;
+}
+
+export const EmptyState: React.FC<EmptyStateProps> = ({
+  icon,
+  label,
+  title,
+  description,
+  tone = 'muted',
+  action,
+  compact = false,
+  style,
+}) => {
+  const c = emptyStateToneColor(tone);
+  const padY = compact ? SPACE.lg : SPACE['2xl'];
+  const padX = compact ? SPACE.base : SPACE.lg;
+  const iconSize = compact ? 40 : 56;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: compact ? SPACE.sm : SPACE.md,
+        padding: `${padY}px ${padX}px`,
+        textAlign: 'center',
+        ...style,
+      }}
+    >
+      {icon && (
+        <div
+          style={{
+            width: iconSize,
+            height: iconSize,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: COLORS.surfaceElev,
+            border: `1px solid ${c}`,
+            borderRadius: RADIUS.sm,
+            color: c,
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </div>
+      )}
+      <Mono tone={emptyStateToneMonoTone(tone)} size="xs">
+        {label}
+      </Mono>
+      {title && (
+        <div
+          style={{
+            fontFamily: FONTS.sans,
+            fontSize: compact ? TYPE.bodySm.size : TYPE.h4.size,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            lineHeight: 1.25,
+            color: COLORS.textPrimary,
+            maxWidth: 360,
+          }}
+        >
+          {title}
+        </div>
+      )}
+      {description && (
+        <div
+          style={{
+            fontFamily: FONTS.sans,
+            fontSize: TYPE.bodySm.size,
+            lineHeight: 1.45,
+            color: COLORS.textSecondary,
+            maxWidth: 360,
+          }}
+        >
+          {description}
+        </div>
+      )}
+      {action && <div style={{ marginTop: SPACE.xs }}>{action}</div>}
+    </div>
+  );
+};

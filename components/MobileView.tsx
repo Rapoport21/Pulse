@@ -103,6 +103,7 @@ import {
   ScanningLine,
   Divider,
   ConfidenceBadge,
+  EmptyState,
 } from './design';
 
 /**
@@ -3277,43 +3278,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
             {/* Task List */}
             <TacticalCard padding="none">
               {myTasks.length === 0 ? (
-                <div
-                  style={{
-                    padding: `${SPACE['2xl']}px ${SPACE.base}px`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: SPACE.md,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 56,
-                      height: 56,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: COLORS.surfaceElev,
-                      border: `1px solid ${COLORS.ok}`,
-                      borderRadius: RADIUS.sm,
-                      color: COLORS.ok,
-                    }}
-                  >
-                    <CheckCircle size={24} />
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: FONTS.sans,
-                      fontSize: TYPE.h4.size,
-                      fontWeight: 600,
-                      color: COLORS.textPrimary,
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    Queue Clear
-                  </div>
-                  <Mono tone="muted">ALL ACTIONS COMPLETE</Mono>
-                </div>
+                <EmptyState
+                  tone="ok"
+                  icon={<CheckCircle size={24} strokeWidth={1.8} />}
+                  label="QUEUE CLEAR"
+                  title="All actions complete"
+                  description={
+                    taskFilter === 'all'
+                      ? 'No tasks assigned to you right now. New orders and alerts will show up here.'
+                      : `No ${taskFilter.toUpperCase()} tasks in your queue. Try the ALL filter to see everything.`
+                  }
+                />
               ) : (
                 myTasks.map((task, i) => {
                   const priority = task.priority;
@@ -3735,17 +3710,36 @@ export const MobileView: React.FC<MobileViewProps> = ({
               }}
             >
               {filteredPatients.length === 0 && (
-                <TacticalCard padding="lg">
-                  <div style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    gap: SPACE.sm, color: COLORS.textSecondary, padding: SPACE.lg,
-                  }}>
-                    <Search size={24} color={COLORS.textMuted} />
-                    <Mono tone="muted" size="xs">NO PATIENTS MATCH</Mono>
-                    <div style={{ fontSize: 14, color: COLORS.textSecondary }}>
-                      Try a different filter or clear search.
-                    </div>
-                  </div>
+                <TacticalCard padding="none">
+                  <EmptyState
+                    icon={<Search size={22} strokeWidth={1.8} />}
+                    label="NO PATIENTS MATCH"
+                    title={
+                      patientSearch
+                        ? `No results for "${patientSearch}"`
+                        : 'No patients in this filter'
+                    }
+                    description={
+                      patientSearch || patientFilter !== 'all'
+                        ? 'Try clearing the search or switching to the ALL filter.'
+                        : 'The roster will populate once patients are admitted.'
+                    }
+                    action={
+                      (patientSearch || patientFilter !== 'all') && (
+                        <TacticalButton
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setPatientSearch('');
+                            setPatientFilter('all');
+                          }}
+                        >
+                          Reset filters
+                        </TacticalButton>
+                      )
+                    }
+                  />
                 </TacticalCard>
               )}
               {filteredPatients.map((patient, pIdx) => {
@@ -4010,29 +4004,30 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   </div>
                 </div>
 
-                {/* My Patients list */}
+                {/* My Patients list — role-aware copy so the zero-state reads
+                    like something the specific role would say, not a generic
+                    "caseload empty" line. */}
                 {myPatientsSorted.length === 0 ? (
-                  <TacticalCard padding="md">
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: SPACE.xs,
-                        padding: SPACE.sm,
-                      }}
-                    >
-                      <Mono tone="muted" size="xs">NO ACTIVE PATIENTS</Mono>
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: COLORS.textSecondary,
-                          textAlign: 'center',
-                        }}
-                      >
-                        Your caseload is empty. New admissions will appear here.
-                      </div>
-                    </div>
+                  <TacticalCard padding="none">
+                    <EmptyState
+                      compact
+                      icon={<Users size={18} strokeWidth={1.8} />}
+                      label="NO ACTIVE PATIENTS"
+                      title={
+                        currentUser.role === UserRole.NURSE
+                          ? 'Caseload clear'
+                          : currentUser.role === UserRole.ER_PERSONNEL
+                          ? 'No active ED cases'
+                          : 'No active trauma cases'
+                      }
+                      description={
+                        currentUser.role === UserRole.NURSE
+                          ? 'No patients assigned to you on this shift. New admissions will appear here.'
+                          : currentUser.role === UserRole.ER_PERSONNEL
+                          ? 'Triage + EMS inbound will populate this list as patients arrive.'
+                          : 'Trauma activations and consults will show up here once paged.'
+                      }
+                    />
                   </TacticalCard>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>

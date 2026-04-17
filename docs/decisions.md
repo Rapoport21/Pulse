@@ -12,6 +12,45 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · EmptyState primitive + role-aware zero-states
+
+**Context.** Stage 7 audit walked every screen × role (Manager / Nurse /
+ER Personnel / Trauma) looking for surfaces that render from an array
+and would read as broken when the array is empty. Most lists already
+had empty-state handling, but every one was hand-rolled with different
+padding, icon size, label casing, and copy. A few were also generic
+("Your caseload is empty") where the role context could carry meaning.
+
+**Decision.** New `EmptyState` primitive in `components/design/primitives.tsx`.
+Composes INSIDE a `TacticalCard` (does not wrap one), so it drops into
+both standalone placeholders and slots inside existing list cards.
+Props: `icon`, `label` (mono all-caps), `title`, `description`, `tone`,
+`action`, `compact`. Wired into four offenders:
+
+- **MobileView · Nurse Actions** — "Queue Clear / ALL ACTIONS COMPLETE"
+  with filter-aware copy (tells you if you're filtered to STAT/ROUTINE).
+- **MobileView · Patients filter** — "NO PATIENTS MATCH" with a Reset
+  Filters action when a search or non-default filter is active.
+- **MobileView · My Patients** — role-aware: Nurse sees "Caseload
+  clear"; ER Personnel sees "No active ED cases"; Trauma sees "No
+  active trauma cases". Each with role-specific follow-up copy.
+- **EmsInboundBoard · zero traffic** — "NO INBOUND TRAFFIC" upgraded
+  from ad-hoc block to the primitive, keeps the dashed border it had.
+
+**Rejected.** Building an `<Empty.Card>` / `<Empty.Inline>` split — one
+primitive with a `compact` flag is simpler and already covers both
+usage sites. Also rejected: generating empty states per role via a
+lookup map — the three copy variants read better as inline conditionals
+at the call site.
+
+**Follow-up.** `PatientDetailScreen` (desktop) Labs / Notes / Imaging
+return `null` when empty. That's acceptable (sections disappear
+cleanly) but could use a `compact` EmptyState if we want to surface
+"No labs ordered yet — tap + to add" as a call to action. Not blocking;
+clean-scroll behavior is fine for demo.
+
+---
+
 ## 2026-04-17 · textDim bumped #2E2E2E → #5A5A5A (WCAG AA)
 
 **Context.** `COLORS.textDim` was `#2E2E2E` — ~1.5:1 contrast on the

@@ -63,6 +63,7 @@ import {
   HudStrip,
   DotGridBg,
   Divider,
+  EmptyState,
 } from '../design';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -501,34 +502,16 @@ const BoardBody: React.FC<{
     return (
       <div
         style={{
-          padding: SPACE.xl,
-          textAlign: 'center',
           border: `1px dashed ${COLORS.border}`,
           borderRadius: RADIUS.sm,
         }}
       >
-        <Radio size={20} color={COLORS.textMuted} strokeWidth={1.5} style={{ marginBottom: 8 }} />
-        <div
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: 11,
-            fontWeight: 600,
-            color: COLORS.textMuted,
-            letterSpacing: '0.14em',
-          }}
-        >
-          NO INBOUND TRAFFIC
-        </div>
-        <div
-          style={{
-            fontFamily: FONTS.sans,
-            fontSize: 12,
-            color: COLORS.textMuted,
-            marginTop: 4,
-          }}
-        >
-          Waiting on radio
-        </div>
+        <EmptyState
+          compact
+          icon={<Radio size={18} strokeWidth={1.8} />}
+          label="NO INBOUND TRAFFIC"
+          description="Waiting on radio — new runs will appear here as EMS calls in."
+        />
       </div>
     );
   }
