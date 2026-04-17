@@ -162,7 +162,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
               minHeight: 320,
               padding: SPACE['2xl'],
               fontFamily: FONTS.mono,
-              fontSize: 14,
+              fontSize: 16,
               lineHeight: 1.65,
               color: COLORS.textSecondary,
             }}
@@ -186,7 +186,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                   }}
                 >
                   <RefreshCw
-                    size={24}
+                    size={28}
                     color={COLORS.info}
                     strokeWidth={2}
                     style={{ animation: 'spin 1.4s linear infinite' }}
@@ -242,7 +242,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                           color: COLORS.info,
                           fontFamily: FONTS.mono,
                           fontWeight: 600,
-                          fontSize: 13,
+                          fontSize: 15,
                           flexShrink: 0,
                           marginTop: 1,
                         }}
@@ -257,7 +257,7 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                           style={{
                             margin: '6px 0 0',
                             fontFamily: FONTS.sans,
-                            fontSize: 15,
+                            fontSize: 17,
                             color: COLORS.textPrimary,
                             lineHeight: 1.55,
                             letterSpacing: '-0.003em',
@@ -299,9 +299,9 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                   disabled={loading}
                   icon={
                     briefingGenerated ? (
-                      <Check size={14} strokeWidth={2} />
+                      <Check size={16} strokeWidth={2} />
                     ) : (
-                      <BrainCircuit size={14} strokeWidth={1.75} />
+                      <BrainCircuit size={16} strokeWidth={1.75} />
                     )
                   }
                   style={
@@ -322,9 +322,9 @@ export const BriefMe: React.FC<BriefMeProps> = ({
                 disabled={loading}
                 icon={
                   copied ? (
-                    <Check size={14} strokeWidth={2} />
+                    <Check size={16} strokeWidth={2} />
                   ) : (
-                    <Copy size={14} strokeWidth={2} />
+                    <Copy size={16} strokeWidth={2} />
                   )
                 }
                 style={

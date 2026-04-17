@@ -214,7 +214,7 @@ const AccordionHeader: React.FC<{
     <span style={{ flex: 1 }}>{title}</span>
     {badge}
     <span style={{ color: COLORS.textMuted, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-      {expanded ? <ChevronUp size={17} /> : <ChevronDown size={17} />}
+      {expanded ? <ChevronUp size={19} /> : <ChevronDown size={19} />}
     </span>
   </button>
 );
@@ -264,7 +264,7 @@ const VitalMiniCard: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 24,
+          fontSize: 28,
           fontWeight: 600,
           letterSpacing: '-0.02em',
           color: vitalColor(status),
@@ -325,7 +325,7 @@ const ScoreChip: React.FC<{
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 24,
+            fontSize: 28,
             fontWeight: 700,
             color,
             lineHeight: 1,
@@ -345,7 +345,7 @@ const ScoreChip: React.FC<{
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 10,
+            fontSize: 11,
             letterSpacing: '0.1em',
             color: COLORS.textMuted,
             textTransform: 'uppercase',
@@ -413,7 +413,7 @@ const ScoreBreakdown: React.FC<{ score: EarlyWarningScore }> = ({ score }) => {
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 13,
+                  fontSize: 15,
                   color: COLORS.textSecondary,
                   flex: 1,
                   minWidth: 0,
@@ -433,7 +433,7 @@ const ScoreBreakdown: React.FC<{ score: EarlyWarningScore }> = ({ score }) => {
                 <span
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 13,
+                    fontSize: 15,
                     fontWeight: 600,
                     color: contributes ? color : COLORS.textMuted,
                     fontVariantNumeric: 'tabular-nums',
@@ -455,7 +455,7 @@ const ScoreBreakdown: React.FC<{ score: EarlyWarningScore }> = ({ score }) => {
           border: `1px solid ${color}30`,
           borderRadius: RADIUS.sm,
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 15,
           lineHeight: 1.4,
           color: COLORS.textPrimary,
         }}
@@ -489,7 +489,7 @@ const SafetyPill: React.FC<{
       border: `1px solid ${borderColor || bg}`,
       borderRadius: RADIUS.full,
       fontFamily: FONTS.mono,
-      fontSize: 11,
+      fontSize: 13,
       fontWeight: 600,
       letterSpacing: '0.1em',
       textTransform: 'uppercase',
@@ -671,7 +671,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               flexShrink: 0,
             }}
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={23} />
             Back
           </button>
 
@@ -718,7 +718,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                 flexShrink: 0,
               }}
             >
-              <QrCode size={15} strokeWidth={1.75} />
+              <QrCode size={17} strokeWidth={1.75} />
             </button>
           )}
 
@@ -736,7 +736,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                 border: `1px solid ${enc.esi <= 2 ? COLORS.crit + '40' : enc.esi === 3 ? COLORS.warn + '40' : COLORS.ok + '40'}`,
                 borderRadius: RADIUS.full,
                 fontFamily: FONTS.mono,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: 600,
                 letterSpacing: '0.1em',
                 color: enc.esi <= 2 ? COLORS.crit : enc.esi === 3 ? COLORS.warn : COLORS.ok,
@@ -808,7 +808,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* ── Section A: Patient Info ───────────────────────────── */}
           <TacticalCard padding="sm">
             <AccordionHeader
-              icon={<Users size={17} />}
+              icon={<Users size={19} />}
               title="Patient Info"
               expanded={expanded.info}
               onToggle={() => toggle('info')}
@@ -847,7 +847,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                           marginTop: 4,
                         }}
                       >
-                        <AlertTriangle size={13} color={COLORS.warn} />
+                        <AlertTriangle size={15} color={COLORS.warn} />
                         <Mono tone="warn" size="xs">INTERPRETER NEEDED</Mono>
                       </div>
                     )}
@@ -869,7 +869,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* ── Section B: Bed & Encounter ────────────────────────── */}
           <TacticalCard padding="sm">
             <AccordionHeader
-              icon={<Eye size={17} />}
+              icon={<Eye size={19} />}
               title="Bed & Encounter"
               expanded={expanded.encounter}
               onToggle={() => toggle('encounter')}
@@ -907,7 +907,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                           marginBottom: SPACE.sm,
                         }}
                       >
-                        <AlertTriangle size={17} color={COLORS.warn} style={{ flexShrink: 0 }} />
+                        <AlertTriangle size={19} color={COLORS.warn} style={{ flexShrink: 0 }} />
                         <span style={{
                           fontFamily: FONTS.sans,
                           fontSize: TYPE.bodySm.size,
@@ -957,7 +957,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* ── Section C: Vitals ─────────────────────────────────── */}
           <TacticalCard padding="sm">
             <AccordionHeader
-              icon={<Activity size={17} />}
+              icon={<Activity size={19} />}
               title="Vitals"
               expanded={expanded.vitals}
               onToggle={() => toggle('vitals')}
@@ -995,7 +995,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                           value={latestVitals.heartRate != null ? String(latestVitals.heartRate) : '--'}
                           unit="bpm"
                           status={hrStatus(latestVitals.heartRate)}
-                          icon={<HeartPulse size={15} />}
+                          icon={<HeartPulse size={17} />}
                         />
                         <VitalMiniCard
                           label="BP"
@@ -1006,35 +1006,35 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                           }
                           unit="mmHg"
                           status={bpStatus(latestVitals.systolic, latestVitals.diastolic)}
-                          icon={<Activity size={15} />}
+                          icon={<Activity size={17} />}
                         />
                         <VitalMiniCard
                           label="SpO2"
                           value={latestVitals.spO2 != null ? String(latestVitals.spO2) : '--'}
                           unit="%"
                           status={spo2Status(latestVitals.spO2)}
-                          icon={<Shield size={15} />}
+                          icon={<Shield size={17} />}
                         />
                         <VitalMiniCard
                           label="RR"
                           value={latestVitals.respRate != null ? String(latestVitals.respRate) : '--'}
                           unit="/min"
                           status={rrStatus(latestVitals.respRate)}
-                          icon={<Brain size={15} />}
+                          icon={<Brain size={17} />}
                         />
                         <VitalMiniCard
                           label="TEMP"
                           value={latestVitals.temperature != null ? latestVitals.temperature.toFixed(1) : '--'}
                           unit="C"
                           status={tempStatus(latestVitals.temperature)}
-                          icon={<Thermometer size={15} />}
+                          icon={<Thermometer size={17} />}
                         />
                         <VitalMiniCard
                           label="PAIN"
                           value={latestVitals.painScore != null ? String(latestVitals.painScore) : '--'}
                           unit="/10"
                           status={painStatus(latestVitals.painScore)}
-                          icon={<AlertTriangle size={15} />}
+                          icon={<AlertTriangle size={17} />}
                         />
                       </div>
 
@@ -1127,7 +1127,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* ── Section D: Allergies ──────────────────────────────── */}
           <TacticalCard padding="sm">
             <AccordionHeader
-              icon={<AlertTriangle size={17} />}
+              icon={<AlertTriangle size={19} />}
               title="Allergies"
               expanded={expanded.allergies}
               onToggle={() => toggle('allergies')}
@@ -1199,7 +1199,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* ── Section E: Active Problems ────────────────────────── */}
           <TacticalCard padding="sm">
             <AccordionHeader
-              icon={<FileText size={17} />}
+              icon={<FileText size={19} />}
               title="Active Problems"
               expanded={expanded.problems}
               onToggle={() => toggle('problems')}
@@ -1273,7 +1273,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {hasSocialData && (
             <TacticalCard padding="sm">
               <AccordionHeader
-                icon={<Shield size={17} />}
+                icon={<Shield size={19} />}
                 title="Social Determinants"
                 expanded={expanded.social}
                 onToggle={() => toggle('social')}
@@ -1396,14 +1396,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               borderRadius: RADIUS.sm,
               color: COLORS.textPrimary,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase' as const,
               cursor: 'pointer',
             }}
           >
-            <HeartPulse size={20} color={COLORS.accent} strokeWidth={2} />
+            <HeartPulse size={23} color={COLORS.accent} strokeWidth={2} />
             <span>Vitals</span>
           </button>
           {/* Note */}
@@ -1427,14 +1427,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               borderRadius: RADIUS.sm,
               color: COLORS.textPrimary,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase' as const,
               cursor: 'pointer',
             }}
           >
-            <FileText size={20} color={COLORS.info} strokeWidth={2} />
+            <FileText size={23} color={COLORS.info} strokeWidth={2} />
             <span>Note</span>
           </button>
           {/* Orders (CPOE) */}
@@ -1458,14 +1458,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               borderRadius: RADIUS.sm,
               color: COLORS.textPrimary,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase' as const,
               cursor: 'pointer',
             }}
           >
-            <Pill size={20} color={COLORS.ok} strokeWidth={2} />
+            <Pill size={23} color={COLORS.ok} strokeWidth={2} />
             <span>Orders</span>
           </button>
           {/* Discharge */}
@@ -1489,14 +1489,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               borderRadius: RADIUS.sm,
               color: COLORS.textPrimary,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase' as const,
               cursor: 'pointer',
             }}
           >
-            <DoorOpen size={20} color={COLORS.warn} strokeWidth={2} />
+            <DoorOpen size={23} color={COLORS.warn} strokeWidth={2} />
             <span>Discharge</span>
           </button>
           {/* Code Blue */}
@@ -1520,14 +1520,14 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               borderRadius: RADIUS.sm,
               color: COLORS.textPrimary,
               fontFamily: FONTS.mono,
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: 600,
               letterSpacing: '0.08em',
               textTransform: 'uppercase' as const,
               cursor: 'pointer',
             }}
           >
-            <Siren size={20} color={COLORS.crit} strokeWidth={2} />
+            <Siren size={23} color={COLORS.crit} strokeWidth={2} />
             <span>Code Blue</span>
           </button>
         </div>

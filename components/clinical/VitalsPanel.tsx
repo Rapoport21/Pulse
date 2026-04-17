@@ -177,7 +177,7 @@ const VitalTile: React.FC<VitalTileProps> = ({ label, current, unit, series, ton
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 22,
+            fontSize: 25,
             fontWeight: 700,
             color: isMissing ? COLORS.textMuted : color,
             fontVariantNumeric: 'tabular-nums',
@@ -266,7 +266,7 @@ const ScoreChip: React.FC<{
         <span
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 28,
+            fontSize: 32,
             fontWeight: 700,
             color,
             lineHeight: 0.95,
@@ -328,7 +328,7 @@ const BreakdownRow: React.FC<{
             border: `1px solid ${points > 0 ? color : COLORS.border}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 600,
             color: points > 0 ? color : COLORS.textMuted,
             letterSpacing: '0.1em',
@@ -475,7 +475,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
               flexShrink: 0,
             }}
           >
-            <ActivitySquare size={13} strokeWidth={2} />
+            <ActivitySquare size={15} strokeWidth={2} />
           </div>
           <div style={{ minWidth: 0 }}>
             <Mono tone="muted" size="xs">
@@ -484,7 +484,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
             <div
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 15,
+                fontSize: 17,
                 fontWeight: 600,
                 color: COLORS.textPrimary,
                 letterSpacing: '-0.003em',
@@ -515,7 +515,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
           unit="BPM"
           series={history.map((v) => v.heartRate)}
           tone={hrTone(latest?.heartRate)}
-          icon={<Heart size={12} strokeWidth={2} color={COLORS.textMuted} />}
+          icon={<Heart size={14} strokeWidth={2} color={COLORS.textMuted} />}
         />
         <VitalTile
           label="BP"
@@ -530,7 +530,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
           unit="%"
           series={history.map((v) => v.spO2)}
           tone={spo2Tone(latest?.spO2)}
-          icon={<Wind size={12} strokeWidth={2} color={COLORS.textMuted} />}
+          icon={<Wind size={14} strokeWidth={2} color={COLORS.textMuted} />}
         />
         <VitalTile
           label="RR"
@@ -545,7 +545,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
           unit="°C"
           series={history.map((v) => v.temperature)}
           tone={tempTone(latest?.temperature)}
-          icon={<Thermometer size={12} strokeWidth={2} color={COLORS.textMuted} />}
+          icon={<Thermometer size={14} strokeWidth={2} color={COLORS.textMuted} />}
         />
         <VitalTile
           label="PAIN"
@@ -553,7 +553,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
           unit="/10"
           series={history.map((v) => v.painScore)}
           tone={painTone(latest?.painScore)}
-          icon={<Brain size={12} strokeWidth={2} color={COLORS.textMuted} />}
+          icon={<Brain size={14} strokeWidth={2} color={COLORS.textMuted} />}
         />
       </div>
 
@@ -569,7 +569,7 @@ export const VitalsPanel: React.FC<VitalsPanelProps> = ({ patient }) => {
               borderTop: `1px solid ${COLORS.border}`,
             }}
           >
-            <FlaskConical size={13} strokeWidth={2} color={COLORS.textMuted} />
+            <FlaskConical size={15} strokeWidth={2} color={COLORS.textMuted} />
             <BracketLabel tone="muted" size="xs">
               EARLY WARNING · tap for breakdown
             </BracketLabel>

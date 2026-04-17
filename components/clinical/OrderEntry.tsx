@@ -97,10 +97,10 @@ type Order = MedOrder | LabOrder | ImagingOrder | ConsultOrder;
 // ─────────────────────────────────────────────────────────────────────────
 
 const CATEGORIES: { id: Category; label: string; icon: React.ReactNode }[] = [
-  { id: 'meds', label: 'Medications', icon: <Pill size={14} /> },
-  { id: 'labs', label: 'Labs', icon: <FlaskConical size={14} /> },
-  { id: 'imaging', label: 'Imaging', icon: <ScanLine size={14} /> },
-  { id: 'consults', label: 'Consults', icon: <Stethoscope size={14} /> },
+  { id: 'meds', label: 'Medications', icon: <Pill size={16} /> },
+  { id: 'labs', label: 'Labs', icon: <FlaskConical size={16} /> },
+  { id: 'imaging', label: 'Imaging', icon: <ScanLine size={16} /> },
+  { id: 'consults', label: 'Consults', icon: <Stethoscope size={16} /> },
 ];
 
 const ED_MEDS = [
@@ -310,7 +310,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
     height: 40,
     padding: `0 ${SPACE.md}px`,
     fontFamily: FONTS.mono,
-    fontSize: 15,
+    fontSize: 17,
     color: COLORS.textPrimary,
     background: COLORS.bgDeep,
     border: `1px solid ${COLORS.border}`,
@@ -346,7 +346,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             style={{
               padding: `${SPACE.xs}px ${SPACE.md}px`,
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 500,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
@@ -389,7 +389,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               gap: 6,
               padding: `${SPACE.sm}px ${SPACE.md}px`,
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
@@ -423,7 +423,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
     <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
       {/* Search */}
       <div style={{ position: 'relative' }}>
-        <Search size={15} color={COLORS.textMuted} style={{ position: 'absolute', left: 12, top: 13, pointerEvents: 'none' }} />
+        <Search size={17} color={COLORS.textMuted} style={{ position: 'absolute', left: 12, top: 13, pointerEvents: 'none' }} />
         <input
           type="text"
           placeholder="Search medications..."
@@ -457,20 +457,20 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Pill size={15} color={med.highAlert ? COLORS.warn : COLORS.textMuted} />
+                <Pill size={17} color={med.highAlert ? COLORS.warn : COLORS.textMuted} />
                 <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.body.size, color: COLORS.textPrimary }}>
                   {med.name}
                 </span>
                 {med.highAlert && (
                   <span style={{
-                    fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600,
+                    fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
                     letterSpacing: '0.12em', color: COLORS.warn, textTransform: 'uppercase',
                   }}>
                     HIGH-ALERT
                   </span>
                 )}
               </div>
-              <ChevronRight size={15} color={COLORS.textMuted} />
+              <ChevronRight size={17} color={COLORS.textMuted} />
             </motion.button>
           ))}
           {filteredMeds.length === 0 && (
@@ -493,7 +493,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           {selectedDrug.highAlert && (
             <TacticalCard padding="md" style={{ borderColor: `${COLORS.warn}60` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <AlertTriangle size={17} color={COLORS.warn} />
+                <AlertTriangle size={19} color={COLORS.warn} />
                 <div>
                   <Mono tone="warn" size="sm">High-Alert Medication</Mono>
                   <div style={{
@@ -565,7 +565,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               variant="primary"
               disabled={!dose.trim()}
               onClick={placeMedOrder}
-              icon={<Pill size={14} />}
+              icon={<Pill size={16} />}
               style={{ flex: 2 }}
             >
               Place Order
@@ -588,7 +588,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: `${SPACE.xs}px ${SPACE.md}px`,
-            fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600,
+            fontFamily: FONTS.mono, fontSize: 14, fontWeight: 600,
             letterSpacing: '0.1em', textTransform: 'uppercase',
             color: labStat ? COLORS.crit : COLORS.ok,
             background: labStat ? COLORS.critDim : COLORS.okDim,
@@ -597,7 +597,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             transition: `all ${MOTION.fast}s ease`,
           }}
         >
-          <Zap size={13} />
+          <Zap size={15} />
           {labStat ? 'STAT' : 'Routine'}
         </motion.button>
       </div>
@@ -644,7 +644,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 {panel.name}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Clock size={11} color={COLORS.textMuted} />
+                <Clock size={13} color={COLORS.textMuted} />
                 <Mono tone="muted" size="xs">{panel.tat}</Mono>
               </div>
             </motion.button>
@@ -658,7 +658,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           variant="primary"
           fullWidth
           onClick={addLabOrders}
-          icon={<FlaskConical size={14} />}
+          icon={<FlaskConical size={16} />}
         >
           Add {selectedLabs.size} Lab{selectedLabs.size !== 1 ? 's' : ''} to Basket
         </TacticalButton>
@@ -700,7 +700,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 </>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ScanLine size={14} color={selected ? COLORS.accent : COLORS.textMuted} />
+                <ScanLine size={16} color={selected ? COLORS.accent : COLORS.textMuted} />
                 <span style={{
                   fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, fontWeight: 600,
                   color: selected ? COLORS.textPrimary : COLORS.textSecondary,
@@ -709,7 +709,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Clock size={11} color={COLORS.textMuted} />
+                <Clock size={13} color={COLORS.textMuted} />
                 <Mono tone="muted" size="xs">{study.tat}</Mono>
               </div>
             </motion.button>
@@ -760,7 +760,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               fullWidth
               disabled={!imgIndication.trim()}
               onClick={placeImagingOrder}
-              icon={<ScanLine size={14} />}
+              icon={<ScanLine size={16} />}
             >
               Place Imaging Order
             </TacticalButton>
@@ -804,7 +804,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 </>
               )}
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Stethoscope size={15} color={active ? COLORS.accent : COLORS.textMuted} />
+                <Stethoscope size={17} color={active ? COLORS.accent : COLORS.textMuted} />
                 <span style={{
                   fontFamily: FONTS.sans, fontSize: TYPE.body.size, fontWeight: 500,
                   color: active ? COLORS.textPrimary : COLORS.textSecondary,
@@ -812,7 +812,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                   {svc}
                 </span>
               </div>
-              {active && <ChevronRight size={15} color={COLORS.accent} />}
+              {active && <ChevronRight size={17} color={COLORS.accent} />}
             </motion.button>
           );
         })}
@@ -861,7 +861,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               fullWidth
               disabled={!consultReason.trim()}
               onClick={placeConsultOrder}
-              icon={<Stethoscope size={14} />}
+              icon={<Stethoscope size={16} />}
             >
               Page Consultant
             </TacticalButton>
@@ -881,16 +881,16 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
     };
 
     const sections: { key: string; label: string; icon: React.ReactNode; items: Order[] }[] = [
-      { key: 'med', label: 'Medications', icon: <Pill size={14} />, items: grouped.med },
-      { key: 'lab', label: 'Labs', icon: <FlaskConical size={14} />, items: grouped.lab },
-      { key: 'imaging', label: 'Imaging', icon: <ScanLine size={14} />, items: grouped.imaging },
-      { key: 'consult', label: 'Consults', icon: <Stethoscope size={14} />, items: grouped.consult },
+      { key: 'med', label: 'Medications', icon: <Pill size={16} />, items: grouped.med },
+      { key: 'lab', label: 'Labs', icon: <FlaskConical size={16} />, items: grouped.lab },
+      { key: 'imaging', label: 'Imaging', icon: <ScanLine size={16} />, items: grouped.imaging },
+      { key: 'consult', label: 'Consults', icon: <Stethoscope size={16} />, items: grouped.consult },
     ].filter((s) => s.items.length > 0);
 
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          <FileText size={15} color={COLORS.accent} />
+          <FileText size={17} color={COLORS.accent} />
           <Mono tone="accent" size="sm">Review Orders</Mono>
           <div style={{ flex: 1 }} />
           <StatusPill label={`${orders.length} PENDING`} tone="warn" />
@@ -925,7 +925,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                       </span>
                       {order.type === 'med' && order.highAlert && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                          <AlertTriangle size={11} color={COLORS.warn} />
+                          <AlertTriangle size={13} color={COLORS.warn} />
                           <Mono tone="warn" size="xs">High-Alert</Mono>
                         </div>
                       )}
@@ -943,7 +943,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                         color: COLORS.crit,
                       }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={16} />
                     </motion.button>
                   </div>
                 );
@@ -958,7 +958,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           variant="primary"
           fullWidth
           onClick={handleSignAll}
-          icon={<ShieldCheck size={15} />}
+          icon={<ShieldCheck size={17} />}
         >
           Sign All Orders ({orders.length})
         </TacticalButton>
@@ -993,7 +993,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
         <TacticalButton
           variant="primary"
           onClick={() => setReviewing(true)}
-          icon={<ShieldCheck size={14} />}
+          icon={<ShieldCheck size={16} />}
         >
           Review & Sign
         </TacticalButton>
@@ -1042,7 +1042,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 cursor: 'pointer',
               }}
             >
-              <X size={15} />
+              <X size={17} />
             </button>
             <BracketLabel tone="accent" size="sm">CPOE &middot; Orders</BracketLabel>
             <div style={{ flex: 1 }} />

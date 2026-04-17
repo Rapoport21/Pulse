@@ -319,7 +319,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               overflow: 'hidden',
             }}
           >
-            <AlertTriangle size={17} strokeWidth={2} color={COLORS.warn} />
+            <AlertTriangle size={19} strokeWidth={2} color={COLORS.warn} />
             <Mono tone="warn" size="sm">
               MANUAL OVERRIDE ACTIVE — TELEMETRY OFFLINE · FALLBACK PROTOCOLS ENGAGED
             </Mono>
@@ -414,7 +414,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-              <Radio size={14} strokeWidth={2} color={COLORS.textSecondary} />
+              <Radio size={16} strokeWidth={2} color={COLORS.textSecondary} />
               <Mono tone="primary" size="sm">
                 ZONE GRID
               </Mono>
@@ -507,7 +507,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Activity size={13} strokeWidth={2} color={COLORS.textSecondary} />
+                <Activity size={15} strokeWidth={2} color={COLORS.textSecondary} />
                 <Mono tone="primary" size="sm">
                   ZONE TELEMETRY
                 </Mono>
@@ -547,7 +547,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
                     borderRadius: RADIUS.sm,
                   }}
                 >
-                  <Radio size={24} strokeWidth={1.5} color={COLORS.textMuted} />
+                  <Radio size={28} strokeWidth={1.5} color={COLORS.textMuted} />
                   <CornerBracket position="tl" color={COLORS.border} size={6} thickness={1} />
                   <CornerBracket position="tr" color={COLORS.border} size={6} thickness={1} />
                   <CornerBracket position="bl" color={COLORS.border} size={6} thickness={1} />
@@ -570,7 +570,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Thermometer size={13} strokeWidth={2} color={COLORS.textMuted} />
+                <Thermometer size={15} strokeWidth={2} color={COLORS.textMuted} />
                 <Mono tone="muted" size="xs">
                   FLOOR ROLLUP · {floors.find((f) => f.id === currentFloor)?.short}
                 </Mono>
@@ -596,7 +596,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
             <TacticalButton
               variant="secondary"
               fullWidth
-              icon={<Users size={14} strokeWidth={2} />}
+              icon={<Users size={16} strokeWidth={2} />}
               onClick={() => setShowStaffModal(true)}
             >
               Manage Personnel
@@ -606,7 +606,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
               <TacticalButton
                 variant="danger"
                 fullWidth
-                icon={<Printer size={14} strokeWidth={2} />}
+                icon={<Printer size={16} strokeWidth={2} />}
                 onClick={() => setShowPrintModal(true)}
               >
                 Print Action Plan
@@ -635,7 +635,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
         title="Hospital-Wide Manual Action Plan"
         content={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <h2 style={{ fontSize: 22, fontWeight: 700, borderBottom: '1px solid #ccc', paddingBottom: 8, margin: 0 }}>
+            <h2 style={{ fontSize: 25, fontWeight: 700, borderBottom: '1px solid #ccc', paddingBottom: 8, margin: 0 }}>
               Floor Status Overview
             </h2>
             {floors.map((f) => {
@@ -645,7 +645,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
                 <div key={f.id} style={{ marginBottom: 16 }}>
                   <h3
                     style={{
-                      fontSize: 17,
+                      fontSize: 19,
                       fontWeight: 700,
                       background: '#f3f4f6',
                       padding: 8,
@@ -725,7 +725,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                    <UserCheck size={14} strokeWidth={2} color={COLORS.textSecondary} />
+                    <UserCheck size={16} strokeWidth={2} color={COLORS.textSecondary} />
                     <Mono tone="primary" size="sm">
                       PATIENT RECORD
                     </Mono>
@@ -741,7 +741,7 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
                     }}
                     aria-label="Close"
                   >
-                    <X size={17} strokeWidth={2} />
+                    <X size={19} strokeWidth={2} />
                   </button>
                 </div>
 
@@ -861,7 +861,7 @@ const KpiCard: React.FC<{
           <span
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 31,
+              fontSize: 36,
               fontWeight: 600,
               letterSpacing: '-0.03em',
               lineHeight: 0.95,
@@ -896,7 +896,7 @@ const KpiCard: React.FC<{
           flexShrink: 0,
         }}
       >
-        <Icon size={20} strokeWidth={2} color={toneColor} />
+        <Icon size={23} strokeWidth={2} color={toneColor} />
         <CornerBracket position="tl" color={toneColor} size={4} thickness={1} inset={-1} />
         <CornerBracket position="br" color={toneColor} size={4} thickness={1} inset={-1} />
       </div>
@@ -940,7 +940,7 @@ const FloorTabs: React.FC<{
           }}
         >
           <Layers
-            size={14}
+            size={16}
             strokeWidth={2}
             color={active ? COLORS.textPrimary : COLORS.textMuted}
           />
@@ -1111,7 +1111,7 @@ const ZoneCell: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 15,
+              fontSize: 17,
               fontWeight: 600,
               color: COLORS.textPrimary,
               letterSpacing: '0.04em',
@@ -1134,7 +1134,7 @@ const ZoneCell: React.FC<{
           }}
         >
           <TrendIcon
-            size={12}
+            size={14}
             strokeWidth={2}
             color={
               zone.trend === 'Rising'
@@ -1147,7 +1147,7 @@ const ZoneCell: React.FC<{
           <span
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 600,
               color,
               letterSpacing: '0.04em',
@@ -1261,11 +1261,11 @@ const ZoneTelemetry: React.FC<{
             LOAD FACTOR
           </Mono>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <TrendIcon size={13} strokeWidth={2} color={color} />
+            <TrendIcon size={15} strokeWidth={2} color={color} />
             <span
               style={{
                 fontFamily: FONTS.mono,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: 600,
                 color,
                 letterSpacing: '0.04em',
@@ -1318,7 +1318,7 @@ const ZoneTelemetry: React.FC<{
       {/* Staffing */}
       <div>
         <Mono tone="muted" size="xs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <UserCheck size={11} strokeWidth={2} color={COLORS.textMuted} />
+          <UserCheck size={13} strokeWidth={2} color={COLORS.textMuted} />
           ACTIVE PERSONNEL
         </Mono>
         <div
@@ -1330,7 +1330,7 @@ const ZoneTelemetry: React.FC<{
             borderLeft: `2px solid ${COLORS.borderHover}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
-            fontSize: 13,
+            fontSize: 15,
             color: COLORS.textPrimary,
             letterSpacing: '0.02em',
           }}
@@ -1364,7 +1364,7 @@ const ZoneTelemetry: React.FC<{
             overflow: 'hidden',
           }}
         >
-          <AlertTriangle size={17} strokeWidth={2} color={COLORS.crit} style={{ flexShrink: 0, marginTop: 1 }} />
+          <AlertTriangle size={19} strokeWidth={2} color={COLORS.crit} style={{ flexShrink: 0, marginTop: 1 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <Mono tone="crit" size="sm">
               THRESHOLD EXCEEDED
@@ -1372,7 +1372,7 @@ const ZoneTelemetry: React.FC<{
             <p
               style={{
                 fontFamily: FONTS.sans,
-                fontSize: 12,
+                fontSize: 14,
                 color: COLORS.textSecondary,
                 lineHeight: 1.5,
                 margin: `${SPACE.xs}px 0 0 0`,
@@ -1381,7 +1381,7 @@ const ZoneTelemetry: React.FC<{
               Load exceeds safety limits. Trigger capacity protocol.
             </p>
           </div>
-          <ArrowUpRight size={15} strokeWidth={2} color={COLORS.crit} style={{ flexShrink: 0 }} />
+          <ArrowUpRight size={17} strokeWidth={2} color={COLORS.crit} style={{ flexShrink: 0 }} />
           <CornerBracket position="tl" color={COLORS.crit} size={6} thickness={1} />
           <CornerBracket position="br" color={COLORS.crit} size={6} thickness={1} />
         </motion.button>
@@ -1411,14 +1411,14 @@ const TelemetryStat: React.FC<{
     }}
   >
     <Mono tone="muted" size="xs" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-      <Icon size={11} strokeWidth={2} color={COLORS.textMuted} />
+      <Icon size={13} strokeWidth={2} color={COLORS.textMuted} />
       {label}
     </Mono>
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 20,
+          fontSize: 23,
           fontWeight: 600,
           color: COLORS.textPrimary,
           letterSpacing: '0.02em',
@@ -1446,7 +1446,7 @@ const PatientField: React.FC<{ label: string; value: string }> = ({ label, value
     <span
       style={{
         fontFamily: FONTS.sans,
-        fontSize: 14,
+        fontSize: 16,
         color: COLORS.textPrimary,
         letterSpacing: '-0.003em',
       }}
@@ -1482,7 +1482,7 @@ const PatientSearch: React.FC<{
           transition: `border-color ${MOTION.fast}s ease`,
         }}
       >
-        <Search size={14} strokeWidth={2} color={focused ? COLORS.accent : COLORS.textMuted} />
+        <Search size={16} strokeWidth={2} color={focused ? COLORS.accent : COLORS.textMuted} />
         <input
           type="text"
           value={value}
@@ -1497,7 +1497,7 @@ const PatientSearch: React.FC<{
             outline: 'none',
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 15,
             letterSpacing: '-0.005em',
             minWidth: 0,
           }}
@@ -1516,7 +1516,7 @@ const PatientSearch: React.FC<{
               padding: 0,
             }}
           >
-            <X size={14} strokeWidth={2} />
+            <X size={16} strokeWidth={2} />
           </button>
         )}
       </div>
@@ -1578,7 +1578,7 @@ const PatientSearch: React.FC<{
                 <div
                   style={{
                     fontFamily: FONTS.sans,
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: 500,
                     color: COLORS.textPrimary,
                     letterSpacing: '-0.005em',

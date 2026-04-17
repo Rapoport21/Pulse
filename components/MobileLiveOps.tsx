@@ -59,9 +59,9 @@ const toneColor = (t: StatusTone | 'primary'): string => {
 };
 
 const TrendIcon: React.FC<{ trend: string; color: string }> = ({ trend, color }) => {
-  if (trend === 'Rising')  return <TrendingUp size={15} color={color} />;
-  if (trend === 'Falling') return <TrendingDown size={15} color={color} />;
-  return <Minus size={15} color={COLORS.textMuted} />;
+  if (trend === 'Rising')  return <TrendingUp size={17} color={color} />;
+  if (trend === 'Falling') return <TrendingDown size={17} color={color} />;
+  return <Minus size={17} color={COLORS.textMuted} />;
 };
 
 /* ── Main component ── */
@@ -133,7 +133,7 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: active ? COLORS.accent : 'transparent',
               border: 'none', borderRadius: RADIUS.sm,
-              fontFamily: FONTS.mono, fontSize: 13, fontWeight: 600,
+              fontFamily: FONTS.mono, fontSize: 15, fontWeight: 600,
               letterSpacing: '0.08em', textTransform: 'uppercase' as const,
               color: active ? COLORS.textPrimary : COLORS.textSecondary,
               cursor: 'pointer',
@@ -148,14 +148,14 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
 
       {/* KPI grid 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.sm }}>
-        <KpiTile icon={<Users size={17} color={COLORS.accent} />}
+        <KpiTile icon={<Users size={19} color={COLORS.accent} />}
           label="Census" value={`${kpis.totalPax}`} sub={`/ ${kpis.totalCap}`} tone="primary" />
-        <KpiTile icon={<Activity size={17} color={toColor(
+        <KpiTile icon={<Activity size={19} color={toColor(
             kpis.util >= 90 ? Status.CRITICAL : kpis.util >= 75 ? Status.WARNING : Status.NORMAL)} />}
           label="Utilization" value={`${kpis.util}%`} tone={utilTone} />
-        <KpiTile icon={<AlertTriangle size={17} color={kpis.critical > 0 ? COLORS.crit : COLORS.ok} />}
+        <KpiTile icon={<AlertTriangle size={19} color={kpis.critical > 0 ? COLORS.crit : COLORS.ok} />}
           label="Critical Zones" value={`${kpis.critical}`} tone={kpis.critical > 0 ? 'crit' : 'ok'} />
-        <KpiTile icon={<Clock size={17} color={COLORS.warn} />}
+        <KpiTile icon={<Clock size={19} color={COLORS.warn} />}
           label="Max Wait" value={kpis.maxWait} tone={/h/.test(kpis.maxWait) ? 'warn' : 'ok'} />
       </div>
 
@@ -193,7 +193,7 @@ const KpiTile: React.FC<{
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
         <span style={{
-          fontFamily: FONTS.sans, fontSize: 31, fontWeight: 600,
+          fontFamily: FONTS.sans, fontSize: 36, fontWeight: 600,
           letterSpacing: '-0.03em', lineHeight: 1, color: toneColor(tone),
         }}>
           {value}
@@ -260,15 +260,15 @@ const ZoneCard: React.FC<{
           gap: SPACE.xs, alignItems: 'center',
         }}>
           <DetailCell label="Beds">
-            <span style={{ fontFamily: FONTS.mono, fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+            <span style={{ fontFamily: FONTS.mono, fontSize: 16, fontWeight: 600, color: COLORS.textPrimary }}>
               {zone.patients}/{zone.capacity}
             </span>
           </DetailCell>
           <DetailCell label="Staff">
             <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <UserCheck size={12} color={COLORS.textSecondary} />
+              <UserCheck size={14} color={COLORS.textSecondary} />
               <span style={{
-                fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary,
+                fontFamily: FONTS.mono, fontSize: 14, color: COLORS.textSecondary,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 60,
               }}>
                 {zone.staffing.split(',')[0]}
@@ -277,7 +277,7 @@ const ZoneCard: React.FC<{
           </DetailCell>
           <DetailCell label="Wait">
             <span style={{
-              fontFamily: FONTS.mono, fontSize: 14, fontWeight: 500,
+              fontFamily: FONTS.mono, fontSize: 16, fontWeight: 500,
               color: /h/.test(zone.waitTime) ? COLORS.warn : COLORS.textSecondary,
             }}>
               {zone.waitTime}

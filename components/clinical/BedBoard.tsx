@@ -63,12 +63,12 @@ const STATE_BG: Record<BedState, string> = {
 };
 
 const STATE_ICON: Record<BedState, React.ReactNode> = {
-  ready: <BedIcon size={13} />,
-  occupied: <User size={13} />,
-  dirty: <Clock size={13} />,
-  not_staffed: <AlertTriangle size={13} />,
-  blocked: <Wrench size={13} />,
-  reserved: <Truck size={13} />,
+  ready: <BedIcon size={15} />,
+  occupied: <User size={15} />,
+  dirty: <Clock size={15} />,
+  not_staffed: <AlertTriangle size={15} />,
+  blocked: <Wrench size={15} />,
+  reserved: <Truck size={15} />,
 };
 
 const ACUITY_COLOR: Record<number, string> = {
@@ -180,7 +180,7 @@ const BedTile: React.FC<{
       <span
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 12,
+          fontSize: 14,
           fontWeight: 600,
           letterSpacing: '0.06em',
           color: COLORS.textPrimary,
@@ -195,7 +195,7 @@ const BedTile: React.FC<{
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 500,
             letterSpacing: '0.08em',
             color,
@@ -342,7 +342,7 @@ const BedPopover: React.FC<{
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 600,
                   letterSpacing: '0.1em',
                   color: COLORS.textMuted,
@@ -354,7 +354,7 @@ const BedPopover: React.FC<{
                 {bed.acuity && (
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 700,
                     letterSpacing: '0.06em',
                     color: ACUITY_COLOR[bed.acuity],
@@ -376,7 +376,7 @@ const BedPopover: React.FC<{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                <X size={17} />
+                <X size={19} />
               </button>
             </div>
 
@@ -384,7 +384,7 @@ const BedPopover: React.FC<{
             <div style={{ padding: `${SPACE.base}px ${SPACE.base}px ${SPACE.sm}px` }}>
               <div style={{
                 fontFamily: FONTS.sans,
-                fontSize: 22,
+                fontSize: 25,
                 fontWeight: 600,
                 letterSpacing: '-0.01em',
                 color: COLORS.textPrimary,
@@ -395,7 +395,7 @@ const BedPopover: React.FC<{
               {bed.mrn && (
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: 500,
                   letterSpacing: '0.06em',
                   color: COLORS.textSecondary,
@@ -451,7 +451,7 @@ const BedPopover: React.FC<{
                     return (
                       <span key={key} style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: 500,
                         letterSpacing: '0.04em',
                         color: done ? COLORS.ok : COLORS.textMuted,
@@ -470,7 +470,7 @@ const BedPopover: React.FC<{
                   {bed.dischargeMilestones.estimatedDcTime && (
                     <span style={{
                       fontFamily: FONTS.mono,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: 500,
                       letterSpacing: '0.04em',
                       color: COLORS.textSecondary,
@@ -503,7 +503,7 @@ const BedPopover: React.FC<{
                   fullWidth
                   onClick={() => onNavigateToPatient(bed.patientId || bed.mrn || bed.id)}
                 >
-                  <FileText size={15} style={{ marginRight: 6 }} />
+                  <FileText size={17} style={{ marginRight: 6 }} />
                   OPEN FULL CHART
                 </TacticalButton>
               )}
@@ -521,7 +521,7 @@ const BedPopover: React.FC<{
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 17,
+                  fontSize: 19,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   letterSpacing: '0.04em',
@@ -541,7 +541,7 @@ const BedPopover: React.FC<{
                   padding: 4,
                 }}
               >
-                <X size={17} />
+                <X size={19} />
               </button>
             </div>
 
@@ -601,7 +601,7 @@ const DetailRow: React.FC<{ label: string; value: string; valueColor?: string }>
     <Mono tone="muted" size="xs">{label}</Mono>
     <div style={{
       fontFamily: FONTS.mono,
-      fontSize: 13,
+      fontSize: 15,
       fontWeight: 500,
       color: valueColor || COLORS.textPrimary,
       marginTop: 2,
@@ -693,7 +693,7 @@ const SummaryBar: React.FC<{ summary: BedSummary; surgeActive: boolean }> = ({ s
       <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.sm, marginBottom: SPACE.md }}>
         <span style={{
           fontFamily: FONTS.sans,
-          fontSize: 40,
+          fontSize: 46,
           fontWeight: 600,
           letterSpacing: '-0.03em',
           lineHeight: 0.95,
@@ -735,7 +735,7 @@ const SummaryBar: React.FC<{ summary: BedSummary; surgeActive: boolean }> = ({ s
             }} />
             <span style={{
               fontFamily: FONTS.mono,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 500,
               letterSpacing: '0.12em',
               color: chip.color,
@@ -770,7 +770,7 @@ const CardMode: React.FC<{
         <BracketLabel tone="accent" size="xs">BED BOARD</BracketLabel>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Mono tone="muted" size="xs">TAP TO EXPAND</Mono>
-          <ChevronRight size={13} color={COLORS.textMuted} />
+          <ChevronRight size={15} color={COLORS.textMuted} />
         </div>
       </div>
 
@@ -778,7 +778,7 @@ const CardMode: React.FC<{
       <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE.sm, marginBottom: SPACE.md }}>
         <span style={{
           fontFamily: FONTS.sans,
-          fontSize: 31,
+          fontSize: 36,
           fontWeight: 600,
           letterSpacing: '-0.03em',
           lineHeight: 0.95,
@@ -966,10 +966,10 @@ const FullMode: React.FC<{
           <div style={{ flex: 1 }} />
           {surgeActive && <StatusPill label="SURGE ACTIVE" tone="crit" pulse />}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: SPACE.sm }}>
-            <RefreshCw size={13} color={COLORS.textMuted} />
+            <RefreshCw size={15} color={COLORS.textMuted} />
             <span style={{
               fontFamily: FONTS.mono,
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: 500,
               letterSpacing: '0.1em',
               color: COLORS.textMuted,
@@ -1019,7 +1019,7 @@ const FullMode: React.FC<{
               >
                 <span style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 35,
+                  fontSize: 40,
                   fontWeight: 700,
                   color: stat.color,
                   lineHeight: 1.1,
@@ -1028,7 +1028,7 @@ const FullMode: React.FC<{
                 </span>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 500,
                   letterSpacing: '0.14em',
                   color: COLORS.textMuted,
@@ -1080,7 +1080,7 @@ const FullMode: React.FC<{
                   )}
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 500,
                     letterSpacing: '0.1em',
                     color: isActive ? chipColor : COLORS.textMuted,
@@ -1090,7 +1090,7 @@ const FullMode: React.FC<{
                   </span>
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 12,
+                    fontSize: 14,
                     fontWeight: 600,
                     color: isActive ? chipColor : COLORS.textDim,
                   }}>
@@ -1147,12 +1147,12 @@ const FullMode: React.FC<{
                       }}
                     >
                       {isCollapsed
-                        ? <ChevronRight size={15} color={COLORS.textMuted} />
-                        : <ChevronDown size={15} color={COLORS.textMuted} />
+                        ? <ChevronRight size={17} color={COLORS.textMuted} />
+                        : <ChevronDown size={17} color={COLORS.textMuted} />
                       }
                       <span style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: 700,
                         letterSpacing: '0.08em',
                         color: COLORS.textPrimary,
@@ -1184,7 +1184,7 @@ const FullMode: React.FC<{
                       </div>
                       <span style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: 500,
                         letterSpacing: '0.08em',
                         color: COLORS.textSecondary,
@@ -1194,7 +1194,7 @@ const FullMode: React.FC<{
                       </span>
                       <span style={{
                         fontFamily: FONTS.mono,
-                        fontSize: 12,
+                        fontSize: 14,
                         fontWeight: 500,
                         color: COLORS.ok,
                         marginLeft: 'auto',
@@ -1219,7 +1219,7 @@ const FullMode: React.FC<{
                           {['', 'BED', 'PATIENT', 'ACUITY', 'ATTENDING', 'NURSE', 'LOS', 'ISO', 'DC'].map((col) => (
                             <span key={col} style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: 600,
                               letterSpacing: '0.14em',
                               color: COLORS.textDim,
@@ -1273,7 +1273,7 @@ const FullMode: React.FC<{
                               {/* Bed label */}
                               <span style={{
                                 fontFamily: FONTS.mono,
-                                fontSize: 15,
+                                fontSize: 17,
                                 fontWeight: 700,
                                 letterSpacing: '0.04em',
                                 color: COLORS.textPrimary,
@@ -1287,7 +1287,7 @@ const FullMode: React.FC<{
                                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
                                     <span style={{
                                       fontFamily: FONTS.sans,
-                                      fontSize: 15,
+                                      fontSize: 17,
                                       fontWeight: 500,
                                       color: COLORS.textPrimary,
                                       whiteSpace: 'nowrap',
@@ -1299,7 +1299,7 @@ const FullMode: React.FC<{
                                     {bed.mrn && (
                                       <span style={{
                                         fontFamily: FONTS.mono,
-                                        fontSize: 12,
+                                        fontSize: 14,
                                         color: COLORS.textMuted,
                                         letterSpacing: '0.06em',
                                       }}>
@@ -1310,7 +1310,7 @@ const FullMode: React.FC<{
                                 ) : (
                                   <span style={{
                                     fontFamily: FONTS.mono,
-                                    fontSize: 13,
+                                    fontSize: 15,
                                     fontWeight: 500,
                                     letterSpacing: '0.06em',
                                     color: dotColor,
@@ -1324,7 +1324,7 @@ const FullMode: React.FC<{
                                 {bed.acuity ? (
                                   <span style={{
                                     fontFamily: FONTS.mono,
-                                    fontSize: 12,
+                                    fontSize: 14,
                                     fontWeight: 700,
                                     letterSpacing: '0.06em',
                                     color: ACUITY_COLOR[bed.acuity],
@@ -1337,13 +1337,13 @@ const FullMode: React.FC<{
                                     ESI-{bed.acuity}
                                   </span>
                                 ) : (
-                                  <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textDim }}>--</span>
+                                  <span style={{ fontFamily: FONTS.mono, fontSize: 15, color: COLORS.textDim }}>--</span>
                                 )}
                               </div>
                               {/* Attending */}
                               <span style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 14,
+                                fontSize: 16,
                                 color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
                                 padding: '0 4px',
                                 whiteSpace: 'nowrap',
@@ -1355,7 +1355,7 @@ const FullMode: React.FC<{
                               {/* Nurse */}
                               <span style={{
                                 fontFamily: FONTS.sans,
-                                fontSize: 14,
+                                fontSize: 16,
                                 color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
                                 padding: '0 4px',
                                 whiteSpace: 'nowrap',
@@ -1367,7 +1367,7 @@ const FullMode: React.FC<{
                               {/* LOS */}
                               <span style={{
                                 fontFamily: FONTS.mono,
-                                fontSize: 13,
+                                fontSize: 15,
                                 fontWeight: 500,
                                 color: isOccupied ? COLORS.textSecondary : COLORS.textDim,
                                 padding: '0 4px',
@@ -1379,7 +1379,7 @@ const FullMode: React.FC<{
                                 {iso ? (
                                   <span style={{
                                     fontFamily: FONTS.mono,
-                                    fontSize: 11,
+                                    fontSize: 13,
                                     fontWeight: 700,
                                     color: iso.color,
                                     background: `${iso.color}18`,
@@ -1414,7 +1414,7 @@ const FullMode: React.FC<{
                                     {milestones.estimatedDcTime && (
                                       <span style={{
                                         fontFamily: FONTS.mono,
-                                        fontSize: 11,
+                                        fontSize: 13,
                                         color: COLORS.textMuted,
                                         marginLeft: 2,
                                       }}>
@@ -1464,7 +1464,7 @@ const FullMode: React.FC<{
               }}>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: 700,
                   letterSpacing: '0.1em',
                   color: COLORS.textPrimary,
@@ -1474,7 +1474,7 @@ const FullMode: React.FC<{
                 </span>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 12,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   background: COLORS.accent,
@@ -1513,7 +1513,7 @@ const FullMode: React.FC<{
                         cursor: 'grab',
                         paddingTop: 2,
                       }}>
-                        <GripVertical size={15} />
+                        <GripVertical size={17} />
                       </div>
                       {/* Card content */}
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1521,7 +1521,7 @@ const FullMode: React.FC<{
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: 4 }}>
                           <span style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 15,
+                            fontSize: 17,
                             fontWeight: 600,
                             color: COLORS.textPrimary,
                             whiteSpace: 'nowrap',
@@ -1532,7 +1532,7 @@ const FullMode: React.FC<{
                           </span>
                           <span style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 11,
+                            fontSize: 13,
                             color: COLORS.textMuted,
                             letterSpacing: '0.06em',
                             flexShrink: 0,
@@ -1544,7 +1544,7 @@ const FullMode: React.FC<{
                         <div style={{ display: 'flex', gap: SPACE.xs, marginBottom: 4, flexWrap: 'wrap' }}>
                           <span style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: 700,
                             letterSpacing: '0.08em',
                             color: srcColor,
@@ -1557,7 +1557,7 @@ const FullMode: React.FC<{
                           </span>
                           <span style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: 700,
                             letterSpacing: '0.06em',
                             color: ACUITY_COLOR[admit.acuity],
@@ -1572,7 +1572,7 @@ const FullMode: React.FC<{
                         {/* Chief complaint */}
                         <div style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 13,
+                          fontSize: 15,
                           color: COLORS.textSecondary,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -1584,10 +1584,10 @@ const FullMode: React.FC<{
                         {/* Wait time + unit */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: 2 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Clock size={11} color={waitColor} />
+                            <Clock size={13} color={waitColor} />
                             <span style={{
                               fontFamily: FONTS.mono,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: 600,
                               color: waitColor,
                               letterSpacing: '0.06em',
@@ -1597,7 +1597,7 @@ const FullMode: React.FC<{
                           </div>
                           <span style={{
                             fontFamily: FONTS.mono,
-                            fontSize: 11,
+                            fontSize: 13,
                             color: COLORS.textMuted,
                             letterSpacing: '0.08em',
                           }}>
@@ -1607,7 +1607,7 @@ const FullMode: React.FC<{
                         {/* Attending */}
                         <span style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 14,
                           color: COLORS.textDim,
                         }}>
                           {admit.attending}
@@ -1675,7 +1675,7 @@ const FullMode: React.FC<{
             gap: 4,
           }}
         >
-          <X size={15} />
+          <X size={17} />
           <Mono tone="secondary" size="xs">CLOSE</Mono>
         </button>
       </HudStrip>
@@ -1722,7 +1722,7 @@ const FullMode: React.FC<{
               >
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 500,
                   letterSpacing: '0.12em',
                   color: isActive ? chipColor : COLORS.textMuted,
@@ -1732,7 +1732,7 @@ const FullMode: React.FC<{
                 </span>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 600,
                   color: isActive ? chipColor : COLORS.textDim,
                 }}>

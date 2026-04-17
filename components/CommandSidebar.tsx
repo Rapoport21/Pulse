@@ -168,7 +168,7 @@ const CommandRow: React.FC<{
         <span
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: 500,
             color: hovered ? COLORS.textPrimary : COLORS.textSecondary,
             letterSpacing: '-0.005em',
@@ -272,7 +272,7 @@ const FeedEntry: React.FC<{
       <div
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 15,
           color: critical ? COLORS.textPrimary : COLORS.textSecondary,
           lineHeight: 1.4,
           letterSpacing: '-0.003em',
@@ -324,7 +324,7 @@ const TranscriptPacket: React.FC<{
           <Mono tone="dim" size="xs">
             #{String(index).padStart(3, '0')}
           </Mono>
-          {isAi && <Bot size={11} color={speakerColor} strokeWidth={2} />}
+          {isAi && <Bot size={13} color={speakerColor} strokeWidth={2} />}
           <Mono size="xs" style={{ color: speakerColor }}>
             {speakerLabel}
           </Mono>
@@ -333,7 +333,7 @@ const TranscriptPacket: React.FC<{
       <div
         style={{
           fontFamily: FONTS.sans,
-          fontSize: 13,
+          fontSize: 15,
           color: COLORS.textPrimary,
           lineHeight: 1.45,
           letterSpacing: '-0.003em',
@@ -548,7 +548,7 @@ export const CommandSidebar = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
           <Radio
-            size={13}
+            size={15}
             strokeWidth={2}
             color={isSurgeActive ? COLORS.accent : COLORS.textMuted}
           />
@@ -638,13 +638,13 @@ export const CommandSidebar = ({
                       flexShrink: 0,
                     }}
                   >
-                    <ShieldAlert size={17} strokeWidth={2} />
+                    <ShieldAlert size={19} strokeWidth={2} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
                         fontFamily: FONTS.sans,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: 600,
                         color: COLORS.textPrimary,
                         letterSpacing: '-0.01em',
@@ -710,13 +710,13 @@ export const CommandSidebar = ({
                         flexShrink: 0,
                       }}
                     >
-                      <Siren size={17} strokeWidth={2.5} />
+                      <Siren size={19} strokeWidth={2.5} />
                     </motion.div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 14,
+                          fontSize: 16,
                           fontWeight: 600,
                           color: COLORS.textPrimary,
                           letterSpacing: '-0.01em',
@@ -748,7 +748,7 @@ export const CommandSidebar = ({
                           borderRadius: RADIUS.sm,
                           color: COLORS.accent,
                           fontFamily: FONTS.mono,
-                          fontSize: 12,
+                          fontSize: 14,
                           fontWeight: 500,
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase' as const,
@@ -796,7 +796,7 @@ export const CommandSidebar = ({
                               borderRadius: RADIUS.sm,
                               color: COLORS.bg,
                               fontFamily: FONTS.mono,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: 700,
                               letterSpacing: '0.06em',
                               textTransform: 'uppercase' as const,
@@ -815,7 +815,7 @@ export const CommandSidebar = ({
                               borderRadius: RADIUS.sm,
                               color: COLORS.textSecondary,
                               fontFamily: FONTS.mono,
-                              fontSize: 12,
+                              fontSize: 14,
                               fontWeight: 500,
                               letterSpacing: '0.06em',
                               textTransform: 'uppercase' as const,
@@ -885,14 +885,14 @@ export const CommandSidebar = ({
                       >
                         {t.acknowledged ? (
                           <CheckCircle2
-                            size={13}
+                            size={15}
                             strokeWidth={2}
                             color={COLORS.ok}
                             style={{ marginTop: 2, flexShrink: 0 }}
                           />
                         ) : (
                           <Clock
-                            size={13}
+                            size={15}
                             strokeWidth={2}
                             color={COLORS.warn}
                             style={{ marginTop: 2, flexShrink: 0 }}
@@ -901,7 +901,7 @@ export const CommandSidebar = ({
                         <span
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 12,
+                            fontSize: 14,
                             color: t.acknowledged
                               ? COLORS.textMuted
                               : COLORS.textPrimary,
@@ -959,7 +959,7 @@ export const CommandSidebar = ({
               />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <CommandRow
-                  icon={<PhoneCall size={12} strokeWidth={2} />}
+                  icon={<PhoneCall size={14} strokeWidth={2} />}
                   iconColor={COLORS.info}
                   label="Page Charge Nurse"
                   code="CMD.PAGE.NURSE"
@@ -968,7 +968,7 @@ export const CommandSidebar = ({
                 />
                 <Divider color={COLORS.border} />
                 <CommandRow
-                  icon={<PhoneCall size={12} strokeWidth={2} />}
+                  icon={<PhoneCall size={14} strokeWidth={2} />}
                   iconColor={COLORS.ok}
                   label="Call Blood Bank"
                   code="CMD.PAGE.BLOOD"
@@ -1057,7 +1057,7 @@ export const CommandSidebar = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-                    <Gauge size={12} strokeWidth={2} color={COLORS.info} />
+                    <Gauge size={14} strokeWidth={2} color={COLORS.info} />
                     <Mono tone="dim" size="xs">
                       SIM.CONTROLS
                     </Mono>
@@ -1067,9 +1067,9 @@ export const CommandSidebar = ({
                       {simControls.length}
                     </BracketLabel>
                     {simPanelOpen ? (
-                      <ChevronUp size={11} color={COLORS.textMuted} />
+                      <ChevronUp size={13} color={COLORS.textMuted} />
                     ) : (
-                      <ChevronDown size={11} color={COLORS.textMuted} />
+                      <ChevronDown size={13} color={COLORS.textMuted} />
                     )}
                   </div>
                 </div>
@@ -1141,7 +1141,7 @@ export const CommandSidebar = ({
                                 <div
                                   style={{
                                     fontFamily: FONTS.sans,
-                                    fontSize: 12,
+                                    fontSize: 14,
                                     fontWeight: 600,
                                     color: COLORS.textPrimary,
                                     letterSpacing: '-0.01em',
@@ -1222,10 +1222,10 @@ export const CommandSidebar = ({
                   }}
                 >
                   {callState === 'ai_speaking' ? (
-                    <Bot size={17} color={COLORS.warn} strokeWidth={2} />
+                    <Bot size={19} color={COLORS.warn} strokeWidth={2} />
                   ) : (
                     <PhoneCall
-                      size={17}
+                      size={19}
                       color={callState === 'calling' ? COLORS.info : COLORS.ok}
                       strokeWidth={2}
                     />
@@ -1262,7 +1262,7 @@ export const CommandSidebar = ({
                   <div
                     style={{
                       fontFamily: FONTS.sans,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: 600,
                       color: COLORS.textPrimary,
                       letterSpacing: '-0.01em',
@@ -1323,7 +1323,7 @@ export const CommandSidebar = ({
                       }}
                     >
                       <Bot
-                        size={15}
+                        size={17}
                         color={COLORS.warn}
                         strokeWidth={2}
                         style={{ marginTop: 2, flexShrink: 0 }}
@@ -1331,7 +1331,7 @@ export const CommandSidebar = ({
                       <div
                         style={{
                           fontFamily: FONTS.sans,
-                          fontSize: 12,
+                          fontSize: 14,
                           color: COLORS.textPrimary,
                           lineHeight: 1.45,
                           letterSpacing: '-0.003em',
@@ -1363,7 +1363,7 @@ export const CommandSidebar = ({
                       marginBottom: SPACE.sm,
                     }}
                   >
-                    <Activity size={11} strokeWidth={2} color={COLORS.textSecondary} />
+                    <Activity size={13} strokeWidth={2} color={COLORS.textSecondary} />
                     <BracketLabel tone="secondary" size="xs">
                       EXTRACTED
                     </BracketLabel>
@@ -1394,7 +1394,7 @@ export const CommandSidebar = ({
                         <span
                           style={{
                             fontFamily: FONTS.sans,
-                            fontSize: 12,
+                            fontSize: 14,
                             fontWeight: 500,
                             color: COLORS.textPrimary,
                             letterSpacing: '-0.003em',
@@ -1436,7 +1436,7 @@ export const CommandSidebar = ({
                     variant="primary"
                     size="sm"
                     fullWidth
-                    icon={<Bot size={13} strokeWidth={2} />}
+                    icon={<Bot size={15} strokeWidth={2} />}
                     onClick={() => setCallState('ai_speaking')}
                   >
                     Hand to AI
@@ -1446,7 +1446,7 @@ export const CommandSidebar = ({
                   variant="danger"
                   size="sm"
                   fullWidth
-                  icon={<PhoneOff size={13} strokeWidth={2} />}
+                  icon={<PhoneOff size={15} strokeWidth={2} />}
                   onClick={endCall}
                 >
                   End Call

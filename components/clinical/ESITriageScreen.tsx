@@ -247,14 +247,14 @@ const YesNoButtons: React.FC<{
       sublabel="Continue"
       onClick={onNo}
       tone="ok"
-      icon={<ArrowRight size={15} strokeWidth={2} />}
+      icon={<ArrowRight size={17} strokeWidth={2} />}
     />
     <BigChoiceButton
       label="YES"
       sublabel="Escalate"
       onClick={onYes}
       tone={yesTone}
-      icon={<AlertTriangle size={15} strokeWidth={2} />}
+      icon={<AlertTriangle size={17} strokeWidth={2} />}
     />
   </div>
 );
@@ -291,7 +291,7 @@ const BigChoiceButton: React.FC<{
       <div
         style={{
           fontFamily: FONTS.mono,
-          fontSize: 26,
+          fontSize: 30,
           fontWeight: 700,
           color,
           letterSpacing: '0.06em',
@@ -360,7 +360,7 @@ const IdentityStep: React.FC<{
                   color: value.sex === s ? COLORS.bg : COLORS.textSecondary,
                   fontFamily: FONTS.mono,
                   fontWeight: 600,
-                  fontSize: 13,
+                  fontSize: 15,
                   letterSpacing: '0.14em',
                   cursor: 'pointer',
                   transition: 'all 140ms ease',
@@ -400,7 +400,7 @@ const LabeledInput: React.FC<{
     borderRadius: RADIUS.sm,
     color: COLORS.textPrimary,
     fontFamily: FONTS.sans,
-    fontSize: 17, // 16px to prevent iOS auto-zoom on focus
+    fontSize: 19, // 16px to prevent iOS auto-zoom on focus
     fontWeight: 500,
     outline: 'none',
     transition: `all ${MOTION.fast}s ease`,
@@ -467,14 +467,14 @@ const VitalsStep: React.FC<{
       >
         {danger ? (
           <>
-            <AlertTriangle size={15} color={COLORS.accent} strokeWidth={2.5} />
+            <AlertTriangle size={17} color={COLORS.accent} strokeWidth={2.5} />
             <Mono tone="accent" size="base">
               VITALS IN ESI DANGER ZONE · CONSIDER UP-TRIAGE
             </Mono>
           </>
         ) : (
           <>
-            <CheckCircle2 size={15} color={COLORS.ok} strokeWidth={2} />
+            <CheckCircle2 size={17} color={COLORS.ok} strokeWidth={2} />
             <Mono tone="ok" size="base">
               VITALS WITHIN ESI ACCEPTABLE RANGE
             </Mono>
@@ -529,7 +529,7 @@ const VitalEntry: React.FC<{
             borderRadius: RADIUS.sm,
             color: COLORS.textPrimary,
             fontFamily: FONTS.mono,
-            fontSize: 17,
+            fontSize: 19,
             fontWeight: 700,
             outline: 'none',
             boxShadow: focused ? `0 0 0 3px ${COLORS.accentGlow}` : 'none',
@@ -583,7 +583,7 @@ const ResourcesStep: React.FC<{
           <div
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 35,
+              fontSize: 40,
               fontWeight: 700,
               lineHeight: 1,
               color:
@@ -600,7 +600,7 @@ const ResourcesStep: React.FC<{
           <div
             style={{
               fontFamily: FONTS.mono,
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 600,
               color: COLORS.textPrimary,
               marginTop: 4,
@@ -647,17 +647,17 @@ const ResourcesStep: React.FC<{
                   flexShrink: 0,
                 }}
               >
-                {isSelected && <CheckCircle2 size={13} strokeWidth={3} />}
+                {isSelected && <CheckCircle2 size={15} strokeWidth={3} />}
               </div>
               <r.icon
-                size={14}
+                size={16}
                 strokeWidth={2}
                 color={isSelected ? COLORS.accent : COLORS.textMuted}
               />
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: 500,
                   color: isSelected ? COLORS.textPrimary : COLORS.textSecondary,
                 }}
@@ -697,7 +697,7 @@ const ResourcesStep: React.FC<{
                 border: `1px solid ${COLORS.border}`,
                 borderRadius: RADIUS.sm,
                 fontFamily: FONTS.sans,
-                fontSize: 12,
+                fontSize: 14,
                 color: COLORS.textMuted,
               }}
             >
@@ -737,10 +737,10 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
           overflow: 'hidden',
         }}
       >
-        <CornerBracket position="tl" color={color} size={11} thickness={1.5} inset={-1} />
-        <CornerBracket position="tr" color={color} size={11} thickness={1.5} inset={-1} />
-        <CornerBracket position="bl" color={color} size={11} thickness={1.5} inset={-1} />
-        <CornerBracket position="br" color={color} size={11} thickness={1.5} inset={-1} />
+        <CornerBracket position="tl" color={color} size={13} thickness={1.5} inset={-1} />
+        <CornerBracket position="tr" color={color} size={13} thickness={1.5} inset={-1} />
+        <CornerBracket position="bl" color={color} size={13} thickness={1.5} inset={-1} />
+        <CornerBracket position="br" color={color} size={13} thickness={1.5} inset={-1} />
 
         <Mono tone="muted" size="xs" style={{ marginBottom: 10 }}>
           ASSIGNED ACUITY
@@ -748,7 +748,7 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
         <div
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 84,
+            fontSize: 96,
             fontWeight: 700,
             color,
             lineHeight: 0.9,
@@ -780,7 +780,7 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
           <div
             style={{
               fontFamily: FONTS.sans,
-              fontSize: 19,
+              fontSize: 22,
               fontWeight: 600,
               color: COLORS.textPrimary,
             }}
@@ -788,7 +788,7 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
             {disp.bay}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <User size={13} strokeWidth={2} color={COLORS.textMuted} />
+            <User size={15} strokeWidth={2} color={COLORS.textMuted} />
             <Mono tone="secondary" size="xs">
               {disp.staffing}
             </Mono>
@@ -808,7 +808,7 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
             border: `1px solid ${COLORS.border}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 500,
             color: COLORS.textPrimary,
             lineHeight: 1.5,
@@ -820,10 +820,10 @@ const ResultStep: React.FC<{ result: TriageResult; onConfirm: () => void; onRese
       </TacticalCard>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.sm }}>
-        <TacticalButton variant="secondary" onClick={onReset} icon={<ChevronLeft size={14} strokeWidth={2} />}>
+        <TacticalButton variant="secondary" onClick={onReset} icon={<ChevronLeft size={16} strokeWidth={2} />}>
           Start Over
         </TacticalButton>
-        <TacticalButton variant="primary" onClick={onConfirm} icon={<CheckCircle2 size={14} strokeWidth={2} />}>
+        <TacticalButton variant="primary" onClick={onConfirm} icon={<CheckCircle2 size={16} strokeWidth={2} />}>
           Assign & Route
         </TacticalButton>
       </div>
@@ -984,7 +984,7 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
                 flexShrink: 0,
               }}
             >
-              <X size={20} strokeWidth={2} />
+              <X size={23} strokeWidth={2} />
             </motion.button>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <BracketLabel tone="accent" size="xs">
@@ -993,7 +993,7 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 15,
+                  fontSize: 17,
                   fontWeight: 700,
                   color: COLORS.textPrimary,
                   letterSpacing: '-0.003em',
@@ -1194,7 +1194,7 @@ const CriteriaList: React.FC<{ label: string; items: string[] }> = ({ label, ite
             position: 'relative',
             paddingLeft: SPACE.md,
             fontFamily: FONTS.sans,
-            fontSize: 14,
+            fontSize: 16,
             lineHeight: 1.55,
             color: COLORS.textSecondary,
           }}
@@ -1234,7 +1234,7 @@ const StepNav: React.FC<{
       variant="ghost"
       onClick={onBack}
       disabled={backDisabled}
-      icon={<ArrowLeft size={14} strokeWidth={2} />}
+      icon={<ArrowLeft size={16} strokeWidth={2} />}
     >
       Back
     </TacticalButton>
@@ -1243,7 +1243,7 @@ const StepNav: React.FC<{
       variant="primary"
       onClick={onNext}
       disabled={nextDisabled}
-      icon={<ArrowRight size={14} strokeWidth={2} />}
+      icon={<ArrowRight size={16} strokeWidth={2} />}
     >
       {nextLabel}
     </TacticalButton>

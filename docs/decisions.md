@@ -12,6 +12,53 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · Type scale +15% second pass + simulator controls rewritten
+
+**Context.** Two Nick-reported issues in one message: (a) "the UI
+(the whole pulse) is still too tiny. top navbar, text, all of it" —
+the morning's 10-12% bump wasn't enough; the chrome and text still
+felt undersized at arm's length on a 10.9" iPad. (b) "sim. controls
+do not work" — the What-If Sim sliders in Horizon weren't responding
+to touch input.
+
+**Decision (sizing).** Second pass, +15% on top of the morning bump,
+applied to:
+- `TYPE` tokens (mono 14/15/16 base; body 17/19; h-scale 22/26/32/42;
+  display 60/80)
+- `CHROME` heights (header 60 → 68, footer 40 → 46, mobileNav 72 → 82)
+- Hardcoded `fontSize: N` literals across the codebase via perl-pass
+  mapping (12→14, 13→15, 14→16, 15→17, 17→19, and up through 70→80)
+- Lucide icon `size={N}` props ≥ 11 by the same mapping
+  (11→13, 12→14, 13→15, up through 52→60). Values ≤ 10 left alone —
+  those are mostly `CornerBracket` chrome sized for their visual role,
+  not semantic icon sizes.
+
+**Decision (simulator).** Replaced the native `<input type="range">`
+inside `LeverSlider` with a stepper pattern: ± buttons (44×44, iOS
+HIG minimum tap target) flanking a segmented fill bar (one cell per
+step, accent-glow on active). Rationale: the native range thumb is
+effectively invisible on the near-black tactical surface in the
+Capacitor iOS WebView, and touch drags frequently fail to register
+because WebKit treats the thin track as a scroll-gesture candidate.
+The stepper has discrete taps, a visible current-state indicator, and
+works identically across mouse, touch, and keyboard.
+
+**Rejected.** (a) Keep the range input but add custom `::-webkit-
+slider-thumb` CSS — WebKit pseudo-element styling is brittle across
+Capacitor versions and still leaves drag-gesture conflicts unsolved.
+(b) Use a Framer-motion drag slider — overkill for 5-step lever
+controls, adds animation complexity we don't need. (c) Auto-compute
+token bumps via a multiplier — easier to review explicit mappings
+than trust a `Math.round(size * 1.15)` chain.
+
+**Follow-up.** If Horizon overflows viewport after the bump, trim the
+chart height further (was 220px after this morning's passes) or move
+Census & Throughput out of the 3-col ops row. Single-viewport fit was
+a previous constraint — it may now yield to legibility. The sidebar
+width (300px) was left alone — width is not text-height-dependent.
+
+---
+
 ## 2026-04-17 · Patient Flow Pipeline removed from Horizon
 
 **Context.** Horizon had a full-width Patient Flow Pipeline card

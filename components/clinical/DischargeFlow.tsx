@@ -88,28 +88,28 @@ const DISPOSITIONS: DispositionOption[] = [
     id: 'home',
     label: 'Home',
     description: 'Patient is safe to discharge home with or without home health services.',
-    icon: <Home size={20} />,
+    icon: <Home size={23} />,
     tone: 'ok',
   },
   {
     id: 'snf',
     label: 'Skilled Nursing Facility',
     description: 'Patient requires skilled nursing care beyond what can be provided at home.',
-    icon: <Building2 size={20} />,
+    icon: <Building2 size={23} />,
     tone: 'info',
   },
   {
     id: 'transfer',
     label: 'Transfer to Another Facility',
     description: 'Patient requires services not available at this facility.',
-    icon: <Ambulance size={20} />,
+    icon: <Ambulance size={23} />,
     tone: 'warn',
   },
   {
     id: 'ama',
     label: 'Against Medical Advice',
     description: 'Patient is leaving against medical advice. AMA form and documentation required.',
-    icon: <AlertTriangle size={20} />,
+    icon: <AlertTriangle size={23} />,
     tone: 'crit',
   },
 ];
@@ -261,7 +261,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 11,
+                  fontSize: 13,
                   fontFamily: FONTS.mono,
                   fontWeight: 600,
                   color: isDone ? COLORS.textPrimary : isCurrent ? COLORS.accent : COLORS.textMuted,
@@ -305,7 +305,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
       {/* Checklist */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-          <ClipboardCheck size={15} color={COLORS.textMuted} />
+          <ClipboardCheck size={17} color={COLORS.textMuted} />
           <Mono tone="secondary" size="sm">Discharge Readiness</Mono>
           <div style={{ flex: 1 }} />
           <Mono tone={allChecked ? 'ok' : 'warn'} size="xs">
@@ -355,7 +355,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                     <motion.span
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      style={{ fontSize: 13, color: COLORS.ok, lineHeight: 1 }}
+                      style={{ fontSize: 15, color: COLORS.ok, lineHeight: 1 }}
                     >
                       {'\u2713'}
                     </motion.span>
@@ -392,7 +392,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
 
       {!allChecked && (
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, padding: `0 ${SPACE.xs}px` }}>
-          <AlertTriangle size={13} color={COLORS.warn} />
+          <AlertTriangle size={15} color={COLORS.warn} />
           <Mono tone="warn" size="xs">
             All items must be verified before proceeding
           </Mono>
@@ -507,7 +507,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
               </div>
               {isSelected && (
                 <div style={{ flexShrink: 0, alignSelf: 'center' }}>
-                  <CheckCircle2 size={20} color={toneColor} />
+                  <CheckCircle2 size={23} color={toneColor} />
                 </div>
               )}
             </motion.button>
@@ -523,7 +523,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
         >
           <TacticalCard padding="md" highlight>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <AlertTriangle size={15} color={COLORS.crit} />
+              <AlertTriangle size={17} color={COLORS.crit} />
               <Mono tone="crit" size="sm">AMA Documentation Required</Mono>
             </div>
             <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, marginTop: SPACE.sm, lineHeight: 1.5 }}>
@@ -569,7 +569,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                       justifyContent: 'center',
                     }}
                   >
-                    <CheckCircle2 size={20} color={toneColor} />
+                    <CheckCircle2 size={23} color={toneColor} />
                   </div>
                   <div>
                     <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: toneColor }}>
@@ -695,7 +695,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                 cursor: 'pointer',
               }}
             >
-              <X size={15} />
+              <X size={17} />
             </button>
             <BracketLabel tone="accent" size="sm">Discharge Patient</BracketLabel>
             <div style={{ flex: 1 }} />
@@ -748,7 +748,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
               }}
             >
               {stepIndex > 0 && (
-                <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={15} />}>
+                <TacticalButton variant="ghost" onClick={goBack} icon={<ArrowLeft size={17} />}>
                   Back
                 </TacticalButton>
               )}
@@ -758,7 +758,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                   variant="primary"
                   onClick={goNext}
                   disabled={!canProceed}
-                  icon={<ArrowRight size={15} />}
+                  icon={<ArrowRight size={17} />}
                 >
                   {step === 'disposition' ? 'Review' : 'Next'}
                 </TacticalButton>

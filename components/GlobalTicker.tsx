@@ -57,7 +57,7 @@ export const GlobalTicker: React.FC<{ isSurgeActive: boolean }> = ({
           borderBottom: `1px solid ${border}`,
           color: fg,
           fontFamily: FONTS.mono,
-          fontSize: 12,
+          fontSize: 14,
           letterSpacing: '0.08em',
           overflow: 'hidden',
           whiteSpace: 'nowrap',
@@ -65,7 +65,7 @@ export const GlobalTicker: React.FC<{ isSurgeActive: boolean }> = ({
         }}
       >
         <AlertTriangle
-          size={13}
+          size={15}
           strokeWidth={2}
           className="pulse-ticker-icon"
           style={{ flexShrink: 0 }}
