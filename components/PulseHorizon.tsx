@@ -261,16 +261,19 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         height: '100%',
         overflowY: 'auto',
         background: COLORS.bg,
-        // Tighter frame so the whole HUD fits one viewport on 4K/5K
-        // displays without scroll. Dropped from SPACE['3xl']/SPACE.xl
-        // (40/24) to SPACE.xl/SPACE.lg (24/20) — saves ~52px vertical
-        // while keeping the tactical breathing room. (2026-04-17)
-        padding: SPACE.xl,
+        // 2026-04-17 (pass 3): 40px bottom HudStrip ticker eats viewport
+        // the previous passes didn't account for. Tightened outer frame
+        // again — padding SPACE.xl→SPACE.md (−24px) and gap
+        // SPACE.lg→SPACE.md (−32px across 4 section gaps). This plus the
+        // Forecast chart drop 280→220 buys ~115px. Density is still
+        // generous; cards keep their own internal SPACE.lg padding so
+        // the HUD doesn't feel cramped, just less wasteful.
+        padding: SPACE.md,
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         display: 'flex',
         flexDirection: 'column',
-        gap: SPACE.lg,
+        gap: SPACE.md,
       }}
     >
       {/* Page Header — HUD strip (full width so both columns below start on
@@ -335,7 +338,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         }}
       >
         {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, minWidth: 0 }}>
           {/* Stale Data Banner */}
           <AnimatePresence>
             {systemStatus === 'stale' && (
@@ -502,13 +505,15 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </div>
 
-            {/* Chart — 280px keeps the forecast readable while letting the
-                whole Horizon fit in one viewport on 4K/5K displays. Was
-                340 before the 2026-04-17 single-viewport pass. */}
+            {/* Chart — 220px on pass 3 (was 280). The 40px bottom HudStrip
+                ticker takes viewport room that wasn't accounted for in the
+                first trim pass; this shrinks the tallest single element on
+                the page to claw it back. Still legible, still shows the
+                -30m → +90m range clearly. */}
             <div
               style={{
                 position: 'relative',
-                height: 280,
+                height: 220,
                 padding: SPACE.md,
                 overflow: 'hidden',
               }}
@@ -885,7 +890,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: SPACE.xl,
+            gap: SPACE.md,
             minWidth: 0,
           }}
         >
@@ -1310,7 +1315,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: SPACE.xl,
+          gap: SPACE.md,
           alignItems: 'stretch',
         }}
       >
