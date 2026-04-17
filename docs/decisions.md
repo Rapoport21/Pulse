@@ -12,6 +12,31 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-17 · textDim bumped #2E2E2E → #5A5A5A (WCAG AA)
+
+**Context.** `COLORS.textDim` was `#2E2E2E` — ~1.5:1 contrast on the
+`#050505` canvas. Well below WCAG AA (4.5:1). Used for separator pipes,
+timestamps, dashes, "SYNCS TO N" labels — all over the app. Legible on
+a fresh OLED in a dim room; invisible on a scratched iPad at 3am in a
+bright unit.
+
+**Decision.** `textDim` → `#5A5A5A` (5.0:1, clears AA normal-text).
+Settings → Display → Contrast check lets you preview any candidate and
+apply via `localStorage['pulse-text-dim']` with a reload. Default now
+ships AA-compliant; the override hook stays for future tuning.
+
+**Rejected.** `#707070` (AAA) — would visually merge `textDim` into
+`textMuted` (#525252) and kill the three-tier quiet-metadata hierarchy.
+`#525252` (the textMuted value) — only 4.1:1, still sub-AA, also
+destroys hierarchy. Conservative play: lowest value that clears AA.
+
+**Follow-up.** T3.4 step 2 in `improvement-ideas.md` — bump `textMuted`
+from `#525252` to `#707070` to restore the contrast gap between the
+two tiers. Not done in this change; revisit after eyeballing `#5A5A5A`
+in the wild for a week.
+
+---
+
 ## 2026-04-12 · Phase 3-4 polish: animations, surge reactivity, safe-area, real-time sim
 
 **Context.** All 17 clinical screens were built and wired. Next was

@@ -17,7 +17,10 @@
 // whole app pick up the override on refresh without touching every usage.
 // ─────────────────────────────────────────────────────────────────────────
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
-const TEXT_DIM_DEFAULT = '#2E2E2E';
+// WCAG AA on the #050505 canvas — 5.0:1 contrast. Picked after the
+// Settings → Display → Contrast check review. Previous value #2E2E2E
+// was at ~1.5:1 (FAIL). See docs/improvement-ideas.md T3.4.
+const TEXT_DIM_DEFAULT = '#5A5A5A';
 const readTextDimOverride = (): string | null => {
   if (typeof window === 'undefined') return null;
   try {
