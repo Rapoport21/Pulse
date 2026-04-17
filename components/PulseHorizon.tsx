@@ -322,7 +322,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           display: 'grid',
           gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)',
           gap: SPACE.xl,
-          alignItems: 'start',
+          // alignItems default (stretch) — RIGHT column's Drivers card has
+          // flex:1 so it expands to match the LEFT column's chart-driven
+          // height. Previously `alignItems: 'start'` locked both columns to
+          // their intrinsic content heights, which created a deep negative-
+          // space void under the LEFT column after the dense sub-widgets
+          // were moved out of the RIGHT column below.
         }}
       >
         {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
@@ -518,7 +523,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   <XAxis
                     dataKey="time"
                     stroke={COLORS.textMuted}
-                    fontSize={11}
+                    fontSize={12}
                     fontFamily={FONTS.mono}
                     tickMargin={8}
                     axisLine={{ stroke: COLORS.border }}
@@ -526,7 +531,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   />
                   <YAxis
                     stroke={COLORS.textMuted}
-                    fontSize={11}
+                    fontSize={12}
                     fontFamily={FONTS.mono}
                     domain={[0, 130]}
                     ticks={[0, 50, 100]}
@@ -1266,182 +1271,209 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </div>
           </TacticalCard>
-
-          {/* Bed Board — compact dashboard tile */}
-          <BedBoard
-            display="card"
-            units={bedUnits}
-            surgeActive={isSurgeActive}
-            onExpand={() => setShowBedBoard(true)}
-          />
-
-          {/* ── Operational Quick Actions ── */}
-          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-              <Zap size={17} strokeWidth={2} color={COLORS.textSecondary} />
-              <Mono tone="primary" size="sm">Command Actions</Mono>
-              <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.sm }}>
-              {[
-                { label: 'Activate Surge', icon: <ShieldAlert size={17} />, color: COLORS.crit, onClick: () => showToast?.('Surge activation requires confirmation', 'info') },
-                { label: 'Divert EMS', icon: <Ambulance size={17} />, color: COLORS.warn, onClick: () => showToast?.('Ambulance diversion toggled', 'info') },
-                { label: 'Lock Unit', icon: <Building2 size={17} />, color: '#F97316', onClick: () => showToast?.('Select unit to lock/unlock', 'info') },
-                { label: 'Page On-Call', icon: <Bell size={17} />, color: COLORS.info, onClick: () => showToast?.('Paging on-call team', 'info') },
-                { label: 'Request Float', icon: <Users size={17} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.STAFFING) },
-                { label: 'EVS Stat', icon: <Wind size={17} />, color: COLORS.ok, onClick: () => showToast?.('EVS stat request sent', 'success') },
-                { label: 'Capacity Alert', icon: <AlertTriangle size={17} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.ALERTS) },
-                { label: 'Open Overflow', icon: <MapPin size={17} />, color: COLORS.warn, onClick: () => showToast?.('Overflow unit activation requires surge mode', 'info') },
-              ].map((action) => (
-                <div
-                  key={action.label}
-                  role="button"
-                  tabIndex={0}
-                  onClick={action.onClick}
-                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && action.onClick()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: SPACE.sm,
-                    padding: `${SPACE.sm}px ${SPACE.md}px`,
-                    background: COLORS.bgDeep,
-                    border: `1px solid ${COLORS.border}`,
-                    borderRadius: RADIUS.sm,
-                    cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.borderHover; e.currentTarget.style.background = COLORS.surfaceElev; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.background = COLORS.bgDeep; }}
-                >
-                  <span style={{ color: action.color, flexShrink: 0 }}>{action.icon}</span>
-                  <span style={{ fontFamily: FONTS.sans, fontSize: 15, fontWeight: 500, color: COLORS.textPrimary, letterSpacing: '-0.005em' }}>
-                    {action.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </TacticalCard>
-
-          {/* ── Census & Throughput KPI Strip ── */}
-          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-              <Activity size={17} strokeWidth={2} color={COLORS.textSecondary} />
-              <Mono tone="primary" size="sm">Census & Throughput</Mono>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE.md }}>
-              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
-                <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
-                <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
-                </div>
-                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '▼ 14 FROM 6H AGO' : isSurgeActive ? '▲ 28 FROM 6H AGO' : '▲ 12 FROM 6H AGO'}
-                </Mono>
-              </div>
-              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
-                <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
-                <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '45m' : isSurgeActive ? '125m' : '98m'}
-                </div>
-                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'crit'} size="xs" style={{ marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? 'WITHIN TARGET' : 'EXCEEDS THRESHOLD'}
-                </Mono>
-              </div>
-              <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm }}>
-                <Mono tone="muted" size="xs">STAFF RATIO</Mono>
-                <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? '1:4.2' : isSurgeActive ? '1:6.1' : '1:5.3'}
-                </div>
-                <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
-                  {loginCount > 1 && !isSurgeActive ? 'OPTIMAL' : isSurgeActive ? 'ABOVE SAFE LIMIT' : 'MONITOR'}
-                </Mono>
-              </div>
-            </div>
-          </TacticalCard>
-
-          {/* ── Active Alerts Feed ── */}
-          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                <Bell size={17} strokeWidth={2} color={COLORS.crit} />
-                <Mono tone="primary" size="sm">Active Alerts</Mono>
-                <StatusPill label={isSurgeActive ? '8 ACTIVE' : '4 ACTIVE'} tone="crit" pulse />
-              </div>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => onNavigateTab?.(Tab.ALERTS)}
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
-              >
-                <Mono tone="accent" size="xs">VIEW ALL</Mono>
-                <ChevronRight size={13} color={COLORS.accent} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
-              {[
-                { level: 'crit' as const, msg: 'ICU bed capacity at 83% — 1 bed available', time: '2m ago' },
-                { level: 'warn' as const, msg: 'ED wait time exceeds 90min threshold', time: '8m ago' },
-                { level: 'crit' as const, msg: 'Nurse:patient ratio 1:6.1 in 2-West (target 1:4)', time: '15m ago' },
-                { level: 'warn' as const, msg: 'EVS turnover backlog: 4 beds pending clean', time: '22m ago' },
-              ].map((alert, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: SPACE.md,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: alert.level === 'crit' ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)',
-                  border: `1px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}20`,
-                  borderLeft: `3px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
-                  borderRadius: RADIUS.sm,
-                }}>
-                  <div style={{
-                    width: 6, height: 6, borderRadius: RADIUS.full, flexShrink: 0,
-                    background: alert.level === 'crit' ? COLORS.crit : COLORS.warn,
-                    boxShadow: `0 0 6px ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
-                  }} />
-                  <span style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textPrimary }}>
-                    {alert.msg}
-                  </span>
-                  <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>{alert.time}</Mono>
-                </div>
-              ))}
-            </div>
-          </TacticalCard>
-
-          {/* ── Department Flow Pipeline ── */}
-          <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-              <ArrowRight size={17} strokeWidth={2} color={COLORS.textSecondary} />
-              <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              {[
-                { label: 'WAITING', count: isSurgeActive ? 14 : 6, color: COLORS.warn },
-                { label: 'IN ED', count: isSurgeActive ? 22 : 18, color: COLORS.info },
-                { label: 'BOARDING', count: isSurgeActive ? 8 : 3, color: COLORS.crit },
-                { label: 'ADMITTED', count: isSurgeActive ? 4 : 3, color: '#A855F7' },
-                { label: 'DC READY', count: isSurgeActive ? 2 : 4, color: COLORS.ok },
-              ].map((stage, i) => (
-                <React.Fragment key={stage.label}>
-                  {i > 0 && <ChevronRight size={15} color={COLORS.textDim} style={{ flexShrink: 0 }} />}
-                  <div style={{
-                    flex: 1,
-                    padding: `${SPACE.md}px ${SPACE.sm}px`,
-                    background: COLORS.bgDeep,
-                    border: `1px solid ${COLORS.border}`,
-                    borderTop: `2px solid ${stage.color}`,
-                    borderRadius: RADIUS.sm,
-                    textAlign: 'center',
-                  }}>
-                    <div style={{ fontFamily: FONTS.sans, fontSize: 31, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
-                      {stage.count}
-                    </div>
-                    <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>{stage.label}</Mono>
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </TacticalCard>
         </div>
       </div>
+
+      {/* ══════════════════════════════ FULL-WIDTH OPERATIONS ROW ══════════════════════════════
+          These were originally stacked inside the RIGHT column, but their
+          combined height ran 800+px deeper than the LEFT column's chart
+          stack — creating a huge negative-space void to the left of the
+          census/alerts/pipeline widgets. Hoisting them out of the grid
+          and laying them horizontally below the forecast returns to a
+          standard HUD rhythm: wide-scan forecast up top, operations
+          density below. (2026-04-17)                                       */}
+
+      {/* Bed Board — compact dashboard tile (full-width; its mini bed grid
+          flex-wraps naturally so extra horizontal room just spreads the
+          per-unit rows rather than padding the chrome.) */}
+      <BedBoard
+        display="card"
+        units={bedUnits}
+        surgeActive={isSurgeActive}
+        onExpand={() => setShowBedBoard(true)}
+      />
+
+      {/* 3-col operations row: Command Actions | Census & Throughput | Active Alerts.
+          Equal 1fr columns — each card's internal density (4-col button
+          grid, 3-tile KPI strip, vertical alert stack) is self-contained
+          and balances visually at ~1/3 widths on desktop. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: SPACE.xl,
+          alignItems: 'stretch',
+        }}
+      >
+        {/* ── Operational Quick Actions ── */}
+        <TacticalCard padding="md" style={{ padding: SPACE.lg, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+            <Zap size={17} strokeWidth={2} color={COLORS.textSecondary} />
+            <Mono tone="primary" size="sm">Command Actions</Mono>
+            <div style={{ flex: 1, height: 1, background: `linear-gradient(90deg, ${COLORS.border}, transparent)` }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: 'min-content', gap: SPACE.sm, flex: 1, alignContent: 'start' }}>
+            {[
+              { label: 'Activate Surge', icon: <ShieldAlert size={17} />, color: COLORS.crit, onClick: () => showToast?.('Surge activation requires confirmation', 'info') },
+              { label: 'Divert EMS', icon: <Ambulance size={17} />, color: COLORS.warn, onClick: () => showToast?.('Ambulance diversion toggled', 'info') },
+              { label: 'Lock Unit', icon: <Building2 size={17} />, color: '#F97316', onClick: () => showToast?.('Select unit to lock/unlock', 'info') },
+              { label: 'Page On-Call', icon: <Bell size={17} />, color: COLORS.info, onClick: () => showToast?.('Paging on-call team', 'info') },
+              { label: 'Request Float', icon: <Users size={17} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.STAFFING) },
+              { label: 'EVS Stat', icon: <Wind size={17} />, color: COLORS.ok, onClick: () => showToast?.('EVS stat request sent', 'success') },
+              { label: 'Capacity Alert', icon: <AlertTriangle size={17} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.ALERTS) },
+              { label: 'Open Overflow', icon: <MapPin size={17} />, color: COLORS.warn, onClick: () => showToast?.('Overflow unit activation requires surge mode', 'info') },
+            ].map((action) => (
+              <div
+                key={action.label}
+                role="button"
+                tabIndex={0}
+                onClick={action.onClick}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && action.onClick()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: SPACE.sm,
+                  padding: `${SPACE.sm}px ${SPACE.md}px`,
+                  background: COLORS.bgDeep,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  cursor: 'pointer',
+                  transition: `all ${MOTION.fast}s ease`,
+                  minWidth: 0,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.borderHover; e.currentTarget.style.background = COLORS.surfaceElev; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.border; e.currentTarget.style.background = COLORS.bgDeep; }}
+              >
+                <span style={{ color: action.color, flexShrink: 0 }}>{action.icon}</span>
+                <span style={{ fontFamily: FONTS.sans, fontSize: 15, fontWeight: 500, color: COLORS.textPrimary, letterSpacing: '-0.005em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {action.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </TacticalCard>
+
+        {/* ── Census & Throughput KPI Strip ── */}
+        <TacticalCard padding="md" style={{ padding: SPACE.lg, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+            <Activity size={17} strokeWidth={2} color={COLORS.textSecondary} />
+            <Mono tone="primary" size="sm">Census & Throughput</Mono>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, flex: 1 }}>
+            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+              <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
+              </div>
+              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? '▼ 14 FROM 6H AGO' : isSurgeActive ? '▲ 28 FROM 6H AGO' : '▲ 12 FROM 6H AGO'}
+              </Mono>
+            </div>
+            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+              <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? '45m' : isSurgeActive ? '125m' : '98m'}
+              </div>
+              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'crit'} size="xs" style={{ marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? 'WITHIN TARGET' : 'EXCEEDS THRESHOLD'}
+              </Mono>
+            </div>
+            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+              <Mono tone="muted" size="xs">STAFF RATIO</Mono>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? '1:4.2' : isSurgeActive ? '1:6.1' : '1:5.3'}
+              </div>
+              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
+                {loginCount > 1 && !isSurgeActive ? 'OPTIMAL' : isSurgeActive ? 'ABOVE SAFE LIMIT' : 'MONITOR'}
+              </Mono>
+            </div>
+          </div>
+        </TacticalCard>
+
+        {/* ── Active Alerts Feed ── */}
+        <TacticalCard padding="md" style={{ padding: SPACE.lg, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+              <Bell size={17} strokeWidth={2} color={COLORS.crit} />
+              <Mono tone="primary" size="sm">Active Alerts</Mono>
+              <StatusPill label={isSurgeActive ? '8 ACTIVE' : '4 ACTIVE'} tone="crit" pulse />
+            </div>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => onNavigateTab?.(Tab.ALERTS)}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}
+            >
+              <Mono tone="accent" size="xs">VIEW ALL</Mono>
+              <ChevronRight size={13} color={COLORS.accent} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, flex: 1 }}>
+            {[
+              { level: 'crit' as const, msg: 'ICU bed capacity at 83% — 1 bed available', time: '2m ago' },
+              { level: 'warn' as const, msg: 'ED wait time exceeds 90min threshold', time: '8m ago' },
+              { level: 'crit' as const, msg: 'Nurse:patient ratio 1:6.1 in 2-West (target 1:4)', time: '15m ago' },
+              { level: 'warn' as const, msg: 'EVS turnover backlog: 4 beds pending clean', time: '22m ago' },
+            ].map((alert, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: SPACE.md,
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                background: alert.level === 'crit' ? 'rgba(239,68,68,0.06)' : 'rgba(245,158,11,0.06)',
+                border: `1px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}20`,
+                borderLeft: `3px solid ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
+                borderRadius: RADIUS.sm,
+                flex: 1,
+                minHeight: 0,
+              }}>
+                <div style={{
+                  width: 6, height: 6, borderRadius: RADIUS.full, flexShrink: 0,
+                  background: alert.level === 'crit' ? COLORS.crit : COLORS.warn,
+                  boxShadow: `0 0 6px ${alert.level === 'crit' ? COLORS.crit : COLORS.warn}`,
+                }} />
+                <span style={{ flex: 1, fontFamily: FONTS.sans, fontSize: 14, color: COLORS.textPrimary, minWidth: 0 }}>
+                  {alert.msg}
+                </span>
+                <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>{alert.time}</Mono>
+              </div>
+            ))}
+          </div>
+        </TacticalCard>
+      </div>
+
+      {/* ── Department Flow Pipeline (full-width) ── */}
+      <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+          <ArrowRight size={17} strokeWidth={2} color={COLORS.textSecondary} />
+          <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+          {[
+            { label: 'WAITING', count: isSurgeActive ? 14 : 6, color: COLORS.warn },
+            { label: 'IN ED', count: isSurgeActive ? 22 : 18, color: COLORS.info },
+            { label: 'BOARDING', count: isSurgeActive ? 8 : 3, color: COLORS.crit },
+            { label: 'ADMITTED', count: isSurgeActive ? 4 : 3, color: '#A855F7' },
+            { label: 'DC READY', count: isSurgeActive ? 2 : 4, color: COLORS.ok },
+          ].map((stage, i) => (
+            <React.Fragment key={stage.label}>
+              {i > 0 && <ChevronRight size={15} color={COLORS.textDim} style={{ flexShrink: 0 }} />}
+              <div style={{
+                flex: 1,
+                padding: `${SPACE.md}px ${SPACE.sm}px`,
+                background: COLORS.bgDeep,
+                border: `1px solid ${COLORS.border}`,
+                borderTop: `2px solid ${stage.color}`,
+                borderRadius: RADIUS.sm,
+                textAlign: 'center',
+              }}>
+                <div style={{ fontFamily: FONTS.sans, fontSize: 31, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
+                  {stage.count}
+                </div>
+                <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>{stage.label}</Mono>
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+      </TacticalCard>
 
       {/* Bed Board fullscreen overlay */}
       <BedBoard
