@@ -49,6 +49,52 @@ interface PresenceMeta {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Optimistic concurrency: versioned envelope for state-update payloads.
+//
+// Each synced key tracks a Lamport-style counter + the last-writer's device id
+// so concurrent edits resolve deterministically instead of permanently
+// diverging. Tiebreak: higher device id (lex string compare) wins at equal
+// version. The losing device surfaces a `lost-edit` event so the UI can show
+// a toast.
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface VersionEnvelope<T = unknown> {
+  /** Lamport version, per key. */
+  __v: number;
+  /** Device id that authored this version (tiebreak key). */
+  __d: string;
+  /** Human-friendly wall-clock timestamp (debug only). */
+  __t: number;
+  /** The actual value being synced. */
+  value: T;
+}
+
+function isEnvelope(p: unknown): p is VersionEnvelope {
+  return (
+    p !== null &&
+    typeof p === 'object' &&
+    '__v' in p &&
+    typeof (p as { __v: unknown }).__v === 'number' &&
+    '__d' in p &&
+    typeof (p as { __d: unknown }).__d === 'string' &&
+    'value' in p
+  );
+}
+
+export interface LostEditInfo {
+  /** useRealtimeState key whose optimistic write was clobbered. */
+  key: string;
+  /** Our version at the time of the lost write. */
+  localVersion: number;
+  /** The winning version that overwrote us. */
+  incomingVersion: number;
+  /** The device that published the winning version. */
+  incomingDevice: string;
+  /** Wall-clock ts of the winning payload (debug). */
+  at: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Per-device identity
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -108,6 +154,10 @@ interface RealtimeStore {
   latencyMs: number;
   // Pending state-request promises waiting on a state-response.
   pendingStateRequests: Map<string, (value: unknown) => void>;
+  // Per-key Lamport version + last writer for optimistic concurrency.
+  versions: Map<string, { version: number; device: string }>;
+  // Subscribers for the 'lost-edit' signal.
+  lostEditSubs: Set<(info: LostEditInfo) => void>;
 }
 
 const store: RealtimeStore = {
@@ -124,6 +174,8 @@ const store: RealtimeStore = {
   logSubs: new Set(),
   latencyMs: 0,
   pendingStateRequests: new Map(),
+  versions: new Map(),
+  lostEditSubs: new Set(),
 };
 
 const LOG_MAX = 50;
@@ -145,13 +197,23 @@ function setPresence(devices: string[]) {
   store.presenceSubs.forEach((fn) => fn([...devices]));
 }
 
-function previewPayload(p: unknown): string {
+function previewRaw(p: unknown): string {
   try {
     const s = JSON.stringify(p);
     return s && s.length > 120 ? s.slice(0, 120) + '…' : s || '';
   } catch {
     return String(p);
   }
+}
+
+function previewPayload(p: unknown): string {
+  // Unwrap version envelopes so the debug log shows the actual payload
+  // annotated with the Lamport version instead of the raw `__v/__d/__t`
+  // wrapper every time.
+  if (isEnvelope(p)) {
+    return `v=${p.__v} · ${previewRaw(p.value)}`;
+  }
+  return previewRaw(p);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -261,28 +323,125 @@ function handleIncoming(data: OutgoingMessage) {
   store.eventSubs.get(data.type)?.forEach((fn) => fn(data.payload));
 
   if (data.type === 'state-update' && data.key) {
-    // Update local cache and notify cache subscribers WITHOUT re-publishing.
-    store.cache.set(data.key, data.payload);
-    store.cacheSubs.get(data.key)?.forEach((fn) => fn(data.payload));
+    // Envelope-aware write with Lamport ordering. Back-compat: if an older
+    // client sent a raw payload (no envelope), treat it as version 0 from an
+    // unknown device — the next versioned write will win trivially.
+    const key = data.key;
+    let incomingVersion = 0;
+    let incomingDevice = '';
+    let incomingValue: unknown;
+    if (isEnvelope(data.payload)) {
+      incomingVersion = data.payload.__v;
+      incomingDevice = data.payload.__d;
+      incomingValue = data.payload.value;
+    } else {
+      incomingValue = data.payload;
+    }
+
+    const local = store.versions.get(key) ?? { version: 0, device: '' };
+
+    // Accept if strictly newer, or equal version with a higher device-id
+    // tiebreak. Reject stale or tied-but-lower updates.
+    const accept =
+      incomingVersion > local.version ||
+      (incomingVersion === local.version && incomingDevice > DEVICE_ID) ||
+      // First-ever update for this key — nothing local to compare against.
+      (local.version === 0 && incomingVersion > 0);
+
+    if (!accept) {
+      appendLog({
+        ts: Date.now(),
+        direction: 'in',
+        type: 'state-drop',
+        key,
+        payloadPreview: `stale v=${incomingVersion} (local v=${local.version})`,
+        source: data.source,
+      });
+      return;
+    }
+
+    // Detect a concurrent-edit collision: we held a version at the same
+    // number from ourselves, the incoming came in equal and won the
+    // tiebreak — our optimistic write just got clobbered. Fire lost-edit
+    // so the UI can toast the operator.
+    const wasOurs = local.device === DEVICE_ID;
+    const wasConcurrent = incomingVersion === local.version && local.version > 0;
+    if (wasOurs && wasConcurrent) {
+      const info: LostEditInfo = {
+        key,
+        localVersion: local.version,
+        incomingVersion,
+        incomingDevice,
+        at: Date.now(),
+      };
+      store.lostEditSubs.forEach((fn) => {
+        try {
+          fn(info);
+        } catch (e) {
+          console.warn('[realtime] lost-edit handler threw', e);
+        }
+      });
+      appendLog({
+        ts: Date.now(),
+        direction: 'in',
+        type: 'lost-edit',
+        key,
+        payloadPreview: `our v=${local.version} lost to ${incomingDevice.slice(0, 8)}`,
+        source: data.source,
+      });
+    }
+
+    store.cache.set(key, incomingValue);
+    store.versions.set(key, {
+      version: incomingVersion,
+      device: incomingDevice,
+    });
+    store.cacheSubs.get(key)?.forEach((fn) => fn(incomingValue));
   } else if (data.type === 'state-request' && data.key) {
-    // Another device is asking — if we have it, respond.
+    // Another device is asking — if we have it, respond with both the
+    // current value and our version metadata so they can align.
     if (store.cache.has(data.key)) {
-      publish('state-response', { key: data.key, value: store.cache.get(data.key) });
+      const vmeta = store.versions.get(data.key) ?? {
+        version: 0,
+        device: DEVICE_ID,
+      };
+      publish('state-response', {
+        key: data.key,
+        value: store.cache.get(data.key),
+        version: vmeta.version,
+        device: vmeta.device,
+      });
     }
   } else if (data.type === 'state-response') {
-    const payload = data.payload as { key?: string; value?: unknown };
+    const payload = data.payload as {
+      key?: string;
+      value?: unknown;
+      version?: number;
+      device?: string;
+    };
     if (payload?.key && store.pendingStateRequests.has(payload.key)) {
       const resolver = store.pendingStateRequests.get(payload.key)!;
       store.pendingStateRequests.delete(payload.key);
       resolver(payload.value);
-      // Also stash in cache so subsequent mounts are instant.
+      // Adopt the peer's cache AND version so our next write is strictly
+      // newer (prevents starting at v=1 on top of a v=5 network state).
       store.cache.set(payload.key, payload.value);
+      if (
+        typeof payload.version === 'number' &&
+        typeof payload.device === 'string'
+      ) {
+        store.versions.set(payload.key, {
+          version: payload.version,
+          device: payload.device,
+        });
+      }
       store.cacheSubs.get(payload.key)?.forEach((fn) => fn(payload.value));
     }
   } else if (data.type === 'reset-all') {
-    // Clear cache and notify everyone.
+    // Clear cache + versions and notify everyone.
     const keys = Array.from(store.cache.keys());
     store.cache.clear();
+    store.versions.clear();
     keys.forEach((k) => {
       store.cacheSubs.get(k)?.forEach((fn) => fn(undefined));
     });
@@ -390,9 +549,51 @@ export function broadcastReset() {
   // Also reset locally.
   const keys = Array.from(store.cache.keys());
   store.cache.clear();
+  store.versions.clear();
   keys.forEach((k) => {
     store.cacheSubs.get(k)?.forEach((fn) => fn(undefined));
   });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Optimistic concurrency: lost-edit subscription
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Subscribe to `lost-edit` events. Fires when this device authored the
+ * latest version for a synced key and a peer's concurrent write at the
+ * same version won the tiebreak — i.e. our optimistic edit was silently
+ * clobbered by another device.
+ *
+ * Returns an unsubscribe function.
+ */
+export function onLostEdit(
+  handler: (info: LostEditInfo) => void,
+): () => void {
+  ensureInit();
+  store.lostEditSubs.add(handler);
+  return () => {
+    store.lostEditSubs.delete(handler);
+  };
+}
+
+/** React wrapper for onLostEdit. Handler is kept up-to-date via a ref. */
+export function useLostEditListener(
+  handler: (info: LostEditInfo) => void,
+): void {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+  useEffect(() => {
+    return onLostEdit((info) => handlerRef.current(info));
+  }, []);
+}
+
+/** Debug helper — read a key's current Lamport version + last writer. */
+export function getVersionMeta(
+  key: string,
+): { version: number; device: string } | null {
+  const meta = store.versions.get(key);
+  return meta ? { ...meta } : null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -480,8 +681,14 @@ export function useRealtimeState<T>(
     const prev = (store.cache.has(key) ? store.cache.get(key) : value) as T;
     const resolved = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
 
-    // 1. Update local cache (synchronous — subsequent calls see this immediately)
+    // Lamport increment: always strictly greater than whatever we've seen
+    // for this key (our own writes + any peer-adopted versions).
+    const currentVersion = store.versions.get(key)?.version ?? 0;
+    const nextVersion = currentVersion + 1;
+
+    // 1. Update local cache + version side-table (synchronous)
     store.cache.set(key, resolved);
+    store.versions.set(key, { version: nextVersion, device: DEVICE_ID });
 
     // 2. Set React state (batched by React, but that's fine — UI catches up)
     setValue(resolved);
@@ -489,8 +696,14 @@ export function useRealtimeState<T>(
     // 3. Notify other local subscribers sharing this key on the same device
     store.cacheSubs.get(key)?.forEach((fn) => fn(resolved));
 
-    // 4. Broadcast to other devices — outside setState, guaranteed to fire
-    publish('state-update', resolved, key);
+    // 4. Broadcast versioned envelope — outside setState, guaranteed to fire
+    const envelope: VersionEnvelope<T> = {
+      __v: nextVersion,
+      __d: DEVICE_ID,
+      __t: Date.now(),
+      value: resolved,
+    };
+    publish('state-update', envelope, key);
   };
 
   return [value, setAndPublish];

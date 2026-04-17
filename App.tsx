@@ -50,7 +50,14 @@ import { PatientsPage } from './components/PatientsPage';
 import { MOCK_PATIENTS } from './data/clinicalMock';
 import type { Patient, Vital, Encounter, ClinicalNote } from './types';
 import { seedBedState, escalateBedState, deescalateBedState, type BedUnit } from './data/bedMock';
-import { useRealtimeState, useRealtimePing, subscribe, publish, broadcastReset } from './lib/realtime';
+import {
+  useRealtimeState,
+  useRealtimePing,
+  useLostEditListener,
+  subscribe,
+  publish,
+  broadcastReset,
+} from './lib/realtime';
 import {
   buildInitialUrgentTasks,
   INITIAL_SURGE_STATE,
@@ -76,6 +83,19 @@ import {
   HudStrip,
   ScanningLine,
 } from './components/design';
+
+// Friendly labels for the lost-edit toast. Maps useRealtimeState keys to
+// human-readable names so the operator sees "Bed assignments" instead of
+// "bed-units" when a concurrent edit wins the tiebreak.
+const LOST_EDIT_LABELS: Record<string, string> = {
+  'surge-mode': 'Surge state',
+  'urgent-tasks': 'Urgent tasks',
+  'bed-units': 'Bed assignments',
+  'admission-queue': 'Admission queue',
+  'patients': 'Patient chart',
+  'clinical-notes': 'Clinical notes',
+  'alert-acks': 'Alert acknowledgment',
+};
 
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
@@ -523,6 +543,17 @@ function App() {
       }
     });
   }, []);
+
+  // Optimistic-concurrency surface: when a concurrent edit on another
+  // device overwrites our version at the same Lamport counter, toast the
+  // operator so they know their change landed under someone else's.
+  useLostEditListener((info) => {
+    const label = LOST_EDIT_LABELS[info.key] ?? info.key;
+    setToast({
+      message: `Lost edit · ${label} was just updated on another device`,
+      type: 'info',
+    });
+  });
 
   useEffect(() => {
     if (toast) {
