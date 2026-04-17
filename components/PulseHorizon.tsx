@@ -261,12 +261,16 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         height: '100%',
         overflowY: 'auto',
         background: COLORS.bg,
-        padding: SPACE['3xl'],
+        // Tighter frame so the whole HUD fits one viewport on 4K/5K
+        // displays without scroll. Dropped from SPACE['3xl']/SPACE.xl
+        // (40/24) to SPACE.xl/SPACE.lg (24/20) — saves ~52px vertical
+        // while keeping the tactical breathing room. (2026-04-17)
+        padding: SPACE.xl,
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         display: 'flex',
         flexDirection: 'column',
-        gap: SPACE.xl,
+        gap: SPACE.lg,
       }}
     >
       {/* Page Header — HUD strip (full width so both columns below start on
@@ -498,11 +502,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             </div>
 
-            {/* Chart */}
+            {/* Chart — 280px keeps the forecast readable while letting the
+                whole Horizon fit in one viewport on 4K/5K displays. Was
+                340 before the 2026-04-17 single-viewport pass. */}
             <div
               style={{
                 position: 'relative',
-                height: 340,
+                height: 280,
                 padding: SPACE.md,
                 overflow: 'hidden',
               }}
@@ -730,7 +736,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  minHeight: 260,
+                  // 220 (was 260) as part of the 2026-04-17 single-viewport
+                  // pass — still leaves enough vertical room for the two-line
+                  // recommendation copy + CTA + status pill.
+                  minHeight: 220,
                 }}
               >
                 <div>
@@ -1353,34 +1362,38 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           </div>
         </TacticalCard>
 
-        {/* ── Census & Throughput KPI Strip ── */}
+        {/* ── Census & Throughput KPI Strip ──
+            2026-04-17: tightened tile padding SPACE.md→SPACE.sm and hero
+            fontSize 40→30 for the single-viewport pass. This was the
+            tallest card in the 3-col ops row; trimming it lets the whole
+            row settle ~50px shorter without reflowing its siblings. */}
         <TacticalCard padding="md" style={{ padding: SPACE.lg, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
             <Activity size={17} strokeWidth={2} color={COLORS.textSecondary} />
             <Mono tone="primary" size="sm">Census & Throughput</Mono>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, flex: 1 }}>
-            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, flex: 1 }}>
+            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
               <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
                 {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
               </div>
               <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
                 {loginCount > 1 && !isSurgeActive ? '▼ 14 FROM 6H AGO' : isSurgeActive ? '▲ 28 FROM 6H AGO' : '▲ 12 FROM 6H AGO'}
               </Mono>
             </div>
-            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
               <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
                 {loginCount > 1 && !isSurgeActive ? '45m' : isSurgeActive ? '125m' : '98m'}
               </div>
               <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'crit'} size="xs" style={{ marginTop: 4 }}>
                 {loginCount > 1 && !isSurgeActive ? 'WITHIN TARGET' : 'EXCEEDS THRESHOLD'}
               </Mono>
             </div>
-            <div style={{ padding: SPACE.md, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
               <Mono tone="muted" size="xs">STAFF RATIO</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 40, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
                 {loginCount > 1 && !isSurgeActive ? '1:4.2' : isSurgeActive ? '1:6.1' : '1:5.3'}
               </div>
               <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
@@ -1440,9 +1453,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         </TacticalCard>
       </div>
 
-      {/* ── Department Flow Pipeline (full-width) ── */}
-      <TacticalCard padding="md" style={{ padding: SPACE.lg }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
+      {/* ── Department Flow Pipeline (full-width) ──
+          2026-04-17: stage padding SPACE.md→SPACE.sm, hero fontSize
+          31→26, card padding SPACE.lg→SPACE.md as part of the
+          single-viewport pass — trims ~30px off the card without
+          compromising chevron-flow readability. */}
+      <TacticalCard padding="md" style={{ padding: SPACE.md }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>
           <ArrowRight size={17} strokeWidth={2} color={COLORS.textSecondary} />
           <Mono tone="primary" size="sm">Patient Flow Pipeline</Mono>
         </div>
@@ -1458,14 +1475,14 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               {i > 0 && <ChevronRight size={15} color={COLORS.textDim} style={{ flexShrink: 0 }} />}
               <div style={{
                 flex: 1,
-                padding: `${SPACE.md}px ${SPACE.sm}px`,
+                padding: `${SPACE.sm}px ${SPACE.sm}px`,
                 background: COLORS.bgDeep,
                 border: `1px solid ${COLORS.border}`,
                 borderTop: `2px solid ${stage.color}`,
                 borderRadius: RADIUS.sm,
                 textAlign: 'center',
               }}>
-                <div style={{ fontFamily: FONTS.sans, fontSize: 31, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
+                <div style={{ fontFamily: FONTS.sans, fontSize: 26, fontWeight: 600, color: stage.color, lineHeight: 1 }}>
                   {stage.count}
                 </div>
                 <Mono tone="muted" size="xs" style={{ marginTop: 4 }}>{stage.label}</Mono>
