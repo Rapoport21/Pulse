@@ -19,6 +19,60 @@ Each entry: what's there now → why it matters → what to do.
 
 ---
 
+## Recently shipped (April 2026)
+
+Tracked here instead of deleting the original entries — the "what to do"
+sections on the done items still contain useful detail about *how* it
+got done. Jump to [`docs/decisions.md`](./decisions.md) for the ADRs.
+
+**Fully shipped:**
+
+- ✓ **T1.5 · Clinical data model (FHIR-compatible)** — `types.ts` now
+  carries FHIR R4-aligned `Patient`, `Encounter`, `Vital`, `Allergy`,
+  `Problem`, `MedicationOrder`, `Note`, `CodeStatus`, `Isolation`.
+- ✓ **T1.8 · Early warning scores (MEWS / NEWS2 / qSOFA)** —
+  `lib/clinicalScores.ts` + surfaced on `PatientHeaderStrip`.
+- ✓ **T2.10 · EMS incoming board** — `components/clinical/EmsInboundBoard.tsx`.
+- ✓ **T2.11 · Vitals capture + trending** — `components/clinical/VitalsPanel.tsx`.
+- ✓ **T3.4 · textDim contrast (step 1)** — `#2E2E2E → #5A5A5A` (WCAG AA).
+  *Step 2 (bump `textMuted`) still pending.*
+
+**Substantially shipped (primary surface built, follow-ups remain):**
+
+- ⟂ **T1.3 · Persistence with conflict resolution** — version fields
+  + `LOST EDIT` toast shipped; automatic merge still open.
+- ⟂ **T1.7 · Patient identity (code status / allergies / isolation)** —
+  `components/clinical/PatientHeaderStrip.tsx`.
+- ⟂ **T1.9 · ESI triage intake flow** — `components/clinical/ESITriageScreen.tsx`.
+- ⟂ **T2.8 · Role-based messaging** — `components/clinical/SecureMessaging.tsx`
+  ships DM + role broadcast. Escalation chains + SLA timers not yet.
+- ⟂ **T2.9 · Mutable bed board** — `components/clinical/BedBoard.tsx`
+  is the 1800-line command surface; holding-area zone is a row, not a grid.
+- ⟂ **T2.16 · SOAP / I-PASS handoff composer** —
+  `components/clinical/HandoffComposer.tsx` replaces the freeform textarea.
+- ⟂ **T2.24 · Charge Nurse assignment** —
+  `components/clinical/WorkforceCoverage.tsx`.
+- ⟂ **T2.25 · ER Physician track board** — `RoundingList.tsx` + `OrderEntry.tsx`.
+- ⟂ **T2.31 · Nurse-call + alarm aggregation** —
+  `components/clinical/AlertsCenter.tsx`.
+- ⟂ **T4.4 · Crash reporting** — tactical `ErrorBoundary` with 3s
+  auto-reload shipped; Sentry not yet.
+
+**New since the original list:**
+
+- Trauma promoted to a first-class `UserRole` (not an ER variant) —
+  every role-dispatched view branches on four values now, not three.
+- Mobile IA locked at **5 tabs** after a 12-tab experiment reverted —
+  desktop-only surfaces live behind the hamburger, tabs are role-gated.
+- Holding-area admission flow — `BedAssignmentStatus` lets patients be
+  created `UNASSIGNED` and live in the worklist pre-bed.
+- 6-step `MobileAdmitFlow` wizard replaced the single long form.
+- Cross-device realtime via Supabase Broadcast — publish fires
+  **after** `setState` flush (not inside the callback).
+- `EmptyState` primitive covers every zero-state surface role-aware.
+
+---
+
 ## T1 · Ship-blockers
 
 ### T1.1 · Identity, not name-typing

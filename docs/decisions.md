@@ -76,6 +76,331 @@ in the wild for a week.
 
 ---
 
+## 2026-04-17 · Tactical error boundary with 3s auto-reload *(backfilled)*
+
+**Context.** Before Stage 6 a top-level crash in any surface dropped the
+user into React's default white fallback — white background, black
+sans-serif stack trace. Jarring on a dark tactical UI and useless on a
+locked iPhone at 3am. The demo can't afford a screen that says "Something
+went wrong" in Helvetica.
+
+**Decision.** `components/ErrorBoundary.tsx` wraps `<App />` in
+`index.tsx` and renders a tactical fallback on throw: red-scan canvas,
+`SYSTEM FAULT · RESTARTING IN N` ticker, auto-reload in 3 seconds. A
+hidden HOLD button + full stack-trace panel unlocks via `?debug=1` in
+the URL — invisible for the demo, available to me when things break.
+
+**Rejected.** Sentry integration (T4.4) — real answer but needs a
+backend, keys, PHI review. Out of scope for the show. Also rejected:
+manual "Reload" button only — if the nurse doesn't see the crash she
+can't tap it, auto-recovery wins.
+
+**Follow-up.** T4.4 still the path forward for production — add Sentry
+post-show once the backend exists. The tactical fallback is the
+permanent first line; Sentry is the reporting channel behind it.
+
+---
+
+## 2026-04-17 · Lamport version clock on shared records for lost-edit detection *(backfilled)*
+
+**Context.** Supabase Broadcast is last-write-wins. Two devices editing
+the same patient's vitals within a few hundred ms will silently clobber
+each other — the second `setState` call wins the local store and the
+broadcast, and the first edit vanishes without the operator knowing.
+Worst-case failure mode for a clinical tool.
+
+**Decision.** Every synced record (`Patient`, `ActionItem`, vitals row,
+note) carries a `version: number` field that monotonically increments
+on mutation. Before accepting an inbound broadcast, compare versions:
+if the inbound is older than what we have, drop it. If it's newer,
+apply. If it's equal-but-different, surface a `LOST EDIT` toast to the
+loser with a reload hint. This is Lamport-clock-lite — not true CRDT,
+but 95% of real conflicts become visible.
+
+**Rejected.** Full CRDT via Y.js or Automerge — overkill for our data
+shapes, adds ~100KB gzip. Also rejected: vector clocks per field —
+would let us auto-merge non-overlapping field edits, but the UX cost
+(conflict resolution modal, per-field timestamps) outweighs the
+benefit at demo scale.
+
+**Follow-up.** T1.3 in `improvement-ideas.md` is partially addressed —
+we have detection but not automatic merge. True merge is Wave C work;
+this unblocks the demo without pretending we're solving distributed
+systems.
+
+---
+
+## 2026-04-16 · MEWS / NEWS2 / qSOFA triad on PatientHeaderStrip *(backfilled)*
+
+**Context.** `types.ts` has FHIR-aligned `Vital` records but nothing
+computed a clinical score from them. A patient with HR 112, BP 88/52,
+RR 28, SpO2 91% rendered as four values in four colors — the experienced
+eye reads "sepsis" instantly, the app said nothing. Every serious EHR
+computes these automatically.
+
+**Decision.** `lib/clinicalScores.ts` — pure functions
+`computeMEWS(v)`, `computeNEWS2(v)`, `computeQSOFA(v)` that take a
+`Vital` and return `{ score, band: 'low' | 'moderate' | 'high' |
+'critical', drivers: [...] }`. Surfaced on `PatientHeaderStrip` as
+three Mono chips with tone driven by band (ok → warn → crit). Tapping
+a chip expands which vitals are pushing the score up.
+
+**Rejected.** Just showing NEWS2 (UK standard) and skipping MEWS/qSOFA
+— US sites use MEWS, Sepsis-3 deprecated SIRS in favor of qSOFA, and
+the cost of adding the other two is a dozen lines each. No reason to
+pick one.
+
+**Follow-up.** T1.8 in `improvement-ideas.md` is now done. Next wedge
+is auto-recompute on each inbound `Vital` write (done in-handler) and
+trend arrows showing score delta between the last two measurements
+(not yet — adds a second vitals lookup per render, revisit when lists
+feel slow).
+
+---
+
+## 2026-04-16 · StateHero binds to live sim; surge tasks become state-aware *(backfilled)*
+
+**Context.** `MobileView` StateHero was hardcoded — `98%`, `4`, `0
+bays`. Surge tasks were a static 5-item list regardless of whether
+we were in a real surge or a warm-up. Decorative, not operational. The
+live sim (`lib/realtimeSim.ts`) had been running for a few days but
+nothing on screen actually read from it.
+
+**Decision.** Two moves in the same commit:
+
+1. **StateHero reads live state.** Census %, open bays, EMS inbound
+   count, active alerts — all sourced from the simulation's tick
+   store. Values update every sim tick; the animated delta arrow is
+   the real delta, not a decoration.
+2. **Surge tasks are state-aware.** `lib/surgeTaskTemplates.ts`
+   inspects current census, open zones, EMS count, staffing gap and
+   emits a task list selected from the library. "Open overflow bay in
+   Hall C" only renders if Hall C has ≥2 open beds. Tasks reorder by
+   impact delta as state changes.
+
+**Rejected.** Gemini-generated surge tasks (T4.1 Phase 2) — ideal but
+needs the API budget decision and fallback logic. Phase 1 (deterministic
+ruleset) is enough to make the activation feel responsive.
+
+**Follow-up.** T4.1 Phase 2 remains open. This change landed Phase 1.
+
+---
+
+## 2026-04-16 · Remove biometric unlock from login *(backfilled)*
+
+**Context.** Stage 1 shipped a Face ID unlock overlay on top of the
+login role picker. On the iPhone 15 Pro simulator it worked fine; on a
+physical device without a paired face template it got stuck in the
+prompt loop — the overlay blocked the role cards and there was no
+escape. Also didn't map to any real identity (see T1.1 — role-picker
+trust is the real gap).
+
+**Decision.** Removed the biometric overlay entirely. Login is now just
+the role picker again. No identity, no session, no audit (T1.1 will
+solve all three properly when it lands). Keeping a half-real biometric
+step was worse than skipping it — it implied security we weren't
+providing.
+
+**Rejected.** Capacitor Biometric Auth plugin with real fallback to a
+passcode — correct answer, but requires a backing identity store and a
+PIN-reset flow. Out of scope for POC.
+
+**Follow-up.** T1.10 session lock (5m mobile / 15m desktop) is the real
+next step. Lives as an idle-timer + PIN overlay, not Face ID — works
+on any device with any user.
+
+---
+
+## 2026-04-16 · QR scanner: reticle only on detection, no hunt animation *(backfilled)*
+
+**Context.** The QR scanner UI went through three iterations in two
+days: (1) static centered frame, (2) roaming "hunt" reticle that wandered
+the viewport pretending to search, (3) detection-only reticle that
+only appears when a code is actually recognized. The hunt animation
+looked tactical but implied the scanner was searching when actually
+it was doing nothing — honest-demo principle violated.
+
+**Decision.** Detection-only reticle. The frame is static; the scan
+line pulses down the viewport; *only* when `BarcodeDetector` (or the
+Capacitor plugin on device) returns a match does the tactical reticle
+snap into place with corner brackets and the metadata strip (patient
+MRN, bed, timestamp). No hunt animation, no pretend-work.
+
+**Rejected.** Hunt reticle — looks cool, lies about what's happening.
+Also rejected: overlay a "SCANNING..." ticker — same dishonesty at the
+copy layer.
+
+**Follow-up.** Scanner is reused as the BCMA primitive in T2.13 Phase
+2 (patient-wristband + med-label verify). The detection-only pattern
+is the right base for that workflow.
+
+---
+
+## 2026-04-14 · Bed assignment optional on admission — "holding area" *(backfilled)*
+
+**Context.** The admission flow required picking a bed before the
+patient record could be created. Real ED workflow: patient arrives, you
+stabilize and chart *before* a bed is available. Forcing an assignment
+up front meant we either made up a bed (lie) or blocked the admit (bug).
+
+**Decision.** `BedAssignmentStatus` enum added to `types.ts`:
+`UNASSIGNED | PENDING | ASSIGNED`. Admission can create a patient in
+`UNASSIGNED` state — they land in a "holding area" view on the bed board
+and render in the *My Patients* worklist with a `HOLDING` chip instead
+of a bed number. Bed can be assigned later via the bed board or the
+patient detail — assigning flips state to `ASSIGNED` and fires the
+same broadcast the original flow would.
+
+**Rejected.** A virtual "Bed TBD" row — works visually but breaks bed
+counts and census math. Also rejected: forcing triage to assign a bed
+— wrong clinically, ESI is about acuity not location.
+
+**Follow-up.** Holding area is a second-class citizen on the bed board
+right now — a row under the grid. T2.9 (mutable bed board) should
+promote it to a proper zone with its own drag-drop behavior.
+
+---
+
+## 2026-04-14 · MobileAdmitFlow as 6-step wizard, not single form *(backfilled)*
+
+**Context.** The first cut of mobile admission was one long scrolling
+form — patient identity, vitals, allergies, problems, code status, bed
+on a single surface. On a phone that's eight screens of scroll with the
+keyboard eating half the viewport for each field. Tap rates were low
+and nurses were abandoning the flow mid-way.
+
+**Decision.** Six-step wizard with a persistent progress bar and explicit
+Next/Back navigation:
+
+1. Identity (name, DOB, sex, MRN)
+2. Chief complaint + ESI
+3. Vitals
+4. Allergies + code status
+5. Active problems
+6. Bed assignment (optional — see holding area ADR above)
+
+Each step is a single focused surface. Swipe-back gesture mirrors
+system nav. Progress is preserved in React state so backing out and
+forward doesn't lose data. Final step shows a summary before commit.
+
+**Rejected.** Single-form with collapsible sections — still forces the
+keyboard + scroll problem. Also rejected: a stepper nav dots UI — too
+small on a phone; the progress bar + numeric step indicator reads
+better.
+
+**Follow-up.** Desktop admit still uses a single long form (room is
+available there, no keyboard pressure). Not worth unifying the flows
+— different constraints, different shapes.
+
+---
+
+## 2026-04-13 · Mobile IA stays at 5 tabs; role-gate desktop-only surfaces *(backfilled)*
+
+**Context.** Tried restructuring mobile IA to 12 tabs mirroring every
+desktop view. Looked comprehensive on paper, shipped it in commit
+`07feb54`, and immediately it was unusable — 12 tabs don't fit on an
+iPhone tab bar and a swipe-nav felt like a drawer-in-disguise. Reverted
+in `cec1188` the same day.
+
+**Decision.** Mobile stays at 5 tabs: **Horizon**, **Actions**,
+**Patients**, **Alerts**, **Comms**. Desktop-only surfaces (Staffing,
+Playbooks, Replay, Integration Health, ADT Feed, etc.) are reachable
+via the hamburger menu but are not promoted to the tab bar. Tabs
+themselves are role-gated: Trauma sees a different Actions tab (activation
+checklist) than Nurse (task queue) than Manager (overview KPIs). Same
+route, different content.
+
+**Rejected.** 12-tab mirror — reverted. Also rejected: collapsing to 3
+tabs (Dashboard / Patients / Actions) — loses Alerts and Comms as
+first-class surfaces, and they're the most time-sensitive on mobile.
+
+**Follow-up.** T2.1 (split `MobileView.tsx`) is the next structural
+move — once each tab is its own file, role-gating can live at the file
+level and the render graph stops mounting everything.
+
+---
+
+## 2026-04-13 · Supabase Broadcast for cross-device sync; publish outside React setState *(backfilled)*
+
+**Context.** Before cross-device sync landed, each device had its own
+React state and the demo required running a second browser tab to look
+like multi-user. Two bugs surfaced fast: (a) the initial publish was
+inside a `setState` callback and fired *before* the state actually
+flushed, so remote devices got stale data, and (b) no conflict handling
+meant two devices editing vitals overwrote each other silently.
+
+**Decision.** `lib/realtime.ts` uses Supabase Broadcast channels keyed
+by incident ID. Every mutation:
+
+1. Optimistic `setState` locally.
+2. `queueMicrotask(() => channel.send({ type, payload }))` —
+   publish *after* state flush, not inside the setter.
+3. Remote receivers compare record versions (see Lamport ADR above)
+   and accept or drop.
+
+Channels auto-reconnect on network flap. The HUD strip's connection
+indicator reads `SYNC · N` where N is the channel member count.
+
+**Rejected.** Supabase Postgres subscriptions (cheaper queries, slower
+fanout — Broadcast is in-memory and sub-100ms). Also rejected: publish
+inside the setState callback — looks idiomatic React, silently breaks
+ordering.
+
+**Follow-up.** T2.3 (offline outbox) is the next layer — today, a failed
+broadcast during network flap is lost. An outbox pattern with local
+SQLite persistence makes the story complete.
+
+---
+
+## 2026-04-13 · MobilePatientDetailScreen is a separate component *(backfilled)*
+
+**Context.** Desktop `PatientDetailScreen` is a three-column chart
+layout — banner top, vitals + labs + notes + imaging in columns below.
+On a phone that shape collapses into a wall of sections and every
+interaction is a full-page nav. Trying to make one component render
+both well meant a dozen `isMobile ?` forks inside one file.
+
+**Decision.** `components/MobilePatientDetailScreen.tsx` is a separate
+phone-native component with its own IA: header strip, tabbed detail
+(Vitals / Labs / Notes / Imaging / Orders), bottom action bar
+(Discharge, Transfer, Add Vital, Note). Shares `PatientHeaderStrip` and
+the clinical primitives with desktop but doesn't try to share layout.
+
+**Rejected.** Responsive-one-file — too many `isMobile` forks, unreadable.
+Also rejected: drawer over the list view — loses the fullscreen immersion
+the phone form factor asks for.
+
+**Follow-up.** When T2.1 (split `MobileView.tsx`) happens, this file
+lives under `components/mobile/` alongside the tab files. Today it's
+at `components/` root which is fine for POC.
+
+---
+
+## 2026-04-13 · Trauma is a first-class role, not an ER variant *(backfilled)*
+
+**Context.** Early cut had three roles: Manager, Nurse, ER Personnel.
+Trauma response was handled as an ER Personnel mode with a "trauma
+activation" toggle. That collapsed two distinct mental models — the
+trauma attending running a coordinated team response is not the same
+person as the ER nurse managing a bay — and made every role-gated
+surface have to special-case `isERPersonnel && isTraumaMode`.
+
+**Decision.** `UserRole` enum gets a fourth value: `TRAUMA`. Every
+role-dispatched view (`ROLE_ACTIONS`, `ROLE_METRICS`, StateHero copy,
+Actions tab content, menu surfaces) now has a Trauma branch. The
+trauma attending sees activation checklist / team assembly / MTP panel
+as their primary Actions tab, not as a modal over the ER view.
+
+**Rejected.** Keeping three roles with a mode toggle — forces every
+downstream component to know about two dimensions (role + mode).
+Four roles is one dimension, cleaner to gate on.
+
+**Follow-up.** T2.26 (Trauma activation + MTP + mass casualty) is the
+full build-out. Today the Trauma role has surface coverage but the
+activation workflow itself is narrative, not wizard. Wave D work.
+
+---
+
 ## 2026-04-12 · Phase 3-4 polish: animations, surge reactivity, safe-area, real-time sim
 
 **Context.** All 17 clinical screens were built and wired. Next was
