@@ -78,6 +78,7 @@ import { PrintPreviewModal } from './PrintPreviewModal';
 import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
+import { useEmsInbound } from '../lib/emsLive';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import { MobileLiveOps } from './MobileLiveOps';
 import { BedSingle } from 'lucide-react';
@@ -970,6 +971,79 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   // Live-updating hospital metrics (jitter every ~5s, surge-aware)
   const liveMetrics = useRealtimeSimulation({ active: true, surgeActive: isSurgeActive });
+
+  // Live EMS inbound — shared data source between the hero subtitle
+  // ("3 EMS INBOUND <5MIN") and the dedicated EmsInboundBoard below.
+  // Two hook instances tick independently but seed from the same mock
+  // and subscribe to the same broadcasts, so they stay within ~1s of
+  // each other — good enough for a minute-grain count.
+  const { inbound: liveEmsInbound } = useEmsInbound();
+
+  // ── StateHero derived counts ─────────────────────────────────────────
+  // The dashboard hero used to ship hardcoded strings ("232 / 284
+  // OCCUPIED", "0 bays", "2 FALL RISK · 3 DISCHARGES PENDING"). Now we
+  // compute them from `bedUnits` (the ground truth) + liveMetrics (the
+  // jitter-sim) so the hero breathes as the simulation runs and reacts
+  // when surge reshapes the bed state. Cheap to recompute — bedUnits
+  // updates maybe every few seconds, patients rarely.
+  const heroDerived = useMemo(() => {
+    const visibleUnits = isSurgeActive
+      ? bedUnits
+      : bedUnits.filter((u) => !u.surgeOnly);
+    const allBeds = visibleUnits.flatMap((u) => u.beds);
+    const occupiedCount = allBeds.filter((b) => b.state === 'occupied').length;
+    const totalBeds = allBeds.length;
+    const edAcute = bedUnits.find((u) => u.id === 'ed-acute');
+    const edHoldsWaiting = edAcute
+      ? edAcute.beds.filter((b) => b.state === 'occupied').length
+      : 0;
+    const traumaUnit = bedUnits.find((u) => u.id === 'ed-trauma');
+    const traumaBaysOpen = traumaUnit
+      ? traumaUnit.beds.filter((b) => b.state === 'ready').length
+      : 0;
+    const dischargesPending = allBeds.filter(
+      (b) => b.dischargeMilestones?.dcOrderWritten === true,
+    ).length;
+    // Fall-risk heuristic: occupied beds with moderate-to-low acuity
+    // AND long length of stay — proxy for elderly boarding patients,
+    // which correlates with fall risk in real EDs. Stays stable for
+    // the demo but grounded in real bed data.
+    const fallRisk = allBeds.filter(
+      (b) =>
+        b.state === 'occupied' &&
+        (b.acuity ?? 5) >= 3 &&
+        (b.losHours ?? 0) >= 36,
+    ).length;
+    // Overdue reassessments derived from avgMews + pendingAdmits so the
+    // number drifts with the live sim (higher during surge). Floor at 2
+    // so it never reads 0 during a live shift.
+    const overdueReassessments = Math.max(
+      2,
+      Math.round(liveMetrics.avgMews + liveMetrics.pendingAdmits / 2),
+    );
+    // Inbound EMS runs that are <5 minutes out. Reading from the live
+    // feed keeps this in sync with what the EmsInboundBoard is showing
+    // on the same dashboard.
+    const inboundEms = liveEmsInbound.filter(
+      (r) => !r.arrived && r.etaMinutes <= 5,
+    ).length;
+    return {
+      occupiedCount,
+      totalBeds,
+      edHoldsWaiting,
+      traumaBaysOpen,
+      dischargesPending,
+      fallRisk,
+      overdueReassessments,
+      inboundEms,
+    };
+  }, [
+    bedUnits,
+    liveMetrics.avgMews,
+    liveMetrics.pendingAdmits,
+    liveEmsInbound,
+    isSurgeActive,
+  ]);
 
   /**
    * QR scan handler. Parses `pulse://` deep-link payloads.
@@ -1998,14 +2072,18 @@ export const MobileView: React.FC<MobileViewProps> = ({
             {(() => {
               const heroProps = (() => {
                 switch (currentUser.role) {
-                  case UserRole.MANAGER:
+                  case UserRole.MANAGER: {
+                    const bedPct = Math.round(liveMetrics.bedCapacityPct);
+                    // Sub-label: during surge, flag ER holds pressure on
+                    // floor beds; baseline, show occupied / total.
+                    const subLabel = isSurgeActive
+                      ? `BED CAPACITY · ${heroDerived.edHoldsWaiting} ER HOLD${heroDerived.edHoldsWaiting === 1 ? '' : 'S'} WAITING ON FLOOR`
+                      : `BED CAPACITY · ${heroDerived.occupiedCount} / ${heroDerived.totalBeds} OCCUPIED`;
                     return {
                       state: (isSurgeActive ? 'surge' : 'nominal') as HeroState,
-                      dominantValue: isSurgeActive ? '98' : '82',
+                      dominantValue: String(bedPct),
                       dominantUnit: '%',
-                      dominantLabel: isSurgeActive
-                        ? 'BED CAPACITY · 12 ER HOLDS WAITING ON FLOOR'
-                        : 'BED CAPACITY · 232 / 284 OCCUPIED',
+                      dominantLabel: subLabel,
                       trendDirection: (isSurgeActive ? 'up' : 'down') as
                         | 'up'
                         | 'down'
@@ -2023,13 +2101,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         surge: 'Surge Active',
                       },
                     };
+                  }
                   case UserRole.NURSE:
                     return {
                       state: (isSurgeActive ? 'strained' : 'nominal') as HeroState,
-                      dominantValue: isSurgeActive ? '6' : '4',
+                      dominantValue: String(heroDerived.overdueReassessments),
                       dominantUnit: undefined,
-                      dominantLabel:
-                        'OVERDUE REASSESSMENTS · 2 FALL RISK · 3 DISCHARGES PENDING',
+                      dominantLabel: `OVERDUE REASSESSMENTS · ${heroDerived.fallRisk} FALL RISK · ${heroDerived.dischargesPending} DISCHARGE${heroDerived.dischargesPending === 1 ? '' : 'S'} PENDING`,
                       trendDirection: 'up' as 'up' | 'down' | 'flat',
                       trendMagnitude: '+1',
                       trendWindow: 'LAST 30M',
@@ -2041,15 +2119,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         surge: 'Critical',
                       },
                     };
-                  case UserRole.ER_PERSONNEL:
-                    // Trauma is baseline busy. Bays at 0 is normal
-                    // for this role; surge escalates to trauma active.
+                  case UserRole.ER_PERSONNEL: {
+                    // Trauma is baseline busy. Zero bays is normal.
+                    const baysOpen = heroDerived.traumaBaysOpen;
+                    const emsCount = heroDerived.inboundEms;
+                    const triageWait = liveMetrics.erWaitMinutes;
                     return {
                       state: (isSurgeActive ? 'surge' : 'strained') as HeroState,
-                      dominantValue: '0',
+                      dominantValue: String(baysOpen),
                       dominantUnit: 'bays',
-                      dominantLabel:
-                        'TRAUMA BAYS OPEN · 3 EMS INBOUND <5MIN · 125M TRIAGE WAIT',
+                      dominantLabel: `TRAUMA BAYS OPEN · ${emsCount} EMS INBOUND <5MIN · ${triageWait}M TRIAGE WAIT`,
                       trendDirection: 'flat' as 'up' | 'down' | 'flat',
                       trendMagnitude: 'HOT',
                       trendWindow: 'LIVE',
@@ -2063,6 +2142,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                         surge: 'Trauma Active',
                       },
                     };
+                  }
                 }
               })();
               return <StateHero {...heroProps} />;

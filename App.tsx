@@ -617,7 +617,15 @@ function App() {
 
   const activateSurge = () => {
     if (surgeState.active) return;
-    const tasks = buildInitialUrgentTasks();
+    // Pass a snapshot of current hospital state so the task builder
+    // can pick a state-aware mix (unstaffed beds, dirty-bed count,
+    // pending ICU admits, etc.) — running surge twice now produces
+    // two different task lists instead of the same five every time.
+    const tasks = buildInitialUrgentTasks({
+      bedUnits,
+      patients,
+      admissionQueue,
+    });
     setSurgeState({ active: true, activatedAt: Date.now() });
     setUrgentTasks(tasks);
     setBedUnits(escalateBedState(seedBedState()));
