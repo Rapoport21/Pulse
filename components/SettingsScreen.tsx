@@ -10,9 +10,11 @@ import {
   Cpu,
   ShieldCheck,
   ChevronLeft,
+  ChevronRight,
   Info,
   AlertTriangle,
   Check,
+  Eye,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import {
@@ -42,6 +44,7 @@ import {
   getLatencyMs,
 } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
+import { TextDimContrastSample } from './TextDimContrastSample';
 
 /**
  * SettingsScreen — full-screen overlay for session/simulation controls.
@@ -176,6 +179,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
 }) => {
   const [resetArmed, setResetArmed] = useState(false);
   const [resetJustFired, setResetJustFired] = useState(false);
+  const [contrastOpen, setContrastOpen] = useState(false);
   const connectionStatus = useConnectionStatus();
   const presence = usePresence();
   const [now, setNow] = useState(() => new Date());
@@ -632,8 +636,91 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </div>
               </Section>
 
+              {/* ── DISPLAY ──────────────────────────────────── */}
+              <Section
+                id="S04"
+                title="Display"
+                meta={
+                  <Mono tone="dim" size="xs">
+                    Readability tools
+                  </Mono>
+                }
+              >
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setContrastOpen(true);
+                  }}
+                  whileTap={{ scale: 0.99 }}
+                  transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.md,
+                    padding: SPACE.md,
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textPrimary,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontFamily: FONTS.sans,
+                    minHeight: 44,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px solid ${COLORS.border}`,
+                      background: COLORS.surfaceElev,
+                      borderRadius: RADIUS.sm,
+                      color: COLORS.textMuted,
+                    }}
+                  >
+                    <Eye size={16} strokeWidth={1.75} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        letterSpacing: '-0.01em',
+                        color: COLORS.textPrimary,
+                        marginBottom: 2,
+                      }}
+                    >
+                      Contrast check
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 12,
+                        color: COLORS.textSecondary,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Preview textDim candidates against the canvas. Pick
+                      the tone that reads clearest at 3am.
+                    </div>
+                  </div>
+                  <ChevronRight
+                    size={16}
+                    color={COLORS.textMuted}
+                    strokeWidth={1.75}
+                  />
+                </motion.button>
+              </Section>
+
               {/* ── SIGN OUT ─────────────────────────────────── */}
-              <Section id="S04" title="Sign Out">
+              <Section id="S05" title="Sign Out">
                 <TacticalCard padding="md">
                   <div
                     style={{
@@ -697,6 +784,15 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </HudStrip>
             </div>
           )}
+
+          {/* Contrast-check overlay — layers above Settings via its own
+              zIndex (250 > 200). Rendered inside the motion container so
+              it inherits the same mount lifecycle as Settings. */}
+          <TextDimContrastSample
+            open={contrastOpen}
+            onClose={() => setContrastOpen(false)}
+            variant={variant}
+          />
         </motion.div>
       )}
     </AnimatePresence>
