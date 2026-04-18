@@ -270,7 +270,19 @@ export const BraceletCardSvg: React.FC<{
       <g transform="translate(750, 30)">
         <rect x="0" y="0" width="50" height="50" fill="#FFFFFF" stroke="#E11D48" strokeWidth="1" />
         {qrDataUrl ? (
-          <image href={qrDataUrl} x="3" y="3" width="44" height="44" preserveAspectRatio="none" />
+          // Set BOTH `href` (SVG 2) and `xlink:href` (SVG 1.1) so the
+          // exported bracelets render in Mac Preview, older Illustrator,
+          // Inkscape < 1.0, and any print-shop raster tooling. Modern
+          // browsers / Figma ignore the duplication.
+          <image
+            href={qrDataUrl}
+            xlinkHref={qrDataUrl}
+            x="3"
+            y="3"
+            width="44"
+            height="44"
+            preserveAspectRatio="none"
+          />
         ) : (
           // Placeholder while the QR loads or if it errors — keeps the
           // visual rhythm so the rest of the bracelet doesn't jitter.
