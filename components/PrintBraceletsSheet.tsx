@@ -1,5 +1,8 @@
 import React, { useRef } from 'react';
 import { Download } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { PrintPreviewModal } from './PrintPreviewModal';
 import { BraceletCard } from './BraceletCard';
 import { TacticalButton, COLORS, FONTS, SPACE } from './design';
@@ -59,20 +62,18 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 /**
- * Serialize all rendered bracelet SVGs into a single standalone SVG and
- * trigger a browser download. Self-contained — the resulting file opens
- * in any SVG viewer without needing the app.
+ * Build a single standalone SVG document that contains every rendered
+ * bracelet, stacked vertically with consistent gaps. Pure serialization
+ * — no side effects. Both the web and native download paths call this
+ * to get the same bytes.
  */
-function downloadBraceletSvg(
-  container: HTMLElement,
-  numbers: BraceletNumber[],
-): void {
+function buildCombinedSvg(container: HTMLElement): { doc: string; count: number } | null {
   // Select by data attribute rather than class — more reliable across
   // React's SVG className handling and survives CSS module scoping.
   const svgs = container.querySelectorAll<SVGElement>('svg[data-bracelet-number]');
   if (svgs.length === 0) {
     console.warn('[PrintBraceletsSheet] No bracelet SVGs found to export.');
-    return;
+    return null;
   }
 
   const WIDTH = BAND_W;
@@ -98,11 +99,60 @@ ${groups.join('\n')}
 </svg>
 `;
 
+  return { doc, count: svgs.length };
+}
+
+/**
+ * Platform-aware SVG export.
+ *
+ *  - Web / desktop: classic Blob + `<a download>` trick. Silent download
+ *    to the browser's default folder.
+ *  - iOS / Android (Capacitor): `<a download>` is ignored by WKWebView,
+ *    so instead we write the file to the app's cache directory and
+ *    open the native share sheet. User picks Save to Files, AirDrop,
+ *    Mail, Messages, etc. File is named so it sorts alongside the
+ *    offline-generated ones in pulse-collateral.
+ */
+async function downloadBraceletSvg(
+  container: HTMLElement,
+  numbers: BraceletNumber[],
+): Promise<void> {
+  const built = buildCombinedSvg(container);
+  if (!built) return;
+  const { doc } = built;
+
+  const fileName = `pulse-bracelets-${numbers[0]}-${numbers[numbers.length - 1]}.svg`;
+
+  if (Capacitor.isNativePlatform()) {
+    // Native path — write to the app's cache, then share by URI so the
+    // user can Save to Files, AirDrop, or attach to a message. Using
+    // Cache (not Documents) keeps clutter out of the user's files app
+    // and lets iOS GC the blob eventually.
+    try {
+      const written = await Filesystem.writeFile({
+        path: fileName,
+        data: doc,
+        directory: Directory.Cache,
+        encoding: Encoding.UTF8,
+      });
+      await Share.share({
+        title: 'PULSE Bracelets',
+        text: `${numbers.length} bracelets`,
+        url: written.uri,
+        dialogTitle: 'Save bracelet SVG',
+      });
+    } catch (err) {
+      console.error('[PrintBraceletsSheet] Native share failed', err);
+    }
+    return;
+  }
+
+  // Web / desktop path
   const blob = new Blob([doc], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `pulse-bracelets-${numbers[0]}-${numbers[numbers.length - 1]}.svg`;
+  a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -169,7 +219,9 @@ export const PrintBraceletsSheet: React.FC<PrintBraceletsSheetProps> = ({
             icon={<Download size={13} strokeWidth={2} />}
             onClick={() => {
               if (previewRef.current) {
-                downloadBraceletSvg(previewRef.current, numbers);
+                // Fire-and-forget — errors are logged inside; the UI
+                // doesn't need to block on the native share sheet.
+                void downloadBraceletSvg(previewRef.current, numbers);
               }
             }}
           >
