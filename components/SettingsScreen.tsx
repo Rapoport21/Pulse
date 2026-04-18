@@ -16,7 +16,6 @@ import {
   Check,
   Eye,
   Type,
-  Printer,
   Tag,
   Monitor,
   Smartphone,
@@ -92,9 +91,6 @@ interface SettingsScreenProps {
   braceletPool?: BraceletPool;
   /** Update the bracelet pool (e.g. unlink a slot). */
   onUpdateBraceletPool?: (next: BraceletPool) => void;
-  /** Navigate to the printable bracelets page. Opt-in — when omitted
-   *  the Settings row simply isn't rendered. */
-  onOpenPrintBracelets?: () => void;
 }
 
 const CONFIRM_WINDOW_MS = 4000;
@@ -224,7 +220,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   variant = 'mobile',
   braceletPool,
   onUpdateBraceletPool,
-  onOpenPrintBracelets,
 }) => {
   const [resetArmed, setResetArmed] = useState(false);
   const [resetJustFired, setResetJustFired] = useState(false);
@@ -1164,80 +1159,6 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         );
                       })}
                     </div>
-
-                    {/* Print action — opens a printable page of wristbands. */}
-                    {onOpenPrintBracelets && (
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          triggerHaptic('light');
-                          onOpenPrintBracelets();
-                        }}
-                        whileTap={{ scale: 0.99 }}
-                        transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: SPACE.md,
-                          padding: SPACE.md,
-                          background: COLORS.surface,
-                          border: `1px solid ${COLORS.border}`,
-                          borderRadius: RADIUS.sm,
-                          color: COLORS.textPrimary,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          fontFamily: FONTS.sans,
-                          minHeight: 44,
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 36,
-                            height: 36,
-                            flexShrink: 0,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: `1px solid ${COLORS.border}`,
-                            background: COLORS.surfaceElev,
-                            borderRadius: RADIUS.sm,
-                            color: COLORS.textMuted,
-                          }}
-                        >
-                          <Printer size={16} strokeWidth={1.75} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontFamily: FONTS.sans,
-                              fontSize: 15,
-                              fontWeight: 600,
-                              letterSpacing: '-0.01em',
-                              color: COLORS.textPrimary,
-                              marginBottom: 2,
-                            }}
-                          >
-                            Print wristbands
-                          </div>
-                          <div
-                            style={{
-                              fontFamily: FONTS.sans,
-                              fontSize: 12,
-                              color: COLORS.textSecondary,
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            Two numbered strips on one page — scissor, wrap, tape.
-                          </div>
-                        </div>
-                        <ChevronRight
-                          size={16}
-                          color={COLORS.textMuted}
-                          strokeWidth={1.75}
-                        />
-                      </motion.button>
-                    )}
 
                     {/* Release-all — clears every slot back to empty. */}
                     {onUpdateBraceletPool && usedCount(braceletPool) > 0 && (

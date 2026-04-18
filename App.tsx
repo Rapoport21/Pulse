@@ -42,7 +42,6 @@ import { CommandSidebar, type SimControlAction } from './components/CommandSideb
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
-import { PrintBraceletsSheet } from './components/PrintBraceletsSheet';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -127,7 +126,6 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showPrintBracelets, setShowPrintBracelets] = useState(false);
   const [chatQuery, setChatQuery] = useState('');
   const [systemStatus, setSystemStatus] = useState<'normal' | 'stale' | 'manual'>('normal');
   const [actionFilter, setActionFilter] = useState<string>('');
@@ -1135,17 +1133,6 @@ function App() {
         variant={isMobile ? 'mobile' : 'desktop'}
         braceletPool={braceletPool}
         onUpdateBraceletPool={setBraceletPool}
-        onOpenPrintBracelets={() => {
-          setShowSettings(false);
-          setShowPrintBracelets(true);
-        }}
-      />
-
-      {/* Printable wristbands — 2 strips per sheet (SCAD demo). */}
-      <PrintBraceletsSheet
-        open={showPrintBracelets}
-        onClose={() => setShowPrintBracelets(false)}
-        braceletPool={braceletPool}
       />
 
       {isMobile ? (

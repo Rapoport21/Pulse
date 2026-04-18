@@ -1520,16 +1520,14 @@ is documented in `docs/decisions.md` (2026-04-17 entries).
 
 ### T3.11 · Scale the bracelet pool beyond 20
 
-**Where.** `lib/braceletPool.ts` → `POOL_SIZE`, plus duplicated
-`BATCH_WORDS` in `components/BraceletCard.tsx` and
-`scripts/export-bracelets.mjs`.
+**Where.** `lib/braceletPool.ts` → `POOL_SIZE` (runtime pool size),
+and `scripts/export-bracelets.mjs` → `POOL_SIZE` + `BATCH_WORDS`
+(offline SVG generator, the only place bracelet artwork lives now).
 
-**Now.** The pool is hardcoded to 20 slots. Every bracelet SVG embeds
-"№ / 20" in the top-right corner and a "batch of twenty" flavor line
-below it. Both are derived from `POOL_SIZE` at render time, so newly-
-rendered bracelets auto-update — but **physical paper bracelets are a
-moment-in-time snapshot**: the ink on bracelets 01–20 will still say
-"batch of twenty" forever, regardless of code changes.
+**Now.** The pool is hardcoded to 20 slots. Every generated bracelet
+SVG embeds "№ / 20" and "batch of twenty" into the ink. **Physical
+paper bracelets are a moment-in-time snapshot** — the "batch of twenty"
+label will stay on bracelets 01–20 forever, regardless of code changes.
 
 **Why it matters.** If a future event needs more than 20 guests
 (SCAD-plus, a different campus, a bigger donor demo), bumping
@@ -1540,9 +1538,8 @@ batch: slots 01–20 labeled "batch of twenty", slots 21–25 labeled
 **What to do — when the time comes:**
 1. Bump `POOL_SIZE` in `lib/braceletPool.ts` to the new count.
 2. Bump `POOL_SIZE` in `scripts/export-bracelets.mjs` to match.
-3. Add the new count to `BATCH_WORDS` in BOTH
-   `components/BraceletCard.tsx` and `scripts/export-bracelets.mjs`
-   (no shared module — Node script runs outside the Vite bundle).
+3. Add the new count to `BATCH_WORDS` in `scripts/export-bracelets.mjs`
+   (digits fallback works but looks off — "batch of 25" vs "twenty-five").
 4. Run `npm run export:bracelets` to regenerate standalone SVGs in
    `../pulse-collateral/bracelets/current-v8/generated/`.
 5. **Reprint every physical bracelet**, including 01–20. Don't mix

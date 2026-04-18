@@ -20,26 +20,12 @@ interface PrintPreviewModalProps {
   onPrint: () => void;
   title: string;
   content: React.ReactNode;
-  /**
-   * Suppress the inner "PULSE OPS · CONFIDENTIAL" document header.
-   * Use for content types where the report chrome is visually wrong
-   * (e.g. bracelet sheets). Default: false.
-   */
-  chromeless?: boolean;
-  /** Optional extra actions rendered to the left of Cancel / Print. */
-  extraActions?: React.ReactNode;
-  /** Optional hint strip above the footer actions. */
-  footerHint?: React.ReactNode;
 }
 
 /**
  * PrintPreviewModal — tactical chrome wrapping a white-paper print preview.
  * The inner preview area stays white so it accurately reflects print output;
  * everything else is tactical (bracket labels, mono meta, sharp corners).
- *
- * `chromeless` hides the inner "PULSE OPS · CONFIDENTIAL" document header
- * for content that provides its own (e.g. bracelet sheets), so the
- * printable area is edge-to-edge whitespace below the modal header.
  */
 export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
   isOpen,
@@ -47,9 +33,6 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
   onPrint,
   title,
   content,
-  chromeless = false,
-  extraActions,
-  footerHint,
 }) => {
   return (
     <AnimatePresence>
@@ -184,88 +167,82 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
               style={{
                 flex: 1,
                 overflowY: 'auto',
-                padding: chromeless ? 0 : `${SPACE['2xl']}px`,
+                padding: `${SPACE['2xl']}px`,
                 background: '#FFFFFF',
                 color: '#000000',
               }}
             >
-              {chromeless ? (
-                // Bracelet sheets supply their own layout — no report header,
-                // no max-width constraint, edge-to-edge whitespace.
-                <div style={{ fontFamily: FONTS.sans, color: '#000000' }}>{content}</div>
-              ) : (
-                <div style={{ maxWidth: 640, margin: '0 auto' }}>
-                  <div
-                    style={{
-                      borderBottom: '2px solid #000000',
-                      paddingBottom: 16,
-                      marginBottom: 24,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-end',
-                      gap: 16,
-                    }}
-                  >
-                    <div>
-                      <h1
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 28,
-                          fontWeight: 700,
-                          textTransform: 'uppercase',
-                          letterSpacing: '-0.01em',
-                          margin: 0,
-                          color: '#000000',
-                        }}
-                      >
-                        {title}
-                      </h1>
-                      <p
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 12,
-                          color: '#4B5563',
-                          margin: '4px 0 0',
-                        }}
-                      >
-                        Generated: {new Date().toLocaleString()}
-                      </p>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 18,
-                          fontWeight: 700,
-                          color: '#000000',
-                        }}
-                      >
-                        PULSE OPS
-                      </div>
-                      <div
-                        style={{
-                          fontFamily: FONTS.mono,
-                          fontSize: 10,
-                          color: '#6B7280',
-                          letterSpacing: '0.08em',
-                        }}
-                      >
-                        CONFIDENTIAL
-                      </div>
-                    </div>
+              <div style={{ maxWidth: 640, margin: '0 auto' }}>
+                <div
+                  style={{
+                    borderBottom: '2px solid #000000',
+                    paddingBottom: 16,
+                    marginBottom: 24,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <h1
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 28,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '-0.01em',
+                        margin: 0,
+                        color: '#000000',
+                      }}
+                    >
+                      {title}
+                    </h1>
+                    <p
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 12,
+                        color: '#4B5563',
+                        margin: '4px 0 0',
+                      }}
+                    >
+                      Generated: {new Date().toLocaleString()}
+                    </p>
                   </div>
-                  <div
-                    style={{
-                      fontFamily: FONTS.sans,
-                      fontSize: 14,
-                      color: '#000000',
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {content}
+                  <div style={{ textAlign: 'right' }}>
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: '#000000',
+                      }}
+                    >
+                      PULSE OPS
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: 10,
+                        color: '#6B7280',
+                        letterSpacing: '0.08em',
+                      }}
+                    >
+                      CONFIDENTIAL
+                    </div>
                   </div>
                 </div>
-              )}
+                <div
+                  style={{
+                    fontFamily: FONTS.sans,
+                    fontSize: 14,
+                    color: '#000000',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {content}
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
@@ -292,11 +269,10 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
               >
                 <AlertTriangle size={12} strokeWidth={2} />
                 <Mono tone="warn" size="xs">
-                  {footerHint ?? 'Verify printer online · paper loaded'}
+                  Verify printer online · paper loaded
                 </Mono>
               </div>
               <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
-                {extraActions}
                 <TacticalButton variant="ghost" size="sm" onClick={onClose}>
                   Cancel
                 </TacticalButton>

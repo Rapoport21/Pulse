@@ -18,10 +18,11 @@
  *   node scripts/export-bracelets.mjs
  *
  * Notes:
- *   - SVG markup is kept in sync with `components/BraceletCard.tsx`
- *     by hand. If the component changes, update `buildBraceletSvg`
- *     below too. Duplication is the price of skipping a React SSR
- *     toolchain for a 20-line static template.
+ *   - This script is the *only* place where the bracelet SVG lives
+ *     now. The React `BraceletCard` component was removed from the
+ *     app — bracelets are generated offline and printed from disk.
+ *     If you want to tweak the visual design, edit `buildBraceletSvg`
+ *     below and re-run the script.
  *   - QR payloads match the app: `pulse://bracelet/<number>`. Scanned
  *     via MobileView, resolved against the pool.
  *   - Real QR is embedded as a base64 PNG via <image href=...>.
@@ -44,12 +45,11 @@ const OUTPUT_DIR = resolve(
   '../../pulse-collateral/bracelets/current-v8/generated',
 );
 
-// ⚠️ Keep in sync with `lib/braceletPool.ts` POOL_SIZE and the matching
-// `BATCH_WORDS` map in `components/BraceletCard.tsx`. Three files, one
+// ⚠️ Keep in sync with `lib/braceletPool.ts` POOL_SIZE. Two files, one
 // truth — no shared module because this script runs outside the Vite
 // bundle (plain Node ESM, no TS import). If you bump POOL_SIZE:
 //   1. Update POOL_SIZE here AND in lib/braceletPool.ts
-//   2. Add the new size to BATCH_WORDS here AND in BraceletCard.tsx
+//   2. Add the new size to BATCH_WORDS below (digits fallback otherwise)
 //   3. Re-run `npm run export:bracelets` to regenerate the SVG files
 //   4. Reprint physical bracelets — already-printed 01–20 say "№ / 20"
 //      and "batch of twenty" and will be inconsistent with the new batch

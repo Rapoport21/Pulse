@@ -12,6 +12,36 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-18 · Bracelet generation lives on disk, not in the app
+
+**Context.** We briefly shipped an in-app pre-print flow
+(`PrintBraceletsSheet` + `BraceletCard` + Capacitor `@capacitor/filesystem`
+/ `@capacitor/share` plugins) so Nick could export bracelet SVGs
+directly from iPhone or desktop. The offline generator
+(`scripts/export-bracelets.mjs`, `npm run export:bracelets`) already
+wrote the same 20 SVGs to `../pulse-collateral/bracelets/current-v8/generated/`.
+
+**Decision.** Removed the entire in-app flow. `PrintBraceletsSheet`,
+`BraceletCard`, the Settings "Print wristbands" row, and the two
+Capacitor plugins are gone. The `PrintPreviewModal` reverted to its
+pre-bracelet shape (no `chromeless` / `extraActions` / `footerHint`
+props). Nick will edit the generator, re-run it, and print from the
+disk files. The app keeps only the runtime pool state and QR scan
+resolution — `lib/braceletPool.ts` is untouched except for a comment
+now pointing at the offline script as the canonical SVG source.
+
+**Why.** Two mental models for the same job is one too many. The
+offline script has zero WKWebView quirks, is faster, produces the
+same bytes across environments, and the files live next to the
+design spec. In-app export was a luxury path used ~never.
+
+**Trade-offs accepted.** If Nick ever wants to print on the go from
+the iPhone (no Mac nearby), he'd need to re-add the Capacitor share
+plugin. T3.11 and the `POOL_SIZE` comment in `lib/braceletPool.ts`
+document the scale-up flow that now only touches the script.
+
+---
+
 ## 2026-04-17 · Opt-in "Larger UI" toggle in Settings → Display
 
 **Context.** Baseline sizing is now the morning-of-pre-bump values (see
