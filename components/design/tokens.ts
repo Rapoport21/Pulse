@@ -148,6 +148,29 @@ export const Z = {
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
+// Mobile layout constants
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Intrinsic height of the mobile bottom tab bar (padding + 48px button + border)
+ * BEFORE the safe-area-inset-bottom is added. Kept in lockstep with MobileView's
+ * <nav> element.
+ */
+export const MOBILE_NAV_BAR_HEIGHT_PX = 53;
+
+/**
+ * CSS value to use as `bottom` on a fullscreen mobile overlay so that the
+ * bottom HUD tab bar in MobileView stays visible underneath it.
+ *
+ * Matches the rendered height of MobileView's <nav>:
+ *   53px (padding + button + border) + max(env(safe-area-inset-bottom), 4px)
+ *
+ * Use in place of `inset: 0` / `bottom: 0` on any mobile-fullscreen overlay.
+ */
+export const MOBILE_NAV_OVERLAY_INSET_BOTTOM =
+  `calc(${MOBILE_NAV_BAR_HEIGHT_PX}px + max(env(safe-area-inset-bottom), 4px))` as const;
+
+// ─────────────────────────────────────────────────────────────────────────
 // Motion — reserved, deliberate
 // ─────────────────────────────────────────────────────────────────────────
 export const MOTION = {

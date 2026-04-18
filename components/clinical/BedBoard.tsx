@@ -25,7 +25,7 @@ import {
   ChevronRight, ArrowUpRight, ShieldAlert, Truck, GripVertical,
   ChevronDown, ChevronUp, RefreshCw, FileText,
 } from 'lucide-react';
-import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z, SHADOW } from '../design/tokens';
+import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z, SHADOW, MOBILE_NAV_OVERLAY_INSET_BOTTOM } from '../design/tokens';
 import {
   Mono, BracketLabel, StatusPill, TacticalCard, CornerBracket,
   Divider, HudStrip, ScanningLine, TacticalButton,
@@ -1645,13 +1645,18 @@ const FullMode: React.FC<{
       transition={{ duration: MOTION.fast }}
       style={{
         position: 'fixed',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+        bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
         background: COLORS.bg,
         zIndex: Z.modal,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         paddingTop: 'env(safe-area-inset-top)',
+        borderTop: `1px solid ${COLORS.border}`,
       }}
     >
       <ScanningLine color={COLORS.accent} duration={20} />

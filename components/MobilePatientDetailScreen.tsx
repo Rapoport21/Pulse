@@ -9,12 +9,13 @@
  *   Discharge. ScanningLine + accent frame on the active tab.
  * - Scrollable content below, one tab at a time.
  *
- * No bottom action bar. The main app nav sits at the viewport bottom
- * naturally; removing this overlay's own bottom bar fixes the two-bar
- * overlap and cuts the "extra step to get back" the user flagged.
+ * No bottom action bar inside the overlay. The overlay itself stops ABOVE
+ * MobileView's bottom HUD nav (via MOBILE_NAV_OVERLAY_INSET_BOTTOM) so the
+ * main app tabs stay visible and tappable at all times — no more two-bar
+ * overlap, no more extra step to get back.
  *
- * Renders as a fullscreen overlay (position: fixed, inset: 0, z-index 50)
- * with slide-up entry animation.
+ * Renders as a fullscreen-minus-nav overlay (position: fixed, top/left/right: 0,
+ * bottom: <nav height>, z-index 50) with slide-up entry animation.
  */
 
 import React, { useMemo, useState } from 'react';
@@ -54,6 +55,7 @@ import {
   SPACE,
   RADIUS,
   MOTION,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   StatusPill,
@@ -1818,7 +1820,11 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
         transition={{ duration: MOTION.base, ease: MOTION.ease }}
         style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          // Stop above the bottom HUD nav so the app tabs stay visible.
+          bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
           zIndex: 50,
           background: COLORS.bg,
           display: 'flex',
@@ -1826,6 +1832,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           fontFamily: FONTS.sans,
           color: COLORS.textPrimary,
           overflow: 'hidden',
+          borderTop: `1px solid ${COLORS.border}`,
         }}
       >
         {/* ── 1. FIXED HEADER ───────────────────────────────────── */}
