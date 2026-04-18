@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
@@ -16,6 +16,12 @@ import {
   Check,
   Eye,
   Type,
+  Printer,
+  Tag,
+  Monitor,
+  Smartphone,
+  Tablet,
+  Laptop,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import {
@@ -42,8 +48,13 @@ import {
   getDeviceId,
   useConnectionStatus,
   usePresence,
+  usePresenceMeta,
   getLatencyMs,
+  getDeviceName,
+  setDeviceName,
 } from '../lib/realtime';
+import type { BraceletPool } from '../lib/braceletPool';
+import { usedCount, POOL_SIZE, unlinkBracelet, makeInitialPool } from '../lib/braceletPool';
 import { triggerHaptic } from '../lib/haptics';
 import { TextDimContrastSample } from './TextDimContrastSample';
 import {
@@ -76,6 +87,14 @@ interface SettingsScreenProps {
   onLogout: () => void;
   /** Mobile wraps the HUD strips tighter and omits chrome. */
   variant?: 'mobile' | 'desktop';
+  /** Shared bracelet pool — when provided, the Bracelets section
+   *  renders. Omitted on screens that don't plumb it through. */
+  braceletPool?: BraceletPool;
+  /** Update the bracelet pool (e.g. unlink a slot). */
+  onUpdateBraceletPool?: (next: BraceletPool) => void;
+  /** Navigate to the printable bracelets page. Opt-in — when omitted
+   *  the Settings row simply isn't rendered. */
+  onOpenPrintBracelets?: () => void;
 }
 
 const CONFIRM_WINDOW_MS = 4000;
@@ -174,6 +193,26 @@ const InfoRow: React.FC<{
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// DeviceIcon — pick an icon that matches the device label.
+// ─────────────────────────────────────────────────────────────────────────
+const DeviceIcon: React.FC<{ name: string; size?: number }> = ({ name, size = 16 }) => {
+  const n = name.toLowerCase();
+  if (n.includes('iphone') || n.includes('phone') || n.includes('android')) {
+    return <Smartphone size={size} strokeWidth={1.75} />;
+  }
+  if (n.includes('ipad') || n.includes('tablet')) {
+    return <Tablet size={size} strokeWidth={1.75} />;
+  }
+  if (n.includes('screen') || n.includes('tv') || n.includes('display')) {
+    return <Monitor size={size} strokeWidth={1.75} />;
+  }
+  if (n.includes('mac') || n.includes('laptop') || n.includes('windows') || n.includes('linux')) {
+    return <Laptop size={size} strokeWidth={1.75} />;
+  }
+  return <Monitor size={size} strokeWidth={1.75} />;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -183,6 +222,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onReset,
   onLogout,
   variant = 'mobile',
+  braceletPool,
+  onUpdateBraceletPool,
+  onOpenPrintBracelets,
 }) => {
   const [resetArmed, setResetArmed] = useState(false);
   const [resetJustFired, setResetJustFired] = useState(false);
@@ -190,7 +232,37 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [uiScale, setUiScale] = useState<UiScale>(() => readUiScale());
   const connectionStatus = useConnectionStatus();
   const presence = usePresence();
+  const presenceMeta = usePresenceMeta();
   const [now, setNow] = useState(() => new Date());
+
+  // Device name — the human label peers see in the "Send to…" sheet.
+  // Auto-detected from the user agent; the operator can override it
+  // here and the new name re-publishes to presence.
+  const [deviceNameDraft, setDeviceNameDraft] = useState(() => getDeviceName());
+  useEffect(() => {
+    if (open) setDeviceNameDraft(getDeviceName());
+  }, [open]);
+  const deviceNameCommitted = getDeviceName();
+  const deviceNameDirty = deviceNameDraft.trim() !== deviceNameCommitted;
+  const commitDeviceName = () => {
+    const trimmed = deviceNameDraft.trim();
+    if (!trimmed) {
+      setDeviceNameDraft(deviceNameCommitted);
+      return;
+    }
+    setDeviceName(trimmed);
+    setDeviceNameDraft(trimmed);
+    triggerHaptic('light');
+  };
+
+  // Peer devices — listed so the operator can confirm names match what
+  // they expect in the Send-to sheet before the demo starts.
+  const peerRows = useMemo(() => {
+    const myId = getDeviceId();
+    return Object.values(presenceMeta)
+      .filter((p) => p.device !== myId)
+      .sort((a, b) => a.deviceName.localeCompare(b.deviceName));
+  }, [presenceMeta]);
 
   // Commit a scale change: persist + apply immediately so the operator
   // sees the UI grow/shrink the moment they tap. No app reload needed.
@@ -855,8 +927,356 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 </div>
               </Section>
 
+              {/* ── DEVICES (SCAD Send-to demo) ─────────────── */}
+              <Section
+                id="S05"
+                title="Devices"
+                meta={
+                  <Mono tone="dim" size="xs">
+                    Send-to peers
+                  </Mono>
+                }
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  {/* This device — editable name. */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.md,
+                      padding: SPACE.md,
+                      background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                      minHeight: 44,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 36,
+                        height: 36,
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: `1px solid ${COLORS.accent}`,
+                        background: COLORS.surfaceElev,
+                        borderRadius: RADIUS.sm,
+                        color: COLORS.accent,
+                      }}
+                    >
+                      <DeviceIcon name={deviceNameCommitted} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Mono tone="muted" size="xs" style={{ display: 'block', marginBottom: 4 }}>
+                        THIS DEVICE
+                      </Mono>
+                      <input
+                        type="text"
+                        value={deviceNameDraft}
+                        onChange={(e) => setDeviceNameDraft(e.target.value)}
+                        onBlur={commitDeviceName}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        maxLength={24}
+                        placeholder="Device name"
+                        style={{
+                          width: '100%',
+                          padding: `6px ${SPACE.sm}px`,
+                          background: COLORS.surfaceElev,
+                          border: `1px solid ${deviceNameDirty ? COLORS.accent : COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                          color: COLORS.textPrimary,
+                          fontFamily: FONTS.sans,
+                          fontSize: 14,
+                          outline: 'none',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Peer list — read-only, renamed remotely. */}
+                  {peerRows.length > 0 ? (
+                    peerRows.map((p) => (
+                      <div
+                        key={p.device}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.md,
+                          padding: `${SPACE.sm}px ${SPACE.md}px`,
+                          background: COLORS.surface,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                          minHeight: 44,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: `1px solid ${COLORS.border}`,
+                            background: COLORS.surfaceElev,
+                            borderRadius: RADIUS.sm,
+                            color: COLORS.textSecondary,
+                          }}
+                        >
+                          <DeviceIcon name={p.deviceName} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 14,
+                              fontWeight: 500,
+                              color: COLORS.textPrimary,
+                              letterSpacing: '-0.005em',
+                            }}
+                          >
+                            {p.deviceName}
+                          </div>
+                          <Mono tone="muted" size="xs">
+                            {p.device.slice(0, 8).toUpperCase()}
+                          </Mono>
+                        </div>
+                        <StatusPill label="Online" tone="ok" size="xs" pulse />
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        padding: `${SPACE.md}px`,
+                        border: `1px dashed ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Mono tone="dim" size="xs">
+                        NO OTHER DEVICES CONNECTED
+                      </Mono>
+                    </div>
+                  )}
+                </div>
+              </Section>
+
+              {/* ── BRACELETS (SCAD participatory demo) ──────── */}
+              {braceletPool && (
+                <Section
+                  id="S06"
+                  title="Bracelets"
+                  meta={
+                    <Mono tone="dim" size="xs">
+                      {usedCount(braceletPool)}/{braceletPool.bracelets.length} in use
+                    </Mono>
+                  }
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.sm,
+                    }}
+                  >
+                    {/* Chip grid — every slot, state at a glance. */}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gap: SPACE.xs,
+                        padding: SPACE.md,
+                        background: COLORS.surface,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                      }}
+                    >
+                      {braceletPool.bracelets.map((slot) => {
+                        const isUsed = slot.status === 'admitted';
+                        return (
+                          <button
+                            key={slot.number}
+                            type="button"
+                            disabled={!isUsed}
+                            onClick={() => {
+                              if (!isUsed || !onUpdateBraceletPool) return;
+                              const next = unlinkBracelet(braceletPool, slot.number);
+                              onUpdateBraceletPool(next);
+                              triggerHaptic('light');
+                            }}
+                            title={
+                              isUsed
+                                ? `#${slot.number} — ${slot.patientName ?? 'Linked'} (tap to release)`
+                                : `#${slot.number} — empty`
+                            }
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: `${SPACE.xs}px 2px`,
+                              minHeight: 48,
+                              background: isUsed ? COLORS.surfaceElev : 'transparent',
+                              border: `1px solid ${isUsed ? COLORS.accent : COLORS.border}`,
+                              borderRadius: RADIUS.sm,
+                              color: isUsed ? COLORS.textPrimary : COLORS.textDim,
+                              fontFamily: FONTS.mono,
+                              fontSize: 13,
+                              fontWeight: 600,
+                              letterSpacing: '0.04em',
+                              cursor: isUsed ? 'pointer' : 'default',
+                              opacity: isUsed ? 1 : 0.55,
+                            }}
+                          >
+                            <span>#{slot.number}</span>
+                            {isUsed && slot.patientName && (
+                              <span
+                                style={{
+                                  display: 'block',
+                                  fontFamily: FONTS.sans,
+                                  fontSize: 9,
+                                  fontWeight: 500,
+                                  letterSpacing: 0,
+                                  textTransform: 'none',
+                                  color: COLORS.textSecondary,
+                                  marginTop: 2,
+                                  maxWidth: '100%',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {slot.patientName.split(' ')[0]}
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Print action — opens a printable page of wristbands. */}
+                    {onOpenPrintBracelets && (
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          onOpenPrintBracelets();
+                        }}
+                        whileTap={{ scale: 0.99 }}
+                        transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: SPACE.md,
+                          padding: SPACE.md,
+                          background: COLORS.surface,
+                          border: `1px solid ${COLORS.border}`,
+                          borderRadius: RADIUS.sm,
+                          color: COLORS.textPrimary,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontFamily: FONTS.sans,
+                          minHeight: 44,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 36,
+                            height: 36,
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: `1px solid ${COLORS.border}`,
+                            background: COLORS.surfaceElev,
+                            borderRadius: RADIUS.sm,
+                            color: COLORS.textMuted,
+                          }}
+                        >
+                          <Printer size={16} strokeWidth={1.75} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 15,
+                              fontWeight: 600,
+                              letterSpacing: '-0.01em',
+                              color: COLORS.textPrimary,
+                              marginBottom: 2,
+                            }}
+                          >
+                            Print wristbands
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: FONTS.sans,
+                              fontSize: 12,
+                              color: COLORS.textSecondary,
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            Two numbered strips on one page — scissor, wrap, tape.
+                          </div>
+                        </div>
+                        <ChevronRight
+                          size={16}
+                          color={COLORS.textMuted}
+                          strokeWidth={1.75}
+                        />
+                      </motion.button>
+                    )}
+
+                    {/* Release-all — clears every slot back to empty. */}
+                    {onUpdateBraceletPool && usedCount(braceletPool) > 0 && (
+                      <TacticalButton
+                        variant="secondary"
+                        size="md"
+                        icon={<Tag size={14} strokeWidth={2} />}
+                        onClick={() => {
+                          onUpdateBraceletPool(makeInitialPool(POOL_SIZE));
+                          triggerHaptic('medium');
+                        }}
+                        style={{ height: 44, width: '100%' }}
+                      >
+                        Release all bracelets
+                      </TacticalButton>
+                    )}
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Info
+                        size={11}
+                        color={COLORS.textDim}
+                        strokeWidth={1.75}
+                      />
+                      <Mono tone="dim" size="xs">
+                        Tap a used chip to release that bracelet back to the pool.
+                      </Mono>
+                    </div>
+                  </div>
+                </Section>
+              )}
+
               {/* ── SIGN OUT ─────────────────────────────────── */}
-              <Section id="S05" title="Sign Out">
+              <Section id="S07" title="Sign Out">
                 <TacticalCard padding="md">
                   <div
                     style={{

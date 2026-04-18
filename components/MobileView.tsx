@@ -49,6 +49,18 @@ import QRCode from 'qrcode';
 import { UserProfile, UserRole } from '../types';
 import type { Patient, ClinicalNote } from '../types';
 import type { AdmissionEntry } from './clinical';
+import type { BraceletPool } from '../lib/braceletPool';
+import { parseBraceletPayload, findSlot } from '../lib/braceletPool';
+import {
+  publish,
+  usePresenceMeta,
+  useRealtimeState,
+  getDeviceId,
+  useConnectionStatus,
+  getDeviceName,
+} from '../lib/realtime';
+import { SendToSheet } from './SendToSheet';
+import { EmptyBraceletSheet } from './EmptyBraceletSheet';
 import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
@@ -70,12 +82,10 @@ import {
   BriefMeScreen,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
-import { useRealtimeState } from '../lib/realtime';
 import { QRScannerModal } from './QRScannerModal';
 import { TestQRModal } from './TestQRModal';
 import { PatientQRCard } from './PatientQRCard';
 import { PrintPreviewModal } from './PrintPreviewModal';
-import { getDeviceId, useConnectionStatus } from '../lib/realtime';
 import { triggerHaptic } from '../lib/haptics';
 import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
 import { useEmsInbound } from '../lib/emsLive';
@@ -133,6 +143,14 @@ interface MobileViewProps {
   patients?: Patient[];
   clinicalNotes?: ClinicalNote[];
   alertAcks?: Record<string, { status: string; actor: string; at: string }>;
+  /** Full bracelet pool — 20 slots. Used by the QR scan router to find out
+   *  what patient (if any) a bracelet is linked to, and by the admit flow
+   *  to show which numbers are still up for grabs. */
+  braceletPool?: BraceletPool;
+  /** Convenience — `availableNumbers(braceletPool)`. Pre-computed in App.tsx
+   *  and threaded down so MobileAdmitFlow's dropdown doesn't have to
+   *  re-derive it. */
+  availableBraceletNumbers?: string[];
   onAssignBed?: (admissionId: string, bedId: string) => void;
   onSubmitAdmission?: (entry: Omit<AdmissionEntry, 'id' | 'status' | 'waitMin' | 'requestedAt'>, bedId?: string) => void;
   onDischargePatient?: (patientId: string) => void;
@@ -906,6 +924,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
   patients: sharedPatients,
   clinicalNotes,
   alertAcks,
+  braceletPool,
+  availableBraceletNumbers = [],
   onAssignBed,
   onSubmitAdmission,
   onDischargePatient,
@@ -957,6 +977,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
 
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
+  /** When the user scans an empty bracelet, we open the admit flow with
+   *  this number pre-selected so they don't have to pick it again. Clears
+   *  back to '' whenever the admit flow closes. */
+  const [prefilledBraceletNumber, setPrefilledBraceletNumber] = useState('');
+  /** Prompt shown when the user scans an unassigned (empty) bracelet —
+   *  offers "Admit with this bracelet" or "Cancel". */
+  const [emptyBraceletPrompt, setEmptyBraceletPrompt] = useState<string | null>(null);
+  /** Send-to-device sheet — when open, carries the patient id being
+   *  broadcast. Multi-select device picker. */
+  const [sendToPatientId, setSendToPatientId] = useState<string | null>(null);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
   const [showNoteComposer, setShowNoteComposer] = useState(false);
   const [showOrderEntry, setShowOrderEntry] = useState(false);
@@ -1050,8 +1080,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
    * QR scan handler. Parses `pulse://` deep-link payloads.
    *
    * Supported schemes today:
-   *   pulse://tab/<tabname>      → jump to the named tab
-   *   pulse://patient/<id>?...    → open that patient's detail screen
+   *   pulse://tab/<tabname>       → jump to the named tab
+   *   pulse://patient/<id>?...     → open that patient's detail screen
+   *   pulse://bracelet/<n>         → route by pool slot state:
+   *       · admitted  → open linked patient's chart
+   *       · empty     → prompt "Admit with this bracelet?" (SCAD demo)
    *
    * The patient URL carries `mrn` and `name` query params so a
    * receiving device without the patient in its local store can still
@@ -1101,6 +1134,34 @@ export const MobileView: React.FC<MobileViewProps> = ({
         `PATIENT NOT IN LOCAL STORE: ${name || mrn || id}`,
         'error',
       );
+      return;
+    }
+
+    // Bracelet QR — pulse://bracelet/<two-digit-number>.
+    // If the slot is linked to a patient, open that chart. If the slot is
+    // empty (or the pool doesn't know about the number yet), offer to
+    // admit a new patient with this bracelet pre-selected.
+    const braceletNumber = parseBraceletPayload(payload);
+    if (braceletNumber) {
+      const slot = braceletPool ? findSlot(braceletPool, braceletNumber) : undefined;
+      if (slot && slot.status === 'admitted' && slot.patientId) {
+        const patient = syncedPatients.find((p) => p.id === slot.patientId);
+        if (patient) {
+          setSelectedPatient(adaptPatientForList(patient));
+          setShowScanner(false);
+          triggerHaptic('medium');
+          showToast(
+            `BRACELET #${braceletNumber} · ${patient.name.family.toUpperCase()}`,
+            'success',
+          );
+          return;
+        }
+        // Linked but patient record missing (deleted?) — fall through.
+      }
+      // Empty slot — open the "admit with this bracelet?" prompt.
+      setShowScanner(false);
+      setEmptyBraceletPrompt(braceletNumber);
+      triggerHaptic('medium');
       return;
     }
 
@@ -5301,6 +5362,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
             triggerHaptic('light');
             setShowPrintPatientQR(selectedPatient.clinical as Patient);
           }}
+          onSendTo={() => {
+            triggerHaptic('light');
+            const pid = (selectedPatient.clinical as Patient).id;
+            setSendToPatientId(pid);
+          }}
         />
       )}
 
@@ -5355,13 +5421,20 @@ export const MobileView: React.FC<MobileViewProps> = ({
       {/* Admit Flow — mobile-native single-screen admission form.
           Unlike desktop AdmitFlow (3-step wizard), this exposes every
           field at once. Admission proceeds with bed deferred —
-          patient lands in the holding area tagged `admitted-unassigned`. */}
+          patient lands in the holding area tagged `admitted-unassigned`.
+          When `prefilledBraceletNumber` is set (from a scan of an empty
+          bracelet), Step 1 opens with that slot already picked. */}
       <MobileAdmitFlow
         open={showAdmitFlow}
-        onClose={() => setShowAdmitFlow(false)}
+        onClose={() => {
+          setShowAdmitFlow(false);
+          setPrefilledBraceletNumber('');
+        }}
         showToast={showToast}
         onSubmitAdmission={onSubmitAdmission}
         bedUnits={bedUnits}
+        availableBraceletNumbers={availableBraceletNumbers}
+        prefilledBraceletNumber={prefilledBraceletNumber || undefined}
       />
 
       {/* Discharge Flow — readiness checklist → disposition → confirm
@@ -5465,6 +5538,50 @@ export const MobileView: React.FC<MobileViewProps> = ({
             label="OPEN PATIENTS TAB"
             sublabel="Scan from another device to jump to the Patients view"
             onClose={() => setShowTestQR(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Empty bracelet prompt — shown after scanning an unassigned
+          wristband (SCAD demo). Offers "Admit with this bracelet?". */}
+      <AnimatePresence>
+        {emptyBraceletPrompt && (
+          <EmptyBraceletSheet
+            number={emptyBraceletPrompt}
+            onAdmit={(n) => {
+              setEmptyBraceletPrompt(null);
+              setPrefilledBraceletNumber(n);
+              setShowAdmitFlow(true);
+            }}
+            onCancel={() => setEmptyBraceletPrompt(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Send-to device sheet — multi-select peer picker that
+          broadcasts `open-patient` to the chosen devices. */}
+      <AnimatePresence>
+        {sendToPatientId && (
+          <SendToSheet
+            patientId={sendToPatientId}
+            patientName={(() => {
+              const p = syncedPatients.find((x) => x.id === sendToPatientId);
+              return p ? `${p.name.family}, ${p.name.given}` : undefined;
+            })()}
+            onSend={(targetDeviceIds) => {
+              publish('open-patient', {
+                patientId: sendToPatientId,
+                targetDeviceIds,
+                fromName: getDeviceName(),
+              });
+              const count = targetDeviceIds.length;
+              showToast(
+                count === 1 ? 'Chart sent to 1 device' : `Chart sent to ${count} devices`,
+                'success',
+              );
+              setSendToPatientId(null);
+            }}
+            onCancel={() => setSendToPatientId(null)}
           />
         )}
       </AnimatePresence>

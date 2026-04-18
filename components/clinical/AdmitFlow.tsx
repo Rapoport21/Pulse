@@ -116,6 +116,12 @@ export interface AdmissionEntry {
   bedAssignmentStatus?: 'assigned' | 'admitted-unassigned';
   /** Extra demographics captured from the new-admission form */
   demographics?: AdmissionDemographics;
+  /**
+   * Physical bracelet number linked at admission (SCAD participatory
+   * demo). When present, App.tsx links the bracelet pool slot to the
+   * resulting Patient id so future QR scans open the chart.
+   */
+  braceletNumber?: string;
 }
 
 export const INITIAL_ADMISSION_QUEUE: AdmissionEntry[] = [

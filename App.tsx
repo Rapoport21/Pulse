@@ -42,6 +42,7 @@ import { CommandSidebar, type SimControlAction } from './components/CommandSideb
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
+import { PrintBraceletsSheet } from './components/PrintBraceletsSheet';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -57,7 +58,14 @@ import {
   subscribe,
   publish,
   broadcastReset,
+  getDeviceId,
 } from './lib/realtime';
+import {
+  INITIAL_POOL,
+  type BraceletPool,
+  linkBracelet,
+  availableNumbers,
+} from './lib/braceletPool';
 import {
   buildInitialUrgentTasks,
   INITIAL_SURGE_STATE,
@@ -96,6 +104,7 @@ const LOST_EDIT_LABELS: Record<string, string> = {
   'patients': 'Patient chart',
   'clinical-notes': 'Clinical notes',
   'alert-acks': 'Alert acknowledgment',
+  'bracelet-pool': 'Bracelets',
 };
 
 function App() {
@@ -118,6 +127,7 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPrintBracelets, setShowPrintBracelets] = useState(false);
   const [chatQuery, setChatQuery] = useState('');
   const [systemStatus, setSystemStatus] = useState<'normal' | 'stale' | 'manual'>('normal');
   const [actionFilter, setActionFilter] = useState<string>('');
@@ -151,6 +161,16 @@ function App() {
   const [clinicalNotes, setClinicalNotes] = useRealtimeState<ClinicalNote[]>('clinical-notes', []);
   const [alertAcks, setAlertAcks] = useRealtimeState<Record<string, { status: string; actor: string; at: string }>>(
     'alert-acks', {}
+  );
+
+  // ── Bracelet pool — SCAD participatory demo. 20 numbered wristband slots
+  // synced across every connected device. Handing out a bracelet links it to
+  // a patient (see submitNewAdmission); scanning a linked bracelet on any
+  // device opens that patient's chart (see MobileView handleQRScan).
+  const [braceletPool, setBraceletPool] = useRealtimeState<BraceletPool>('bracelet-pool', INITIAL_POOL);
+  const availableBraceletNumbers = useMemo(
+    () => availableNumbers(braceletPool),
+    [braceletPool],
   );
 
   /** Add a clinical note (SOAP, progress, nursing, etc.) — syncs to all devices */
@@ -498,6 +518,15 @@ function App() {
       return [newPatient, ...prev];
     });
 
+    // Link the bracelet to the patient if one was selected during admit.
+    // Slot flips from 'empty' → 'admitted' and carries the patient's
+    // name so Settings can label the chip without a patient lookup.
+    if (entry.braceletNumber) {
+      setBraceletPool(prev =>
+        linkBracelet(prev, entry.braceletNumber!, newPatient.id, entry.name),
+      );
+    }
+
     if (bedContext) {
       showToast(`Admitted ${entry.name} → ${bedContext.bedLabel} (${bedContext.unitName})`);
     } else {
@@ -551,6 +580,27 @@ function App() {
         setToast({ message: `SURGE MODE ACTIVATED — ${count} urgent tasks`, type: 'error' });
       }
     });
+  }, []);
+
+  // ── Cross-device "Send to..." plumbing ─────────────────────────────────
+  // When any device hits "Send to..." on a patient chart, it publishes an
+  // `open-patient` broadcast carrying the target device ids + patient id.
+  // Each device checks whether it's a target; if so it navigates to the
+  // Patients tab with that patient pre-selected. This is how the SCAD demo
+  // pushes a chart from Nick's iPhone to the wall-mounted touchscreen.
+  useEffect(() => {
+    return subscribe<{ patientId: string; targetDeviceIds: string[]; fromName?: string }>(
+      'open-patient',
+      (payload) => {
+        if (!payload) return;
+        const myId = getDeviceId();
+        if (!payload.targetDeviceIds.includes(myId)) return;
+        setInitialPatientId(payload.patientId);
+        setActiveTab(Tab.PATIENTS);
+        const sender = payload.fromName ? ` from ${payload.fromName}` : '';
+        setToast({ message: `Chart received${sender}`, type: 'info' });
+      },
+    );
   }, []);
 
   // Optimistic-concurrency surface: when a concurrent edit on another
@@ -870,6 +920,7 @@ function App() {
     setPatients([...MOCK_PATIENTS]);
     setClinicalNotes([]);
     setAlertAcks({});
+    setBraceletPool(INITIAL_POOL);
 
     // Local-only state
     setGlobalHandoverNotes(null);
@@ -892,6 +943,7 @@ function App() {
     setPatients,
     setClinicalNotes,
     setAlertAcks,
+    setBraceletPool,
   ]);
 
   const handleConfirmHandover = (notes: string) => {
@@ -1081,6 +1133,19 @@ function App() {
           handleLogout();
         }}
         variant={isMobile ? 'mobile' : 'desktop'}
+        braceletPool={braceletPool}
+        onUpdateBraceletPool={setBraceletPool}
+        onOpenPrintBracelets={() => {
+          setShowSettings(false);
+          setShowPrintBracelets(true);
+        }}
+      />
+
+      {/* Printable wristbands — 2 strips per sheet (SCAD demo). */}
+      <PrintBraceletsSheet
+        open={showPrintBracelets}
+        onClose={() => setShowPrintBracelets(false)}
+        braceletPool={braceletPool}
       />
 
       {isMobile ? (
@@ -1105,6 +1170,8 @@ function App() {
           patients={patients}
           clinicalNotes={clinicalNotes}
           alertAcks={alertAcks}
+          braceletPool={braceletPool}
+          availableBraceletNumbers={availableBraceletNumbers}
           onAssignBed={assignBedToAdmission}
           onSubmitAdmission={submitNewAdmission}
           onDischargePatient={dischargePatient}

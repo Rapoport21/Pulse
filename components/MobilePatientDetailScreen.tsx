@@ -27,6 +27,7 @@ import {
   DoorOpen,
   Siren,
   QrCode,
+  Send,
 } from 'lucide-react';
 import { Patient } from '../types';
 import { ageInYears } from '../data/clinicalMock';
@@ -68,6 +69,10 @@ interface MobilePatientDetailScreenProps {
   onOpenVitals?: () => void;
   /** Open the printable QR ID-band preview for this patient. */
   onPrintQR?: () => void;
+  /** Open the "Send to..." device picker for this patient — pushes the
+   *  chart to another connected PULSE device (wall-mounted touchscreen,
+   *  iMac, iPad, etc.). Part of the SCAD participatory demo. */
+  onSendTo?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -517,6 +522,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
   onOpenCodeBlue,
   onOpenVitals,
   onPrintQR,
+  onSendTo,
 }) => {
   // Accordion state
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -693,6 +699,35 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           >
             {fullName}
           </div>
+
+          {/* Send to another device — SCAD participatory demo. Pushes
+              the current chart to a peer device over realtime broadcast
+              so a wall-mounted touchscreen or iPad can show what the
+              operator is looking at on their phone. */}
+          {onSendTo && (
+            <button
+              type="button"
+              onClick={onSendTo}
+              aria-label="Send chart to another device"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 28,
+                marginRight: SPACE.xs,
+                padding: 0,
+                background: COLORS.surfaceElev,
+                border: `1px solid ${COLORS.accent}`,
+                borderRadius: RADIUS.sm,
+                color: COLORS.accent,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              <Send size={14} strokeWidth={1.75} />
+            </button>
+          )}
 
           {/* Print QR — small action button, only rendered when the
               parent wires an onPrintQR callback. Shows a QrCode icon

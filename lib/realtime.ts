@@ -45,8 +45,13 @@ interface OutgoingMessage<T = unknown> {
 
 interface PresenceMeta {
   device: string;
+  /** Human-readable name: iPhone / iPad / Mac / Screen. Editable in Settings. */
+  deviceName: string;
   joinedAt: number;
 }
+
+/** Keyed by device id. Populated from presence `sync` events. */
+export type PresenceMap = Record<string, PresenceMeta>;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Optimistic concurrency: versioned envelope for state-update payloads.
@@ -126,6 +131,65 @@ export function getDeviceId(): string {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Device name (human-readable label shown in Send-to sheets and Settings).
+// Auto-detected from user agent, overridable via localStorage.
+// ──────────────────────────────────────────────────────────────────────────────
+
+const DEVICE_NAME_KEY = 'pulse-device-name';
+
+/** Best-effort UA sniff. Returns "iPhone" / "iPad" / "Mac" / "Device". */
+function detectDeviceName(): string {
+  if (typeof navigator === 'undefined') return 'Device';
+  const ua = navigator.userAgent;
+  // iPadOS 13+ reports as Mac in the UA but has touch points
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1)) {
+    return /iPad/.test(ua) ? 'iPad' : 'iPad';
+  }
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android' : 'Android Tablet';
+  if (/Macintosh|Mac OS X/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Device';
+}
+
+function loadOrDetectDeviceName(): string {
+  if (typeof window === 'undefined') return detectDeviceName();
+  try {
+    const stored = window.localStorage.getItem(DEVICE_NAME_KEY);
+    if (stored && stored.trim()) return stored;
+  } catch {
+    // ignore
+  }
+  return detectDeviceName();
+}
+
+let CURRENT_DEVICE_NAME = loadOrDetectDeviceName();
+
+export function getDeviceName(): string {
+  return CURRENT_DEVICE_NAME;
+}
+
+/** Override the device name. Persists to localStorage and re-tracks presence. */
+export function setDeviceName(name: string): void {
+  const trimmed = name.trim() || detectDeviceName();
+  CURRENT_DEVICE_NAME = trimmed;
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(DEVICE_NAME_KEY, trimmed);
+    } catch {
+      // ignore
+    }
+  }
+  // Re-track presence so peers see the new label immediately.
+  if (store.channel && store.status === 'connected') {
+    store.channel
+      .track({ device: DEVICE_ID, deviceName: trimmed, joinedAt: Date.now() } satisfies PresenceMeta)
+      .catch((e) => console.warn('[realtime] re-track failed', e));
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // Module-level singleton
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -147,6 +211,10 @@ interface RealtimeStore {
   // Presence subscribers
   presenceSubs: Set<(devices: string[]) => void>;
   presenceState: string[];
+  // Keyed presence meta (device id → PresenceMeta). Populated from Supabase
+  // presence sync events. Falls back to a single local entry when offline.
+  presenceMeta: PresenceMap;
+  presenceMetaSubs: Set<(meta: PresenceMap) => void>;
   // Ring buffer of last 50 messages for the debug panel.
   log: RealtimeLogEntry[];
   logSubs: Set<(log: RealtimeLogEntry[]) => void>;
@@ -170,6 +238,14 @@ const store: RealtimeStore = {
   statusSubs: new Set(),
   presenceSubs: new Set(),
   presenceState: [DEVICE_ID],
+  presenceMeta: {
+    [DEVICE_ID]: {
+      device: DEVICE_ID,
+      deviceName: CURRENT_DEVICE_NAME,
+      joinedAt: Date.now(),
+    },
+  },
+  presenceMetaSubs: new Set(),
   log: [],
   logSubs: new Set(),
   latencyMs: 0,
@@ -195,6 +271,11 @@ function setStatus(s: ConnectionStatus) {
 function setPresence(devices: string[]) {
   store.presenceState = devices;
   store.presenceSubs.forEach((fn) => fn([...devices]));
+}
+
+function setPresenceMeta(meta: PresenceMap) {
+  store.presenceMeta = meta;
+  store.presenceMetaSubs.forEach((fn) => fn({ ...meta }));
 }
 
 function previewRaw(p: unknown): string {
@@ -267,6 +348,21 @@ function ensureInit() {
       const presenceState = channel.presenceState() as Record<string, PresenceMeta[]>;
       const devices = Object.keys(presenceState);
       setPresence(devices);
+      // Flatten to a keyed meta map. Supabase stores an array of meta objects
+      // per key (one per concurrent connection), so we take the first.
+      const meta: PresenceMap = {};
+      for (const id of devices) {
+        const list = presenceState[id];
+        if (list && list.length > 0) {
+          const entry = list[0];
+          meta[id] = {
+            device: entry.device ?? id,
+            deviceName: entry.deviceName ?? 'Device',
+            joinedAt: entry.joinedAt ?? Date.now(),
+          };
+        }
+      }
+      setPresenceMeta(meta);
       appendLog({
         ts: Date.now(),
         direction: 'in',
@@ -279,7 +375,11 @@ function ensureInit() {
       if (status === 'SUBSCRIBED') {
         setStatus('connected');
         try {
-          await channel.track({ device: DEVICE_ID, joinedAt: Date.now() } satisfies PresenceMeta);
+          await channel.track({
+            device: DEVICE_ID,
+            deviceName: CURRENT_DEVICE_NAME,
+            joinedAt: Date.now(),
+          } satisfies PresenceMeta);
         } catch (e) {
           console.warn('[realtime] presence track failed', e);
         }
@@ -525,6 +625,19 @@ export function subscribePresence(fn: (devices: string[]) => void): () => void {
   return () => store.presenceSubs.delete(fn);
 }
 
+/** Full presence meta keyed by device id — device name + joinedAt. */
+export function getPresenceMeta(): PresenceMap {
+  ensureInit();
+  return { ...store.presenceMeta };
+}
+
+export function subscribePresenceMeta(fn: (meta: PresenceMap) => void): () => void {
+  ensureInit();
+  store.presenceMetaSubs.add(fn);
+  fn({ ...store.presenceMeta });
+  return () => store.presenceMetaSubs.delete(fn);
+}
+
 export function getLatencyMs(): number {
   return store.latencyMs;
 }
@@ -747,6 +860,13 @@ export function usePresence(): string[] {
   const [devices, setDevices] = useState<string[]>(() => [...store.presenceState]);
   useEffect(() => subscribePresence(setDevices), []);
   return devices;
+}
+
+/** React hook — keyed presence meta, live-updated on every sync. */
+export function usePresenceMeta(): PresenceMap {
+  const [meta, setMeta] = useState<PresenceMap>(() => ({ ...store.presenceMeta }));
+  useEffect(() => subscribePresenceMeta(setMeta), []);
+  return meta;
 }
 
 export function useRealtimeLog(): RealtimeLogEntry[] {

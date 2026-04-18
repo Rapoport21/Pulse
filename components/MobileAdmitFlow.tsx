@@ -79,6 +79,18 @@ export interface MobileAdmitFlowProps {
   ) => void;
   /** Live bed state, used to populate the bed picker on step 7. */
   bedUnits?: BedUnit[];
+  /**
+   * Bracelet numbers currently unlinked (SCAD demo). When non-empty,
+   * step 1 shows a dropdown so the operator can tie this patient to a
+   * physical wristband. Leave empty to hide the selector entirely.
+   */
+  availableBraceletNumbers?: string[];
+  /**
+   * When the admit flow is opened from a scan of an empty bracelet,
+   * the scanner pre-fills the selector with that number so the operator
+   * doesn't have to reselect it.
+   */
+  prefilledBraceletNumber?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -117,6 +129,8 @@ interface FormState {
   gcs: string;
   allergies: AdmissionAllergyInput[];
   problems: AdmissionProblemInput[];
+  /** Two-digit bracelet number (SCAD demo). Empty string = none selected. */
+  braceletNumber: string;
 }
 
 const BLANK_ALLERGY: AdmissionAllergyInput = {
@@ -159,6 +173,7 @@ const INITIAL_FORM: FormState = {
   gcs: '15',
   allergies: [{ ...BLANK_ALLERGY }],
   problems: [{ ...BLANK_PROBLEM }],
+  braceletNumber: '',
 };
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -701,6 +716,8 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
   showToast,
   onSubmitAdmission,
   bedUnits,
+  availableBraceletNumbers = [],
+  prefilledBraceletNumber,
 }) => {
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
@@ -709,6 +726,15 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
   const [shake, setShake] = useState(false);
   const [selectedBedId, setSelectedBedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Options shown in the bracelet dropdown: any currently-empty slot plus
+  // the pre-filled number (if any) so it stays visible even after the pool
+  // updates. Deduped.
+  const braceletOptions = useMemo(() => {
+    const set = new Set<string>(availableBraceletNumbers);
+    if (prefilledBraceletNumber) set.add(prefilledBraceletNumber);
+    return Array.from(set).sort();
+  }, [availableBraceletNumbers, prefilledBraceletNumber]);
 
   // iOS-style edge-swipe-to-close
   const swipeBackRef = useSwipeBack<HTMLDivElement>({
@@ -719,7 +745,8 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
     enabled: open,
   });
 
-  // Reset wizard when opened
+  // Reset wizard when opened. If a bracelet was pre-filled (e.g. scanner
+  // opened the flow with a specific empty bracelet selected), seed it.
   useEffect(() => {
     if (open) {
       setCurrentStep(1);
@@ -727,8 +754,12 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       setDirection(1);
       setShake(false);
       setSelectedBedId(null);
+      setForm((prev) => ({
+        ...prev,
+        braceletNumber: prefilledBraceletNumber ?? prev.braceletNumber ?? '',
+      }));
     }
-  }, [open]);
+  }, [open, prefilledBraceletNumber]);
 
   // Compute available (ready) beds grouped by unit — used in step 7
   const availableBedsByUnit = useMemo(() => {
@@ -889,6 +920,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
       requestedUnit: selectedBedDisplay?.unit.shortName || 'Med-Surg',
       attending: form.attending || 'Unassigned',
       bedAssignmentStatus: selectedBedId ? 'assigned' : 'admitted-unassigned',
+      braceletNumber: form.braceletNumber.trim() || undefined,
       demographics: {
         dob: form.dob || undefined,
         sex: form.sex === '' ? undefined : form.sex,
@@ -1081,6 +1113,25 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 {currentStep === 1 && (
                   <TacticalCard padding="sm">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
+                      {/* SCAD demo — bracelet selector. Hidden when there
+                          are no options (pool not provided or exhausted). */}
+                      {braceletOptions.length > 0 && (
+                        <Field label="BRACELET NUMBER">
+                          <SelectInput
+                            value={form.braceletNumber}
+                            onChange={(e) => set('braceletNumber', e.target.value)}
+                            style={{ fontFamily: FONTS.mono, letterSpacing: '0.08em' }}
+                          >
+                            <option value="">— NONE —</option>
+                            {braceletOptions.map((n) => (
+                              <option key={n} value={n}>
+                                #{n}
+                              </option>
+                            ))}
+                          </SelectInput>
+                        </Field>
+                      )}
+
                       <PairRow>
                         <Field label="FIRST NAME *">
                           <TextInput
