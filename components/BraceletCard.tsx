@@ -324,7 +324,16 @@ export const BraceletCardSvg: React.FC<{
   );
 };
 
-/** Spell common pool sizes for the flavor footer, fall back to digits. */
+/**
+ * Spell common pool sizes for the flavor footer, fall back to digits.
+ *
+ * ⚠️ If `POOL_SIZE` in `lib/braceletPool.ts` is bumped to a value not
+ * in this map, the footer will render "batch of 25" instead of "batch
+ * of twenty-five" — functional but ugly. Add the new size here AND in
+ * the matching `BATCH_WORDS` map in `scripts/export-bracelets.mjs`
+ * (they must stay in sync — the script runs outside the React bundle).
+ * See `lib/braceletPool.ts` for the full POOL_SIZE bump checklist.
+ */
 function spellBatch(n: number): string {
   const words: Record<number, string> = {
     10: 'ten',

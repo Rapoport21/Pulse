@@ -43,7 +43,39 @@ export interface BraceletPool {
   bracelets: BraceletSlot[];
 }
 
-/** Default pool size. Can be bumped for larger events. */
+/**
+ * Default pool size. Can be bumped for larger events.
+ *
+ * ⚠️ BUMPING POOL_SIZE IS A MULTI-FILE CHANGE — read this before editing:
+ *
+ * Bracelets printed from the *previous* pool size have the old count
+ * baked into the ink. Specifically, every bracelet SVG embeds:
+ *   1. A "№ / N" counter in the top-right (auto-derives from POOL_SIZE,
+ *      so newly-rendered bracelets are fine — but already-printed
+ *      physical bracelets will still say the old N).
+ *   2. A "batch of <word>" line below it ("batch of twenty" for 20).
+ *      The word comes from a hardcoded `BATCH_WORDS` map duplicated in
+ *      `components/BraceletCard.tsx` AND `scripts/export-bracelets.mjs`.
+ *      If the new size isn't in the map, it falls back to digits
+ *      ("batch of 25") — ugly but not broken.
+ *
+ * Checklist when you bump this number:
+ *   □ Update `BATCH_WORDS` in `components/BraceletCard.tsx` (if new
+ *     size isn't already there — digits fallback works but looks off).
+ *   □ Update `BATCH_WORDS` and `POOL_SIZE` in `scripts/export-bracelets.mjs`
+ *     (two files must stay in sync — no shared module because it's a
+ *     standalone Node ESM script).
+ *   □ Re-run `npm run export:bracelets` to regenerate the standalone
+ *     SVGs in `../pulse-collateral/bracelets/current-v8/generated/`.
+ *   □ Reprint *all* physical bracelets. Old bracelets 01–20 still say
+ *     "№ / 20" and "batch of twenty"; reusing them in a 25-pool event
+ *     would be inconsistent with the new 21–25 bracelets.
+ *   □ If any deployed devices have cached pool state, broadcast a
+ *     reset after rollout (otherwise 21–N won't appear on devices
+ *     that still have the old 20-slot pool in memory).
+ *
+ * Backlog entry tracking this: `docs/improvement-ideas.md` → T3.11.
+ */
 export const POOL_SIZE = 20;
 
 /** Build a fresh empty pool. Used as the initial state and after reset. */

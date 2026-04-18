@@ -44,7 +44,16 @@ const OUTPUT_DIR = resolve(
   '../../pulse-collateral/bracelets/current-v8/generated',
 );
 
-// Keep in sync with lib/braceletPool.ts POOL_SIZE.
+// ⚠️ Keep in sync with `lib/braceletPool.ts` POOL_SIZE and the matching
+// `BATCH_WORDS` map in `components/BraceletCard.tsx`. Three files, one
+// truth — no shared module because this script runs outside the Vite
+// bundle (plain Node ESM, no TS import). If you bump POOL_SIZE:
+//   1. Update POOL_SIZE here AND in lib/braceletPool.ts
+//   2. Add the new size to BATCH_WORDS here AND in BraceletCard.tsx
+//   3. Re-run `npm run export:bracelets` to regenerate the SVG files
+//   4. Reprint physical bracelets — already-printed 01–20 say "№ / 20"
+//      and "batch of twenty" and will be inconsistent with the new batch
+// Full checklist: see the POOL_SIZE comment in lib/braceletPool.ts.
 const POOL_SIZE = 20;
 const HOSPITAL = 'MEMORIAL GENERAL · EMERGENCY DEPT';
 
