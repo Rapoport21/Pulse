@@ -703,7 +703,9 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
           {/* Send to another device — SCAD participatory demo. Pushes
               the current chart to a peer device over realtime broadcast
               so a wall-mounted touchscreen or iPad can show what the
-              operator is looking at on their phone. */}
+              operator is looking at on their phone. Tone-matched to the
+              QR icon next to it so the header reads as a row of
+              peer actions, not a single hero accent button. */}
           {onSendTo && (
             <button
               type="button"
@@ -718,9 +720,9 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
                 marginRight: SPACE.xs,
                 padding: 0,
                 background: COLORS.surfaceElev,
-                border: `1px solid ${COLORS.accent}`,
+                border: `1px solid ${COLORS.borderStrong}`,
                 borderRadius: RADIUS.sm,
-                color: COLORS.accent,
+                color: COLORS.textSecondary,
                 cursor: 'pointer',
                 flexShrink: 0,
               }}
@@ -827,12 +829,28 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
         </div>
 
         {/* ── 3. SCROLLABLE CONTENT ──────────────────────────────── */}
+        {/* Two-layer split: the outer div is the scroll viewport
+            (flex: 1 inside the overlay's column), the inner div is the
+            flex column that stacks the TacticalCards. Splitting them
+            prevents a subtle flexbox clipping bug — when the cards sum
+            to more than the viewport height and the parent is
+            flex+column, each TacticalCard (`overflow: hidden`) had
+            `min-height: auto` resolve to 0 and got shrunk by
+            `flex-shrink: 1`. Content was clipped and cards overlapped
+            each other. Moving the flex-column inside a non-height-
+            constrained wrapper lets every card keep its natural height
+            and the viewport scrolls normally. */}
         <div
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <div
+          style={{
             padding: `${SPACE.base}px`,
             paddingBottom: `calc(${SPACE.base}px + 72px + env(safe-area-inset-bottom))`,
             display: 'flex',
@@ -1388,6 +1406,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               </AnimatePresence>
             </TacticalCard>
           )}
+          </div>
         </div>
 
         {/* ── 4. BOTTOM ACTION BAR ───────────────────────────────── */}
