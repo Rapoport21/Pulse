@@ -1,10 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Users, Activity, AlertTriangle, Clock, TrendingUp, TrendingDown, Minus, UserCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  Users, Activity, AlertTriangle, Clock,
+  TrendingUp, TrendingDown, Minus, UserCheck,
+  ChevronDown, ChevronUp, UserPlus, Zap,
+} from 'lucide-react';
 import { Status, ZoneStatus, UserProfile } from '../types';
 import {
   COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION,
-  Mono, StatusPill, TacticalCard, CornerBracket, type StatusTone,
+  Mono, StatusPill, TacticalCard, TacticalButton, CornerBracket, Divider,
+  type StatusTone,
 } from './design';
 import { MobileScreenHeader } from './MobileScreenHeader';
 
@@ -71,6 +76,11 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
   currentUser, systemStatus, showToast, isSurgeActive,
 }) => {
   const [currentFloor, setCurrentFloor] = useState(1);
+  /** One zone is expanded at a time. `null` = all collapsed.
+   *  Tapping the same zone again collapses it; tapping a different
+   *  zone swaps the expansion. Keeps the list focused on one
+   *  surface detail instead of ballooning every card at once. */
+  const [expandedZoneId, setExpandedZoneId] = useState<string | null>(null);
 
   const floorZones = useMemo(() => Z.filter((z) => z.floor === currentFloor), [currentFloor]);
 
@@ -160,10 +170,19 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
         // {FLOORS.find((f) => f.id === currentFloor)?.code} ZONES
       </Mono>
 
-      {/* Zone cards */}
+      {/* Zone cards — tap any tile to expand in place. Only one
+          zone is open at a time so the screen stays focused. */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
         {floorZones.map((zone) => (
-          <ZoneCard key={zone.id} zone={zone} showToast={showToast} />
+          <ZoneCard
+            key={zone.id}
+            zone={zone}
+            expanded={expandedZoneId === zone.id}
+            onToggle={() =>
+              setExpandedZoneId((prev) => (prev === zone.id ? null : zone.id))
+            }
+            showToast={showToast}
+          />
         ))}
       </div>
 
@@ -200,29 +219,54 @@ const KpiTile: React.FC<{
   </TacticalCard>
 );
 
-/* ── ZoneCard ── */
+/* ── ZoneCard ──
+ *
+ * Compact tile by default; tap to expand in place. Expanded
+ * view shows full staffing (no truncation), available-bed
+ * math, wait-time narrative, and three quick actions that
+ * route through showToast. One zone is expanded at a time —
+ * the parent MobileLiveOps owns that state.
+ */
 
 const ZoneCard: React.FC<{
   zone: ExtendedZone;
+  expanded: boolean;
+  onToggle: () => void;
   showToast: (msg: string, type?: 'success' | 'info' | 'error') => void;
-}> = ({ zone, showToast }) => {
+}> = ({ zone, expanded, onToggle, showToast }) => {
   const color = toColor(zone.status);
   const tone = toTone(zone.status);
   const trendColor = zone.trend === 'Rising' ? COLORS.crit
     : zone.trend === 'Falling' ? COLORS.ok : COLORS.textMuted;
 
+  const available = Math.max(0, zone.capacity - zone.patients);
+  const hasWaitHours = /h/.test(zone.waitTime);
+
   return (
     <motion.div
+      layout
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: MOTION.base, ease: MOTION.ease }}
+      transition={{
+        opacity: { duration: MOTION.base, ease: MOTION.ease },
+        layout: { duration: MOTION.fast, ease: MOTION.ease },
+      }}
     >
-      <TacticalCard padding="sm" interactive style={{ position: 'relative' }}
-        onClick={() => showToast(`${zone.name} selected`, 'info')}>
+      <TacticalCard
+        padding="sm"
+        interactive
+        onClick={onToggle}
+        style={{
+          position: 'relative',
+          cursor: 'pointer',
+          borderLeft: `3px solid ${color}`,
+        }}
+      >
         {/* Name + status */}
         <div style={{
           display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', marginBottom: SPACE.sm,
+          gap: SPACE.sm,
         }}>
           <span style={{
             fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, fontWeight: 600,
@@ -230,8 +274,13 @@ const ZoneCard: React.FC<{
           }}>
             {zone.name}
           </span>
-          <StatusPill label={zone.status} tone={tone}
-            pulse={zone.status === Status.CRITICAL} size="xs" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+            <StatusPill label={zone.status} tone={tone}
+              pulse={zone.status === Status.CRITICAL} size="xs" />
+            {expanded
+              ? <ChevronUp size={12} color={COLORS.textMuted} />
+              : <ChevronDown size={12} color={COLORS.textMuted} />}
+          </div>
         </div>
 
         {/* Occupancy bar */}
@@ -274,7 +323,7 @@ const ZoneCard: React.FC<{
           <DetailCell label="Wait">
             <span style={{
               fontFamily: FONTS.mono, fontSize: 13, fontWeight: 500,
-              color: /h/.test(zone.waitTime) ? COLORS.warn : COLORS.textSecondary,
+              color: hasWaitHours ? COLORS.warn : COLORS.textSecondary,
             }}>
               {zone.waitTime}
             </span>
@@ -288,10 +337,181 @@ const ZoneCard: React.FC<{
             </div>
           </DetailCell>
         </div>
+
+        {/* Expanded detail — fires on tap. One zone open at a time. */}
+        <AnimatePresence initial={false}>
+          {expanded && (
+            <motion.div
+              key="expanded"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: MOTION.fast }}
+              style={{ overflow: 'hidden' }}
+              // Prevent bubbling so taps inside the expand don't re-collapse
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Divider style={{ margin: `${SPACE.md}px 0 ${SPACE.md}px` }} />
+
+              {/* Occupancy breakdown */}
+              <div style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                gap: SPACE.sm, marginBottom: SPACE.md,
+              }}>
+                <ExpandStat label="OCCUPIED" value={`${zone.patients}`} sub={`${zone.occupancy}%`} tone="primary" />
+                <ExpandStat
+                  label="AVAILABLE"
+                  value={`${available}`}
+                  sub={`of ${zone.capacity}`}
+                  tone={available > 0 ? 'ok' : 'crit'}
+                />
+                <ExpandStat
+                  label="WAIT TIME"
+                  value={zone.waitTime}
+                  sub={hasWaitHours ? 'over target' : 'within target'}
+                  tone={hasWaitHours ? 'warn' : 'ok'}
+                />
+              </div>
+
+              {/* Full staffing — no truncation */}
+              <div style={{
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                background: COLORS.bgDeep,
+                border: `1px solid ${COLORS.border}`,
+                borderRadius: RADIUS.sm,
+                marginBottom: SPACE.md,
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  gap: SPACE.xs, marginBottom: 3,
+                }}>
+                  <Users size={11} color={COLORS.textMuted} />
+                  <Mono tone="dim" size="xs">STAFF ON DUTY</Mono>
+                </div>
+                <span style={{
+                  fontFamily: FONTS.mono, fontSize: 12,
+                  color: COLORS.textPrimary, fontWeight: 500,
+                }}>
+                  {zone.staffing}
+                </span>
+              </div>
+
+              {/* Trend narrative */}
+              <div style={{
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                background: `${trendColor}10`,
+                border: `1px solid ${trendColor}30`,
+                borderRadius: RADIUS.sm,
+                borderLeft: `2px solid ${trendColor}`,
+                marginBottom: SPACE.md,
+              }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  gap: SPACE.xs, marginBottom: 3,
+                }}>
+                  <TrendIcon trend={zone.trend} color={trendColor} />
+                  <Mono
+                    tone={zone.trend === 'Rising' ? 'crit' : zone.trend === 'Falling' ? 'ok' : 'muted'}
+                    size="xs"
+                  >
+                    {zone.trend.toUpperCase()}
+                  </Mono>
+                </div>
+                <span style={{
+                  fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size,
+                  color: COLORS.textSecondary, lineHeight: 1.4,
+                }}>
+                  {trendNarrative(zone)}
+                </span>
+              </div>
+
+              {/* Quick actions */}
+              <div style={{ display: 'flex', gap: SPACE.sm }}>
+                <TacticalButton
+                  variant="ghost"
+                  size="sm"
+                  fullWidth
+                  icon={<UserCheck size={11} />}
+                  onClick={() => showToast(`View ${zone.name} patients`, 'info')}
+                >
+                  Patients
+                </TacticalButton>
+                <TacticalButton
+                  variant="ghost"
+                  size="sm"
+                  fullWidth
+                  icon={<UserPlus size={11} />}
+                  onClick={() => showToast(`Request staff for ${zone.name}`, 'info')}
+                >
+                  Staff
+                </TacticalButton>
+                <TacticalButton
+                  variant={zone.status === Status.CRITICAL ? 'danger' : 'secondary'}
+                  size="sm"
+                  fullWidth
+                  icon={<Zap size={11} />}
+                  onClick={() => showToast(`Escalate ${zone.name}`, 'info')}
+                >
+                  Escalate
+                </TacticalButton>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </TacticalCard>
     </motion.div>
   );
 };
+
+/* ── ExpandStat ── helper for the 3-up stat row in expanded view */
+
+const ExpandStat: React.FC<{
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: StatusTone | 'primary';
+}> = ({ label, value, sub, tone = 'primary' }) => (
+  <div style={{
+    padding: `${SPACE.sm}px ${SPACE.md}px`,
+    background: COLORS.bgDeep,
+    border: `1px solid ${COLORS.border}`,
+    borderRadius: RADIUS.sm,
+  }}>
+    <Mono tone="dim" size="xs" style={{ display: 'block', marginBottom: 3 }}>
+      {label}
+    </Mono>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+      <span style={{
+        fontFamily: FONTS.sans, fontSize: 18, fontWeight: 600,
+        letterSpacing: '-0.02em', lineHeight: 1, color: toneColor(tone),
+      }}>
+        {value}
+      </span>
+      {sub && <Mono tone="muted" size="xs">{sub}</Mono>}
+    </div>
+  </div>
+);
+
+/** Plain-English trend narrative for the expanded zone panel.
+ *  Not backed by a forecaster — these are plausible-sounding
+ *  hints tied to the current zone's status + trend. Good enough
+ *  to feel alive on the demo; replace with a real prediction
+ *  feed when it exists. */
+function trendNarrative(zone: ExtendedZone): string {
+  if (zone.status === Status.CRITICAL && zone.trend === 'Rising') {
+    return `${zone.name} is at/above capacity with arrivals still trending up. Expect waitlist growth within 30m.`;
+  }
+  if (zone.status === Status.WARNING && zone.trend === 'Rising') {
+    return `${zone.name} is under pressure and headed toward capacity. Consider surfacing to Coord before it crits.`;
+  }
+  if (zone.trend === 'Falling') {
+    return `${zone.name} load is decreasing. Holding steady through the next half hour looks safe.`;
+  }
+  if (zone.trend === 'Stable') {
+    return `${zone.name} is stable. No inflection signal in the last window — current staffing is adequate.`;
+  }
+  return `${zone.name} conditions nominal.`;
+}
 
 /* ── DetailCell (tiny helper to reduce repetition in zone detail rows) ── */
 

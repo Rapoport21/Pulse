@@ -93,6 +93,310 @@ const transferStatusColor = (s: TransferStatus) => s === 'IN PROGRESS' ? COLORS.
 const transferStatusTone = (s: TransferStatus): 'ok' | 'warn' | 'crit' | 'info' => s === 'IN PROGRESS' ? 'info' : s === 'PENDING' ? 'warn' : 'crit';
 const utilizationColor = (avail: number, total: number) => { const p = total > 0 ? (avail / total) * 100 : 0; return p >= 30 ? COLORS.ok : p >= 15 ? COLORS.warn : COLORS.crit; };
 
+// ── Dept detail panel ────────────────────────────────────────────────────
+// Rendered below the clinical dept grid when a tile is tapped. Filters
+// the active transfers, bottleneck alerts, and comms feed down to the
+// subset that involves the selected department, and surfaces a couple
+// of quick actions. Kept inside this module so it has direct access to
+// the same mock-data arrays as the parent body (no prop-drilling).
+
+const DeptDetailPanel: React.FC<{
+  dept: Department;
+  onClose: () => void;
+  showToast: (msg: string) => void;
+}> = ({ dept, onClose, showToast }) => {
+  const statusCol = deptStatusColor(dept.status);
+  const occupancy = Math.round((dept.census / dept.capacity) * 100);
+  const available = Math.max(0, dept.capacity - dept.census);
+
+  // A transfer involves this dept if it's the source or the destination.
+  const relatedTransfers = ACTIVE_TRANSFERS.filter(
+    t => t.from === dept.shortName || t.to === dept.shortName,
+  );
+
+  // Bottleneck titles mention dept shortName (e.g. "OR Turnaround",
+  // "Lab TAT", "ED to ICU Transfer"). Simple substring match catches
+  // the realistic cases.
+  const relatedBottlenecks = BOTTLENECK_ALERTS.filter(
+    b =>
+      b.title.toUpperCase().includes(dept.shortName.toUpperCase()) ||
+      b.detail.toUpperCase().includes(dept.shortName.toUpperCase()),
+  );
+
+  const relatedComms = COORD_MESSAGES.filter(
+    m => m.from === dept.shortName || m.to === dept.shortName,
+  );
+
+  return (
+    <div style={{
+      position: 'relative',
+      padding: SPACE.base,
+      background: COLORS.surfaceElev,
+      border: `1px solid ${statusCol}40`,
+      borderLeft: `3px solid ${statusCol}`,
+      borderRadius: RADIUS.sm,
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: SPACE.sm, gap: SPACE.sm,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
+          <span style={{
+            fontFamily: FONTS.sans, fontSize: TYPE.h3.size,
+            fontWeight: TYPE.h3.weight, color: COLORS.textPrimary,
+          }}>
+            {dept.shortName}
+          </span>
+          <Mono tone="muted" size="xs">{dept.name}</Mono>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Collapse"
+          style={{
+            width: 24, height: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent',
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.sm,
+            color: COLORS.textMuted,
+            cursor: 'pointer',
+          }}
+        >
+          <X size={12} />
+        </button>
+      </div>
+
+      {/* Quick stats */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+        gap: SPACE.sm, marginBottom: SPACE.md,
+      }}>
+        <DeptStat label="CENSUS" value={`${dept.census}`} sub={`${occupancy}%`} tone="primary" />
+        <DeptStat
+          label="AVAILABLE"
+          value={`${available}`}
+          sub={`of ${dept.capacity}`}
+          tone={available > 0 ? 'ok' : 'crit'}
+        />
+        <DeptStat
+          label="TRANSFERS"
+          value={`${relatedTransfers.length}`}
+          sub={dept.activeTransfers > 0 ? 'in motion' : 'idle'}
+          tone={relatedTransfers.length > 0 ? 'info' : 'ok'}
+        />
+      </div>
+
+      {/* Transfers involving this dept */}
+      {relatedTransfers.length > 0 && (
+        <div style={{ marginBottom: SPACE.md }}>
+          <Mono tone="dim" size="xs" style={{ display: 'block', marginBottom: SPACE.sm }}>
+            // ACTIVE TRANSFERS ({relatedTransfers.length})
+          </Mono>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+            {relatedTransfers.map(t => {
+              const col = transferStatusColor(t.status);
+              return (
+                <div
+                  key={t.id}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: SPACE.sm,
+                    padding: `${SPACE.xs}px ${SPACE.md}px`,
+                    background: COLORS.surface,
+                    border: `1px solid ${col}30`,
+                    borderRadius: RADIUS.sm,
+                    borderLeft: `2px solid ${col}`,
+                  }}
+                >
+                  <div style={{
+                    width: 22, height: 22, borderRadius: RADIUS.full,
+                    background: `${col}20`, border: `1px solid ${col}50`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: FONTS.mono, fontSize: 9, fontWeight: 600, color: col,
+                    flexShrink: 0,
+                  }}>
+                    {t.patientInitials}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: COLORS.textPrimary }}>
+                      {t.from}
+                    </span>
+                    <ArrowRight size={10} color={col} />
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600, color: COLORS.textPrimary }}>
+                      {t.to}
+                    </span>
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  <StatusPill label={t.status} tone={transferStatusTone(t.status)} size="xs" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bottlenecks involving this dept */}
+      {relatedBottlenecks.length > 0 && (
+        <div style={{ marginBottom: SPACE.md }}>
+          <Mono tone="dim" size="xs" style={{ display: 'block', marginBottom: SPACE.sm }}>
+            // BOTTLENECKS ({relatedBottlenecks.length})
+          </Mono>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+            {relatedBottlenecks.map(b => {
+              const col = b.severity === 'crit' ? COLORS.crit : COLORS.warn;
+              return (
+                <div
+                  key={b.id}
+                  style={{
+                    padding: `${SPACE.xs}px ${SPACE.md}px`,
+                    background: `${col}10`,
+                    border: `1px solid ${col}30`,
+                    borderRadius: RADIUS.sm,
+                    borderLeft: `2px solid ${col}`,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs, marginBottom: 2 }}>
+                    <AlertTriangle size={11} color={col} />
+                    <span style={{
+                      fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size,
+                      fontWeight: 600, color: col,
+                    }}>
+                      {b.title}
+                    </span>
+                  </div>
+                  <Mono tone="secondary" size="xs">{b.detail}</Mono>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent comms */}
+      {relatedComms.length > 0 && (
+        <div style={{ marginBottom: SPACE.md }}>
+          <Mono tone="dim" size="xs" style={{ display: 'block', marginBottom: SPACE.sm }}>
+            // RECENT COMMS ({relatedComms.length})
+          </Mono>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xs }}>
+            {relatedComms.slice(0, 3).map(m => (
+              <div
+                key={m.id}
+                style={{
+                  padding: `${SPACE.xs}px ${SPACE.md}px`,
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  borderLeft: `2px solid ${m.fromColor}`,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: m.fromColor }}>
+                      {m.from}
+                    </span>
+                    <ArrowRight size={9} color={COLORS.textMuted} />
+                    <span style={{ fontFamily: FONTS.mono, fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: COLORS.textSecondary }}>
+                      {m.to}
+                    </span>
+                  </div>
+                  <Mono tone="muted" size="xs">{m.time}</Mono>
+                </div>
+                <span style={{
+                  fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size,
+                  color: COLORS.textPrimary, lineHeight: 1.4,
+                }}>
+                  {m.message}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state — when nothing matches */}
+      {relatedTransfers.length === 0 && relatedBottlenecks.length === 0 && relatedComms.length === 0 && (
+        <div style={{
+          padding: `${SPACE.md}px ${SPACE.md}px`,
+          background: COLORS.surface,
+          border: `1px dashed ${COLORS.border}`,
+          borderRadius: RADIUS.sm,
+          textAlign: 'center',
+          marginBottom: SPACE.md,
+        }}>
+          <Mono tone="muted" size="xs">NO ACTIVE COORDINATION THREADS</Mono>
+        </div>
+      )}
+
+      {/* Quick actions */}
+      <div style={{ display: 'flex', gap: SPACE.sm }}>
+        <TacticalButton
+          variant="ghost"
+          size="sm"
+          fullWidth
+          icon={<MessageSquare size={11} />}
+          onClick={() => showToast(`Open comms to ${dept.shortName}`)}
+        >
+          Message
+        </TacticalButton>
+        <TacticalButton
+          variant="ghost"
+          size="sm"
+          fullWidth
+          icon={<Activity size={11} />}
+          onClick={() => showToast(`View ${dept.shortName} patient list`)}
+        >
+          Patients
+        </TacticalButton>
+        <TacticalButton
+          variant={dept.status === 'CRITICAL' ? 'danger' : 'secondary'}
+          size="sm"
+          fullWidth
+          icon={<Zap size={11} />}
+          onClick={() => showToast(`Escalate ${dept.shortName}`)}
+        >
+          Escalate
+        </TacticalButton>
+      </div>
+    </div>
+  );
+};
+
+const DeptStat: React.FC<{
+  label: string;
+  value: string;
+  sub?: string;
+  tone: 'primary' | 'ok' | 'warn' | 'crit' | 'info';
+}> = ({ label, value, sub, tone }) => {
+  const col =
+    tone === 'ok' ? COLORS.ok
+    : tone === 'warn' ? COLORS.warn
+    : tone === 'crit' ? COLORS.crit
+    : tone === 'info' ? COLORS.info
+    : COLORS.textPrimary;
+  return (
+    <div style={{
+      padding: `${SPACE.sm}px ${SPACE.md}px`,
+      background: COLORS.bgDeep,
+      border: `1px solid ${COLORS.border}`,
+      borderRadius: RADIUS.sm,
+    }}>
+      <Mono tone="dim" size="xs" style={{ display: 'block', marginBottom: 3 }}>
+        {label}
+      </Mono>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+        <span style={{
+          fontFamily: FONTS.sans, fontSize: 18, fontWeight: 600,
+          letterSpacing: '-0.02em', lineHeight: 1, color: col,
+        }}>
+          {value}
+        </span>
+        {sub && <Mono tone="muted" size="xs">{sub}</Mono>}
+      </div>
+    </div>
+  );
+};
+
 // ── Body component (inline) ──────────────────────────────────────────────
 // Everything the overlay renders inside its scrollable region, but with
 // no position:fixed, no HudStrip header, no close button. Drop this
@@ -104,8 +408,15 @@ export interface DeptCoordinationBodyProps {
 
 export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ showToast }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>('transfers');
+  /** Clinical dept tile tap-to-expand. When set, an inline detail
+   *  panel drops in below the dept grid with that dept's transfers,
+   *  bottlenecks, and comms. Tap the same tile again to collapse,
+   *  or tap another tile to swap. */
+  const [expandedDeptId, setExpandedDeptId] = useState<string | null>(null);
 
   const toggleSection = (s: string) => setExpandedSection(prev => prev === s ? null : s);
+
+  const expandedDept = DEPARTMENTS.find(d => d.id === expandedDeptId) ?? null;
 
   // ── Department Nodes ───────────────────────────────────────────────────
   const renderDeptNodes = () => {
@@ -124,8 +435,22 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
           {clinical.map(dept => {
             const occupancy = Math.round((dept.census / dept.capacity) * 100);
             const statusCol = deptStatusColor(dept.status);
+            const isExpanded = expandedDeptId === dept.id;
             return (
-              <TacticalCard key={dept.id} padding="sm" style={{ borderLeft: `3px solid ${statusCol}` }}>
+              <TacticalCard
+                key={dept.id}
+                padding="sm"
+                interactive
+                onClick={() => setExpandedDeptId(prev => prev === dept.id ? null : dept.id)}
+                style={{
+                  borderLeft: `3px solid ${statusCol}`,
+                  cursor: 'pointer',
+                  // Highlight the currently-expanded tile so the user
+                  // knows which detail panel belongs to which dept.
+                  borderColor: isExpanded ? statusCol : undefined,
+                  boxShadow: isExpanded ? `0 0 12px ${statusCol}40` : undefined,
+                }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.xs }}>
                   <span style={{
                     fontFamily: FONTS.sans, fontSize: TYPE.h4.size, fontWeight: TYPE.h4.weight,
@@ -155,17 +480,50 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
                   />
                 </div>
 
-                {/* Active transfers indicator */}
-                {dept.activeTransfers > 0 && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                    <ArrowRight size={9} color={COLORS.info} />
-                    <Mono tone="info" size="xs">{dept.activeTransfers} TRANSFER{dept.activeTransfers > 1 ? 'S' : ''}</Mono>
-                  </div>
-                )}
+                {/* Active transfers indicator + expand affordance */}
+                <div style={{
+                  display: 'flex', alignItems: 'center',
+                  justifyContent: 'space-between', marginTop: 2, gap: SPACE.xs,
+                }}>
+                  {dept.activeTransfers > 0 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowRight size={9} color={COLORS.info} />
+                      <Mono tone="info" size="xs">{dept.activeTransfers} TRANSFER{dept.activeTransfers > 1 ? 'S' : ''}</Mono>
+                    </div>
+                  ) : (
+                    <div />
+                  )}
+                  {isExpanded
+                    ? <ChevronUp size={11} color={statusCol} />
+                    : <ChevronDown size={11} color={COLORS.textMuted} />}
+                </div>
               </TacticalCard>
             );
           })}
         </div>
+
+        {/* ── Dept detail panel ─────────────────────────────────────
+            Shows the expanded department's transfers, bottlenecks,
+            and comms. Renders below the grid so the 2-col tile
+            layout stays stable regardless of which tile is open. */}
+        <AnimatePresence initial={false}>
+          {expandedDept && (
+            <motion.div
+              key={expandedDept.id}
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: 'auto', marginBottom: SPACE.md }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: MOTION.fast }}
+              style={{ overflow: 'hidden' }}
+            >
+              <DeptDetailPanel
+                dept={expandedDept}
+                onClose={() => setExpandedDeptId(null)}
+                showToast={showToast}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Utility departments */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.sm }}>

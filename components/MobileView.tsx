@@ -3440,6 +3440,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               currentUser={currentUser}
               showToast={showToast}
               navClearance={NAV_HEIGHT + SPACE['2xl']}
+              bedUnits={bedUnits}
+              isSurgeActive={isSurgeActive}
+              onExpandBedBoard={() => setShowBedBoard(true)}
+              onExpandEmsBoard={() => setShowEmsBoard(true)}
             />
           ) : (
           <motion.div
