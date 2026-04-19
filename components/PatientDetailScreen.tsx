@@ -512,7 +512,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   />
                   {[
                     { time: '12:15', label: 'Arrival', detail: `Ambulatory walk-in · ${clinical.currentEncounter?.chiefComplaint ?? 'Chest pain'}`, tone: COLORS.ok, done: true },
-                    { time: '12:22', label: 'Triage (ESI ' + (clinical.currentEncounter?.esiLevel ?? 2) + ')', detail: 'Vitals recorded · MEWS calculated · Allergies verified', tone: COLORS.ok, done: true },
+                    { time: '12:22', label: 'Triage (ESI ' + (clinical.currentEncounter?.esi ?? 2) + ')', detail: 'Vitals recorded · MEWS calculated · Allergies verified', tone: COLORS.ok, done: true },
                     { time: '12:35', label: 'Assessment', detail: clinical.currentEncounter?.attendingId ? `Attending: ${clinical.currentEncounter.attendingId}` : 'Attending: Dr. Reeves', tone: COLORS.ok, done: true },
                     { time: '13:00', label: 'Labs Drawn', detail: 'CBC, BMP, Troponin, BNP · Results pending', tone: COLORS.info, done: true },
                     { time: '13:15', label: 'Imaging', detail: 'CT Head ordered · In progress', tone: COLORS.warn, done: false },
@@ -1600,7 +1600,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                 />
                 {[
                   { time: '12:15', label: 'Arrival', detail: `Ambulatory walk-in · ${clinical.currentEncounter?.chiefComplaint ?? 'Chest pain'}`, tone: COLORS.ok, done: true },
-                  { time: '12:22', label: 'Triage (ESI ' + (clinical.currentEncounter?.esiLevel ?? 2) + ')', detail: 'Vitals recorded · MEWS calculated · Allergies verified', tone: COLORS.ok, done: true },
+                  { time: '12:22', label: 'Triage (ESI ' + (clinical.currentEncounter?.esi ?? 2) + ')', detail: 'Vitals recorded · MEWS calculated · Allergies verified', tone: COLORS.ok, done: true },
                   { time: '12:35', label: 'Assessment', detail: clinical.currentEncounter?.attendingId ? `Attending: ${clinical.currentEncounter.attendingId}` : 'Attending: Dr. Reeves', tone: COLORS.ok, done: true },
                   { time: '13:00', label: 'Labs Drawn', detail: 'CBC, BMP, Troponin, BNP · Results pending', tone: COLORS.info, done: true },
                   { time: '13:15', label: 'Imaging', detail: 'CT Head ordered · In progress', tone: COLORS.warn, done: false },

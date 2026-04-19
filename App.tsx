@@ -26,7 +26,7 @@ import {
   TrendingDown,
   SlidersHorizontal,
 } from 'lucide-react';
-import { Tab, UserRole, UserProfile } from './types';
+import { Tab, UserRole, UserProfile, type Allergy } from './types';
 import { USERS } from './data/userProfiles';
 import { PulseHorizon } from './components/PulseHorizon';
 import { ActionBoard } from './components/ActionBoard';
@@ -228,10 +228,13 @@ function App() {
       })));
     }
 
-    // Update admission queue entry
-    setAdmissionQueue(prev => prev.map(a =>
-      a.mrn === patient.mrn ? { ...a, status: 'discharged' as const } : a
-    ));
+    // Remove from admission queue — the queue tracks patients in the
+    // pipeline (pending → placing → in_transit → admitted). Once
+    // discharged, they exit the queue entirely; the patient record
+    // itself carries the final state via currentEncounter.status =
+    // 'finished' below. (Previously this tried to set status:'discharged'
+    // which isn't a valid AdmissionStatus — see types in AdmitFlow.tsx.)
+    setAdmissionQueue(prev => prev.filter(a => a.mrn !== patient.mrn));
 
     // Update patient encounter status
     setPatients(prev => prev.map(p =>
@@ -317,14 +320,34 @@ function App() {
       else birthDate = demo.dob;
     }
 
-    // Build allergy list from form input
-    const allergies = (demo?.allergies ?? [])
+    // Build allergy list from form input.
+    //
+    // The admit form captures clinical-speak severity
+    // (mild / moderate / severe / life-threatening) because that's
+    // how nurses talk about it. The stored shape uses FHIR
+    // AllergyIntolerance.criticality (low / high / unable-to-assess).
+    // Map at the boundary so every downstream consumer (patient
+    // header strip, QR card, detail screens) can rely on the
+    // FHIR-shaped type.
+    const toFhirCriticality = (s: string): Allergy['severity'] => {
+      switch (s) {
+        case 'severe':
+        case 'life-threatening':
+          return 'high';
+        case 'mild':
+        case 'moderate':
+          return 'low';
+        default:
+          return 'unable-to-assess';
+      }
+    };
+    const allergies: Allergy[] = (demo?.allergies ?? [])
       .filter(a => a.substance.trim())
       .map((a, i) => ({
         id: `ALG-${patientId}-${i}`,
         substance: a.substance,
         reaction: a.reaction || 'Unknown',
-        severity: a.severity as 'mild' | 'moderate' | 'severe' | 'life-threatening',
+        severity: toFhirCriticality(a.severity),
         verification: 'confirmed' as const,
       }));
 
