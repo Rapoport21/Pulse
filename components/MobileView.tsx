@@ -91,6 +91,7 @@ import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
 import { useEmsInbound } from '../lib/emsLive';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import { MobileLiveOps } from './MobileLiveOps';
+import { MobileCoordination } from './MobileCoordination';
 import { MobileScreenHeader } from './MobileScreenHeader';
 import { BedSingle } from 'lucide-react';
 import {
@@ -1410,7 +1411,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
     const isNurse = currentUser.role === UserRole.NURSE;
     return [
       { id: 'horizon' as const, icon: Activity, label: 'Horizon', code: 'HRZ' },
-      { id: 'patients' as const, icon: Users, label: currentUser.role === UserRole.MANAGER ? 'Units' : 'Patients', code: currentUser.role === UserRole.MANAGER ? 'UNT' : 'PAT' },
+      { id: 'patients' as const, icon: Users, label: currentUser.role === UserRole.MANAGER ? 'Coord' : 'Patients', code: currentUser.role === UserRole.MANAGER ? 'CRD' : 'PAT' },
       isNurse
         ? { id: 'actions' as const, icon: CheckCircle2, label: 'Actions', code: 'ACT' }
         : { id: 'actions' as const, icon: Radio, label: 'Live Ops', code: 'OPS' },
@@ -3424,8 +3425,26 @@ export const MobileView: React.FC<MobileViewProps> = ({
           </motion.div>
         )}
 
-        {/* ────── PATIENTS ──────────────────────────────────── */}
+        {/* ────── PATIENTS / COORDINATION ─────────────────────
+            Floor managers don't work the patient list the way
+            Nurse / ER / Trauma do — their whole job is beds and
+            what's coming through the front door. For them, this
+            slot renders the dedicated Coordination surface (Bed
+            Board + LIVE EMS Inbound). Everyone else gets the
+            existing Patient List + inline Bed Board. The tab key
+            stays 'patients' so tab state, deep links, and the QR
+            tab router don't have to branch per role. */}
         {activeTab === 'patients' && (
+          currentUser.role === UserRole.MANAGER ? (
+            <MobileCoordination
+              currentUser={currentUser}
+              bedUnits={bedUnits}
+              isSurgeActive={isSurgeActive}
+              onExpandBedBoard={() => setShowBedBoard(true)}
+              onExpandEmsBoard={() => setShowEmsBoard(true)}
+              navClearance={NAV_HEIGHT + SPACE['2xl']}
+            />
+          ) : (
           <motion.div
             key="patients"
             initial={{ opacity: 0 }}
@@ -3943,11 +3962,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </div>
 
             {/* ── MY PATIENTS (role-scoped worklist) ─────────────
-                Hidden for MANAGER / Operations Director, who sees
-                all patients via the main list above. Nurses, ER
-                Personnel, and Trauma see their own caseload with
-                an MEWS-driven acuity sort + SBAR drawer. */}
-            {currentUser.role !== UserRole.MANAGER && (
+                Nurses, ER Personnel, and Trauma see their own
+                caseload with an MEWS-driven acuity sort + SBAR
+                drawer. MANAGER never hits this branch — they route
+                to MobileCoordination instead (see ternary above). */}
               <div
                 style={{
                   marginTop: SPACE.lg,
@@ -4277,7 +4295,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   </div>
                 )}
               </div>
-            )}
 
             </>)}
 
@@ -4367,6 +4384,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               </div>
             )}
           </motion.div>
+          )
         )}
 
         {/* ────── ALERTS ────────────────────────────────────── */}
