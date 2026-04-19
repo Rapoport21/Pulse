@@ -6,6 +6,7 @@ import {
   COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION,
   Mono, StatusPill, TacticalCard, CornerBracket, type StatusTone,
 } from './design';
+import { MobileScreenHeader } from './MobileScreenHeader';
 
 /* ── Props ── */
 
@@ -94,30 +95,25 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
       overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch',
       padding: SPACE.base, gap: SPACE.base,
     }}>
-      {/* Breadcrumb */}
-      <Mono tone="muted" size="xs" style={{ paddingTop: SPACE.xs }}>
-        // PULSE / MOBILE / LIVE OPS
-      </Mono>
-
-      {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 style={{
-          margin: 0, fontFamily: FONTS.sans,
-          fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight,
-          letterSpacing: TYPE.h3.tracking, lineHeight: TYPE.h3.lineHeight,
-          color: COLORS.textPrimary,
-        }}>
-          Live Ops
-        </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          {isSurgeActive && <StatusPill label="SURGE" tone="crit" pulse />}
-          <StatusPill
-            label={systemStatus === 'normal' ? 'LIVE' : systemStatus.toUpperCase()}
-            tone={systemStatus === 'normal' ? 'ok' : systemStatus === 'stale' ? 'warn' : 'info'}
-            pulse={systemStatus === 'normal'}
-          />
-        </div>
-      </div>
+      {/* Universal breadcrumb + title — anchors this screen to the
+          same baseline as every other mobile tab so the marker line
+          doesn't drift when switching tabs. Page slug is "ACTIONS"
+          (not "LIVE OPS") because that's the tab the user is on. */}
+      <MobileScreenHeader
+        role={currentUser.role}
+        page="ACTIONS"
+        title="Live Ops"
+        right={
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
+            {isSurgeActive && <StatusPill label="SURGE" tone="crit" pulse />}
+            <StatusPill
+              label={systemStatus === 'normal' ? 'LIVE' : systemStatus.toUpperCase()}
+              tone={systemStatus === 'normal' ? 'ok' : systemStatus === 'stale' ? 'warn' : 'info'}
+              pulse={systemStatus === 'normal'}
+            />
+          </div>
+        }
+      />
 
       {/* Floor selector */}
       <div style={{

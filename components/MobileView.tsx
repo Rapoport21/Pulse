@@ -91,6 +91,7 @@ import { useRealtimeSimulation } from '../lib/useRealtimeSimulation';
 import { useEmsInbound } from '../lib/emsLive';
 import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import { MobileLiveOps } from './MobileLiveOps';
+import { MobileScreenHeader } from './MobileScreenHeader';
 import { BedSingle } from 'lucide-react';
 import {
   COLORS,
@@ -2103,21 +2104,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 H1 has been removed because it was the word "Overview",
                 which wasted the most prominent slot on the page on a
                 label that said nothing. The card hierarchy itself is
-                now the navigation. */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: SPACE.sm,
-                marginTop: SPACE.xs,
-              }}
-            >
-              <Mono tone="dim" size="xs">
-                // PULSE / {currentUser.role.toUpperCase()} / HORIZON
-              </Mono>
-              <StatusPill label="Live" tone="ok" pulse />
-            </div>
+                now the navigation. We render only the breadcrumb
+                (no title prop) via the universal MobileScreenHeader
+                so the marker baseline aligns with every other tab. */}
+            <MobileScreenHeader
+              role={currentUser.role}
+              page="HOME"
+              right={<StatusPill label="Live" tone="ok" pulse />}
+            />
 
             {/* ── STATE HERO (biggest numeric on the screen) ──
                 Role-aware: each role has a different "what matters
@@ -3058,31 +3052,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
               gap: SPACE.lg,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                marginTop: SPACE.xs,
-              }}
-            >
-              <Mono tone="dim" size="xs">
-                // PULSE / MOBILE / ACTIONS
-              </Mono>
-              <h1
-                style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: TYPE.h1.size,
-                  fontWeight: TYPE.h1.weight,
-                  letterSpacing: TYPE.h1.tracking,
-                  lineHeight: TYPE.h1.lineHeight,
-                  color: COLORS.textPrimary,
-                  margin: 0,
-                }}
-              >
-                Actions Queue
-              </h1>
-            </div>
+            <MobileScreenHeader
+              role={currentUser.role}
+              page="ACTIONS"
+              title="Actions Queue"
+            />
 
             {/* Urgent Surge Tasks */}
             {isSurgeActive && urgentTasks.length > 0 && (
@@ -3465,31 +3439,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
               gap: SPACE.lg,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                marginTop: SPACE.xs,
-              }}
-            >
-              <Mono tone="dim" size="xs">
-                // PULSE / MOBILE / PATIENTS
-              </Mono>
-              <h1
-                style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: TYPE.h1.size,
-                  fontWeight: TYPE.h1.weight,
-                  letterSpacing: TYPE.h1.tracking,
-                  lineHeight: TYPE.h1.lineHeight,
-                  color: COLORS.textPrimary,
-                  margin: 0,
-                }}
-              >
-                Patients
-              </h1>
-            </div>
+            <MobileScreenHeader
+              role={currentUser.role}
+              page="PATIENTS"
+              title="Patients"
+            />
 
             {/* ── BIG ADMIT PATIENT CTA ───────────────────────── */}
             <motion.button
@@ -4430,37 +4384,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
               gap: SPACE.lg,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-                gap: SPACE.sm,
-                marginTop: SPACE.xs,
-              }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Mono tone="dim" size="xs">
-                  // PULSE / MOBILE / ALERTS
+            <MobileScreenHeader
+              role={currentUser.role}
+              page="ALERTS"
+              title="Alerts Feed"
+              right={
+                <Mono tone="muted" size="xs">
+                  {mockAlerts.filter((a) => a.unread).length} UNREAD
                 </Mono>
-                <h1
-                  style={{
-                    fontFamily: FONTS.sans,
-                    fontSize: TYPE.h1.size,
-                    fontWeight: TYPE.h1.weight,
-                    letterSpacing: TYPE.h1.tracking,
-                    lineHeight: TYPE.h1.lineHeight,
-                    color: COLORS.textPrimary,
-                    margin: 0,
-                  }}
-                >
-                  Alerts Feed
-                </h1>
-              </div>
-              <Mono tone="muted" size="xs">
-                {mockAlerts.filter((a) => a.unread).length} UNREAD
-              </Mono>
-            </div>
+              }
+            />
 
             {/* Full alerts center launcher */}
             <motion.button
@@ -4676,31 +4609,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
               gap: SPACE.lg,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 4,
-                marginTop: SPACE.xs,
-              }}
-            >
-              <Mono tone="dim" size="xs">
-                // PULSE / MOBILE / COMMS
-              </Mono>
-              <h1
-                style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: TYPE.h1.size,
-                  fontWeight: TYPE.h1.weight,
-                  letterSpacing: TYPE.h1.tracking,
-                  lineHeight: TYPE.h1.lineHeight,
-                  color: COLORS.textPrimary,
-                  margin: 0,
-                }}
-              >
-                Comms Channel
-              </h1>
-            </div>
+            <MobileScreenHeader
+              role={currentUser.role}
+              page="COMMS"
+              title="Comms Channel"
+            />
 
             {/* Full messaging launcher */}
             <motion.button
