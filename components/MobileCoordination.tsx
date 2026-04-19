@@ -35,7 +35,6 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { BedSingle, Radio, ChevronRight } from 'lucide-react';
 import type { UserProfile } from '../types';
-import { UserRole } from '../types';
 import type { BedUnit } from '../data/bedMock';
 import type { useEmsInbound } from '../lib/emsLive';
 import { triggerHaptic } from '../lib/haptics';
@@ -281,13 +280,5 @@ export const MobileCoordination: React.FC<MobileCoordinationProps> = ({
     </motion.div>
   );
 };
-
-// Guard: this component only renders for the MANAGER role. The parent
-// should branch on `currentUser.role === UserRole.MANAGER` before
-// mounting — but we also soft-warn in dev if it ever slips through.
-if (typeof window !== 'undefined' && process?.env?.NODE_ENV === 'development') {
-  // eslint-disable-next-line no-underscore-dangle
-  (MobileCoordination as unknown as { __role?: UserRole }).__role = UserRole.MANAGER;
-}
 
 export default MobileCoordination;
