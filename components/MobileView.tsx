@@ -1802,7 +1802,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </div>
 
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: MOTION.base, ease: MOTION.ease }}
               style={{ position: 'relative', zIndex: 1 }}
@@ -1891,7 +1891,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.14, duration: MOTION.base, ease: MOTION.ease }}
               style={{ position: 'relative', zIndex: 1 }}
@@ -1968,7 +1968,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 the handler so older callers don't break. */}
             {onOpenSettings && (
               <motion.div
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: MOTION.base, ease: MOTION.ease }}
                 style={{ position: 'relative', zIndex: 1 }}
@@ -2046,7 +2046,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             <div style={{ flex: 1 }} />
 
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: MOTION.base, ease: MOTION.ease }}
               style={{ position: 'relative', zIndex: 1 }}
@@ -2088,7 +2088,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'horizon' && (
           <motion.div
             key="horizon"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
@@ -2490,7 +2490,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   ────────────────���─────────────────────────── */}
                   {!isSafe && !isSurgeActive && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: MOTION.base, delay: 0.3 }}
                       style={{
@@ -2679,7 +2679,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   {/* After surge is active — show resolved state */}
                   {isSurgeActive && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={{ opacity: 0 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: MOTION.base }}
                       style={{
@@ -3022,7 +3022,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'actions' && currentUser.role !== UserRole.NURSE && (
           <motion.div
             key="liveops"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
@@ -3041,7 +3041,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'actions' && currentUser.role === UserRole.NURSE && (
           <motion.div
             key="actions"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
@@ -3428,7 +3428,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'patients' && (
           <motion.div
             key="patients"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
@@ -4373,7 +4373,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'alerts' && (
           <motion.div
             key="alerts"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
@@ -4598,7 +4598,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
         {activeTab === 'comms' && (
           <motion.div
             key="comms"
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{

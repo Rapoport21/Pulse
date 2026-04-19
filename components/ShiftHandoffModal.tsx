@@ -15,7 +15,6 @@ import {
   SPACE,
   RADIUS,
   MOTION,
-  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   SectionTitle,
@@ -62,12 +61,16 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
         transition={{ duration: MOTION.fast, ease: MOTION.ease }}
         onClick={onCancel}
         style={{
+          // Login briefing / shift handoff is a hard pre-app gate.
+          // It is the first thing the user sees after auth (or last
+          // thing before logout) and must FULLY take over the screen,
+          // including the bottom HUD nav. Per Nick on 2026-04-18:
+          // "navbar is still visible during log in pop up. should
+          // not be." The general app rule (overlays clear the nav)
+          // does not apply to this dialog — there is nothing
+          // actionable in the navbar until the user dismisses this.
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          // Stop above MobileView's bottom HUD nav so app tabs stay visible.
-          bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+          inset: 0,
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
@@ -75,7 +78,6 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
           padding: SPACE.md,
           background: 'rgba(0, 0, 0, 0.86)',
           backdropFilter: 'blur(6px)',
-          borderTop: `1px solid ${COLORS.borderStrong}`,
         }}
       >
         <motion.div
