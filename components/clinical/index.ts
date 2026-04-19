@@ -41,6 +41,6 @@ export { AlertsCenter } from './AlertsCenter';
 export type { AlertsCenterProps } from './AlertsCenter';
 export { BriefMeScreen } from './BriefMeScreen';
 export type { BriefMeScreenProps } from './BriefMeScreen';
-export { DeptCoordination } from './DeptCoordination';
-export type { DeptCoordinationProps } from './DeptCoordination';
+export { DeptCoordination, DeptCoordinationBody } from './DeptCoordination';
+export type { DeptCoordinationProps, DeptCoordinationBodyProps } from './DeptCoordination';
 

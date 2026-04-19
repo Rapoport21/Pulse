@@ -2,6 +2,20 @@
  * DeptCoordination — tactical C2 overlay for multi-department ops.
  * Bucket A innovation: dept nodes, transfers, shared resources,
  * bottleneck alerts, and inter-dept coordination comms.
+ *
+ * This module exports two components:
+ *   • `DeptCoordinationBody` — the scrollable content (summary +
+ *     dept nodes + sections). Renders inline with no overlay
+ *     chrome. Used by MobileCoordination so the Floor Manager's
+ *     mobile tab shows the same C2 view that the Horizon quick
+ *     action pops up as a fullscreen overlay. Takes `showToast`.
+ *   • `DeptCoordination` — the fullscreen overlay (position:fixed
+ *     + HudStrip header + close button). Wraps the body. Used by
+ *     the Horizon page's "COORD · Departments" quick action.
+ *
+ * Keeping one source for the body guarantees the inline screen
+ * and the overlay never drift — add a department or a bottleneck
+ * in one place and both surfaces update.
  */
 
 import React, { useState } from 'react';
@@ -79,9 +93,16 @@ const transferStatusColor = (s: TransferStatus) => s === 'IN PROGRESS' ? COLORS.
 const transferStatusTone = (s: TransferStatus): 'ok' | 'warn' | 'crit' | 'info' => s === 'IN PROGRESS' ? 'info' : s === 'PENDING' ? 'warn' : 'crit';
 const utilizationColor = (avail: number, total: number) => { const p = total > 0 ? (avail / total) * 100 : 0; return p >= 30 ? COLORS.ok : p >= 15 ? COLORS.warn : COLORS.crit; };
 
-// ── Component ────────────────────────────────────────────────────────────
+// ── Body component (inline) ──────────────────────────────────────────────
+// Everything the overlay renders inside its scrollable region, but with
+// no position:fixed, no HudStrip header, no close button. Drop this
+// inside any mobile screen to embed the C2 view.
 
-export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClose, showToast }) => {
+export interface DeptCoordinationBodyProps {
+  showToast: (msg: string) => void;
+}
+
+export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ showToast }) => {
   const [expandedSection, setExpandedSection] = useState<string | null>('transfers');
 
   const toggleSection = (s: string) => setExpandedSection(prev => prev === s ? null : s);
@@ -591,7 +612,43 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
     );
   };
 
-  // ── Main render ────────────────────────────────────────────────────────
+  // ── Inline body render ─────────────────────────────────────────────────
+  // Just the sections stacked. Caller owns scroll / header / close.
+  return (
+    <>
+      {renderSummary()}
+
+      <Divider style={{ margin: `${SPACE.md}px ${SPACE.base}px` }} />
+
+      {renderDeptNodes()}
+
+      <Divider style={{ margin: `${SPACE.md}px ${SPACE.base}px` }} />
+
+      {renderTransfers()}
+
+      <Divider style={{ margin: `0 ${SPACE.base}px` }} />
+
+      {renderResources()}
+
+      <Divider style={{ margin: `0 ${SPACE.base}px` }} />
+
+      {renderBottlenecks()}
+
+      <Divider style={{ margin: `0 ${SPACE.base}px` }} />
+
+      {renderChat()}
+    </>
+  );
+};
+
+DeptCoordinationBody.displayName = 'DeptCoordinationBody';
+
+// ── Overlay component (fullscreen) ───────────────────────────────────────
+// Used by the Horizon page's "COORD · Departments" quick action. Wraps
+// DeptCoordinationBody in a fullscreen motion.div with a HudStrip header
+// and a close button. Body content is identical.
+
+export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClose, showToast }) => {
   return (
     <AnimatePresence>
       {open && (
@@ -638,28 +695,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
             paddingTop: 56, paddingBottom: 'max(env(safe-area-inset-bottom), 32px)',
             WebkitOverflowScrolling: 'touch',
           }}>
-            {renderSummary()}
-
-            <Divider style={{ margin: `${SPACE.md}px ${SPACE.base}px` }} />
-
-            {renderDeptNodes()}
-
-            <Divider style={{ margin: `${SPACE.md}px ${SPACE.base}px` }} />
-
-            {renderTransfers()}
-
-            <Divider style={{ margin: `0 ${SPACE.base}px` }} />
-
-            {renderResources()}
-
-            <Divider style={{ margin: `0 ${SPACE.base}px` }} />
-
-            {renderBottlenecks()}
-
-            <Divider style={{ margin: `0 ${SPACE.base}px` }} />
-
-            {renderChat()}
-
+            <DeptCoordinationBody showToast={showToast} />
             {/* Bottom spacer for safe area */}
             <div style={{ height: 40 }} />
           </div>

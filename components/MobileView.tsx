@@ -3438,10 +3438,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           currentUser.role === UserRole.MANAGER ? (
             <MobileCoordination
               currentUser={currentUser}
-              bedUnits={bedUnits}
-              isSurgeActive={isSurgeActive}
-              onExpandBedBoard={() => setShowBedBoard(true)}
-              onExpandEmsBoard={() => setShowEmsBoard(true)}
+              showToast={showToast}
               navClearance={NAV_HEIGHT + SPACE['2xl']}
             />
           ) : (
