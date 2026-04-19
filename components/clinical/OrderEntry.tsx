@@ -43,6 +43,7 @@ import {
   MOTION,
   TYPE,
   Z,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   StatusPill,
@@ -979,7 +980,10 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
     if (orders.length === 0 || reviewing) return null;
     return (
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
+        position: 'fixed',
+        // Sit above MobileView's bottom HUD nav so app tabs stay visible.
+        bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+        left: 0, right: 0,
         display: 'flex', alignItems: 'center', gap: SPACE.sm,
         padding: `${SPACE.md}px ${SPACE.base}px`,
         paddingBottom: `max(${SPACE.md}px, env(safe-area-inset-bottom))`,
@@ -1014,7 +1018,11 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           transition={{ duration: MOTION.fast }}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+            bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
             zIndex: Z.modal,
             background: COLORS.bg,
             display: 'flex',
@@ -1023,6 +1031,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             color: COLORS.textPrimary,
             overflow: 'hidden',
             paddingTop: 'env(safe-area-inset-top)',
+            borderTop: `1px solid ${COLORS.borderStrong}`,
           }}
         >
           {/* ── Header strip ──────────────────────────────────────────── */}

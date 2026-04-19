@@ -32,6 +32,7 @@ import {
   RADIUS,
   MOTION,
   Z,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   StatusPill,
@@ -305,7 +306,11 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
           transition={{ duration: MOTION.fast }}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+            bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
             zIndex: Z.modal,
             background: CODE_BG,
             display: 'flex',
@@ -313,6 +318,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            borderTop: `1px solid ${COLORS.borderStrong}`,
           }}
         >
           <style>{flashKeyframes}</style>

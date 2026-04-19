@@ -54,6 +54,7 @@ import {
   RADIUS,
   TYPE,
   MOTION,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   CornerBracket,
@@ -597,7 +598,11 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
         transition={{ duration: MOTION.base, ease: MOTION.ease }}
         style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+          bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
           zIndex: 200,
           background: COLORS.bg,
           color: COLORS.textPrimary,
@@ -609,6 +614,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
           paddingLeft: 'env(safe-area-inset-left)',
           paddingRight: 'env(safe-area-inset-right)',
           overflow: 'hidden',
+          borderTop: `1px solid ${COLORS.borderStrong}`,
         }}
       >
         <DotGridBg />

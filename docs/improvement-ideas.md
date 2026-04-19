@@ -75,6 +75,110 @@ got done. Jump to [`docs/decisions.md`](./decisions.md) for the ADRs.
 
 ## T1 · Ship-blockers
 
+### T1.0a · Navbar is a single universal instance — enforce it
+
+**Where.** `components/MobileView.tsx` — the `<nav>` on ~line 5206 is
+today the one and only mobile tab bar. Good. What's missing is the
+*architectural guardrail* that prevents a future change from mounting a
+second one inside a modal, overlay, or per-screen component.
+
+**Now.** Nav is a single React element in MobileView, z-index 40. But:
+- Nothing in the codebase flags "don't render another nav anywhere else."
+- Several fullscreen overlays were (and some still are) rendered with
+  `position: fixed; inset: 0; z-index: 50`, which visually *replaces*
+  the nav with nothing — to the user that reads as "the nav disappeared
+  and came back when I closed this screen." That's the same failure
+  mode as mounting a lookalike nav per screen, from the user's side.
+- `CLAUDE.md` directive #4 now requires: when navigating to any tab,
+  the user is looking at the *same* DOM instance. Not a new one that
+  looks the same.
+
+**Why it matters.** User-visible invariant. Nick's exact words:
+"navbar still disappears. must be there." A replaced/remounted nav
+loses animation state, loses focus, can flicker, and is a tell that the
+IA isn't really a shell with tabs — it's N separate screens cosplaying.
+
+**What to do.**
+1. Add an ESLint rule / grep-check that flags new `<nav>` elements
+   outside `MobileView.tsx` and the single desktop shell header.
+2. Document in `CLAUDE.md` (done — directive #4).
+3. See T1.0b for the companion "don't cover it" rule.
+
+---
+
+### T1.0b · Fullscreen overlays never cover the mobile navbar
+
+**Where.** Any component with `position: 'fixed'` and `inset: 0` that
+renders on mobile. Grep hit list as of 2026-04-18:
+
+- Already fixed: `components/clinical/BedBoard.tsx`,
+  `components/MobilePatientDetailScreen.tsx`.
+- Still covering nav on mobile: `ChatAssistant.tsx` (2),
+  `SettingsScreen.tsx`, `QRScannerModal.tsx`, `DischargeFlow.tsx`,
+  `OrderEntry.tsx`, `CodeBlueScreen.tsx` (2), `RoundingList.tsx`,
+  `BriefMeScreen.tsx`, `EmsInboundBoard.tsx`, `SecureMessaging.tsx`,
+  `MobileAdmitFlow.tsx`, `ShiftHandoffModal.tsx`, `PulseHorizon.tsx`
+  (2), `StaffManagementModal.tsx`.
+
+**Now.** Each of those uses raw `inset: 0` which extends behind the
+53px + safe-area nav, hiding it. Result: nav "disappears" — same
+complaint Nick hit twice.
+
+**Why it matters.** Every complaint about the nav vanishing roots
+here. Fix is mechanical but must be applied everywhere, not piecemeal.
+
+**What to do.** For every mobile-rendered fullscreen overlay:
+
+1. Import `MOBILE_NAV_OVERLAY_INSET_BOTTOM` from
+   `components/design/tokens.ts`.
+2. Replace `inset: 0` with:
+   ```ts
+   top: 0, left: 0, right: 0,
+   bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+   ```
+3. Add `borderTop: 1px solid ${COLORS.borderStrong}` so the boundary
+   reads as a seam, not a gap.
+4. If the overlay has its own *internal* bottom-fixed bar (action bar,
+   input composer, etc.), that bar also needs `bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM`
+   — otherwise it stays pinned to the screen edge and hides the nav
+   instead.
+5. Add the rule to `CLAUDE.md` (done — directive #5) and reference
+   this entry in PR descriptions when adding a new overlay.
+
+**Test.** On any covered screen, the bottom 5-tab HUD must remain
+interactive. Tap the tab for a different screen — should navigate
+without dismissing the overlay explicitly (nav is always on).
+
+---
+
+### T1.0c · iPhone is portrait-locked
+
+**Where.** `ios/App/App/Info.plist → UISupportedInterfaceOrientations`.
+iPad keeps all four orientations via the `~ipad` override.
+
+**Now.** As of 2026-04-18: iPhone is locked to Portrait only. No
+Landscape, no PortraitUpsideDown.
+
+**Why it matters.**
+
+- PULSE mobile layout targets a 390-430px wide column. Landscape
+  reflows are not designed — every screen, ticker, and overlay assumes
+  portrait height.
+- Accidental rotation mid-code-blue is a real-world nuisance in a
+  clinical setting. Locking removes a whole class of UI-rotation bugs.
+- Tablets are a different form factor with different IA expectations.
+  iPad keeps rotation enabled on purpose.
+
+**What to do.**
+
+1. Plist is already updated — no further action on iPhone.
+2. If iPad ever gets a dedicated layout, revisit whether landscape
+   should still be free or gated per screen.
+3. Do NOT add a JS-side `ScreenOrientation` plugin just for this —
+   the plist-level lock is simpler and native.
+
+---
+
 ### T1.1 · Identity, not name-typing
 
 **Where.** `components/LoginScreenTactical.tsx`. `App.tsx` tracks

@@ -15,6 +15,7 @@ import {
   SPACE,
   RADIUS,
   MOTION,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   SectionTitle,
@@ -62,7 +63,11 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
         onClick={onCancel}
         style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+          bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
           zIndex: 100,
           display: 'flex',
           alignItems: 'center',
@@ -70,6 +75,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
           padding: SPACE.md,
           background: 'rgba(0, 0, 0, 0.86)',
           backdropFilter: 'blur(6px)',
+          borderTop: `1px solid ${COLORS.borderStrong}`,
         }}
       >
         <motion.div

@@ -32,6 +32,7 @@ import {
   MOTION,
   Z,
   SHADOW,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   CornerBracket,
@@ -1236,7 +1237,11 @@ ${urgentTasks
             onClick={onClose}
             style={{
               position: 'fixed',
-              inset: 0,
+              top: 0,
+              left: 0,
+              right: 0,
+              // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+              bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
               background: 'rgba(0,0,0,0.6)',
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
@@ -1255,11 +1260,13 @@ ${urgentTasks
               position: 'fixed',
               top: 0,
               right: 0,
-              bottom: 0,
+              // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+              bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
               width: '100%',
               maxWidth: 600,
               background: COLORS.bg,
               borderLeft: `1px solid ${COLORS.border}`,
+              borderTop: `1px solid ${COLORS.borderStrong}`,
               boxShadow: SHADOW.modal,
               display: 'flex',
               flexDirection: 'column',

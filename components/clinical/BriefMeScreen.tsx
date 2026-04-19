@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import {
   COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono, BracketLabel, StatusPill, TacticalCard, TacticalButton,
   HudStrip, ScanningLine, ConfidenceBadge, Divider,
 } from '../design';
@@ -141,7 +142,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
           key="briefme-screen"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: MOTION.fast }}
-          style={{ position: 'fixed', inset: 0, zIndex: Z.modal, background: COLORS.bg, display: 'flex', flexDirection: 'column', fontFamily: FONTS.sans, color: COLORS.textPrimary, overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)' }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM, zIndex: Z.modal, background: COLORS.bg, display: 'flex', flexDirection: 'column', fontFamily: FONTS.sans, color: COLORS.textPrimary, overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)', borderTop: `1px solid ${COLORS.borderStrong}` }}
         >
           {/* Header */}
           <HudStrip side="top" fixed>

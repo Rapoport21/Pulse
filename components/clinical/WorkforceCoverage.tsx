@@ -38,6 +38,7 @@ import {
   UserPlus,
   GripVertical,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   X,
   MoreHorizontal,
@@ -49,11 +50,29 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import {
-  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION,
+  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono, BracketLabel, StatusPill, TacticalCard,
   TacticalButton, Divider, CornerBracket, ScanningLine,
 } from '../design';
 import { UserRole } from '../../types';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Viewport — share the mobile breakpoint used elsewhere in the app
+// ─────────────────────────────────────────────────────────────────────────
+const useIsMobile = (): boolean => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    setIsMobile(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types
@@ -281,6 +300,11 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
   const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
   const [now, setNow] = useState(() => new Date());
 
+  // Mobile layout state
+  const isMobile = useIsMobile();
+  const [mobileTab, setMobileTab] = useState<'units' | 'crew' | 'log'>('units');
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+
   // Live clock tick (once/min is enough).
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
@@ -413,13 +437,13 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
 
   // ── Drag handlers ──────────────────────────────────────────────────────
 
-  const handleDragStart = useCallback((e: DragEvent<HTMLDivElement>, staffId: string) => {
+  const handleDragStart = useCallback((e: DragEvent<HTMLElement>, staffId: string) => {
     e.dataTransfer.setData('text/plain', staffId);
     e.dataTransfer.effectAllowed = 'move';
     setDraggedId(staffId);
   }, []);
 
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>, unitId: string | null) => {
+  const handleDragOver = useCallback((e: DragEvent<HTMLElement>, unitId: string | null) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDropTarget(unitId ?? 'FLOAT');
@@ -429,7 +453,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
     setDropTarget(null);
   }, []);
 
-  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>, targetUnitId: string | null) => {
+  const handleDrop = useCallback((e: DragEvent<HTMLElement>, targetUnitId: string | null) => {
     e.preventDefault();
     const staffId = e.dataTransfer.getData('text/plain');
     if (!staffId) return;
@@ -445,7 +469,578 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
 
   if (!open && !embedded) return null;
 
-  // ── Render ─────────────────────────────────────────────────────────────
+  // ── Mobile render (phone width) ───────────────────────────────────────
+  // Stacked layout with tabs (UNITS / CREW / LOG), self-wraps in a
+  // position:fixed overlay that clears the bottom HUD nav via
+  // MOBILE_NAV_OVERLAY_INSET_BOTTOM. Reuses all sub-components.
+
+  if (isMobile && !embedded) {
+    return (
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="wfc-mobile"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: MOTION.base, ease: MOTION.ease }}
+            onClick={() => { setSlotMenu(null); setAssignSheet(null); }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              background: COLORS.bg,
+              color: COLORS.textPrimary,
+              fontFamily: FONTS.sans,
+              borderTop: `1px solid ${COLORS.borderStrong}`,
+              paddingTop: 'env(safe-area-inset-top)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* ── HEADER ───────────────────────────────────────────────── */}
+            <header
+              style={{
+                position: 'relative',
+                padding: `${SPACE.md}px ${SPACE.base}px ${SPACE.sm}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
+                flexShrink: 0,
+              }}
+            >
+              {/* Title + close */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: SPACE.sm,
+                  gap: SPACE.sm,
+                }}
+              >
+                <div>
+                  <BracketLabel tone="accent" size="xs">STAFFING</BracketLabel>
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 600,
+                      letterSpacing: '-0.01em',
+                      marginTop: 2,
+                      lineHeight: 1.05,
+                    }}
+                  >
+                    Command Center
+                  </div>
+                  <Mono tone="muted" size="xs" style={{ marginTop: 3 }}>
+                    {now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    {' · SHIFT '}
+                    {shiftChangeIn.countdown}
+                  </Mono>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); _onClose?.(); }}
+                  aria-label="Close staffing"
+                  style={{
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.border}`,
+                    borderRadius: RADIUS.sm,
+                    color: COLORS.textSecondary,
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Compact stats — horizontal scroll */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 6,
+                  overflowX: 'auto',
+                  marginBottom: SPACE.sm,
+                  paddingBottom: 2,
+                  scrollbarWidth: 'none' as const,
+                }}
+              >
+                {[
+                  { label: 'ON DUTY', value: totalOnDuty, color: COLORS.ok },
+                  {
+                    label: 'GAPS',
+                    value: totalGaps,
+                    color: totalGaps === 0 ? COLORS.ok : totalGaps <= 3 ? COLORS.warn : COLORS.crit,
+                  },
+                  {
+                    label: 'COMPLIANT',
+                    value: `${unitsCompliant}/${UNITS.length}`,
+                    color: unitsCompliant === UNITS.length ? COLORS.ok : COLORS.warn,
+                  },
+                  {
+                    label: 'RATIO VIO',
+                    value: ratioViolations,
+                    color: ratioViolations === 0 ? COLORS.ok : COLORS.crit,
+                  },
+                  {
+                    label: 'OT >10H',
+                    value: overtimeStaff.length,
+                    color: overtimeStaff.length === 0 ? COLORS.ok : COLORS.warn,
+                  },
+                ].map(s => (
+                  <div
+                    key={s.label}
+                    style={{
+                      flexShrink: 0,
+                      padding: '5px 10px',
+                      background: COLORS.surface,
+                      borderLeft: `2px solid ${s.color}`,
+                      borderRadius: RADIUS.sm,
+                      minWidth: 82,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: FONTS.sans,
+                        fontSize: 18,
+                        fontWeight: 700,
+                        letterSpacing: '-0.01em',
+                        color: s.color,
+                        lineHeight: 1,
+                      }}
+                    >
+                      {s.value}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 3,
+                        fontFamily: FONTS.mono,
+                        fontSize: 9,
+                        letterSpacing: '0.14em',
+                        color: COLORS.textMuted,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {s.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Shift filter pills */}
+              <div style={{ display: 'flex', gap: 4, marginBottom: SPACE.sm }}>
+                {(['day', 'night', 'all'] as const).map(s => {
+                  const active = shiftFilter === s;
+                  return (
+                    <button
+                      key={s}
+                      onClick={(e) => { e.stopPropagation(); setShiftFilter(s); }}
+                      style={{
+                        flex: 1,
+                        padding: '7px 8px',
+                        background: active ? COLORS.accentDim : COLORS.surface,
+                        border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
+                        color: active ? COLORS.accent : COLORS.textSecondary,
+                        fontFamily: FONTS.mono,
+                        fontSize: 10,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        borderRadius: RADIUS.sm,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Top-level actions */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <TacticalButton
+                  variant="primary"
+                  size="sm"
+                  onClick={(e) => {
+                    e?.stopPropagation?.();
+                    showToast('Coverage request broadcast');
+                    appendChange('Coverage request broadcast (agency + float managers)', 'info');
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <Radio size={12} />
+                  <span>REQUEST</span>
+                </TacticalButton>
+                <TacticalButton
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e?.stopPropagation?.();
+                    showToast('Handoff checklist opened');
+                  }}
+                  style={{ flex: 1 }}
+                >
+                  <ArrowRightLeft size={12} />
+                  <span>HANDOFF</span>
+                </TacticalButton>
+              </div>
+            </header>
+
+            {/* ── TAB BAR ──────────────────────────────────────────────── */}
+            <div
+              style={{
+                display: 'flex',
+                background: COLORS.surface,
+                borderBottom: `1px solid ${COLORS.border}`,
+                flexShrink: 0,
+              }}
+            >
+              {[
+                { id: 'units' as const, label: 'UNITS', count: UNITS.length },
+                {
+                  id: 'crew' as const,
+                  label: 'CREW',
+                  count: floatPool.length + onCallPool.length + breakPool.length,
+                },
+                { id: 'log' as const, label: 'LOG', count: changeLog.length },
+              ].map(t => {
+                const active = mobileTab === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMobileTab(t.id);
+                      setMobileDetailOpen(false);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '12px 8px',
+                      background: active ? COLORS.bg : 'transparent',
+                      border: 'none',
+                      borderBottom: active ? `2px solid ${COLORS.accent}` : '2px solid transparent',
+                      color: active ? COLORS.textPrimary : COLORS.textSecondary,
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                  >
+                    <span>{t.label}</span>
+                    <span
+                      style={{
+                        color: active ? COLORS.accent : COLORS.textMuted,
+                        fontSize: 9,
+                        background: active ? COLORS.accentDim : 'transparent',
+                        padding: active ? '1px 5px' : 0,
+                        borderRadius: 2,
+                      }}
+                    >
+                      {t.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── BODY ─────────────────────────────────────────────────── */}
+            <div
+              style={{
+                flex: 1,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                background: COLORS.bg,
+              }}
+            >
+              {/* UNITS — list */}
+              {mobileTab === 'units' && !mobileDetailOpen && (
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch' as const,
+                  }}
+                >
+                  {UNITS.map(u => (
+                    <UnitListItem
+                      key={u.id}
+                      unit={u}
+                      staff={filteredStaff}
+                      active={u.id === selectedUnitId}
+                      isDropTarget={false}
+                      onSelect={() => {
+                        setSelectedUnitId(u.id);
+                        setMobileDetailOpen(true);
+                      }}
+                      onDragOver={(e) => handleDragOver(e, u.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, u.id)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* UNITS — detail */}
+              {mobileTab === 'units' && mobileDetailOpen && (
+                <>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMobileDetailOpen(false); }}
+                    aria-label="Back to unit list"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE.xs,
+                      padding: `${SPACE.sm}px ${SPACE.base}px`,
+                      background: COLORS.surface,
+                      border: 'none',
+                      borderBottom: `1px solid ${COLORS.border}`,
+                      color: COLORS.textSecondary,
+                      fontFamily: FONTS.mono,
+                      fontSize: 11,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      flexShrink: 0,
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                  >
+                    <ChevronLeft size={14} />
+                    <span>BACK TO UNITS</span>
+                  </button>
+                  <div
+                    style={{
+                      flex: 1,
+                      overflowY: 'auto',
+                      WebkitOverflowScrolling: 'touch' as const,
+                    }}
+                  >
+                    <UnitDetailPanel
+                      unit={selectedUnit}
+                      staff={filteredStaff}
+                      draggedId={draggedId}
+                      dropTarget={dropTarget}
+                      slotMenu={slotMenu}
+                      onSetSlotMenu={setSlotMenu}
+                      onOpenAssignSheet={(role) =>
+                        setAssignSheet({ unitId: selectedUnit.id, role })
+                      }
+                      onMoveStaff={moveStaff}
+                      onSendHome={sendStaffHome}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, selectedUnit.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, selectedUnit.id)}
+                      onMessageUnit={() => {
+                        showToast(`Broadcast queued for ${selectedUnit.name} crew`);
+                        appendChange(`Crew broadcast → ${selectedUnit.name}`, 'info');
+                      }}
+                      onRequestSupport={() => {
+                        showToast(`Support request sent for ${selectedUnit.name}`);
+                        appendChange(`Support request → ${selectedUnit.name}`, 'warn');
+                      }}
+                      onDeclareShortage={() => {
+                        showToast(`${selectedUnit.name} flagged as staffing shortage`);
+                        appendChange(`${selectedUnit.name} flagged SHORTAGE`, 'warn');
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* CREW */}
+              {mobileTab === 'crew' && (
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    WebkitOverflowScrolling: 'touch' as const,
+                  }}
+                >
+                  <PoolSection
+                    title="FLOAT POOL"
+                    tone="info"
+                    count={floatPool.length}
+                    members={floatPool}
+                    draggedId={draggedId}
+                    isDropTarget={false}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => { e.preventDefault(); }}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => { e.preventDefault(); }}
+                    hintWhenEmpty="// NO FLOAT STAFF AVAILABLE"
+                    onMessage={(m) => {
+                      showToast(`Message queued for ${m.name}`);
+                      appendChange(`Message → ${m.name}`, 'info');
+                    }}
+                  />
+                  <PoolSection
+                    title="ON CALL"
+                    tone="warn"
+                    count={onCallPool.length}
+                    members={onCallPool}
+                    draggedId={draggedId}
+                    isDropTarget={false}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => { e.preventDefault(); }}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => { e.preventDefault(); }}
+                    hintWhenEmpty="// NO ON-CALL STAFF ROSTERED"
+                    callInAction={(m) => callInStaff(m.id)}
+                    onMessage={(m) => {
+                      showToast(`Message queued for ${m.name}`);
+                      appendChange(`Message → ${m.name}`, 'info');
+                    }}
+                  />
+                  <PoolSection
+                    title="ON BREAK"
+                    tone="muted"
+                    count={breakPool.length}
+                    members={breakPool}
+                    draggedId={draggedId}
+                    isDropTarget={false}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => { e.preventDefault(); }}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => { e.preventDefault(); }}
+                    hintWhenEmpty="// NO STAFF ON BREAK"
+                    onMessage={(m) => {
+                      showToast(`Message queued for ${m.name}`);
+                      appendChange(`Message → ${m.name}`, 'info');
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* LOG */}
+              {mobileTab === 'log' && (
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: SPACE.base,
+                    WebkitOverflowScrolling: 'touch' as const,
+                  }}
+                >
+                  {/* Shift change card */}
+                  <div style={{ marginBottom: SPACE.lg }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        marginBottom: SPACE.sm,
+                      }}
+                    >
+                      <BracketLabel tone="muted" size="xs">SHIFT CHANGE</BracketLabel>
+                      <Mono tone="secondary" size="xs">{shiftChangeIn.label}</Mono>
+                      <div style={{ flex: 1 }} />
+                      <Mono
+                        tone={shiftChangeIn.minutesLeft < 60 ? 'warn' : 'muted'}
+                        size="xs"
+                      >
+                        {shiftChangeIn.countdown}
+                      </Mono>
+                    </div>
+                    <TacticalCard padding="sm">
+                      <div style={{ display: 'flex', gap: SPACE.sm, flexWrap: 'wrap' }}>
+                        <ShiftBadge label="IN" value={24} tone="ok" />
+                        <ShiftBadge label="OUT" value={27} tone="warn" />
+                        <ShiftBadge label="NET" value={-3} tone="crit" />
+                      </div>
+                    </TacticalCard>
+                  </div>
+
+                  {/* Recent changes */}
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        marginBottom: SPACE.sm,
+                      }}
+                    >
+                      <BracketLabel tone="muted" size="xs">RECENT CHANGES</BracketLabel>
+                      <Mono tone="muted" size="xs">{changeLog.length}</Mono>
+                      <div style={{ flex: 1 }} />
+                      {changeLog.length > 0 && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setChangeLog([]); }}
+                          aria-label="Clear change log"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: COLORS.textMuted,
+                            cursor: 'pointer',
+                            padding: 2,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            fontFamily: FONTS.mono,
+                            fontSize: 10,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          <RefreshCw size={10} />
+                          CLEAR
+                        </button>
+                      )}
+                    </div>
+                    {changeLog.length === 0 ? (
+                      <Mono tone="dim" size="xs">// NO CHANGES THIS SESSION</Mono>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {changeLog.map(entry => (
+                          <ChangeLogRow key={entry.id} entry={entry} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* AssignSheet popover */}
+            <AnimatePresence>
+              {assignSheet && (
+                <AssignSheet
+                  unitId={assignSheet.unitId}
+                  role={assignSheet.role}
+                  staff={staff}
+                  onClose={() => setAssignSheet(null)}
+                  onPick={(staffId) => {
+                    moveStaff(staffId, assignSheet.unitId);
+                    setAssignSheet(null);
+                  }}
+                />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // ── Desktop render ─────────────────────────────────────────────────────
 
   return (
     <div
@@ -575,7 +1170,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
           </div>
 
           <TacticalButton
-            variant="accent"
+            variant="primary"
             size="sm"
             onClick={(e) => {
               e?.stopPropagation?.();
@@ -932,9 +1527,9 @@ const UnitListItem: React.FC<{
   active: boolean;
   isDropTarget: boolean;
   onSelect: () => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (e: DragEvent<HTMLElement>) => void;
   onDragLeave: () => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLElement>) => void;
 }> = ({ unit, staff, active, isDropTarget, onSelect, onDragOver, onDragLeave, onDrop }) => {
   const gap = unitGap(unit, staff);
   const cur = unitCurrent(unit, staff);
@@ -1157,11 +1752,11 @@ interface UnitDetailProps {
   onOpenAssignSheet: (role: StaffRole) => void;
   onMoveStaff: (staffId: string, unitId: string | null) => void;
   onSendHome: (staffId: string) => void;
-  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragStart: (e: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (e: DragEvent<HTMLElement>) => void;
   onDragLeave: () => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLElement>) => void;
   onMessageUnit: () => void;
   onRequestSupport: () => void;
   onDeclareShortage: () => void;
@@ -1302,7 +1897,7 @@ const UnitDetailPanel: React.FC<UnitDetailProps> = ({
         </TacticalButton>
         {gap > 0 && (
           <TacticalButton
-            variant="accent"
+            variant="danger"
             size="sm"
             onClick={(e) => {
               e?.stopPropagation?.();
@@ -1418,7 +2013,7 @@ interface RoleSlotRowProps {
   onOpenAssignSheet: () => void;
   onMoveStaff: (staffId: string, unitId: string | null) => void;
   onSendHome: (staffId: string) => void;
-  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragStart: (e: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
   extra?: boolean;
 }
@@ -1618,7 +2213,7 @@ interface AssignedChipProps {
   onSendToFloat: () => void;
   onSendHome: () => void;
   isDragged: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragStart: (e: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
 }
 
@@ -1646,7 +2241,7 @@ const AssignedChip: React.FC<AssignedChipProps> = ({
         exit={{ opacity: 0, scale: 0.8 }}
         transition={{ duration: MOTION.fast, ease: MOTION.ease }}
         draggable
-        onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLDivElement>, member.id)}
+        onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLElement>, member.id)}
         onDragEnd={onDragEnd}
         onClick={(e) => {
           e.stopPropagation();
@@ -1833,11 +2428,11 @@ interface PoolSectionProps {
   members: StaffMember[];
   draggedId: string | null;
   isDropTarget: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragStart: (e: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
+  onDragOver: (e: DragEvent<HTMLElement>) => void;
   onDragLeave: () => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
+  onDrop: (e: DragEvent<HTMLElement>) => void;
   hintWhenEmpty: string;
   callInAction?: (m: StaffMember) => void;
   onMessage: (m: StaffMember) => void;
@@ -1943,7 +2538,7 @@ const PoolSection: React.FC<PoolSectionProps> = ({
 const StaffPoolCard: React.FC<{
   member: StaffMember;
   isDragged: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>, id: string) => void;
+  onDragStart: (e: DragEvent<HTMLElement>, id: string) => void;
   onDragEnd: () => void;
   onCallIn?: () => void;
   onMessage: () => void;
@@ -1957,7 +2552,7 @@ const StaffPoolCard: React.FC<{
       exit={{ opacity: 0, y: -4 }}
       transition={{ duration: MOTION.fast, ease: MOTION.ease }}
       draggable
-      onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLDivElement>, member.id)}
+      onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLElement>, member.id)}
       onDragEnd={onDragEnd}
       style={{
         display: 'grid',
@@ -2019,7 +2614,7 @@ const StaffPoolCard: React.FC<{
             </Mono>
           )}
           {member.status === 'on-call' && <StatusPill label="ON CALL" tone="warn" />}
-          {member.status === 'break' && <StatusPill label="BREAK" tone="muted" />}
+          {member.status === 'break' && <StatusPill label="BREAK" tone="neutral" />}
         </div>
       </div>
 

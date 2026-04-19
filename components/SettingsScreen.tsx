@@ -31,6 +31,7 @@ import {
   RADIUS,
   MOTION,
   CHROME,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   StatusPill,
@@ -355,7 +356,11 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           transition={{ duration: MOTION.fast, ease: MOTION.ease }}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+            bottom: isMobile ? MOBILE_NAV_OVERLAY_INSET_BOTTOM : 0,
             background: COLORS.bg,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
@@ -363,6 +368,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
+            borderTop: isMobile ? `1px solid ${COLORS.borderStrong}` : undefined,
             // Safe-area insets sit on the outer container so the
             // HudStrips inside the flex column stay clear of the
             // dynamic island / home indicator while the body

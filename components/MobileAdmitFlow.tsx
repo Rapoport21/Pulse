@@ -43,6 +43,7 @@ import {
   RADIUS,
   MOTION,
   SHADOW,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   TacticalCard,
@@ -999,7 +1000,11 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
           transition={{ duration: MOTION.base, ease: MOTION.ease }}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+            bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
             zIndex: 50,
             background: COLORS.bg,
             display: 'flex',
@@ -1007,6 +1012,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            borderTop: `1px solid ${COLORS.borderStrong}`,
           }}
         >
           {/* ── FIXED HEADER ───────────────────────────────────────── */}

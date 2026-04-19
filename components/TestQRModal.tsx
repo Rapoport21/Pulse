@@ -9,6 +9,7 @@ import {
   RADIUS,
   MOTION,
   Z,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   BracketFrame,
@@ -83,7 +84,11 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
       transition={{ duration: MOTION.base, ease: MOTION.ease }}
       style={{
         position: 'fixed',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+        bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
         zIndex: Z.modal + 10,
         background: COLORS.bgDeep,
         display: 'flex',
@@ -91,6 +96,7 @@ export const TestQRModal: React.FC<TestQRModalProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         padding: SPACE.base,
+        borderTop: `1px solid ${COLORS.borderStrong}`,
       }}
       role="dialog"
       aria-modal="true"

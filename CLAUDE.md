@@ -17,7 +17,13 @@ Persistent instructions for any Claude session on this repo. Read this first.
 
 3. **Role-aware hierarchy.** Mobile UI must differentiate Manager / Nurse / ER Personnel / Trauma. Don't collapse them into one view.
 
-4. **Stay on track.** If Nick flags a side issue mid-task, note it and defer unless he says otherwise.
+4. **Navbar is universal.** The mobile bottom tab bar is a *single DOM instance* mounted at the app shell. When the user navigates to the Patients tab (or any tab) it is the SAME navbar — not a new one that looks the same. Never re-render the nav inside a per-screen component, never mount a lookalike in a modal/overlay.
+
+5. **Fullscreen never overlays the navbar on mobile.** Any `position: fixed` / `inset: 0` overlay that renders on mobile must stop above the nav. Use `bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM` from `components/design/tokens.ts` instead of `inset: 0` / `bottom: 0`. If the overlay has its own internal bottom-fixed bar (action bar, input, etc.), that bar also needs the same offset.
+
+6. **iPhone is portrait-only.** Landscape is disabled on iPhone. iPad keeps all orientations. Source of truth: `ios/App/App/Info.plist → UISupportedInterfaceOrientations`.
+
+7. **Stay on track.** If Nick flags a side issue mid-task, note it and defer unless he says otherwise.
 
 ## Project shape
 

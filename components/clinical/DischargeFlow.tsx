@@ -37,6 +37,7 @@ import {
   TYPE,
   Z,
   SHADOW,
+  MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
   BracketLabel,
   StatusPill,
@@ -668,7 +669,11 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
           transition={{ duration: MOTION.fast }}
           style={{
             position: 'fixed',
-            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            // Stop above MobileView's bottom HUD nav so app tabs stay visible.
+            bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
             zIndex: Z.modal,
             background: COLORS.bg,
             display: 'flex',
@@ -676,6 +681,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
             fontFamily: FONTS.sans,
             color: COLORS.textPrimary,
             overflow: 'hidden',
+            borderTop: `1px solid ${COLORS.borderStrong}`,
           }}
         >
           {/* ── Header strip ──────────────────────────────────────────── */}
@@ -734,7 +740,8 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
             <div
               style={{
                 position: 'fixed',
-                bottom: 0,
+                // Sit above MobileView's bottom HUD nav so app tabs stay visible.
+                bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
                 left: 0,
                 right: 0,
                 display: 'flex',
