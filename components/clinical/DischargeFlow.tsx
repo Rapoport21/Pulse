@@ -33,7 +33,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Z,
   SHADOW,
@@ -332,7 +332,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                   borderRadius: RADIUS.sm,
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                   outline: 'none',
                   width: '100%',
                 }}
@@ -349,7 +349,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: 1,
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   {checked && (
@@ -432,7 +432,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
                 outline: 'none',
                 width: '100%',
                 overflow: 'hidden',
@@ -478,7 +478,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                   justifyContent: 'center',
                   flexShrink: 0,
                   color: isSelected ? toneColor : COLORS.textMuted,
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                 }}
               >
                 {dispo.icon}

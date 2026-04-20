@@ -25,7 +25,7 @@ import {
   ChevronRight, ArrowUpRight, ShieldAlert, Truck, GripVertical,
   ChevronDown, ChevronUp, RefreshCw, FileText,
 } from 'lucide-react';
-import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z, SHADOW, MOBILE_NAV_OVERLAY_INSET_BOTTOM } from '../design/tokens';
+import { COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, cssTransition, Z, SHADOW, MOBILE_NAV_OVERLAY_INSET_BOTTOM } from '../design/tokens';
 import {
   Mono, BracketLabel, StatusPill, TacticalCard, CornerBracket,
   Divider, HudStrip, ScanningLine, TacticalButton,
@@ -1067,7 +1067,7 @@ const FullMode: React.FC<{
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   {f.key !== 'all' && (

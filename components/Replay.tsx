@@ -23,7 +23,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -485,7 +485,7 @@ export const Replay: React.FC<ReplayProps> = ({ showToast }) => {
                   borderRadius: RADIUS.sm,
                   color: isPlaying ? COLORS.textPrimary : COLORS.textSecondary,
                   cursor: 'pointer',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                   boxShadow: isPlaying ? `0 0 16px ${COLORS.accent}60` : 'none',
                 }}
               >
@@ -1079,7 +1079,7 @@ const IconBtn: React.FC<{
         borderRadius: RADIUS.sm,
         color: hovered ? COLORS.textPrimary : COLORS.textSecondary,
         cursor: 'pointer',
-        transition: `all ${MOTION.fast}s ease`,
+        transition: cssTransition(),
       }}
     >
       {children}

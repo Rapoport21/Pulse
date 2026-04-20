@@ -14,7 +14,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   SectionTitle,
@@ -176,7 +176,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     borderRadius: RADIUS.sm,
                     color: COLORS.textMuted,
                     cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                     flexShrink: 0,
                   }}
                   onMouseEnter={(e) => {

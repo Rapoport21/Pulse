@@ -11,7 +11,7 @@ import {
   AlertTriangle, ChevronDown,
 } from 'lucide-react';
 import {
-  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, Z,
+  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, cssTransition, Z,
   MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono, BracketLabel, StatusPill, TacticalCard, TacticalButton,
   HudStrip, ScanningLine, ConfidenceBadge, Divider,
@@ -326,7 +326,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                     const expanded = expandedHistory === i;
                     return (
                       <motion.button key={i} onClick={() => setExpandedHistory(expanded ? null : i)} whileTap={{ scale: 0.99 }}
-                        style={{ display: 'flex', flexDirection: 'column', gap: expanded ? SPACE.sm : 0, padding: `${SPACE.md}px ${SPACE.base}px`, background: expanded ? COLORS.surfaceElev : COLORS.surface, border: `1px solid ${expanded ? COLORS.borderStrong : COLORS.border}`, borderRadius: RADIUS.sm, cursor: 'pointer', textAlign: 'left', width: '100%', outline: 'none', transition: `all ${MOTION.fast}s ease` }}>
+                        style={{ display: 'flex', flexDirection: 'column', gap: expanded ? SPACE.sm : 0, padding: `${SPACE.md}px ${SPACE.base}px`, background: expanded ? COLORS.surfaceElev : COLORS.surface, border: `1px solid ${expanded ? COLORS.borderStrong : COLORS.border}`, borderRadius: RADIUS.sm, cursor: 'pointer', textAlign: 'left', width: '100%', outline: 'none', transition: cssTransition() }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, width: '100%' }}>
                           <Mono tone="accent" size="xs" style={{ flexShrink: 0 }}>{entry.time}</Mono>
                           <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, flex: 1 }}>{entry.summary}</span>

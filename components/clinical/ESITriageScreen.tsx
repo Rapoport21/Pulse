@@ -58,7 +58,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Mono,
   BracketLabel,
@@ -363,7 +363,7 @@ const IdentityStep: React.FC<{
                   fontSize: 12,
                   letterSpacing: '0.14em',
                   cursor: 'pointer',
-                  transition: 'all 140ms ease',
+                  transition: cssTransition(),
                 }}
               >
                 {s}
@@ -403,7 +403,7 @@ const LabeledInput: React.FC<{
     fontSize: 16, // 16px to prevent iOS auto-zoom on focus
     fontWeight: 500,
     outline: 'none',
-    transition: `all ${MOTION.fast}s ease`,
+    transition: cssTransition(),
     boxShadow: focused ? `0 0 0 3px ${COLORS.accentGlow}` : 'none',
   };
   return (
@@ -630,7 +630,7 @@ const ResourcesStep: React.FC<{
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'all 140ms ease',
+                transition: cssTransition(),
               }}
             >
               <div

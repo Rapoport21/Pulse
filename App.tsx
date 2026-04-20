@@ -84,6 +84,7 @@ import {
   SHADOW,
   MOTION,
   CHROME,
+  cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -1880,7 +1881,7 @@ const NavButton: React.FC<{
         fontWeight: 500,
         cursor: 'pointer',
         letterSpacing: '-0.003em',
-        transition: 'all 160ms ease',
+        transition: cssTransition(),
       }}
     >
       {active && (
@@ -1922,7 +1923,7 @@ const IconButton: React.FC<{
         borderRadius: RADIUS.sm,
         color: active ? COLORS.textPrimary : hovered ? COLORS.textPrimary : COLORS.textSecondary,
         cursor: 'pointer',
-        transition: 'all 160ms ease',
+        transition: cssTransition(),
       }}
     >
       {children}

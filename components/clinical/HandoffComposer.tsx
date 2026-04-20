@@ -7,7 +7,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, ArrowRight, BrainCircuit, CheckCircle2, ClipboardCopy, Printer, Send, Users, X } from 'lucide-react';
-import { COLORS, FONTS, SPACE, RADIUS, MOTION, TYPE, Z, Mono, BracketLabel, StatusPill, TacticalCard, TacticalButton, HudStrip, ScanningLine, Divider } from '../design';
+import { COLORS, FONTS, SPACE, RADIUS, MOTION, cssTransition, TYPE, Z, Mono, BracketLabel, StatusPill, TacticalCard, TacticalButton, HudStrip, ScanningLine, Divider } from '../design';
 import { MOCK_PATIENTS, ageInYears } from '../../data/clinicalMock';
 import { computeMEWS } from '../../lib/clinicalScores';
 import type { Patient } from '../../types';
@@ -103,7 +103,7 @@ const InfoRow: React.FC<{ label: string; value: string; valueColor?: string }> =
 );
 
 const Checkbox: React.FC<{ checked: boolean; color: string }> = ({ checked, color }) => (
-  <div style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: checked ? `${color}18` : COLORS.surface, border: `1.5px solid ${checked ? color : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: `all ${MOTION.fast}s ease` }}>
+  <div style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: checked ? `${color}18` : COLORS.surface, border: `1.5px solid ${checked ? color : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: cssTransition() }}>
     {checked && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: 12, color, lineHeight: 1 }}>{'\u2713'}</motion.span>}
   </div>
 );
@@ -201,7 +201,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
           const tone = mews ? mewsTone(mews.risk) : 'ok' as const;
           const bed = p.currentEncounter?.location?.bed ?? '--';
           return (
-            <motion.button key={p.id} onClick={() => togglePatient(p.id)} whileTap={{ scale: 0.98 }} style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: SPACE.md, padding: SPACE.md, background: checked ? `${accent}08` : COLORS.surface, border: `1px solid ${checked ? `${accent}30` : COLORS.border}`, borderRadius: RADIUS.sm, cursor: 'pointer', textAlign: 'left', transition: `all ${MOTION.fast}s ease`, outline: 'none', width: '100%', overflow: 'hidden' }}>
+            <motion.button key={p.id} onClick={() => togglePatient(p.id)} whileTap={{ scale: 0.98 }} style={{ position: 'relative', display: 'flex', alignItems: 'flex-start', gap: SPACE.md, padding: SPACE.md, background: checked ? `${accent}08` : COLORS.surface, border: `1px solid ${checked ? `${accent}30` : COLORS.border}`, borderRadius: RADIUS.sm, cursor: 'pointer', textAlign: 'left', transition: cssTransition(), outline: 'none', width: '100%', overflow: 'hidden' }}>
               <AccentBar color={accent} opacity={checked ? 1 : 0.3} />
               <Checkbox checked={checked} color={accent} />
               <div style={{ flex: 1, minWidth: 0 }}>

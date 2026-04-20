@@ -181,6 +181,17 @@ export const MOTION = {
   /** Linear easing for scanning lines */
   linear: 'linear' as const,
 
+  /** CSS-string versions of the Motion ease tuples. The Framer Motion
+   *  array tuples don't work in inline-style `transition:` strings —
+   *  browsers need a cubic-bezier() expression. These mirror `ease` /
+   *  `easeSmooth` / a drawer-style curve, so CSS transitions get the
+   *  same custom feel Framer Motion gets, instead of falling back to
+   *  the browser's weak default `ease` keyword. */
+  cssEase: 'cubic-bezier(0.16, 1, 0.3, 1)' as const,
+  cssEaseSmooth: 'cubic-bezier(0.22, 1, 0.36, 1)' as const,
+  cssEaseInOut: 'cubic-bezier(0.77, 0, 0.175, 1)' as const,
+  cssEaseDrawer: 'cubic-bezier(0.32, 0.72, 0, 1)' as const,
+
   // Durations in seconds (motion/react convention)
   fast: 0.18,
   base: 0.28,
@@ -188,6 +199,40 @@ export const MOTION = {
   slower: 0.65,
   ambient: 14, // slow scanning horizontal line
 } as const;
+
+/**
+ * Build a named-property CSS transition string with the custom ease
+ * curve. Covers the standard interactive-surface properties we animate
+ * on cards, tiles, buttons, and rows. Skips layout-triggering props
+ * (width / height / padding / margin / font-size) that `transition: all`
+ * would unnecessarily include and that force reflow.
+ *
+ * Use this in inline `style` objects:
+ *
+ *   transition: cssTransition()             // MOTION.fast, default
+ *   transition: cssTransition(MOTION.base)  // slower for modals / cards
+ *
+ * Pass a specific properties array for non-standard cases:
+ *
+ *   transition: cssTransition(MOTION.fast, ['transform', 'opacity'])
+ */
+export const CSS_TRANSITION_INTERACTIVE_PROPS = [
+  'background',
+  'border-color',
+  'color',
+  'box-shadow',
+  'transform',
+  'opacity',
+] as const;
+
+export const cssTransition = (
+  duration: number = MOTION.fast,
+  properties: ReadonlyArray<string> = CSS_TRANSITION_INTERACTIVE_PROPS,
+): string => {
+  const d = `${duration}s`;
+  const e = MOTION.cssEase;
+  return properties.map((p) => `${p} ${d} ${e}`).join(', ');
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Chrome heights — ensures boot/login/shell align to the same grid

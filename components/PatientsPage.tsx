@@ -6,7 +6,7 @@ import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
 import type { Patient, UserProfile, UserRole } from '../types';
 import {
-  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, SHADOW,
+  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, cssTransition, SHADOW,
   Mono, BracketLabel, StatusPill, TacticalCard, HudStrip, ScanningLine, Divider, TacticalButton,
 } from './design';
 
@@ -87,7 +87,7 @@ const SortPill: React.FC<{
       textTransform: 'uppercase' as const,
       color: active ? COLORS.accent : COLORS.textMuted,
       cursor: 'pointer',
-      transition: `all ${MOTION.fast}s ease`,
+      transition: cssTransition(),
     }}
   >
     {label}
@@ -122,7 +122,7 @@ const FilterPill: React.FC<{
       textTransform: 'uppercase' as const,
       color: active ? COLORS.textPrimary : COLORS.textMuted,
       cursor: 'pointer',
-      transition: `all ${MOTION.fast}s ease`,
+      transition: cssTransition(),
     }}
   >
     {dotColor && (

@@ -25,7 +25,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -1594,7 +1594,7 @@ const CoverageBar: React.FC<{
         borderRadius: RADIUS.sm,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: `all ${MOTION.fast}s ease`,
+        transition: cssTransition(),
       }}
     >
       <div
@@ -1680,7 +1680,7 @@ const OpenShiftRow: React.FC<{ shift: OpenShift; onClick: () => void }> = ({ shi
         borderRadius: RADIUS.sm,
         cursor: 'pointer',
         textAlign: 'left',
-        transition: `all ${MOTION.fast}s ease`,
+        transition: cssTransition(),
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

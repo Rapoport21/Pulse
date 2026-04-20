@@ -6,7 +6,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   CornerBracket,
@@ -319,7 +319,7 @@ export const LoadingScreen: React.FC<{ onComplete: () => void }> = ({
                     background: active ? 'rgba(225,29,72,0.06)' : COLORS.bgDeep,
                     border: `1px solid ${active ? COLORS.accent : COLORS.border}`,
                     borderRadius: RADIUS.sm,
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   <Icon

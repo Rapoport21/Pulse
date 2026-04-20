@@ -33,7 +33,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -198,7 +198,7 @@ const Field: React.FC<{
             fontSize: 14,
             fontWeight: 500,
             outline: 'none',
-            transition: `all ${MOTION.fast}s ease`,
+            transition: cssTransition(),
             boxShadow: focused ? `0 0 0 3px ${COLORS.accentGlow}` : 'none',
           }}
         />
@@ -830,7 +830,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     boxShadow: chiefComplaintFocused
                       ? `0 0 0 3px ${COLORS.accentGlow}`
                       : 'none',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 />
               </div>
@@ -1271,7 +1271,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                             cursor: 'pointer',
                             flexShrink: 0,
                             color: '#000',
-                            transition: `all ${MOTION.fast}s ease`,
+                            transition: cssTransition(),
                           }}
                         >
                           {completed && <CheckCircle2 size={11} strokeWidth={2.5} />}
@@ -1378,7 +1378,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                       border: `1px solid ${isGuarantorSame ? COLORS.ok : COLORS.borderStrong}`,
                       borderRadius: 999,
                       cursor: 'pointer',
-                      transition: `all ${MOTION.fast}s ease`,
+                      transition: cssTransition(),
                       padding: 0,
                     }}
                   >
@@ -1921,7 +1921,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                   boxShadow: chiefComplaintFocused
                     ? `0 0 0 3px ${COLORS.accentGlow}`
                     : 'none',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                 }}
               />
             </div>
@@ -2372,7 +2372,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                           cursor: 'pointer',
                           flexShrink: 0,
                           color: '#000',
-                          transition: `all ${MOTION.fast}s ease`,
+                          transition: cssTransition(),
                         }}
                       >
                         {completed && <CheckCircle2 size={11} strokeWidth={2.5} />}
@@ -2479,7 +2479,7 @@ export const PatientDetailScreen: React.FC<PatientDetailScreenProps> = ({
                     border: `1px solid ${isGuarantorSame ? COLORS.ok : COLORS.borderStrong}`,
                     borderRadius: 999,
                     cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                     padding: 0,
                   }}
                 >

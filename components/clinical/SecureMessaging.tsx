@@ -37,7 +37,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Z,
   MOBILE_NAV_OVERLAY_INSET_BOTTOM,
@@ -732,7 +732,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 borderRadius: RADIUS.sm,
                 color: inputText.trim() ? COLORS.textPrimary : COLORS.textMuted,
                 cursor: inputText.trim() ? 'pointer' : 'default',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
                 flexShrink: 0,
               }}
             >

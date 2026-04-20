@@ -24,7 +24,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   CHROME,
   Mono,
   BracketLabel,
@@ -753,7 +753,7 @@ export const CommandSidebar = ({
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase' as const,
                           cursor: 'pointer',
-                          transition: `all ${MOTION.base}s ease`,
+                          transition: cssTransition(MOTION.base),
                         }}
                         onMouseEnter={(e) => {
                           (e.target as HTMLButtonElement).style.background = `${COLORS.accent}1a`;
@@ -1111,7 +1111,7 @@ export const CommandSidebar = ({
                                 borderRadius: RADIUS.sm,
                                 cursor: 'pointer',
                                 textAlign: 'left',
-                                transition: `all ${MOTION.base}s ease`,
+                                transition: cssTransition(MOTION.base),
                               }}
                               onMouseEnter={(e) => {
                                 (e.currentTarget as HTMLButtonElement).style.background = `${toneColor}1a`;

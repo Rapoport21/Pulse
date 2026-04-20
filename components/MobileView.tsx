@@ -100,7 +100,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   SHADOW,
   Mono,
   BracketLabel,
@@ -3712,7 +3712,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       letterSpacing: '0.08em', textTransform: 'uppercase' as const,
                       color: active ? tone : COLORS.textSecondary,
                       cursor: 'pointer',
-                      transition: `all ${MOTION.fast}s ease`,
+                      transition: cssTransition(),
                     }}
                   >
                     {f.label}

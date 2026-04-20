@@ -36,7 +36,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Z,
   SHADOW,
@@ -424,7 +424,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                       border: `1.5px solid ${isSelected ? COLORS.accent : COLORS.border}`,
                       borderRadius: RADIUS.sm,
                       cursor: 'pointer',
-                      transition: `all ${MOTION.fast}s ease`,
+                      transition: cssTransition(),
                       outline: 'none',
                     }}
                   >
@@ -816,7 +816,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                     border: `1px solid ${queueFilter === tab.key ? COLORS.accent : COLORS.border}`,
                     borderRadius: RADIUS.sm,
                     cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                     outline: 'none',
                   }}
                 >
@@ -1111,7 +1111,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                                           border: `1px solid ${COLORS.ok}40`,
                                           borderRadius: RADIUS.sm,
                                           cursor: 'pointer',
-                                          transition: `all ${MOTION.fast}s ease`,
+                                          transition: cssTransition(),
                                         }}
                                         onMouseEnter={e => { (e.target as HTMLElement).style.background = 'rgba(16,185,129,0.2)'; }}
                                         onMouseLeave={e => { (e.target as HTMLElement).style.background = 'rgba(16,185,129,0.08)'; }}

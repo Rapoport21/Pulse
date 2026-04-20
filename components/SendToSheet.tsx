@@ -6,7 +6,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Z,
   Mono,
   BracketLabel,
@@ -260,7 +260,7 @@ export const SendToSheet: React.FC<SendToSheetProps> = ({
                     color: COLORS.textPrimary,
                     cursor: 'pointer',
                     boxShadow: isSelected ? `0 0 16px ${COLORS.accent}30` : 'none',
-                    transition: 'all 0.15s ease',
+                    transition: cssTransition(),
                     textAlign: 'left',
                   }}
                 >

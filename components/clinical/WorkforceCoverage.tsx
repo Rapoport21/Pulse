@@ -50,7 +50,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import {
-  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+  COLORS, FONTS, TYPE, SPACE, RADIUS, MOTION, cssTransition, MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono, BracketLabel, StatusPill, TacticalCard,
   TacticalButton, Divider, CornerBracket, ScanningLine,
 } from '../design';
@@ -1160,7 +1160,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
                     color: active ? COLORS.textPrimary : COLORS.textMuted,
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   {s}

@@ -15,7 +15,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -318,7 +318,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     borderRadius: RADIUS.sm,
                     color: COLORS.textMuted,
                     cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.borderColor = COLORS.borderStrong;

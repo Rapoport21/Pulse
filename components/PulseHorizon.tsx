@@ -68,7 +68,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   SHADOW,
   Mono,
   BracketLabel,
@@ -1354,7 +1354,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   border: `1px solid ${COLORS.border}`,
                   borderRadius: RADIUS.sm,
                   cursor: 'pointer',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                   minWidth: 0,
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = COLORS.borderHover; e.currentTarget.style.background = COLORS.surfaceElev; }}

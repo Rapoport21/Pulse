@@ -40,7 +40,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Z,
   MOBILE_NAV_OVERLAY_INSET_BOTTOM,
@@ -357,7 +357,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               borderRadius: RADIUS.md,
               cursor: 'pointer',
               outline: 'none',
-              transition: `all ${MOTION.fast}s ease`,
+              transition: cssTransition(),
             }}
           >
             {opt}
@@ -400,7 +400,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
               borderRadius: RADIUS.md,
               cursor: 'pointer',
               outline: 'none',
-              transition: `all ${MOTION.fast}s ease`,
+              transition: cssTransition(),
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
@@ -454,7 +454,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 outline: 'none',
                 textAlign: 'left',
                 width: '100%',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
@@ -595,7 +595,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             background: labStat ? COLORS.critDim : COLORS.okDim,
             border: `1px solid ${labStat ? COLORS.crit : COLORS.ok}`,
             borderRadius: RADIUS.md, cursor: 'pointer', outline: 'none',
-            transition: `all ${MOTION.fast}s ease`,
+            transition: cssTransition(),
           }}
         >
           <Zap size={12} />
@@ -628,7 +628,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer', outline: 'none',
                 textAlign: 'left',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
                 overflow: 'hidden',
               }}
             >
@@ -690,7 +690,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer', outline: 'none',
                 textAlign: 'left',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
                 overflow: 'hidden',
               }}
             >
@@ -794,7 +794,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer', outline: 'none',
                 textAlign: 'left', width: '100%',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
                 overflow: 'hidden',
               }}
             >

@@ -39,7 +39,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Z,
   SHADOW,
   Mono,
@@ -670,7 +670,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 alignItems: 'center',
                 gap: SPACE.xs,
                 cursor: 'pointer',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
               }}
             >
               <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.info, lineHeight: 1 }}>
@@ -691,7 +691,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 alignItems: 'center',
                 gap: SPACE.xs,
                 cursor: 'pointer',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
               }}
             >
               <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.crit, lineHeight: 1 }}>
@@ -712,7 +712,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 alignItems: 'center',
                 gap: SPACE.xs,
                 cursor: 'pointer',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
               }}
             >
               <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.warn, lineHeight: 1 }}>
@@ -733,7 +733,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                 alignItems: 'center',
                 gap: SPACE.xs,
                 cursor: 'pointer',
-                transition: `all ${MOTION.fast}s ease`,
+                transition: cssTransition(),
               }}
             >
               <div style={{ fontSize: 36, fontWeight: 700, fontFamily: FONTS.mono, color: COLORS.ok, lineHeight: 1 }}>
@@ -775,7 +775,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                     textTransform: 'uppercase' as const,
                     color: isActive ? tabColor : COLORS.textMuted,
                     cursor: 'pointer',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   {tab}
@@ -820,7 +820,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                       borderRadius: RADIUS.sm,
                       overflow: 'hidden',
                       opacity: isResolved ? 0.45 : isAck ? 0.65 : 1,
-                      transition: `all ${MOTION.base}s ease`,
+                      transition: cssTransition(MOTION.base),
                       padding: `${SPACE.lg}px`,
                       boxShadow: isEscalated ? `0 0 16px ${COLORS.crit}30, inset 0 0 1px ${COLORS.crit}40` : undefined,
                       animation: isEscalated ? 'pulse-escalation-ring 2s ease-in-out infinite' : undefined,
@@ -1236,7 +1236,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
                         borderRadius: RADIUS.sm,
                         overflow: 'hidden',
                         opacity: isResolved ? 0.45 : isAck ? 0.6 : 1,
-                        transition: `all ${MOTION.base}s ease`,
+                        transition: cssTransition(MOTION.base),
                         boxShadow: isEscalated ? `0 0 12px ${COLORS.crit}25` : undefined,
                         animation: isEscalated ? 'pulse-escalation-ring 2s ease-in-out infinite' : undefined,
                       }}

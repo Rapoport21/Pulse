@@ -35,7 +35,7 @@ import {
   FONTS,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   TYPE,
   Z,
   Mono,
@@ -435,7 +435,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   fontSize: TYPE.bodySm.size,
                   fontWeight: 500,
                   outline: 'none',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                 }}
               >
                 {nt.icon}
@@ -504,7 +504,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                     fontFamily: FONTS.mono,
                     fontSize: 11,
                     outline: 'none',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                   }}
                 >
                   <BrainCircuit size={12} />
@@ -810,7 +810,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                     borderRadius: RADIUS.sm,
                     cursor: 'pointer',
                     outline: 'none',
-                    transition: `all ${MOTION.fast}s ease`,
+                    transition: cssTransition(),
                     width: '100%',
                   }}
                 >

@@ -7,7 +7,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   TacticalButton,
@@ -145,7 +145,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({
                   borderRadius: RADIUS.sm,
                   color: COLORS.textMuted,
                   cursor: 'pointer',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                   flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {

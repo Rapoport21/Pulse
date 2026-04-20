@@ -17,7 +17,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Mono,
   BracketLabel,
   StatusPill,
@@ -259,7 +259,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                   borderRadius: RADIUS.sm,
                   color: COLORS.textMuted,
                   cursor: 'pointer',
-                  transition: `all ${MOTION.fast}s ease`,
+                  transition: cssTransition(),
                   flexShrink: 0,
                 }}
                 onMouseEnter={(e) => {
@@ -345,7 +345,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                         borderLeft: `3px solid ${checked ? COLORS.ok : COLORS.border}`,
                         borderRadius: RADIUS.sm,
                         cursor: 'pointer',
-                        transition: `all ${MOTION.fast}s ease`,
+                        transition: cssTransition(),
                       }}
                     >
                       <input
@@ -367,7 +367,7 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
                           borderRadius: RADIUS.sm,
                           color: '#000',
                           flexShrink: 0,
-                          transition: `all ${MOTION.fast}s ease`,
+                          transition: cssTransition(),
                         }}
                       >
                         {checked && <Check size={12} strokeWidth={3} />}

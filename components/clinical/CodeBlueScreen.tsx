@@ -30,7 +30,7 @@ import {
   TYPE,
   SPACE,
   RADIUS,
-  MOTION,
+  MOTION, cssTransition,
   Z,
   MOBILE_NAV_OVERLAY_INSET_BOTTOM,
   Mono,
@@ -534,7 +534,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
                         letterSpacing: '0.1em',
                         textTransform: 'uppercase',
                         cursor: 'pointer',
-                        transition: `all ${MOTION.fast}s ease`,
+                        transition: cssTransition(),
                       }}
                     >
                       {r}
