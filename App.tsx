@@ -74,6 +74,7 @@ import {
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
 import { initUiScale } from './lib/uiScale';
+import { readSurgeDurationMs } from './lib/surgeDuration';
 import {
   COLORS,
   FONTS,
@@ -154,6 +155,13 @@ function App() {
   // Keep a ref so assignBedToAdmission always reads the latest queue
   const admissionQueueRef = useRef(admissionQueue);
   admissionQueueRef.current = admissionQueue;
+
+  // Auto-deactivate handle for Surge Mode. Scheduled at activateSurge
+  // time from the operator's `pulse-surge-duration` preference (30 s /
+  // 1 m / 2 m / 5 m / permanent). `null` = no timer is pending.
+  // Must be cleared in deactivateSurge (so manual stand-down doesn't
+  // leave a dangling timeout) and on unmount.
+  const surgeAutoStandDownRef = useRef<number | null>(null);
 
   // ── Additional synced state — clinical notes & alert acks ──
   const [clinicalNotes, setClinicalNotes] = useRealtimeState<ClinicalNote[]>('clinical-notes', []);
@@ -742,15 +750,50 @@ function App() {
     setBedUnits(escalateBedState(seedBedState()));
     sendSurgePing({ taskCount: tasks.length });
     showToast('Surge Mode Activated', 'error');
+
+    // Schedule auto stand-down per Settings → Simulation → Surge duration.
+    // Read at activation time so the operator can change the preference
+    // mid-demo and have it apply on the NEXT activation. `null` ms means
+    // "permanent — operator dismisses manually."
+    if (surgeAutoStandDownRef.current !== null) {
+      window.clearTimeout(surgeAutoStandDownRef.current);
+      surgeAutoStandDownRef.current = null;
+    }
+    const autoMs = readSurgeDurationMs();
+    if (autoMs !== null) {
+      surgeAutoStandDownRef.current = window.setTimeout(() => {
+        surgeAutoStandDownRef.current = null;
+        deactivateSurge();
+      }, autoMs);
+    }
   };
 
   const deactivateSurge = () => {
+    // Cancel any pending auto stand-down timer first — whether this
+    // was called by the timer itself, a manual operator tap, or a
+    // reset. Safe to call even if no timer is pending.
+    if (surgeAutoStandDownRef.current !== null) {
+      window.clearTimeout(surgeAutoStandDownRef.current);
+      surgeAutoStandDownRef.current = null;
+    }
     if (!surgeState.active) return;
     setSurgeState({ active: false, activatedAt: null });
     setUrgentTasks([]);
     setBedUnits(deescalateBedState());
     showToast('Surge Mode Deactivated — Stand Down', 'info');
   };
+
+  // Clean up the surge auto-stand-down timer on unmount. If the app
+  // tears down while a timer is pending, we don't want the handler
+  // to fire against a stale closure.
+  useEffect(() => {
+    return () => {
+      if (surgeAutoStandDownRef.current !== null) {
+        window.clearTimeout(surgeAutoStandDownRef.current);
+        surgeAutoStandDownRef.current = null;
+      }
+    };
+  }, []);
 
   // ── Simulation Controls — demo power tools ──
   const simControls = useMemo<SimControlAction[]>(() => [
@@ -933,6 +976,14 @@ function App() {
    * other connected devices so they all land on a fresh mock together.
    */
   const resetSimulation = useCallback(() => {
+    // Cancel any pending surge auto stand-down timer — the reset
+    // already clears surge state, so we don't want a stale timeout
+    // to fire later and emit a duplicate stand-down toast.
+    if (surgeAutoStandDownRef.current !== null) {
+      window.clearTimeout(surgeAutoStandDownRef.current);
+      surgeAutoStandDownRef.current = null;
+    }
+
     // Shared state — restored to initial values, broadcasts to peers
     setSurgeState(INITIAL_SURGE_STATE);
     setUrgentTasks([]);

@@ -21,6 +21,7 @@ import {
   Smartphone,
   Tablet,
   Laptop,
+  Zap,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 import {
@@ -63,6 +64,13 @@ import {
   writeUiScale,
   applyUiScale,
 } from '../lib/uiScale';
+import {
+  type SurgeDuration,
+  SURGE_DURATION_ORDER,
+  SURGE_DURATION_LABEL,
+  readSurgeDuration,
+  writeSurgeDuration,
+} from '../lib/surgeDuration';
 
 /**
  * SettingsScreen — full-screen overlay for session/simulation controls.
@@ -226,6 +234,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [resetJustFired, setResetJustFired] = useState(false);
   const [contrastOpen, setContrastOpen] = useState(false);
   const [uiScale, setUiScale] = useState<UiScale>(() => readUiScale());
+  const [surgeDuration, setSurgeDurationState] = useState<SurgeDuration>(() =>
+    readSurgeDuration()
+  );
   const connectionStatus = useConnectionStatus();
   const presence = usePresence();
   const presenceMeta = usePresenceMeta();
@@ -268,6 +279,18 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     setUiScale(next);
     writeUiScale(next);
     applyUiScale(next);
+  };
+
+  // Commit a surge-duration change. Only affects the NEXT surge
+  // activation — we don't retroactively shorten a surge that's
+  // already running (would be confusing if the operator flipped
+  // mid-scenario). The App reads the preference at activateSurge
+  // time and schedules an auto-deactivate timer accordingly.
+  const handleSurgeDurationChange = (next: SurgeDuration) => {
+    if (next === surgeDuration) return;
+    triggerHaptic('light');
+    setSurgeDurationState(next);
+    writeSurgeDuration(next);
   };
 
   // Tick clock — only while open, to avoid background churn.
@@ -925,6 +948,161 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                       strokeWidth={1.75}
                     />
                   </motion.button>
+                </div>
+              </Section>
+
+              {/* ── SIMULATION ──────────────────────────────── */}
+              {/* Demo-tuning controls. The clinically-correct default
+                  is "Permanent" — once Surge Mode is activated the
+                  screen stays screaming-red until an operator stands
+                  down. For the SCAD demo loop, auto-expire options
+                  (30 s → 5 min) let the stand reset between visitors
+                  without manual cleanup. */}
+              <Section
+                id="S04B"
+                title="Simulation"
+                meta={
+                  <Mono tone="dim" size="xs">
+                    Demo pacing
+                  </Mono>
+                }
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  {/* Surge Duration — how long Surge Mode stays
+                      active before auto stand-down. Applies to the
+                      NEXT activation; in-flight surges are not
+                      retroactively shortened. */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: SPACE.md,
+                      padding: SPACE.md,
+                      background: COLORS.surface,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.sm,
+                    }}
+                  >
+                    {/* Label row: icon tile + title + description. */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.md,
+                        minHeight: 44,
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          flexShrink: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: `1px solid ${COLORS.border}`,
+                          background: COLORS.surfaceElev,
+                          borderRadius: RADIUS.sm,
+                          color: COLORS.accent,
+                        }}
+                      >
+                        <Zap size={16} strokeWidth={1.75} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 15,
+                            fontWeight: 600,
+                            letterSpacing: '-0.01em',
+                            color: COLORS.textPrimary,
+                            marginBottom: 2,
+                          }}
+                        >
+                          Surge duration
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 12,
+                            color: COLORS.textSecondary,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          How long Surge Mode stays active before
+                          auto stand-down. Permanent keeps it on
+                          until you tap again.
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 5-up segmented toggle. Full-width grid so
+                        every option gets equal tap area; 44-tall
+                        buttons for touch targets. */}
+                    <div
+                      role="radiogroup"
+                      aria-label="Surge duration"
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${SURGE_DURATION_ORDER.length}, 1fr)`,
+                        gap: 0,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: RADIUS.sm,
+                        overflow: 'hidden',
+                        background: COLORS.surfaceElev,
+                      }}
+                    >
+                      {SURGE_DURATION_ORDER.map((option, i) => {
+                        const active = surgeDuration === option;
+                        const isLast = i === SURGE_DURATION_ORDER.length - 1;
+                        return (
+                          <motion.button
+                            key={option}
+                            type="button"
+                            role="radio"
+                            aria-checked={active}
+                            onClick={() => handleSurgeDurationChange(option)}
+                            whileTap={{ scale: 0.96 }}
+                            transition={{
+                              duration: MOTION.fast,
+                              ease: MOTION.ease,
+                            }}
+                            style={{
+                              minHeight: 44,
+                              padding: `0 ${SPACE.xs}px`,
+                              background: active
+                                ? COLORS.accent
+                                : 'transparent',
+                              border: 'none',
+                              borderRight: isLast
+                                ? 'none'
+                                : `1px solid ${COLORS.border}`,
+                              color: active
+                                ? '#FFFFFF'
+                                : COLORS.textSecondary,
+                              cursor: 'pointer',
+                              fontFamily: FONTS.mono,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: '0.08em',
+                              textTransform: 'uppercase',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {SURGE_DURATION_LABEL[option]}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </Section>
 
