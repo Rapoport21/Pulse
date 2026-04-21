@@ -500,7 +500,7 @@ export const CommandSidebar = ({
     setTranscript([]);
     setActionTasks([]);
     setTimeout(() => {
-      if (callState !== 'ended') setCallState('connected');
+      setCallState((cs) => (cs === 'calling' ? 'connected' : cs));
     }, 2000);
   };
 

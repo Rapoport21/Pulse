@@ -2238,7 +2238,7 @@ const AssignedChip: React.FC<AssignedChipProps> = ({
         layout
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: isDragged ? 0.4 : 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.8 }}
+        exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: MOTION.fast, ease: MOTION.ease }}
         draggable
         onDragStart={(e) => onDragStart(e as unknown as DragEvent<HTMLElement>, member.id)}

@@ -104,7 +104,16 @@ const InfoRow: React.FC<{ label: string; value: string; valueColor?: string }> =
 
 const Checkbox: React.FC<{ checked: boolean; color: string }> = ({ checked, color }) => (
   <div style={{ width: 20, height: 20, borderRadius: RADIUS.sm, background: checked ? `${color}18` : COLORS.surface, border: `1.5px solid ${checked ? color : COLORS.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1, transition: cssTransition() }}>
-    {checked && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: 12, color, lineHeight: 1 }}>{'\u2713'}</motion.span>}
+    {checked && (
+      <motion.span
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+        style={{ fontSize: 12, color, lineHeight: 1 }}
+      >
+        {'\u2713'}
+      </motion.span>
+    )}
   </div>
 );
 

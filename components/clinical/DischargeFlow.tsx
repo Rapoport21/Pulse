@@ -354,8 +354,9 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
                 >
                   {checked && (
                     <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
+                      initial={{ scale: 0.6, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                       style={{ fontSize: 12, color: COLORS.ok, lineHeight: 1 }}
                     >
                       {'\u2713'}
