@@ -490,7 +490,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   onClick={() =>
                     setAiVisible((prev) => ({ ...prev, [sec.key]: !prev[sec.key] }))
                   }
-                  whileTap={{ scale: 0.92 }}
+                  whileTap={{ scale: 0.97 }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

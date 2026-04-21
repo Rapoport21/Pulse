@@ -932,7 +932,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                       )}
                     </div>
                     <motion.button
-                      whileTap={{ scale: 0.9 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={() => removeOrder(globalIdx)}
                       style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',

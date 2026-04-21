@@ -1643,7 +1643,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           <motion.button
             onClick={() => onOpenChat()}
             aria-label="Open PULSE AI"
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.97 }}
             whileHover={{ borderColor: COLORS.info }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
@@ -1667,7 +1667,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               setShowScanner(true);
             }}
             aria-label="Open QR scanner"
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.97 }}
             whileHover={{ borderColor: COLORS.accent }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
@@ -1688,7 +1688,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
           <motion.button
             onClick={() => setShowMenu(!showMenu)}
             aria-label={showMenu ? 'Close menu' : 'Open menu'}
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.97 }}
             whileHover={{ borderColor: COLORS.borderHover }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
@@ -1764,7 +1764,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 type="button"
                 onClick={() => setShowMenu(false)}
                 aria-label="Close menu"
-                whileTap={{ scale: 0.94 }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   display: 'inline-flex',
@@ -5173,7 +5173,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 }}
                 aria-label={item.label}
                 aria-pressed={active}
-                whileTap={{ scale: 0.92 }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   position: 'relative',

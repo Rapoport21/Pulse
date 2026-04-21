@@ -414,7 +414,7 @@ export const TextDimContrastSample: React.FC<Props> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close contrast check"
-                whileTap={{ scale: 0.94 }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   display: 'inline-flex',

@@ -970,7 +970,7 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
               type="button"
               onClick={onClose}
               aria-label="Close"
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.97 }}
               style={{
                 width: 32,
                 height: 32,

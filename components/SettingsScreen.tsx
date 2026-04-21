@@ -425,7 +425,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 type="button"
                 onClick={onClose}
                 aria-label="Close settings"
-                whileTap={{ scale: 0.94 }}
+                whileTap={{ scale: 0.97 }}
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{
                   display: 'inline-flex',
