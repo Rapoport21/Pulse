@@ -5192,16 +5192,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   transition: `color ${MOTION.fast}s ease`,
                 }}
               >
-                {/* Active indicator — shared layout morphs between tabs */}
+                {/* Active indicator — shared layout morphs between tabs.
+                    Uses a critically-damped tween (not a spring) so the
+                    pill settles flat into the new tab with no vertical
+                    bob / overshoot. Springy morphs read as "the selected
+                    state moves up before it settles" which is exactly
+                    the feeling we don't want on a nav bar. */}
                 {active && (
                   <motion.span
                     layoutId="mobile-nav-active-frame"
                     aria-hidden
                     transition={{
-                      type: 'spring',
-                      stiffness: 520,
-                      damping: 38,
-                      mass: 0.8,
+                      duration: MOTION.fast,
+                      ease: MOTION.ease,
                     }}
                     style={{
                       position: 'absolute',
