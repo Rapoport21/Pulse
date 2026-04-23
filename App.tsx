@@ -81,6 +81,7 @@ import {
   formatScenarioRemaining,
   SCENARIO_META,
   metricValue,
+  scenarioEmsBootstrap,
 } from './lib/scenario';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
@@ -825,6 +826,14 @@ function App() {
   const startScenario = useCallback((severity: ScenarioSeverity) => {
     const state = buildScenarioState(severity, getDeviceId());
     setActiveScenario(state);
+    // Replace the EMS inbound list with a scenario-tuned set so the
+    // board paints correctly from t=0 — otherwise all three severities
+    // share the same 6 baseline runs for the first ~15s of the scenario.
+    try {
+      publish('ems-replace', scenarioEmsBootstrap(severity));
+    } catch (err) {
+      console.warn('[scenario] ems-replace publish failed', err);
+    }
     const meta = SCENARIO_META[severity];
     showToast(`Scenario ${meta.id} · ${meta.label} — running 3:00`,
       severity === 3 ? 'error' : severity === 2 ? 'info' : 'info',
@@ -835,6 +844,10 @@ function App() {
     if (!activeScenario) return;
     const wasS3 = activeScenario.severity === 3;
     setActiveScenario(null);
+    // Flush the scenario-specific EMS list back to baseline seed.
+    try { publish('ems-reset'); } catch {
+      /* noop — reset is best-effort */
+    }
     showToast('Scenario stopped — returning to baseline', 'info');
     // If S3 auto-activated surge, bringing down the scenario also brings
     // down surge. Manual surge from elsewhere (the PulseHorizon button or
@@ -881,6 +894,9 @@ function App() {
       // Auto-clear scenario at 3:00. Uses setActiveScenario directly so
       // we don't re-trigger the "stop" toast — expiry is its own beat.
       setActiveScenario(null);
+      try { publish('ems-reset'); } catch {
+        /* noop — reset is best-effort */
+      }
     },
   });
 

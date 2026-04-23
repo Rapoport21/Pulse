@@ -101,7 +101,24 @@ export const useEmsInbound = (): {
     const unsubReset = subscribe('ems-reset', () => {
       setInbound(liftSeed(seedEmsInbound()));
     });
-    return () => { unsubInject(); unsubReset(); };
+    // Full-list replace — used by the scenario engine at activation time
+    // to swap the baseline seed for a scenario-tuned set instantly (so
+    // the inbound card doesn't look identical across S1/S2/S3 at t=0).
+    const unsubReplace = subscribe<Omit<EmsInbound, 'id' | 'createdAt'>[]>(
+      'ems-replace',
+      (runs) => {
+        setInbound(
+          runs.map((r) => ({
+            ...r,
+            id: `EMS-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+            createdAt: new Date().toISOString(),
+            etaSeconds: r.etaMinutes * 60,
+            arrived: false,
+          })),
+        );
+      },
+    );
+    return () => { unsubInject(); unsubReset(); unsubReplace(); };
   }, []);
 
   const acknowledge = (id: string) =>

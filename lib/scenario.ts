@@ -135,33 +135,38 @@ export interface ScenarioMetricBeat {
 }
 
 export const SCENARIO_TIMELINES: Record<ScenarioSeverity, ScenarioMetricBeat[]> = {
-  // ── S1 · NORMAL ── Subtle breathing. Things feel alive, not urgent.
-  // Numbers drift slightly below baseline then return.
+  // ── S1 · NORMAL ── A visibly CALM shift. Numbers drop below baseline
+  // across the whole board so the operator sees green tone immediately.
+  // Ramp-phase deltas are intentionally aggressive (not "0, -2") so the
+  // screen reads "quiet day" the instant S1 is activated, not 30 seconds
+  // later when the climb phase kicks in.
   1: [
-    { phase: 'ramp', delta: { census: 0, erWaitMinutes: -2 } },
-    { phase: 'climb', delta: { census: -1, erWaitMinutes: -5, dischargesPending: 2 } },
-    { phase: 'peak', delta: { census: -2, erWaitMinutes: -8, ambulanceCount: 1, dischargesPending: 3 } },
-    { phase: 'hold', delta: { census: -1, erWaitMinutes: -3, dischargesPending: 1 } },
-    { phase: 'windDown', delta: { census: 0, erWaitMinutes: 0 } },
-    { phase: 'closing', delta: { census: 0, erWaitMinutes: 2 } },
+    { phase: 'ramp', delta: { census: -4, erWaitMinutes: -12, nedocsScore: -18, staffingRatio: -0.4, boardingAdmitted: -6, dischargesPending: 4, emsOffloadRiskMin: -15, activeAlerts: -2, icuOccupancyPct: -3, triageWaitMin: -30, traumaBaysAvailable: 1 } },
+    { phase: 'climb', delta: { census: -6, erWaitMinutes: -15, nedocsScore: -22, staffingRatio: -0.5, boardingAdmitted: -8, dischargesPending: 5, emsOffloadRiskMin: -20, activeAlerts: -2, icuOccupancyPct: -4, triageWaitMin: -40, traumaBaysAvailable: 1 } },
+    { phase: 'peak', delta: { census: -8, erWaitMinutes: -18, nedocsScore: -25, staffingRatio: -0.6, boardingAdmitted: -10, dischargesPending: 6, emsOffloadRiskMin: -25, activeAlerts: -3, icuOccupancyPct: -5, triageWaitMin: -50, ambulanceCount: -1, traumaBaysAvailable: 1 } },
+    { phase: 'hold', delta: { census: -6, erWaitMinutes: -14, nedocsScore: -20, staffingRatio: -0.4, boardingAdmitted: -7, dischargesPending: 4, emsOffloadRiskMin: -18, activeAlerts: -2, icuOccupancyPct: -4, triageWaitMin: -35, traumaBaysAvailable: 1 } },
+    { phase: 'windDown', delta: { census: -3, erWaitMinutes: -8, nedocsScore: -12, staffingRatio: -0.2, boardingAdmitted: -3, dischargesPending: 2, emsOffloadRiskMin: -10, activeAlerts: -1, icuOccupancyPct: -2, triageWaitMin: -20 } },
+    { phase: 'closing', delta: { census: -1, erWaitMinutes: -2, nedocsScore: -5, dischargesPending: 1, activeAlerts: -1 } },
   ],
 
-  // ── S2 · MODERATE ── Elevated load. Nothing catastrophic, but
-  // pressure builds. Does NOT auto-activate surge (user can manually).
+  // ── S2 · MODERATE ── Elevated load from t=0. Screen reads clearly
+  // "we're busy" immediately — boosted ramp-phase deltas so it doesn't
+  // look like baseline for the first 30 seconds.
   2: [
-    { phase: 'ramp', delta: { census: 3, erWaitMinutes: 15, ambulanceCount: 1, activeAlerts: 1, emsOffloadRiskMin: 10, triageWaitMin: 10 } },
-    { phase: 'climb', delta: { census: 8, erWaitMinutes: 28, ambulanceCount: 2, staffingRatio: 0.4, activeAlerts: 1, emsOffloadRiskMin: 20, triageWaitMin: 20, boardingAdmitted: 3 } },
-    { phase: 'peak', delta: { census: 14, erWaitMinutes: 42, ambulanceCount: 3, staffingRatio: 0.9, activeAlerts: 2, triageWaitMin: 30, boardingAdmitted: 6, emsOffloadRiskMin: 30, nedocsScore: 20, icuOccupancyPct: 5 } },
-    { phase: 'hold', delta: { census: 12, erWaitMinutes: 38, ambulanceCount: 2, staffingRatio: 0.7, activeAlerts: 2, triageWaitMin: 25, boardingAdmitted: 5, emsOffloadRiskMin: 25, nedocsScore: 16, icuOccupancyPct: 4 } },
-    { phase: 'windDown', delta: { census: 8, erWaitMinutes: 20, ambulanceCount: 1, staffingRatio: 0.3, activeAlerts: 1, triageWaitMin: 15, boardingAdmitted: 3, emsOffloadRiskMin: 12, icuOccupancyPct: 2 } },
-    { phase: 'closing', delta: { census: 4, erWaitMinutes: 10, boardingAdmitted: 1 } },
+    { phase: 'ramp', delta: { census: 8, erWaitMinutes: 22, ambulanceCount: 2, activeAlerts: 2, emsOffloadRiskMin: 18, triageWaitMin: 18, nedocsScore: 18, staffingRatio: 0.5, boardingAdmitted: 3, icuOccupancyPct: 3 } },
+    { phase: 'climb', delta: { census: 12, erWaitMinutes: 32, ambulanceCount: 3, staffingRatio: 0.7, activeAlerts: 2, emsOffloadRiskMin: 25, triageWaitMin: 22, boardingAdmitted: 5, nedocsScore: 24, icuOccupancyPct: 4 } },
+    { phase: 'peak', delta: { census: 14, erWaitMinutes: 42, ambulanceCount: 3, staffingRatio: 0.9, activeAlerts: 3, triageWaitMin: 30, boardingAdmitted: 6, emsOffloadRiskMin: 30, nedocsScore: 30, icuOccupancyPct: 5 } },
+    { phase: 'hold', delta: { census: 12, erWaitMinutes: 38, ambulanceCount: 2, staffingRatio: 0.7, activeAlerts: 2, triageWaitMin: 25, boardingAdmitted: 5, emsOffloadRiskMin: 25, nedocsScore: 24, icuOccupancyPct: 4 } },
+    { phase: 'windDown', delta: { census: 8, erWaitMinutes: 20, ambulanceCount: 1, staffingRatio: 0.3, activeAlerts: 1, triageWaitMin: 15, boardingAdmitted: 3, emsOffloadRiskMin: 12, nedocsScore: 12, icuOccupancyPct: 2 } },
+    { phase: 'closing', delta: { census: 4, erWaitMinutes: 10, boardingAdmitted: 1, nedocsScore: 5 } },
   ],
 
   // ── S3 · DISASTER ── MCI event. Auto-activates surge at T+2s.
-  // Census +28 at peak, ambulance divert, overflow open, MTP active.
+  // Ramp-phase numbers are already catastrophic — screen paints red
+  // immediately, doesn't wait 30s for climb. Peak is the absolute worst.
   3: [
-    { phase: 'ramp', delta: { census: 8, erWaitMinutes: 40, ambulanceCount: 2, activeAlerts: 3, triageWaitMin: 20, boardingAdmitted: 4, emsOffloadRiskMin: 25, nedocsScore: 20 }, flags: { overflowOpen: true } },
-    { phase: 'climb', delta: { census: 18, erWaitMinutes: 65, ambulanceCount: 4, staffingRatio: 1.2, activeAlerts: 5, activeCodes: 1, triageWaitMin: 45, traumaBaysAvailable: -2, boardingAdmitted: 9, emsOffloadRiskMin: 45, nedocsScore: 40, icuOccupancyPct: 8, rnShortfall: -2, orAvailable: -2 }, flags: { overflowOpen: true, ambulanceDivert: true } },
+    { phase: 'ramp', delta: { census: 16, erWaitMinutes: 55, ambulanceCount: 4, activeAlerts: 5, activeCodes: 1, triageWaitMin: 40, boardingAdmitted: 8, emsOffloadRiskMin: 40, nedocsScore: 38, staffingRatio: 0.9, icuOccupancyPct: 6, traumaBaysAvailable: -1, rnShortfall: -2, orAvailable: -1 }, flags: { overflowOpen: true } },
+    { phase: 'climb', delta: { census: 22, erWaitMinutes: 68, ambulanceCount: 5, staffingRatio: 1.3, activeAlerts: 6, activeCodes: 2, triageWaitMin: 50, traumaBaysAvailable: -2, boardingAdmitted: 11, emsOffloadRiskMin: 50, nedocsScore: 45, icuOccupancyPct: 9, rnShortfall: -3, orAvailable: -2 }, flags: { overflowOpen: true, ambulanceDivert: true } },
     { phase: 'peak', delta: { census: 28, erWaitMinutes: 80, ambulanceCount: 6, staffingRatio: 1.9, activeAlerts: 8, activeCodes: 3, triageWaitMin: 70, traumaBaysAvailable: -3, boardingAdmitted: 14, emsOffloadRiskMin: 65, nedocsScore: 55, icuOccupancyPct: 12, rnShortfall: -4, orAvailable: -3 }, flags: { overflowOpen: true, ambulanceDivert: true, mtpActive: true } },
     { phase: 'hold', delta: { census: 26, erWaitMinutes: 72, ambulanceCount: 5, staffingRatio: 1.7, activeAlerts: 7, activeCodes: 2, triageWaitMin: 65, traumaBaysAvailable: -3, boardingAdmitted: 13, emsOffloadRiskMin: 55, nedocsScore: 48, icuOccupancyPct: 11, rnShortfall: -4, orAvailable: -2 }, flags: { overflowOpen: true, ambulanceDivert: true, mtpActive: true } },
     { phase: 'windDown', delta: { census: 18, erWaitMinutes: 45, ambulanceCount: 3, staffingRatio: 1.0, activeAlerts: 4, activeCodes: 1, triageWaitMin: 45, traumaBaysAvailable: -2, boardingAdmitted: 9, emsOffloadRiskMin: 30, nedocsScore: 30, icuOccupancyPct: 6, rnShortfall: -3, orAvailable: -1 }, flags: { overflowOpen: true } },
@@ -648,6 +653,244 @@ export const SCENARIO_META: Record<ScenarioSeverity, ScenarioMeta> = {
 // ────────────────────────────────────────────────────────────────────────
 // Helpers
 // ────────────────────────────────────────────────────────────────────────
+
+// ────────────────────────────────────────────────────────────────────────
+// EMS bootstrap — scenario-tuned initial inbound list
+// ────────────────────────────────────────────────────────────────────────
+//
+// `seedEmsInbound()` gives every shift the same 6 baseline runs. That's
+// fine for the default screen but makes S1/S2/S3 look identical for the
+// first ~15 seconds of a scenario (until timeline ems-inject events fire).
+// This helper returns a fresh, scenario-tuned inbound list so the board
+// paints correctly the instant a scenario activates.
+//
+// Shape is `Omit<EmsInbound, 'id' | 'createdAt'>` — same contract as
+// `emsLive.inject()`. IDs are generated by the consumer.
+
+export interface ScenarioEmsSeed {
+  unit: string;
+  mode: 'ground' | 'air';
+  etaMinutes: number;
+  age: number;
+  sex: 'M' | 'F';
+  chiefComplaint: string;
+  activationLevel:
+    | 'TRAUMA_1'
+    | 'TRAUMA_2'
+    | 'STROKE'
+    | 'STEMI'
+    | 'SEPSIS'
+    | 'NONE';
+  fieldVitals?: {
+    heartRate?: number;
+    systolic?: number;
+    diastolic?: number;
+    respRate?: number;
+    spO2?: number;
+    gcs?: number;
+  };
+  fieldTreatment?: string;
+  destinationBay?: string;
+}
+
+export const SCENARIO_EMS_BOOTSTRAP: Record<ScenarioSeverity, ScenarioEmsSeed[]> = {
+  // S1 · NORMAL — 2 routine runs. Board should read "quiet shift".
+  1: [
+    {
+      unit: 'Medic 9',
+      mode: 'ground',
+      etaMinutes: 11,
+      age: 62,
+      sex: 'M',
+      chiefComplaint: 'Fall from standing, no LOC, R hip pain',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 82, systolic: 136, diastolic: 78, respRate: 16, spO2: 97, gcs: 15 },
+      fieldTreatment: 'IV NS KVO · fentanyl 50mcg',
+      destinationBay: 'Acute 4',
+    },
+    {
+      unit: 'Medic 22',
+      mode: 'ground',
+      etaMinutes: 14,
+      age: 29,
+      sex: 'F',
+      chiefComplaint: 'Migraine, nausea, hx chronic',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 78, systolic: 118, diastolic: 72, respRate: 16, spO2: 99, gcs: 15 },
+      fieldTreatment: 'O2 2L · ondansetron 4mg',
+      destinationBay: 'Fast Track 2',
+    },
+  ],
+
+  // S2 · MODERATE — 5 mixed runs, 1 trauma-2 + 1 stroke up front.
+  2: [
+    {
+      unit: 'Medic 33',
+      mode: 'ground',
+      etaMinutes: 3,
+      age: 54,
+      sex: 'M',
+      chiefComplaint: 'Crush injury, R arm, industrial press',
+      activationLevel: 'TRAUMA_2',
+      fieldVitals: { heartRate: 118, systolic: 102, diastolic: 64, respRate: 22, spO2: 96, gcs: 15 },
+      fieldTreatment: 'TQ R upper arm · 18g IV NS · fentanyl 100mcg',
+      destinationBay: 'Trauma 2',
+    },
+    {
+      unit: 'Medic 28',
+      mode: 'ground',
+      etaMinutes: 6,
+      age: 71,
+      sex: 'F',
+      chiefComplaint: 'AMS, poss CVA, last known well 45m ago',
+      activationLevel: 'STROKE',
+      fieldVitals: { heartRate: 94, systolic: 168, diastolic: 94, respRate: 18, spO2: 97, gcs: 13 },
+      fieldTreatment: 'O2 NC · IV NS · stroke scale: 6',
+      destinationBay: 'Acute 1',
+    },
+    {
+      unit: 'Medic 14',
+      mode: 'ground',
+      etaMinutes: 9,
+      age: 45,
+      sex: 'M',
+      chiefComplaint: 'Chest pain, diaphoretic, hx HTN',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 96, systolic: 142, diastolic: 88, respRate: 18, spO2: 97, gcs: 15 },
+      fieldTreatment: 'ASA 325 · IV NS · 12-lead pending',
+      destinationBay: 'Acute 2',
+    },
+    {
+      unit: 'Medic 41',
+      mode: 'ground',
+      etaMinutes: 12,
+      age: 81,
+      sex: 'F',
+      chiefComplaint: 'SOB, CHF exacerbation, LE edema',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 104, systolic: 158, diastolic: 92, respRate: 24, spO2: 91, gcs: 15 },
+      fieldTreatment: 'O2 4L NC · IV access',
+      destinationBay: 'Acute 5',
+    },
+    {
+      unit: 'Medic 17',
+      mode: 'ground',
+      etaMinutes: 16,
+      age: 33,
+      sex: 'M',
+      chiefComplaint: 'Lac R forearm, glass, bleeding controlled',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 88, systolic: 128, diastolic: 78, respRate: 16, spO2: 98, gcs: 15 },
+      fieldTreatment: 'Pressure dressing · IV access',
+      destinationBay: 'Fast Track 1',
+    },
+  ],
+
+  // S3 · DISASTER — 8 runs, heavy trauma load. MCI bus rollover set.
+  3: [
+    {
+      unit: 'Medic 41',
+      mode: 'ground',
+      etaMinutes: 2,
+      age: 22,
+      sex: 'M',
+      chiefComplaint: 'MCI bus rollover, ejected, multiple rib fx, pneumothorax',
+      activationLevel: 'TRAUMA_1',
+      fieldVitals: { heartRate: 138, systolic: 78, diastolic: 42, respRate: 32, spO2: 88, gcs: 11 },
+      fieldTreatment: 'Bilateral 14g IV · TXA 1g · chest seal L · c-collar',
+      destinationBay: 'Trauma 1',
+    },
+    {
+      unit: 'Medic 42',
+      mode: 'ground',
+      etaMinutes: 4,
+      age: 34,
+      sex: 'F',
+      chiefComplaint: 'MCI bus rollover, restrained, GCS 14, open tib-fib',
+      activationLevel: 'TRAUMA_2',
+      fieldVitals: { heartRate: 112, systolic: 108, diastolic: 68, respRate: 22, spO2: 95, gcs: 14 },
+      fieldTreatment: '18g IV NS · splint R leg · fentanyl 75mcg',
+      destinationBay: 'Trauma 2',
+    },
+    {
+      unit: 'Air 5',
+      mode: 'air',
+      etaMinutes: 6,
+      age: 8,
+      sex: 'M',
+      chiefComplaint: 'MCI peds, unrestrained, AMS, scalp lac',
+      activationLevel: 'TRAUMA_1',
+      fieldVitals: { heartRate: 152, systolic: 82, diastolic: 50, respRate: 28, spO2: 93, gcs: 12 },
+      fieldTreatment: 'IO access · NS 20mL/kg · c-collar · pressure to scalp',
+      destinationBay: 'Trauma 1',
+    },
+    {
+      unit: 'Medic 51',
+      mode: 'ground',
+      etaMinutes: 8,
+      age: 47,
+      sex: 'F',
+      chiefComplaint: 'MCI, seatbelt sign, abd pain, +FAST LUQ',
+      activationLevel: 'TRAUMA_1',
+      fieldVitals: { heartRate: 124, systolic: 94, diastolic: 58, respRate: 24, spO2: 96, gcs: 14 },
+      fieldTreatment: '2x 18g IV NS WO · TXA 1g',
+      destinationBay: 'Trauma 2',
+    },
+    {
+      unit: 'Medic 12',
+      mode: 'ground',
+      etaMinutes: 10,
+      age: 58,
+      sex: 'M',
+      chiefComplaint: 'Substernal CP 1h, diaphoretic, ST elev II/III/aVF',
+      activationLevel: 'STEMI',
+      fieldVitals: { heartRate: 102, systolic: 142, diastolic: 88, respRate: 18, spO2: 97, gcs: 15 },
+      fieldTreatment: 'ASA 325 · NTG 0.4 SL · heparin 4000u · cath lab paged',
+      destinationBay: 'Cath Lab',
+    },
+    {
+      unit: 'Medic 38',
+      mode: 'ground',
+      etaMinutes: 12,
+      age: 19,
+      sex: 'M',
+      chiefComplaint: 'MCI, lower extremity crush, R leg mangled',
+      activationLevel: 'TRAUMA_2',
+      fieldVitals: { heartRate: 128, systolic: 98, diastolic: 62, respRate: 22, spO2: 96, gcs: 15 },
+      fieldTreatment: 'TQ R thigh · 18g IV NS · fentanyl 150mcg',
+      destinationBay: 'Trauma 3',
+    },
+    {
+      unit: 'Air 2',
+      mode: 'air',
+      etaMinutes: 14,
+      age: 63,
+      sex: 'F',
+      chiefComplaint: 'MCI, chest/back pain, +chest wall tenderness',
+      activationLevel: 'TRAUMA_2',
+      fieldVitals: { heartRate: 104, systolic: 116, diastolic: 72, respRate: 20, spO2: 94, gcs: 15 },
+      fieldTreatment: 'IV NS · c-collar · O2 NRB',
+      destinationBay: 'Trauma 3',
+    },
+    {
+      unit: 'Medic 6',
+      mode: 'ground',
+      etaMinutes: 17,
+      age: 71,
+      sex: 'F',
+      chiefComplaint: 'MCI bystander, CP + SOB, hx CAD',
+      activationLevel: 'NONE',
+      fieldVitals: { heartRate: 94, systolic: 158, diastolic: 88, respRate: 20, spO2: 95, gcs: 15 },
+      fieldTreatment: 'O2 NC · ASA 325 · IV NS',
+      destinationBay: 'Acute 3',
+    },
+  ],
+};
+
+/** Lookup helper — returns the scenario-tuned inbound seed. */
+export function scenarioEmsBootstrap(severity: ScenarioSeverity): ScenarioEmsSeed[] {
+  return SCENARIO_EMS_BOOTSTRAP[severity];
+}
 
 export function buildScenarioState(
   severity: ScenarioSeverity,
