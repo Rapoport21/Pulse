@@ -50,6 +50,7 @@ import {
   metricValue,
   useScenarioTick,
 } from '../lib/scenario';
+import { useEmsInbound } from '../lib/emsLive';
 import {
   BedBoard,
   AdmitFlow,
@@ -152,6 +153,24 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   // a prop change. Components memoize on `phase` so we don't thrash
   // every second.
   const scenarioTick = useScenarioTick(activeScenario);
+
+  // Live EMS feed — same source of truth as the Live Ops / EmsInboundBoard.
+  // When the scenario engine publishes `ems-inject` runs, they flow through
+  // useEmsInbound and show up here automatically.
+  const { inbound: liveEms } = useEmsInbound();
+  const liveEmsActive = useMemo(() => liveEms.filter((r) => !r.arrived), [liveEms]);
+  const liveEmsTotal = liveEmsActive.length;
+  const liveEmsCrit = useMemo(() => {
+    const critLevels = new Set(['TRAUMA_1', 'STEMI', 'STROKE']);
+    return liveEmsActive.filter(
+      (r) => critLevels.has(r.activationLevel ?? 'NONE') && r.etaMinutes <= 5,
+    ).length;
+  }, [liveEmsActive]);
+  const liveEmsStable = Math.max(0, liveEmsTotal - liveEmsCrit);
+  // Saturation: 10 runs = 100%. Gives the progress rail something to
+  // actually do while the scenario injects more EMS.
+  const liveEmsSat = Math.min(100, liveEmsTotal * 10);
+
   const [simState, setSimState] = useState({
     addedStaff: 0,
     openBeds: 0,
@@ -798,25 +817,54 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       marginBottom: SPACE.sm,
                     }}
                   >
-                    {isSurgeActive ? (
-                      <CheckCircle2 size={14} strokeWidth={2} color={COLORS.ok} />
-                    ) : loginCount > 1 ? (
-                      <CheckCircle2 size={14} strokeWidth={2} color={COLORS.textMuted} />
-                    ) : (
-                      <ShieldAlert size={14} strokeWidth={2} color={COLORS.accent} />
-                    )}
-                    <Mono
-                      tone={isSurgeActive ? 'ok' : loginCount > 1 ? 'muted' : 'accent'}
-                      size="sm"
-                    >
-                      [{' '}
-                      {isSurgeActive
-                        ? 'PROTOCOL ACTIVE'
-                        : loginCount > 1
-                        ? 'NO ACTION REQ'
-                        : 'INTERVENTION REQ'}{' '}
-                      ]
-                    </Mono>
+                    {(() => {
+                      // Scenario drives tone first — when a scenario is
+                      // running, the recommendation tracks its severity +
+                      // phase rather than loginCount heuristics.
+                      if (activeScenario) {
+                        const sev = activeScenario.severity;
+                        const icon =
+                          sev === 3 ? (
+                            <ShieldAlert size={14} strokeWidth={2} color={COLORS.crit} />
+                          ) : sev === 2 ? (
+                            <AlertTriangle size={14} strokeWidth={2} color={COLORS.warn} />
+                          ) : (
+                            <CheckCircle2 size={14} strokeWidth={2} color={COLORS.ok} />
+                          );
+                        const tone: 'ok' | 'warn' | 'crit' =
+                          sev === 3 ? 'crit' : sev === 2 ? 'warn' : 'ok';
+                        const label =
+                          sev === 3
+                            ? 'MCI · INTERVENTION REQ'
+                            : sev === 2
+                            ? 'ELEVATED · MONITOR'
+                            : 'NORMAL OPS';
+                        return (
+                          <>
+                            {icon}
+                            <Mono tone={tone} size="sm">
+                              [ {label} ]
+                            </Mono>
+                          </>
+                        );
+                      }
+                      return isSurgeActive ? (
+                        <>
+                          <CheckCircle2 size={14} strokeWidth={2} color={COLORS.ok} />
+                          <Mono tone="ok" size="sm">[ PROTOCOL ACTIVE ]</Mono>
+                        </>
+                      ) : loginCount > 1 ? (
+                        <>
+                          <CheckCircle2 size={14} strokeWidth={2} color={COLORS.textMuted} />
+                          <Mono tone="muted" size="sm">[ NO ACTION REQ ]</Mono>
+                        </>
+                      ) : (
+                        <>
+                          <ShieldAlert size={14} strokeWidth={2} color={COLORS.accent} />
+                          <Mono tone="accent" size="sm">[ INTERVENTION REQ ]</Mono>
+                        </>
+                      );
+                    })()}
                   </div>
                   <p
                     style={{
@@ -827,11 +875,33 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       margin: 0,
                     }}
                   >
-                    {isSurgeActive
-                      ? 'Surge Level 2 active. Census 312 (+28). Float pool deployed. Overflow Hall C open — 2 occupied, 2 ready. ER wait 125m, divert recommended. 3 active codes. Risk trajectory stabilizing — monitor fast-track throughput.'
-                      : loginCount > 1
-                      ? 'Capacity is stable. Census 284, ER wait 45m. ICU at 83%. Staffing ratio 1:4.2 — optimal. No surge protocols required.'
-                      : 'Forecast exceeds safety thresholds. Census trending +28 over 2h. Activate Surge Protocol Level 2 immediately.'}
+                    {(() => {
+                      if (activeScenario) {
+                        const sev = activeScenario.severity;
+                        const phase = scenarioTick.phase;
+                        const census = Math.round(metricValue('census', activeScenario));
+                        const er = Math.round(metricValue('erWaitMinutes', activeScenario));
+                        const codes = Math.round(metricValue('activeCodes', activeScenario));
+                        const ems = liveEmsTotal;
+                        const easing = phase === 'windDown' || phase === 'closing';
+                        if (sev === 3) {
+                          return easing
+                            ? `MCI stabilizing. Census ${census}. ER wait ${er}m. ${codes} active code${codes === 1 ? '' : 's'}. ${ems} EMS inbound. MTP winding down — maintain float coverage through closing.`
+                            : `MASS CASUALTY INCIDENT. Census ${census} (+${census - 284}). ER wait ${er}m. ${codes} active code${codes === 1 ? '' : 's'}. ${ems} EMS inbound, ${liveEmsCrit} critical. Overflow Hall C open, divert posted. Hold all discharges.`;
+                        }
+                        if (sev === 2) {
+                          return easing
+                            ? `Pressure easing. Census ${census}. ER wait ${er}m. ${ems} EMS inbound. Float pool standing down. No surge required.`
+                            : `Elevated load. Census ${census} (+${census - 284}). ER wait ${er}m. ${ems} EMS inbound, ${liveEmsCrit} critical. Float pool on standby. Monitor for escalation.`;
+                        }
+                        return `Normal operations. Census ${census}, ER wait ${er}m. ${ems} EMS inbound — baseline throughput. All metrics within target.`;
+                      }
+                      return isSurgeActive
+                        ? 'Surge Level 2 active. Census 312 (+28). Float pool deployed. Overflow Hall C open — 2 occupied, 2 ready. ER wait 125m, divert recommended. 3 active codes. Risk trajectory stabilizing — monitor fast-track throughput.'
+                        : loginCount > 1
+                        ? 'Capacity is stable. Census 284, ER wait 45m. ICU at 83%. Staffing ratio 1:4.2 — optimal. No surge protocols required.'
+                        : 'Forecast exceeds safety thresholds. Census trending +28 over 2h. Activate Surge Protocol Level 2 immediately.';
+                    })()}
                   </p>
                 </div>
                 {!isSurgeActive && loginCount <= 1 && (
@@ -972,13 +1042,14 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   color: COLORS.textPrimary,
                 }}
               >
-                {loginCount > 1 && !isSurgeActive ? '2' : '8'}
+                {liveEmsTotal}
               </span>
               <Mono tone="muted" size="xs">
                 TOTAL EN ROUTE
               </Mono>
             </div>
-            {/* Progress rail */}
+            {/* Progress rail — reflects live EMS saturation. Turns accent
+                when any critical is inbound, ok when all stable. */}
             <div
               style={{
                 position: 'relative',
@@ -992,44 +1063,34 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             >
               <motion.div
                 initial={{ width: 0 }}
-                animate={{ width: loginCount > 1 && !isSurgeActive ? '10%' : '40%' }}
+                animate={{ width: `${liveEmsSat}%` }}
                 transition={{ duration: MOTION.slow, ease: MOTION.ease }}
                 style={{
                   height: '100%',
-                  background:
-                    loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.accent,
-                  boxShadow: `0 0 8px ${
-                    loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.accent
-                  }`,
+                  background: liveEmsCrit > 0 ? COLORS.accent : COLORS.ok,
+                  boxShadow: `0 0 8px ${liveEmsCrit > 0 ? COLORS.accent : COLORS.ok}`,
                 }}
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {loginCount > 1 && !isSurgeActive ? (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={13} strokeWidth={2} color={COLORS.ok} />
-                    <Mono tone="ok" size="xs">
-                      0 CRIT
-                    </Mono>
-                  </div>
-                  <Mono tone="muted" size="xs">
-                    2 STABLE
+              {liveEmsCrit > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <ShieldAlert size={13} strokeWidth={2} color={COLORS.accent} />
+                  <Mono tone="accent" size="xs">
+                    {liveEmsCrit} CRIT {'<'} 5M
                   </Mono>
-                </>
+                </div>
               ) : (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ShieldAlert size={13} strokeWidth={2} color={COLORS.accent} />
-                    <Mono tone="accent" size="xs">
-                      3 CRIT {'<'} 5M
-                    </Mono>
-                  </div>
-                  <Mono tone="muted" size="xs">
-                    5 STABLE
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircle2 size={13} strokeWidth={2} color={COLORS.ok} />
+                  <Mono tone="ok" size="xs">
+                    0 CRIT
                   </Mono>
-                </>
+                </div>
               )}
+              <Mono tone="muted" size="xs">
+                {liveEmsStable} STABLE
+              </Mono>
             </div>
           </TacticalCard>
 
@@ -1420,43 +1481,165 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             <Mono tone="primary" size="sm">Census & Throughput</Mono>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, flex: 1 }}>
-            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
-              <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
-              </div>
-              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? '▼ 14 FROM 6H AGO' : isSurgeActive ? '▲ 28 FROM 6H AGO' : '▲ 12 FROM 6H AGO'}
-              </Mono>
-            </div>
-            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
-              <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.crit, marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? '45m' : isSurgeActive ? '125m' : '98m'}
-              </div>
-              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'crit'} size="xs" style={{ marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? 'WITHIN TARGET' : 'EXCEEDS THRESHOLD'}
-              </Mono>
-            </div>
-            <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
-              <Mono tone="muted" size="xs">STAFF RATIO</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: loginCount > 1 && !isSurgeActive ? COLORS.ok : COLORS.warn, marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? '1:4.2' : isSurgeActive ? '1:6.1' : '1:5.3'}
-              </div>
-              <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
-                {loginCount > 1 && !isSurgeActive ? 'OPTIMAL' : isSurgeActive ? 'ABOVE SAFE LIMIT' : 'MONITOR'}
-              </Mono>
-            </div>
+            {(() => {
+              // When a scenario is running, metricValue() overlays baseline
+              // with per-phase deltas. Baseline numbers (284 census, 45m ER,
+              // 4.2 staff) are the MANAGER-calm case; scenarios push them up
+              // through ramp→climb→peak, then relax on windDown→closing.
+              const census = Math.round(metricValue('census', activeScenario));
+              const erWait = Math.round(metricValue('erWaitMinutes', activeScenario));
+              const staff = metricValue('staffingRatio', activeScenario);
+              const censusDelta = census - 284; // vs baseline
+              const calm = loginCount > 1 && !isSurgeActive && !activeScenario;
+              const censusTone: 'ok' | 'warn' | 'crit' =
+                calm ? 'ok' : censusDelta >= 25 ? 'crit' : censusDelta >= 10 ? 'warn' : 'ok';
+              const erTone: 'ok' | 'warn' | 'crit' =
+                calm ? 'ok' : erWait >= 90 ? 'crit' : erWait >= 60 ? 'warn' : 'ok';
+              const staffTone: 'ok' | 'warn' | 'crit' =
+                calm ? 'ok' : staff >= 5.5 ? 'crit' : staff >= 4.8 ? 'warn' : 'ok';
+              const toneColor = (t: 'ok' | 'warn' | 'crit') =>
+                t === 'crit' ? COLORS.crit : t === 'warn' ? COLORS.warn : COLORS.ok;
+              const censusLabel = calm
+                ? '▼ 14 FROM 6H AGO'
+                : censusDelta === 0
+                ? '● STEADY 6H'
+                : censusDelta > 0
+                ? `▲ ${censusDelta} FROM 6H AGO`
+                : `▼ ${Math.abs(censusDelta)} FROM 6H AGO`;
+              const erLabel = calm
+                ? 'WITHIN TARGET'
+                : erWait >= 90
+                ? 'EXCEEDS THRESHOLD'
+                : erWait >= 60
+                ? 'NEAR THRESHOLD'
+                : 'WITHIN TARGET';
+              const staffLabel = calm
+                ? 'OPTIMAL'
+                : staff >= 5.5
+                ? 'ABOVE SAFE LIMIT'
+                : staff >= 4.8
+                ? 'MONITOR'
+                : 'OPTIMAL';
+              return (
+                <>
+                  <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+                    <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
+                    <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
+                      {census}
+                    </div>
+                    <Mono tone={censusTone} size="xs" style={{ marginTop: 4 }}>
+                      {censusLabel}
+                    </Mono>
+                  </div>
+                  <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+                    <Mono tone="muted" size="xs">ER WAIT TIME</Mono>
+                    <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: toneColor(erTone), marginTop: 4 }}>
+                      {erWait}m
+                    </div>
+                    <Mono tone={erTone} size="xs" style={{ marginTop: 4 }}>
+                      {erLabel}
+                    </Mono>
+                  </div>
+                  <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
+                    <Mono tone="muted" size="xs">STAFF RATIO</Mono>
+                    <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: toneColor(staffTone), marginTop: 4 }}>
+                      1:{staff.toFixed(1)}
+                    </div>
+                    <Mono tone={staffTone} size="xs" style={{ marginTop: 4 }}>
+                      {staffLabel}
+                    </Mono>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </TacticalCard>
 
         {/* ── Active Alerts Feed ── */}
         <TacticalCard padding="md" style={{ padding: SPACE.lg, display: 'flex', flexDirection: 'column' }}>
+          {(() => {
+            // Scenario-aware alert feed. Count is driven by metricValue
+            // so it ticks with the phase. The list rotates copy by phase
+            // so the feed feels like it's breathing, not stuck on mock.
+            const alertCount = Math.round(metricValue('activeAlerts', activeScenario));
+            const tone: 'ok' | 'warn' | 'crit' =
+              alertCount >= 6 ? 'crit' : alertCount >= 3 ? 'warn' : 'ok';
+            const label = `${alertCount} ACTIVE`;
+            const sev = activeScenario?.severity;
+            const phase = scenarioTick.phase;
+            type Alert = { level: 'crit' | 'warn'; msg: string; time: string };
+            const alerts: Alert[] = (() => {
+              if (!activeScenario) {
+                return [
+                  { level: 'crit', msg: 'ICU bed capacity at 83% — 1 bed available', time: '2m ago' },
+                  { level: 'warn', msg: 'ED wait time exceeds 90min threshold', time: '8m ago' },
+                  { level: 'crit', msg: 'Nurse:patient ratio 1:6.1 in 2-West (target 1:4)', time: '15m ago' },
+                  { level: 'warn', msg: 'EVS turnover backlog: 4 beds pending clean', time: '22m ago' },
+                ];
+              }
+              if (sev === 1) {
+                return [
+                  { level: 'warn', msg: 'Routine EMS inbound — no activation', time: 'now' },
+                  { level: 'warn', msg: 'Discharge lounge steady — 3 pending transport', time: '1m ago' },
+                  { level: 'warn', msg: 'Staffing ratio within target across units', time: '2m ago' },
+                  { level: 'warn', msg: 'Bed board: normal churn, no flags', time: '4m ago' },
+                ];
+              }
+              if (sev === 2) {
+                if (phase === 'ramp' || phase === 'climb') {
+                  return [
+                    { level: 'warn', msg: 'ER load climbing — 90% saturation crossed', time: 'now' },
+                    { level: 'crit', msg: 'Trauma 2 inbound — crush injury, ETA 8m', time: '1m ago' },
+                    { level: 'warn', msg: 'Float pool on standby — 2 RNs warming', time: '2m ago' },
+                    { level: 'warn', msg: 'Admissions queue: 6 pending floor assignment', time: '3m ago' },
+                  ];
+                }
+                if (phase === 'peak' || phase === 'hold') {
+                  return [
+                    { level: 'crit', msg: 'Boarding pressure sustained — 6 ER→floor holds', time: 'now' },
+                    { level: 'crit', msg: 'Stroke inbound — CT suite pre-warmed', time: '1m ago' },
+                    { level: 'warn', msg: 'Blood bank: O- down to 3 units', time: '2m ago' },
+                    { level: 'warn', msg: 'Staffing gap Med-Surg 4W — charge covering', time: '4m ago' },
+                  ];
+                }
+                return [
+                  { level: 'warn', msg: 'Pressure easing — hold throughput steady', time: 'now' },
+                  { level: 'warn', msg: '3 discharges clearing through 14:45', time: '1m ago' },
+                  { level: 'warn', msg: 'EMS load returning to baseline', time: '2m ago' },
+                  { level: 'warn', msg: 'NEDOCS trending down — monitor shift change', time: '3m ago' },
+                ];
+              }
+              // Severity 3 — MCI
+              if (phase === 'ramp' || phase === 'climb') {
+                return [
+                  { level: 'crit', msg: 'MASS CASUALTY INCIDENT — Surge Level 2 active', time: 'now' },
+                  { level: 'crit', msg: 'Medic 41 inbound — penetrating trauma, ETA 4m', time: '1m ago' },
+                  { level: 'crit', msg: 'Overflow Hall C opening — EVS dispatched', time: '2m ago' },
+                  { level: 'warn', msg: 'Ambulance divert posted to regional grid', time: '3m ago' },
+                ];
+              }
+              if (phase === 'peak' || phase === 'hold') {
+                return [
+                  { level: 'crit', msg: '3 ACTIVE CODES — trauma bays saturated', time: 'now' },
+                  { level: 'crit', msg: 'MTP active — O- and FFP continuous release', time: '1m ago' },
+                  { level: 'crit', msg: 'RN shortfall -4 FTE — call-back initiated', time: '2m ago' },
+                  { level: 'warn', msg: 'St. Mary / County on divert — transfers held', time: '4m ago' },
+                ];
+              }
+              return [
+                { level: 'warn', msg: 'Peak passed — incident stabilizing', time: 'now' },
+                { level: 'warn', msg: 'EMS offload easing — last bay freed', time: '1m ago' },
+                { level: 'warn', msg: 'NEDOCS falling — MTP wind-down in progress', time: '2m ago' },
+                { level: 'warn', msg: 'After-action review queued for 16:00', time: '3m ago' },
+              ];
+            })();
+            return (
+          <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.md }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
-              <Bell size={16} strokeWidth={2} color={COLORS.crit} />
+              <Bell size={16} strokeWidth={2} color={tone === 'crit' ? COLORS.crit : tone === 'warn' ? COLORS.warn : COLORS.ok} />
               <Mono tone="primary" size="sm">Active Alerts</Mono>
-              <StatusPill label={isSurgeActive ? '8 ACTIVE' : '4 ACTIVE'} tone="crit" pulse />
+              <StatusPill label={label} tone={tone} pulse={tone !== 'ok'} />
             </div>
             <div
               role="button"
@@ -1469,12 +1652,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, flex: 1 }}>
-            {[
-              { level: 'crit' as const, msg: 'ICU bed capacity at 83% — 1 bed available', time: '2m ago' },
-              { level: 'warn' as const, msg: 'ED wait time exceeds 90min threshold', time: '8m ago' },
-              { level: 'crit' as const, msg: 'Nurse:patient ratio 1:6.1 in 2-West (target 1:4)', time: '15m ago' },
-              { level: 'warn' as const, msg: 'EVS turnover backlog: 4 beds pending clean', time: '22m ago' },
-            ].map((alert, i) => (
+            {alerts.map((alert, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: SPACE.md,
                 padding: `${SPACE.sm}px ${SPACE.md}px`,
@@ -1497,6 +1675,9 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               </div>
             ))}
           </div>
+          </>
+            );
+          })()}
         </TacticalCard>
       </div>
 

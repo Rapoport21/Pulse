@@ -80,6 +80,7 @@ import {
   useScenarioTick,
   formatScenarioRemaining,
   SCENARIO_META,
+  metricValue,
 } from './lib/scenario';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
@@ -1692,23 +1693,52 @@ function App() {
               BOTTOM HUD STRIP — system ticker
               ═══════════════════════════════════════════════════════ */}
           <HudStrip side="bottom">
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
-              <StatusPill label="NEDOCS 185 · Dangerous" tone="crit" />
-              <span style={{ color: COLORS.textDim }}>│</span>
-              <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
-              <span style={{ color: COLORS.textDim }}>│</span>
-              <Mono tone="secondary">Active Surge Playbooks · 3</Mono>
-              {isSurgeActive && (
+            {(() => {
+              // NEDOCS + alert pills track the scenario so the ambient
+              // bottom strip moves when a sim is running. Baseline
+              // otherwise (keeps the demo's "dangerous" vibe).
+              const nedocs = Math.round(metricValue('nedocsScore', activeScenario));
+              const alerts = Math.round(metricValue('activeAlerts', activeScenario));
+              const codes = Math.round(metricValue('activeCodes', activeScenario));
+              const nedocsTone: 'ok' | 'warn' | 'crit' =
+                nedocs >= 160 ? 'crit' : nedocs >= 120 ? 'warn' : 'ok';
+              const nedocsLabel = `NEDOCS ${nedocs} · ${
+                nedocs >= 160 ? 'Dangerous' : nedocs >= 120 ? 'Severe' : nedocs >= 100 ? 'Busy' : 'Normal'
+              }`;
+              return (
                 <>
-                  <span style={{ color: COLORS.textDim }}>│</span>
-                  <StatusPill label="SURGE MODE · ACTIVE" tone="crit" pulse />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
+                    <StatusPill label={nedocsLabel} tone={nedocsTone} pulse={nedocsTone === 'crit'} />
+                    <span style={{ color: COLORS.textDim }}>│</span>
+                    <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
+                    <span style={{ color: COLORS.textDim }}>│</span>
+                    <Mono tone="secondary">
+                      Alerts · {alerts}{codes > 0 ? ` · Codes · ${codes}` : ''}
+                    </Mono>
+                    {isSurgeActive && (
+                      <>
+                        <span style={{ color: COLORS.textDim }}>│</span>
+                        <StatusPill label="SURGE MODE · ACTIVE" tone="crit" pulse />
+                      </>
+                    )}
+                    {activeScenario && (
+                      <>
+                        <span style={{ color: COLORS.textDim }}>│</span>
+                        <StatusPill
+                          label={`SIM · S${activeScenario.severity} · ${formatScenarioRemaining(scenarioTick.remainingMs)}`}
+                          tone={activeScenario.severity === 3 ? 'crit' : activeScenario.severity === 2 ? 'warn' : 'ok'}
+                          pulse={activeScenario.severity === 3}
+                        />
+                      </>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
+                    <Mono tone="muted">Network</Mono>
+                    <StatusPill label="Stable" tone="ok" />
+                  </div>
                 </>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
-              <Mono tone="muted">Network</Mono>
-              <StatusPill label="Stable" tone="ok" />
-            </div>
+              );
+            })()}
           </HudStrip>
 
           {/* Modals */}

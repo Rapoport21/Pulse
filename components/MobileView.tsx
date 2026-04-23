@@ -1342,10 +1342,30 @@ export const MobileView: React.FC<MobileViewProps> = ({
   // detailed curve that still feels responsive to touch on a phone. Adds
   // a small sine-wave jitter so the line reads as real telemetry rather
   // than a clean monotonic curve.
+  //
+  // Scenario awareness: when a scenario is running, the NOW anchor reads
+  // the scenario's live NEDOCS metric and the curve shape bends with the
+  // phase (rising during ramp/climb, flat near peak, decaying on
+  // windDown/closing). Same pattern as PulseHorizon so the two surfaces
+  // agree across devices.
   const chartData = React.useMemo(() => {
     const pts: Array<{ time: string; tick: string; load: number }> = [];
-    const baseStart = isSurgeActive ? 32 : 85;
-    const baseEnd = isSurgeActive ? 22 : 112;
+    let baseStart = isSurgeActive ? 32 : 85;
+    let baseEnd = isSurgeActive ? 22 : 112;
+    if (activeScenario && scenarioTick.remainingMs > 0) {
+      const now = metricValue('nedocsScore', activeScenario);
+      const phase = scenarioTick.phase;
+      if (phase === 'ramp' || phase === 'climb') {
+        baseStart = Math.max(40, now - 10);
+        baseEnd = now + 18;
+      } else if (phase === 'peak' || phase === 'hold') {
+        baseStart = Math.max(40, now - 3);
+        baseEnd = now + 3;
+      } else {
+        baseStart = now + 4;
+        baseEnd = Math.max(40, now - 20);
+      }
+    }
     for (let i = 0; i <= 16; i++) {
       const t = i / 16;
       const eased = t * t * (3 - 2 * t); // smoothstep
@@ -1367,8 +1387,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
       });
     }
     return pts;
-  }, [isSurgeActive]);
+  }, [isSurgeActive, activeScenario, scenarioTick.phase, scenarioTick.remainingMs]);
   const isSafe = chartData[chartData.length - 1].load < 100;
+  // Forecast delta — how much the +4h projection moves vs. NOW.
+  // Drives the section-header pill copy ("+12% LOAD" / "SAFE").
+  const forecastDelta = chartData[chartData.length - 1].load - chartData[0].load;
 
   // Bed state is now synced via useRealtimeState — surge escalation
   // is handled centrally in App.tsx activateSurge/deactivateSurge.
@@ -2380,19 +2403,65 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M03"
                   label="Bed Capacity"
-                  value={String(liveMetrics.bedCapacityPct)}
+                  value={String(
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? Math.round(metricValue('icuOccupancyPct', activeScenario))
+                      : liveMetrics.bedCapacityPct,
+                  )}
                   unit="%"
-                  accent={isSurgeActive ? 'crit' : 'ok'}
-                  progressPct={liveMetrics.bedCapacityPct}
+                  accent={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? activeScenario.severity === 3
+                        ? 'crit'
+                        : activeScenario.severity === 2
+                        ? 'warn'
+                        : 'ok'
+                      : isSurgeActive
+                      ? 'crit'
+                      : 'ok'
+                  }
+                  progressPct={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? Math.round(metricValue('icuOccupancyPct', activeScenario))
+                      : liveMetrics.bedCapacityPct
+                  }
                 />
                 <MetricTile
                   id="M04"
                   label="Active Codes"
-                  value={String(liveMetrics.activeCodes)}
-                  delta={isSurgeActive
-                    ? { text: '+2 NEW', tone: 'crit' }
-                    : { text: 'STABLE', tone: 'info' }}
-                  accent={isSurgeActive ? 'crit' : 'info'}
+                  value={String(
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? Math.round(metricValue('activeCodes', activeScenario))
+                      : liveMetrics.activeCodes,
+                  )}
+                  delta={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? {
+                          text: Math.round(metricValue('activeCodes', activeScenario)) > 0
+                            ? `${Math.round(metricValue('activeCodes', activeScenario))} ACTIVE`
+                            : 'STABLE',
+                          tone:
+                            Math.round(metricValue('activeCodes', activeScenario)) >= 2
+                              ? 'crit'
+                              : Math.round(metricValue('activeCodes', activeScenario)) === 1
+                              ? 'warn'
+                              : 'info',
+                        }
+                      : isSurgeActive
+                      ? { text: '+2 NEW', tone: 'crit' }
+                      : { text: 'STABLE', tone: 'info' }
+                  }
+                  accent={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? Math.round(metricValue('activeCodes', activeScenario)) >= 2
+                        ? 'crit'
+                        : Math.round(metricValue('activeCodes', activeScenario)) === 1
+                        ? 'warn'
+                        : 'info'
+                      : isSurgeActive
+                      ? 'crit'
+                      : 'info'
+                  }
                 />
               </div>
             </div>
@@ -2404,7 +2473,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 label="PULSE HORIZON"
                 right={
                   <Mono tone={isSafe ? 'ok' : 'crit'}>
-                    {isSafe ? 'SAFE' : '+12% LOAD'}
+                    {isSafe
+                      ? 'SAFE'
+                      : `${forecastDelta >= 0 ? '+' : ''}${Math.round(forecastDelta)}% LOAD`}
                   </Mono>
                 }
               />
