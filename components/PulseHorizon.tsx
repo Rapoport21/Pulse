@@ -7,6 +7,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceArea,
+  ReferenceDot,
   AreaChart,
   Area,
 } from 'recharts';
@@ -80,6 +82,7 @@ import {
   BracketFrame,
   Divider,
   MetricValue,
+  ScanningLine,
 } from './design';
 
 interface PulseHorizonProps {
@@ -466,8 +469,21 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               flexDirection: 'column',
               opacity: systemStatus === 'manual' ? 0.75 : 1,
               transition: `opacity ${MOTION.base}s ease`,
+              boxShadow:
+                !isSafe && systemStatus === 'normal'
+                  ? `0 8px 32px rgba(0,0,0,0.4), 0 0 24px ${COLORS.accentGlow}`
+                  : SHADOW.panel,
             }}
           >
+            {/* Ambient scan — only on the hero forecast card, only when
+                live. Gives the primary panel a breath without adding
+                another band of chrome. */}
+            {systemStatus === 'normal' && !isSimulating && (
+              <ScanningLine
+                color={!isSafe ? COLORS.accent : COLORS.info}
+                duration={MOTION.ambient}
+              />
+            )}
             {/* Chart header strip */}
             <div
               style={{
@@ -533,6 +549,18 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 4" stroke={COLORS.border} vertical={false} />
+                  {/* Breach wash — the danger zone above 100% capacity gets
+                      a subtle red tint so a line crossing the threshold is
+                      spatial, not just a dashed label. Rendered before the
+                      axes so it reads as a background field. */}
+                  <ReferenceArea
+                    y1={100}
+                    y2={130}
+                    fill={COLORS.crit}
+                    fillOpacity={0.07}
+                    stroke="none"
+                    ifOverflow="visible"
+                  />
                   <XAxis
                     dataKey="time"
                     stroke={COLORS.textMuted}
@@ -609,7 +637,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     strokeWidth={2}
                     fill="url(#horizonFill)"
                     isAnimationActive
-                    animationDuration={500}
+                    animationDuration={900}
+                    animationEasing="ease-out"
                   />
                   {isSimulating && (
                     <Area
@@ -622,15 +651,31 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       isAnimationActive={false}
                     />
                   )}
+                  {/* NOW indicator — a glowing dot pinned to the current
+                      load point. Makes "where we are right now" legible
+                      as a moment on the line rather than just a dashed
+                      vertical rule. Color follows forecast severity. */}
+                  <ReferenceDot
+                    x="NOW"
+                    y={currentLoad}
+                    r={4}
+                    fill={COLORS.info}
+                    stroke={COLORS.bg}
+                    strokeWidth={2}
+                    ifOverflow="visible"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
-            {/* KPI footer band */}
+            {/* KPI footer band — +90m is the hero (2fr), other cells
+                supporting (1fr each). Uniform weight was reading as
+                "dashboard hits"; the point of the page is the forecast
+                number, so give it real spatial primacy. */}
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
+                gridTemplateColumns: '1fr 2fr 1fr 1fr',
                 borderTop: `1px solid ${COLORS.border}`,
                 background: COLORS.bgDeep,
               }}
@@ -640,6 +685,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 label="Forecast +90m"
                 value={`${projectedLoad.toFixed(0)}%`}
                 tone={forecastTone}
+                hero
               />
               <KpiCell
                 label={isRising ? 'Rising' : 'Falling'}
@@ -795,16 +841,28 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   </p>
                 </div>
                 {!isSurgeActive && loginCount <= 1 && (
-                  <TacticalButton
-                    variant="primary"
-                    size="md"
-                    fullWidth
-                    icon={<ArrowRight size={14} strokeWidth={2} />}
-                    onClick={onActivatePlaybook}
+                  // Breathing pulse — signature moment. Says "this is waiting
+                  // for you" without adding ornament. Opacity loop only, so
+                  // the button doesn't visibly resize / reflow siblings.
+                  <motion.div
+                    animate={{ opacity: [0.92, 1, 0.92] }}
+                    transition={{
+                      duration: 3.2,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
                     style={{ marginTop: SPACE.md }}
                   >
-                    Activate Surge Playbook
-                  </TacticalButton>
+                    <TacticalButton
+                      variant="primary"
+                      size="md"
+                      fullWidth
+                      icon={<ArrowRight size={14} strokeWidth={2} />}
+                      onClick={onActivatePlaybook}
+                    >
+                      Activate Surge Playbook
+                    </TacticalButton>
+                  </motion.div>
                 )}
               </TacticalCard>
             )}
@@ -925,11 +983,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               <span
                 style={{
                   fontFamily: FONTS.sans,
-                  fontSize: 56,
+                  fontSize: 64,
                   fontWeight: 600,
-                  letterSpacing: '-0.04em',
+                  letterSpacing: '-0.045em',
                   lineHeight: 0.9,
                   color: COLORS.textPrimary,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {loginCount > 1 && !isSurgeActive ? '2' : '8'}
@@ -1382,7 +1441,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, flex: 1 }}>
             <div style={{ padding: SPACE.sm, background: COLORS.bgDeep, border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, flex: 1 }}>
               <Mono tone="muted" size="xs">TOTAL CENSUS</Mono>
-              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4 }}>
+              <div style={{ fontFamily: FONTS.sans, fontSize: 30, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: COLORS.textPrimary, marginTop: 4, fontVariantNumeric: 'tabular-nums' }}>
                 {loginCount > 1 && !isSurgeActive ? '284' : isSurgeActive ? '312' : '298'}
               </div>
               <Mono tone={loginCount > 1 && !isSurgeActive ? 'ok' : 'warn'} size="xs" style={{ marginTop: 4 }}>
@@ -1972,7 +2031,10 @@ const KpiCell: React.FC<{
   tone: 'primary' | 'ok' | 'warn' | 'crit';
   icon?: React.ReactNode;
   isLast?: boolean;
-}> = ({ label, value, tone, icon, isLast }) => {
+  /** Render at ~2x size for the hero forecast cell — gives the one
+   *  number that matters real visual primacy over the supporting KPIs. */
+  hero?: boolean;
+}> = ({ label, value, tone, icon, isLast, hero }) => {
   const color =
     tone === 'ok'
       ? COLORS.ok
@@ -1981,29 +2043,38 @@ const KpiCell: React.FC<{
       : tone === 'crit'
       ? COLORS.crit
       : COLORS.textPrimary;
+  // Hero cells glow when in warn/crit territory — subtle, not neon.
+  const heroGlow =
+    hero && (tone === 'crit' || tone === 'warn')
+      ? `0 0 20px ${color}33`
+      : undefined;
   return (
     <div
       style={{
-        padding: `${SPACE.md}px ${SPACE.lg}px`,
+        padding: hero ? `${SPACE.md}px ${SPACE.xl}px` : `${SPACE.md}px ${SPACE.lg}px`,
         borderRight: isLast ? undefined : `1px solid ${COLORS.border}`,
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: hero ? 4 : 6,
+        background: hero ? COLORS.surface : undefined,
+        boxShadow: heroGlow,
+        transition: `box-shadow ${MOTION.base}s ease`,
       }}
     >
       <Mono tone="muted" size="xs">
         {label}
       </Mono>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         {icon}
         <span
           style={{
             fontFamily: FONTS.mono,
-            fontSize: 22,
+            fontSize: hero ? 38 : 22,
             fontWeight: 600,
-            letterSpacing: '0.02em',
+            letterSpacing: hero ? '-0.02em' : '0.02em',
             color,
             lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
           {value}
