@@ -44,7 +44,12 @@ import {
   Plus,
 } from 'lucide-react';
 import { Status, Tab, UserProfile, UserRole } from '../types';
-import { ROLE_METRICS } from '../data/userProfiles';
+import { ROLE_METRICS, getRoleMetrics } from '../data/userProfiles';
+import {
+  type ScenarioState,
+  metricValue,
+  useScenarioTick,
+} from '../lib/scenario';
 import {
   BedBoard,
   AdmitFlow,
@@ -93,6 +98,9 @@ interface PulseHorizonProps {
   /** Navigate to a top-level tab (e.g. Tab.ADMISSIONS, Tab.PATIENTS). */
   onNavigateTab?: (tab: string) => void;
   loginCount?: number;
+  /** Active 3-minute simulation scenario. Drives metric overlays and
+   *  forecast curve shifts when set. Null = baseline. */
+  activeScenario?: ScenarioState | null;
 }
 
 type SelectedDriver = {
@@ -136,7 +144,14 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   showToast,
   onNavigateTab,
   loginCount = 1,
+  activeScenario = null,
 }) => {
+  // Scenario tick drives phase-aware re-renders. When the scenario's
+  // phase changes (e.g. climb → peak), everything downstream — KPIs,
+  // situation copy, forecast curve — picks up the new metrics without
+  // a prop change. Components memoize on `phase` so we don't thrash
+  // every second.
+  const scenarioTick = useScenarioTick(activeScenario);
   const [simState, setSimState] = useState({
     addedStaff: 0,
     openBeds: 0,
@@ -162,8 +177,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [showBriefMe, setShowBriefMe] = useState(false);
 
   const drivers = useMemo(() => {
-    const baseDrivers = ROLE_METRICS[currentUser.role];
-    if (loginCount > 1) {
+    // Scenario wins — when a scenario is running the role metrics helper
+    // overlays live values from the phase timeline. Baseline otherwise.
+    const baseDrivers = getRoleMetrics(currentUser.role, activeScenario);
+    // First-login "things are fine" override only applies when we're NOT
+    // mid-scenario — scenario data always wins.
+    if (loginCount > 1 && !activeScenario) {
       return baseDrivers.map((driver) => {
         if (currentUser.role === UserRole.MANAGER) {
           if (driver.id === '1') return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' as const };
@@ -184,14 +203,35 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       });
     }
     return baseDrivers;
-  }, [currentUser.role, loginCount]);
+  }, [currentUser.role, loginCount, activeScenario, scenarioTick.phase]);
 
   const chartData = useMemo(() => {
     let baseLoad = { now: 92, plus30: 98, plus60: 105, plus90: 112 };
-    if (isSurgeActive) {
+    let prevLoad = 85; // -30m anchor
+    if (activeScenario) {
+      // Scenario drives the curve. NOW is live; forecast shape flexes by phase:
+      //   ramp/climb → rising projection
+      //   peak/hold  → near-flat at the top
+      //   windDown/closing → decaying back toward baseline
+      const now = metricValue('nedocsScore', activeScenario);
+      const phase = scenarioTick.phase;
+      if (phase === 'ramp' || phase === 'climb') {
+        baseLoad = { now, plus30: now + 8, plus60: now + 14, plus90: now + 18 };
+        prevLoad = Math.max(60, now - 10);
+      } else if (phase === 'peak' || phase === 'hold') {
+        baseLoad = { now, plus30: now + 3, plus60: now + 4, plus90: now + 2 };
+        prevLoad = Math.max(60, now - 4);
+      } else {
+        // windDown / closing
+        baseLoad = { now, plus30: now - 6, plus60: now - 14, plus90: now - 20 };
+        prevLoad = now + 4;
+      }
+    } else if (isSurgeActive) {
       baseLoad = { now: 32, plus30: 30, plus60: 28, plus90: 25 };
+      prevLoad = 85;
     } else if (loginCount > 1) {
       baseLoad = { now: 32, plus30: 34, plus60: 35, plus90: 38 };
+      prevLoad = 32;
     }
     const staffImpact = simState.addedStaff * 2.5;
     const bedImpact = simState.openBeds * 1.5;
@@ -202,13 +242,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     const r90 = totalReduction * 1.0;
 
     return [
-      { time: '-30m', load: isSurgeActive ? 85 : loginCount > 1 ? 32 : 85, capacity: 100 },
+      { time: '-30m', load: prevLoad, capacity: 100 },
       { time: 'NOW', load: systemStatus === 'manual' ? 85 : baseLoad.now, capacity: 100 },
       { time: '+30m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus30 - r30), capacity: 100 },
       { time: '+60m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus60 - r60), capacity: 100 },
       { time: '+90m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus90 - r90), capacity: 100 },
     ];
-  }, [simState, isSurgeActive, systemStatus, loginCount]);
+  }, [simState, isSurgeActive, systemStatus, loginCount, activeScenario, scenarioTick.phase]);
 
   // Bed state is now synced via useRealtimeState — surge escalation
   // is handled centrally in App.tsx activateSurge/deactivateSurge.

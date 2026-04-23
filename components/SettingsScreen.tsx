@@ -71,6 +71,14 @@ import {
   readSurgeDuration,
   writeSurgeDuration,
 } from '../lib/surgeDuration';
+import {
+  type ScenarioState,
+  type ScenarioSeverity,
+  SCENARIO_META,
+  formatScenarioRemaining,
+  phaseLabel,
+  type ScenarioPhase,
+} from '../lib/scenario';
 
 /**
  * SettingsScreen — full-screen overlay for session/simulation controls.
@@ -100,6 +108,27 @@ interface SettingsScreenProps {
   braceletPool?: BraceletPool;
   /** Update the bracelet pool (e.g. unlink a slot). */
   onUpdateBraceletPool?: (next: BraceletPool) => void;
+
+  // ── Scenario controls (required for Simulation section) ──
+  /** Currently running scenario, or null if none. */
+  activeScenario?: ScenarioState | null;
+  /** Live scenario tick snapshot — countdown, phase, flags. */
+  scenarioTick?: {
+    scenario: ScenarioState | null;
+    elapsedMs: number;
+    remainingMs: number;
+    phase: ScenarioPhase | null;
+    isExpired: boolean;
+  };
+  /** Start a new scenario at given severity. Hot-swaps if one is running. */
+  onStartScenario?: (severity: ScenarioSeverity) => void;
+  /** Stop the currently running scenario and revert to baseline. */
+  onStopScenario?: () => void;
+
+  // ── Manual Surge controls (independent of scenarios) ──
+  isSurgeActive?: boolean;
+  onActivateSurge?: () => void;
+  onDeactivateSurge?: () => void;
 }
 
 const CONFIRM_WINDOW_MS = 4000;
@@ -198,6 +227,273 @@ const InfoRow: React.FC<{
 );
 
 // ─────────────────────────────────────────────────────────────────────────
+// ScenarioCards — three tappable TacticalCard-style tiles, one per
+// severity. The active scenario gets an accent border + breathing glow,
+// live countdown badge, and [ STOP ] button. Tapping another mid-run
+// hot-swaps immediately and restarts the 3-minute clock.
+// ─────────────────────────────────────────────────────────────────────────
+interface ScenarioCardsProps {
+  activeScenario: ScenarioState | null;
+  tick?: {
+    scenario: ScenarioState | null;
+    elapsedMs: number;
+    remainingMs: number;
+    phase: ScenarioPhase | null;
+    isExpired: boolean;
+  };
+  onStart: (severity: ScenarioSeverity) => void;
+  onStop: () => void;
+}
+const ScenarioCards: React.FC<ScenarioCardsProps> = ({
+  activeScenario,
+  tick,
+  onStart,
+  onStop,
+}) => {
+  const activeSeverity = activeScenario?.severity ?? null;
+  const severities: ScenarioSeverity[] = [1, 2, 3];
+  return (
+    <div
+      style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}
+    >
+      {severities.map((sev) => {
+        const meta = SCENARIO_META[sev];
+        const isActive = activeSeverity === sev;
+        const color =
+          meta.tone === 'ok'
+            ? COLORS.ok
+            : meta.tone === 'warn'
+            ? COLORS.warn
+            : COLORS.crit;
+        return (
+          <motion.button
+            key={sev}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            onClick={() => (isActive ? onStop() : onStart(sev))}
+            whileTap={{ scale: 0.99 }}
+            animate={
+              isActive && sev === 3
+                ? {
+                    boxShadow: [
+                      `0 0 0 1px ${color}, 0 0 14px ${color}44`,
+                      `0 0 0 1px ${color}, 0 0 28px ${color}88`,
+                      `0 0 0 1px ${color}, 0 0 14px ${color}44`,
+                    ],
+                  }
+                : isActive
+                ? { boxShadow: `0 0 0 1px ${color}, 0 0 16px ${color}55` }
+                : { boxShadow: '0 0 0 1px transparent' }
+            }
+            transition={
+              isActive && sev === 3
+                ? { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }
+                : { duration: MOTION.base, ease: MOTION.ease }
+            }
+            style={{
+              width: '100%',
+              textAlign: 'left',
+              padding: SPACE.md,
+              background: isActive ? COLORS.surfaceElev : COLORS.surface,
+              border: `1px solid ${isActive ? color : COLORS.border}`,
+              borderRadius: RADIUS.sm,
+              cursor: 'pointer',
+              fontFamily: FONTS.sans,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: SPACE.sm,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header row: dot + id label + status */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                minHeight: 20,
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: color,
+                  boxShadow: isActive ? `0 0 10px ${color}` : undefined,
+                  flexShrink: 0,
+                }}
+              />
+              <Mono tone={isActive ? 'accent' : 'muted'} size="sm">
+                [ {meta.id} · {meta.label} ]
+              </Mono>
+              <div style={{ flex: 1 }} />
+              {isActive && tick?.scenario ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      letterSpacing: '0.08em',
+                      color: COLORS.textPrimary,
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {formatScenarioRemaining(tick.remainingMs)}
+                  </span>
+                  <Mono tone="dim" size="xs">
+                    {phaseLabel(tick.phase)}
+                  </Mono>
+                </div>
+              ) : (
+                <Mono tone="dim" size="xs">
+                  3:00
+                </Mono>
+              )}
+            </div>
+
+            {/* Tagline */}
+            <div
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: '-0.01em',
+                color: COLORS.textPrimary,
+                lineHeight: 1.3,
+              }}
+            >
+              {meta.tagline}
+            </div>
+
+            {/* Description */}
+            <div
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: 12,
+                color: COLORS.textSecondary,
+                lineHeight: 1.45,
+              }}
+            >
+              {meta.description}
+            </div>
+
+            {/* Running footer — STOP hint */}
+            {isActive && (
+              <div
+                style={{
+                  marginTop: SPACE.xs,
+                  paddingTop: SPACE.sm,
+                  borderTop: `1px solid ${COLORS.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <Mono tone="accent" size="xs">
+                  ● RUNNING
+                </Mono>
+                <Mono tone="dim" size="xs">
+                  TAP TO STOP
+                </Mono>
+              </div>
+            )}
+          </motion.button>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// ManualSurgeToggle — a single row that lets the operator flip Surge Mode
+// on/off from Settings, independent of scenarios. S3 auto-activates surge;
+// this is for the operator who wants surge without the full scenario
+// choreography.
+// ─────────────────────────────────────────────────────────────────────────
+const ManualSurgeToggle: React.FC<{
+  isActive: boolean;
+  onActivate: () => void;
+  onDeactivate: () => void;
+}> = ({ isActive, onActivate, onDeactivate }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: SPACE.md,
+      padding: SPACE.md,
+      background: COLORS.surface,
+      border: `1px solid ${isActive ? COLORS.accent : COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      minHeight: 52,
+      boxShadow: isActive ? `0 0 16px ${COLORS.accentGlow}` : undefined,
+      transition: `box-shadow ${MOTION.base}s ${MOTION.cssEase}, border-color ${MOTION.base}s ${MOTION.cssEase}`,
+    }}
+  >
+    <div
+      style={{
+        width: 36,
+        height: 36,
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: `1px solid ${isActive ? COLORS.accent : COLORS.border}`,
+        background: COLORS.surfaceElev,
+        borderRadius: RADIUS.sm,
+        color: isActive ? COLORS.accent : COLORS.textMuted,
+      }}
+    >
+      <Zap size={16} strokeWidth={1.75} />
+    </div>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 15,
+          fontWeight: 600,
+          letterSpacing: '-0.01em',
+          color: COLORS.textPrimary,
+          marginBottom: 2,
+        }}
+      >
+        Surge Mode
+      </div>
+      <div
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 12,
+          color: COLORS.textSecondary,
+          lineHeight: 1.4,
+        }}
+      >
+        {isActive
+          ? 'Protocol Level 2 active — urgent task list live'
+          : 'Independent of scenarios. Trigger any time.'}
+      </div>
+    </div>
+    <TacticalButton
+      variant={isActive ? 'danger' : 'secondary'}
+      size="sm"
+      onClick={isActive ? onDeactivate : onActivate}
+      style={{ flexShrink: 0, minWidth: 120, height: 40 }}
+    >
+      {isActive ? 'Stand down' : 'Activate'}
+    </TacticalButton>
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 // DeviceIcon — pick an icon that matches the device label.
 // ─────────────────────────────────────────────────────────────────────────
 const DeviceIcon: React.FC<{ name: string; size?: number }> = ({ name, size = 16 }) => {
@@ -229,6 +525,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   variant = 'mobile',
   braceletPool,
   onUpdateBraceletPool,
+  activeScenario,
+  scenarioTick,
+  onStartScenario,
+  onStopScenario,
+  isSurgeActive = false,
+  onActivateSurge,
+  onDeactivateSurge,
 }) => {
   const [resetArmed, setResetArmed] = useState(false);
   const [resetJustFired, setResetJustFired] = useState(false);
@@ -963,7 +1266,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 title="Simulation"
                 meta={
                   <Mono tone="dim" size="xs">
-                    Demo pacing
+                    Scenarios · Surge
                   </Mono>
                 }
               >
@@ -971,9 +1274,37 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: SPACE.sm,
+                    gap: SPACE.md,
                   }}
                 >
+                  {/* Scenario picker — three big tappable cards.
+                      S1/S2/S3, each a 3-minute choreographed timeline
+                      that reshapes every metric and feed in the app.
+                      The active card gets an accent border + breathing
+                      glow; others dim back. Tapping another mid-run
+                      hot-swaps immediately and restarts the clock. */}
+                  {onStartScenario && onStopScenario && (
+                    <ScenarioCards
+                      activeScenario={activeScenario ?? null}
+                      tick={scenarioTick}
+                      onStart={onStartScenario}
+                      onStop={onStopScenario}
+                    />
+                  )}
+
+                  {/* Manual Surge toggle — independent of scenarios.
+                      Scenario S3 auto-activates surge, but this row
+                      stays available so the operator can flip surge
+                      on/off at any time from Settings without picking
+                      a scenario. Surge duration (below) still applies. */}
+                  {onActivateSurge && onDeactivateSurge && (
+                    <ManualSurgeToggle
+                      isActive={isSurgeActive}
+                      onActivate={onActivateSurge}
+                      onDeactivate={onDeactivateSurge}
+                    />
+                  )}
+
                   {/* Surge Duration — how long Surge Mode stays
                       active before auto stand-down. Applies to the
                       NEXT activation; in-flight surges are not

@@ -42,6 +42,7 @@ import { CommandSidebar, type SimControlAction } from './components/CommandSideb
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
+import { ScenarioHudBadge } from './components/ScenarioHudBadge';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -71,6 +72,15 @@ import {
   SurgeModeState,
   UrgentTask,
 } from './lib/surgeTaskTemplates';
+import {
+  type ScenarioState,
+  type ScenarioSeverity,
+  buildScenarioState,
+  useScenarioEventRunner,
+  useScenarioTick,
+  formatScenarioRemaining,
+  SCENARIO_META,
+} from './lib/scenario';
 import { fireSurgeNotification, installFirstClickPermissionListener } from './lib/notifications';
 import { installGlobalHapticListener } from './lib/haptics';
 import { initUiScale } from './lib/uiScale';
@@ -124,6 +134,15 @@ function App() {
     [],
   );
   const isSurgeActive = surgeState.active;
+
+  // ── Active scenario — 3-minute simulation state ───────────────────────
+  // Synced across devices. Event runner (below) only fires on the
+  // authoring device so ems-inject / alerts / toasts don't duplicate.
+  const [activeScenario, setActiveScenario] = useRealtimeState<ScenarioState | null>(
+    'active-scenario',
+    null,
+  );
+  const scenarioTick = useScenarioTick(activeScenario);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -796,6 +815,74 @@ function App() {
     };
   }, []);
 
+  // ────────────────────────────────────────────────────────────────────
+  // Scenario — start / stop / hot-swap.
+  // S1 = quiet day, S2 = elevated, S3 = MCI disaster (auto-activates
+  // surge). Hot-swap: tapping S3 while S2 runs replaces immediately
+  // and resets the 3-minute clock.
+  // ────────────────────────────────────────────────────────────────────
+  const startScenario = useCallback((severity: ScenarioSeverity) => {
+    const state = buildScenarioState(severity, getDeviceId());
+    setActiveScenario(state);
+    const meta = SCENARIO_META[severity];
+    showToast(`Scenario ${meta.id} · ${meta.label} — running 3:00`,
+      severity === 3 ? 'error' : severity === 2 ? 'info' : 'info',
+    );
+  }, [setActiveScenario]);
+
+  const stopScenario = useCallback(() => {
+    if (!activeScenario) return;
+    const wasS3 = activeScenario.severity === 3;
+    setActiveScenario(null);
+    showToast('Scenario stopped — returning to baseline', 'info');
+    // If S3 auto-activated surge, bringing down the scenario also brings
+    // down surge. Manual surge from elsewhere (the PulseHorizon button or
+    // Settings toggle) stays independent.
+    if (wasS3 && surgeState.active) {
+      deactivateSurge();
+    }
+  }, [activeScenario, setActiveScenario, surgeState.active]);
+
+  // Event runner — fires scheduled events on the authoring device only.
+  // Binds to the stable callbacks and publishes EMS runs via the existing
+  // 'ems-inject' broadcast channel so LiveOps picks them up across devices.
+  useScenarioEventRunner(activeScenario, getDeviceId(), {
+    onEmsInject: (payload) => {
+      publish('ems-inject', payload);
+    },
+    onAlert: (payload) => {
+      // Scenario alerts surface as high-visibility toasts. Alerts feed
+      // integration is a follow-up — the toast path fires everywhere
+      // and is acknowledgeable via tap-to-dismiss.
+      showToast(`${payload.title} — ${payload.message}`,
+        payload.type === 'critical' ? 'error' : payload.type === 'warning' ? 'info' : 'info',
+      );
+    },
+    onCode: (payload) => {
+      showToast(`${payload.type} — ${payload.room}`, 'error');
+    },
+    onOverflowOpen: () => {
+      showToast('Overflow Hall C OPEN — 2 beds ready', 'error');
+    },
+    onDischarge: (payload) => {
+      showToast(`Discharge · ${payload.room} · ${payload.patient}`, 'info');
+    },
+    onSurgeActivate: () => {
+      if (!surgeState.active) activateSurge();
+    },
+    onSurgeDeactivate: () => {
+      if (surgeState.active) deactivateSurge();
+    },
+    onToast: (payload) => {
+      showToast(payload.message, payload.type);
+    },
+    onExpire: () => {
+      // Auto-clear scenario at 3:00. Uses setActiveScenario directly so
+      // we don't re-trigger the "stop" toast — expiry is its own beat.
+      setActiveScenario(null);
+    },
+  });
+
   // ── Simulation Controls — demo power tools ──
   const simControls = useMemo<SimControlAction[]>(() => [
     {
@@ -1208,6 +1295,15 @@ function App() {
         variant={isMobile ? 'mobile' : 'desktop'}
         braceletPool={braceletPool}
         onUpdateBraceletPool={setBraceletPool}
+        // ── Scenario controls ──
+        activeScenario={activeScenario}
+        scenarioTick={scenarioTick}
+        onStartScenario={startScenario}
+        onStopScenario={stopScenario}
+        // ── Manual surge toggle (independent of scenarios) ──
+        isSurgeActive={isSurgeActive}
+        onActivateSurge={activateSurge}
+        onDeactivateSurge={deactivateSurge}
       />
 
       {isMobile ? (
@@ -1240,6 +1336,7 @@ function App() {
           onUpdateVitals={updatePatientVitals}
           onAddNote={addClinicalNote}
           onAcknowledgeAlert={acknowledgeAlert}
+          activeScenario={activeScenario}
         />
       ) : (
         <div
@@ -1303,6 +1400,16 @@ function App() {
                 )}
                 <span style={{ color: COLORS.textDim, margin: '0 2px' }}>│</span>
                 <StatusPill label={liveStatusLabel} tone={liveStatusTone} pulse />
+                {/* Scenario badge — persistent HUD indicator when a
+                    scenario is running. Tap to jump back to Settings
+                    → Simulation so the operator can stop or swap. */}
+                {activeScenario && (
+                  <ScenarioHudBadge
+                    severity={activeScenario.severity}
+                    remainingMs={scenarioTick.remainingMs}
+                    onClick={() => setShowSettings(true)}
+                  />
+                )}
               </div>
 
               {/* Nav — bracket underline on active */}
@@ -1480,6 +1587,7 @@ function App() {
                   onNavigateToActionBoard={navigateToActionBoard}
                   onNavigateTab={(tab) => navigateToTab(tab as Tab)}
                   loginCount={loginCount}
+                  activeScenario={activeScenario}
                 />
               )}
               {activeTab === Tab.PATIENTS && (

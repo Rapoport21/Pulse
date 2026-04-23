@@ -1,4 +1,9 @@
 import { UserRole, UserProfile, MetricDriver, ActionItem, Status } from '../types';
+import {
+  type ScenarioState,
+  metricValue,
+  scenarioFlags,
+} from '../lib/scenario';
 
 export const USERS: Record<UserRole, UserProfile> = {
   [UserRole.MANAGER]: {
@@ -49,6 +54,152 @@ export const ROLE_METRICS: Record<UserRole, MetricDriver[]> = {
     { id: 't3', name: 'Blood Bank', value: 'MTP Active', trend: 'stable', status: Status.CRITICAL, impact: 90 },
   ]
 };
+
+/**
+ * Scenario-aware metric driver list. Same shape as ROLE_METRICS but
+ * with values / statuses that reflect the currently running scenario.
+ * When no scenario is active, returns values identical to ROLE_METRICS
+ * so existing consumers see the baseline.
+ *
+ * The values are recomputed every time this function is called — which
+ * is usually once per phase boundary (every ~30 s during a scenario)
+ * because consumers wrap it in `useMemo(..., [scenario?.severity, scenarioPhase])`.
+ */
+export function getRoleMetrics(
+  role: UserRole,
+  scenario: ScenarioState | null,
+  now: number = Date.now(),
+): MetricDriver[] {
+  const boarding = Math.round(metricValue('boardingAdmitted', scenario, now));
+  const emsOffload = Math.round(metricValue('emsOffloadRiskMin', scenario, now));
+  const rnShortfall = Math.round(metricValue('rnShortfall', scenario, now));
+  const triageWait = Math.round(metricValue('triageWaitMin', scenario, now));
+  const ambulance = Math.round(metricValue('ambulanceCount', scenario, now));
+  const codes = Math.round(metricValue('activeCodes', scenario, now));
+  const orAvail = Math.round(metricValue('orAvailable', scenario, now));
+  const traumaBays = Math.round(metricValue('traumaBaysAvailable', scenario, now));
+  const pendingDischarges = Math.round(metricValue('dischargesPending', scenario, now));
+  const flags = scenarioFlags(scenario, now);
+
+  const sev = scenario?.severity ?? 0;
+
+  switch (role) {
+    case UserRole.MANAGER:
+      return [
+        {
+          id: '1',
+          name: 'Boarding Pressure',
+          value: `${Math.max(0, boarding)} Admitted`,
+          trend: sev >= 2 ? 'up' : sev === 1 ? 'down' : 'up',
+          status: boarding >= 30 ? Status.CRITICAL : boarding >= 22 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, 60 + boarding),
+        },
+        {
+          id: '2',
+          name: 'EMS Offload Risk',
+          value: `${Math.max(0, emsOffload)}m Avg`,
+          trend: sev >= 2 ? 'up' : sev === 1 ? 'down' : 'stable',
+          status: emsOffload >= 75 ? Status.CRITICAL : emsOffload >= 50 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, Math.round((emsOffload / 100) * 100)),
+        },
+        {
+          id: '3',
+          name: 'Staffing Gap (RN)',
+          value: `${rnShortfall} FTE`,
+          trend: sev === 3 ? 'up' : 'stable',
+          status: rnShortfall <= -4 ? Status.CRITICAL : rnShortfall <= -2 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, Math.abs(rnShortfall) * 20),
+        },
+      ];
+
+    case UserRole.NURSE:
+      return [
+        {
+          id: 'n1',
+          name: 'Pain Reassessment',
+          value: `${sev === 3 ? 8 : sev === 2 ? 6 : sev === 1 ? 2 : 4} Overdue`,
+          trend: sev >= 2 ? 'up' : 'down',
+          status: sev === 3 ? Status.CRITICAL : Status.WARNING,
+          impact: sev === 3 ? 95 : sev === 2 ? 85 : 70,
+        },
+        {
+          id: 'n2',
+          name: 'High Fall Risk',
+          value: `${sev === 3 ? 5 : sev === 2 ? 3 : 2} Patients`,
+          trend: sev >= 2 ? 'up' : 'stable',
+          status: sev >= 2 ? Status.CRITICAL : Status.WARNING,
+          impact: sev === 3 ? 85 : 65,
+        },
+        {
+          id: 'n3',
+          name: 'Discharge Pending',
+          value: `${Math.max(0, pendingDischarges)} Waiting`,
+          trend: sev === 1 ? 'up' : 'down',
+          status: sev === 1 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, pendingDischarges * 15),
+        },
+      ];
+
+    case UserRole.ER_PERSONNEL:
+      return [
+        {
+          id: 'e1',
+          name: 'Trauma Bays',
+          value: `${Math.max(0, traumaBays)} Available`,
+          trend: sev >= 2 ? 'down' : 'stable',
+          status: traumaBays === 0 ? Status.CRITICAL : traumaBays === 1 ? Status.WARNING : Status.NORMAL,
+          impact: 100 - (traumaBays * 30),
+        },
+        {
+          id: 'e2',
+          name: 'Triage Wait',
+          value: `${triageWait} mins`,
+          trend: sev >= 2 ? 'up' : sev === 1 ? 'down' : 'stable',
+          status: triageWait >= 150 ? Status.CRITICAL : triageWait >= 120 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, Math.round(triageWait / 2)),
+        },
+        {
+          id: 'e3',
+          name: 'Ambulance ETA',
+          value: `${ambulance} (<5m)`,
+          trend: sev >= 2 ? 'up' : 'stable',
+          status: ambulance >= 4 ? Status.CRITICAL : ambulance >= 2 ? Status.WARNING : Status.NORMAL,
+          impact: Math.min(100, ambulance * 20),
+        },
+      ];
+
+    case UserRole.TRAUMA:
+      return [
+        {
+          id: 't1',
+          name: 'Active Traumas',
+          value: `${sev === 3 ? Math.max(2, codes) : sev === 2 ? 2 : 2} In Bay`,
+          trend: sev === 3 ? 'up' : sev === 1 ? 'down' : 'up',
+          status: sev === 3 ? Status.CRITICAL : Status.WARNING,
+          impact: sev === 3 ? 100 : 85,
+        },
+        {
+          id: 't2',
+          name: 'OR Availability',
+          value: `${Math.max(0, orAvail)} of 4`,
+          trend: sev >= 2 ? 'down' : 'stable',
+          status: orAvail <= 1 ? Status.CRITICAL : orAvail <= 2 ? Status.WARNING : Status.NORMAL,
+          impact: 100 - (orAvail * 20),
+        },
+        {
+          id: 't3',
+          name: 'Blood Bank',
+          value: flags.mtpActive ? 'MTP Active' : sev >= 2 ? '8u O-neg Ready' : 'Stocked',
+          trend: 'stable',
+          status: flags.mtpActive ? Status.CRITICAL : sev >= 2 ? Status.WARNING : Status.NORMAL,
+          impact: flags.mtpActive ? 100 : 60,
+        },
+      ];
+
+    default:
+      return ROLE_METRICS[role];
+  }
+}
 
 export const ROLE_ACTIONS: Record<UserRole, ActionItem[]> = {
   [UserRole.MANAGER]: [

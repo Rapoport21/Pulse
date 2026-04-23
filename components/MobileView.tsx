@@ -61,7 +61,14 @@ import {
 } from '../lib/realtime';
 import { SendToSheet } from './SendToSheet';
 import { EmptyBraceletSheet } from './EmptyBraceletSheet';
-import { ROLE_ACTIONS, ROLE_METRICS } from '../data/userProfiles';
+import { ROLE_ACTIONS } from '../data/userProfiles';
+import {
+  type ScenarioState,
+  metricValue,
+  scenarioFlags,
+  useScenarioTick,
+} from '../lib/scenario';
+import { ScenarioHudBadge } from './ScenarioHudBadge';
 import { MOCK_PATIENTS, ageInYears } from '../data/clinicalMock';
 import { computeMEWS } from '../lib/clinicalScores';
 import { PatientDetailScreen } from './PatientDetailScreen';
@@ -159,6 +166,9 @@ interface MobileViewProps {
   onUpdateVitals?: (patientId: string, vitals: Omit<import('../types').Vital, 'id' | 'timestamp'>) => void;
   onAddNote?: (note: Omit<ClinicalNote, 'id' | 'createdAt'>) => void;
   onAcknowledgeAlert?: (alertId: string, actor: string) => void;
+  /** Active 3-minute simulation scenario. Drives metric overlays and
+   *  surfaces the persistent HUD badge when set. Null = baseline. */
+  activeScenario?: ScenarioState | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -934,7 +944,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
   onUpdateVitals,
   onAddNote,
   onAcknowledgeAlert,
+  activeScenario = null,
 }) => {
+  // Scenario tick — re-renders on phase change so metric overlays pick
+  // up new values without prop churn.
+  const scenarioTick = useScenarioTick(activeScenario);
   const [activeTab, setActiveTab] = useState<
     'horizon' | 'patients' | 'actions' | 'alerts' | 'comms'
   >('horizon');
@@ -1501,6 +1515,33 @@ export const MobileView: React.FC<MobileViewProps> = ({
             </Mono>
           )}
         </motion.div>
+      )}
+
+      {/* ── SCENARIO HUD STRIP ────────────────────────────────────
+          Persistent badge anchored above the top HUD. Visible on
+          every tab whenever a scenario is running so the operator
+          never loses the "I'm mid-simulation" signal. Tap to open
+          Settings and stop / swap. */}
+      {activeScenario && scenarioTick.remainingMs > 0 && (
+        <div
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: `${SPACE.xs}px ${SPACE.sm}px`,
+            background: COLORS.bgDeep,
+            borderBottom: `1px solid ${COLORS.border}`,
+            zIndex: 29,
+          }}
+        >
+          <ScenarioHudBadge
+            severity={activeScenario.severity}
+            remainingMs={scenarioTick.remainingMs}
+            onClick={onOpenSettings}
+            compact
+          />
+        </div>
       )}
 
       {/* ── TOP HUD HEADER ────────────────────────────────────── */}
@@ -2130,22 +2171,52 @@ export const MobileView: React.FC<MobileViewProps> = ({
               const heroProps = (() => {
                 switch (currentUser.role) {
                   case UserRole.MANAGER: {
-                    const bedPct = Math.round(liveMetrics.bedCapacityPct);
+                    // Bed capacity blends baseline occupancy with ICU
+                    // pressure + boarded admits when a scenario is live,
+                    // so S3 feels truly critical without rewriting the
+                    // realtime sim. Baseline: trust liveMetrics.
+                    const bedPct = activeScenario
+                      ? Math.min(
+                          100,
+                          Math.round(
+                            60 +
+                              (metricValue('icuOccupancyPct', activeScenario) - 83) * 0.6 +
+                              (metricValue('boardingAdmitted', activeScenario) - 24) * 1.4,
+                          ),
+                        )
+                      : Math.round(liveMetrics.bedCapacityPct);
+                    const scenarioLive = activeScenario && scenarioTick.remainingMs > 0;
                     // Sub-label: during surge, flag ER holds pressure on
                     // floor beds; baseline, show occupied / total.
-                    const subLabel = isSurgeActive
-                      ? `BED CAPACITY · ${heroDerived.edHoldsWaiting} ER HOLD${heroDerived.edHoldsWaiting === 1 ? '' : 'S'} WAITING ON FLOOR`
-                      : `BED CAPACITY · ${heroDerived.occupiedCount} / ${heroDerived.totalBeds} OCCUPIED`;
+                    const subLabel = scenarioLive
+                      ? `BED CAPACITY · ${metricValue('boardingAdmitted', activeScenario)} BOARDING · ${metricValue('census', activeScenario)} CENSUS`
+                      : isSurgeActive
+                        ? `BED CAPACITY · ${heroDerived.edHoldsWaiting} ER HOLD${heroDerived.edHoldsWaiting === 1 ? '' : 'S'} WAITING ON FLOOR`
+                        : `BED CAPACITY · ${heroDerived.occupiedCount} / ${heroDerived.totalBeds} OCCUPIED`;
+                    const scenarioState: HeroState | null = scenarioLive
+                      ? activeScenario.severity === 3
+                        ? 'surge'
+                        : activeScenario.severity === 2
+                          ? 'strained'
+                          : 'nominal'
+                      : null;
                     return {
-                      state: (isSurgeActive ? 'surge' : 'nominal') as HeroState,
+                      state: (scenarioState ?? (isSurgeActive ? 'surge' : 'nominal')) as HeroState,
                       dominantValue: String(bedPct),
                       dominantUnit: '%',
                       dominantLabel: subLabel,
-                      trendDirection: (isSurgeActive ? 'up' : 'down') as
-                        | 'up'
-                        | 'down'
-                        | 'flat',
-                      trendMagnitude: isSurgeActive ? '+6%' : '-2%',
+                      trendDirection: (scenarioLive
+                        ? scenarioTick.phase === 'windDown' || scenarioTick.phase === 'closing'
+                          ? 'down'
+                          : 'up'
+                        : isSurgeActive
+                          ? 'up'
+                          : 'down') as 'up' | 'down' | 'flat',
+                      trendMagnitude: scenarioLive
+                        ? `+${Math.round((metricValue('nedocsScore', activeScenario) - 112) / 4)}%`
+                        : isSurgeActive
+                          ? '+6%'
+                          : '-2%',
                       trendWindow: 'NEXT 2H',
                       timerText:
                         isSurgeActive && surgeActivatedAt
@@ -2178,9 +2249,18 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     };
                   case UserRole.ER_PERSONNEL: {
                     // Trauma is baseline busy. Zero bays is normal.
-                    const baysOpen = heroDerived.traumaBaysOpen;
-                    const emsCount = heroDerived.inboundEms;
-                    const triageWait = liveMetrics.erWaitMinutes;
+                    // Scenario overlays reshape bays / EMS / wait when a
+                    // simulation is running so the trauma view breathes.
+                    const scenarioLive = activeScenario && scenarioTick.remainingMs > 0;
+                    const baysOpen = scenarioLive
+                      ? Math.max(0, metricValue('traumaBaysAvailable', activeScenario))
+                      : heroDerived.traumaBaysOpen;
+                    const emsCount = scenarioLive
+                      ? metricValue('ambulanceCount', activeScenario)
+                      : heroDerived.inboundEms;
+                    const triageWait = scenarioLive
+                      ? metricValue('triageWaitMin', activeScenario)
+                      : liveMetrics.erWaitMinutes;
                     return {
                       state: (isSurgeActive ? 'surge' : 'strained') as HeroState,
                       dominantValue: String(baysOpen),
@@ -2250,22 +2330,52 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <MetricTile
                   id="M01"
                   label="ER Wait Time"
-                  value={String(liveMetrics.erWaitMinutes)}
+                  value={String(
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? metricValue('erWaitMinutes', activeScenario)
+                      : liveMetrics.erWaitMinutes,
+                  )}
                   unit="min"
-                  delta={isSurgeActive
-                    ? { text: '+80m', tone: 'crit' }
-                    : { text: '+5m', tone: 'crit' }}
-                  accent={isSurgeActive ? 'crit' : 'warn'}
+                  delta={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? {
+                          text: `+${metricValue('erWaitMinutes', activeScenario) - 45}m`,
+                          tone: activeScenario.severity === 3 ? 'crit' : 'warn',
+                        }
+                      : isSurgeActive
+                        ? { text: '+80m', tone: 'crit' }
+                        : { text: '+5m', tone: 'crit' }
+                  }
+                  accent={
+                    (activeScenario && activeScenario.severity === 3) || isSurgeActive
+                      ? 'crit'
+                      : 'warn'
+                  }
                 />
                 <MetricTile
                   id="M02"
                   label="Total Census"
-                  value={String(liveMetrics.totalCensus)}
+                  value={String(
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? metricValue('census', activeScenario)
+                      : liveMetrics.totalCensus,
+                  )}
                   unit="pts"
-                  delta={isSurgeActive
-                    ? { text: '+28', tone: 'crit' }
-                    : { text: '-12', tone: 'ok' }}
-                  accent={isSurgeActive ? 'warn' : undefined}
+                  delta={
+                    activeScenario && scenarioTick.remainingMs > 0
+                      ? {
+                          text: `${metricValue('census', activeScenario) - 284 >= 0 ? '+' : ''}${metricValue('census', activeScenario) - 284}`,
+                          tone: activeScenario.severity === 3 ? 'crit' : 'warn',
+                        }
+                      : isSurgeActive
+                        ? { text: '+28', tone: 'crit' }
+                        : { text: '-12', tone: 'ok' }
+                  }
+                  accent={
+                    (activeScenario && activeScenario.severity === 3) || isSurgeActive
+                      ? 'warn'
+                      : undefined
+                  }
                 />
                 <MetricTile
                   id="M03"
