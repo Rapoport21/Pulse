@@ -278,9 +278,32 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const delta = projectedLoad - currentLoad;
   const isRising = delta > 0;
 
-  // NEDOCS-style severity classification for the forecast number
-  const forecastTone: 'ok' | 'warn' | 'crit' =
-    projectedLoad >= 100 ? 'crit' : projectedLoad >= 85 ? 'warn' : 'ok';
+  // NEDOCS-style severity classification for the forecast number.
+  // When a scenario is running, severity wins over numerical thresholds
+  // so the screen telegraphs the scenario unambiguously: S1 = ok, S2 =
+  // warn, S3 = crit — even if the projected number is mid-band.
+  const forecastTone: 'ok' | 'warn' | 'crit' = (() => {
+    if (activeScenario && scenarioTick.remainingMs > 0) {
+      const sev = activeScenario.severity;
+      if (sev === 3) return 'crit';
+      if (sev === 2) return 'warn';
+      return 'ok';
+    }
+    return projectedLoad >= 100 ? 'crit' : projectedLoad >= 85 ? 'warn' : 'ok';
+  })();
+
+  // Chart accent — drives the saturation-forecast line stroke + fill
+  // gradient so the visual color tracks scenario severity, not just the
+  // data values. Without this, S1/S2/S3 only re-shape the curve and the
+  // line stays the same blue, making the screen feel unresponsive.
+  const chartAccent =
+    forecastTone === 'crit'
+      ? COLORS.crit
+      : forecastTone === 'warn'
+      ? COLORS.warn
+      : activeScenario && scenarioTick.remainingMs > 0
+      ? COLORS.ok      // S1 — explicitly green to read "calm"
+      : COLORS.info;   // baseline (no scenario, sub-warn) — neutral blue
 
   const getDriverTitle = () => {
     switch (currentUser.role) {
@@ -583,12 +606,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 <AreaChart data={chartData} margin={{ top: 16, right: 20, left: -8, bottom: 8 }}>
                   <defs>
                     <linearGradient id="horizonFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.35} />
-                      <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
+                      <stop offset="0%" stopColor={chartAccent} stopOpacity={0.35} />
+                      <stop offset="95%" stopColor={chartAccent} stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="horizonFillSim" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={COLORS.info} stopOpacity={0.25} />
-                      <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
+                      <stop offset="0%" stopColor={chartAccent} stopOpacity={0.25} />
+                      <stop offset="95%" stopColor={chartAccent} stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="2 4" stroke={COLORS.border} vertical={false} />
@@ -623,7 +646,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
                     }}
-                    itemStyle={{ color: COLORS.info }}
+                    itemStyle={{ color: chartAccent }}
                     labelStyle={{ color: COLORS.textMuted }}
                     formatter={(value: number) => [`${value.toFixed(1)}%`, 'LOAD']}
                   />
@@ -664,7 +687,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   <Area
                     type="monotone"
                     dataKey="load"
-                    stroke={COLORS.info}
+                    stroke={chartAccent}
                     strokeWidth={2}
                     fill="url(#horizonFill)"
                     isAnimationActive
@@ -675,7 +698,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                       type="monotone"
                       dataKey="load"
                       strokeDasharray="4 4"
-                      stroke={COLORS.info}
+                      stroke={chartAccent}
                       strokeWidth={1.5}
                       fill="url(#horizonFillSim)"
                       isAnimationActive={false}
