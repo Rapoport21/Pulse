@@ -44,6 +44,7 @@ import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ScenarioHudBadge } from './components/ScenarioHudBadge';
 import { EmsAutoBrief } from './components/EmsAutoBrief';
+import { CinematicBoot, BOOT_DURATION_MS } from './components/CinematicBoot';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -682,7 +683,7 @@ function App() {
   const isCompactNav = windowWidth < 1280;
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsBooting(false), 2400);
+    const timer = setTimeout(() => setIsBooting(false), BOOT_DURATION_MS);
 
     const handleResize = () => {
       const w = window.innerWidth;
@@ -1152,7 +1153,7 @@ function App() {
   // BOOT SCREEN — Tactical system-init sequence
   // ══════════════════════════════════════════════════════════════════════
   if (isBooting) {
-    return <TacticalBootScreen />;
+    return <CinematicBoot onComplete={() => setIsBooting(false)} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════
