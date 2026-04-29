@@ -43,6 +43,7 @@ import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ScenarioHudBadge } from './components/ScenarioHudBadge';
+import { EmsAutoBrief } from './components/EmsAutoBrief';
 import { DebugPanel, ConnectionIndicator } from './components/DebugPanel';
 import { BedBoard, AdmitFlow, AlertsCenter, WorkforceCoverage, INITIAL_ADMISSION_QUEUE } from './components/clinical';
 import type { AdmissionEntry } from './components/clinical';
@@ -1176,6 +1177,12 @@ function App() {
   return (
     <>
       <ConnectionIndicator />
+      {/* Auto-brief overlay: when an inbound EMS run hits ETA 2:00, a
+          card slides in top-right with a "generating handoff brief"
+          shimmer + typewriter. Composed deterministically from the
+          run's real fields (age, sex, vitals, treatment, bay) plus
+          scenario context — see components/EmsAutoBrief.tsx. */}
+      <EmsAutoBrief activeScenario={activeScenario} />
       {debugMode && <DebugPanel currentUser={currentUser} />}
 
       {showShiftBriefing && (
