@@ -228,22 +228,68 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     let baseLoad = { now: 92, plus30: 98, plus60: 105, plus90: 112 };
     let prevLoad = 85; // -30m anchor
     if (activeScenario) {
-      // Scenario drives the curve. NOW is live; forecast shape flexes by phase:
-      //   ramp/climb → rising projection
-      //   peak/hold  → near-flat at the top
-      //   windDown/closing → decaying back toward baseline
+      // Scenario drives the curve. Each severity has its OWN trajectory
+      // shape — they don't share a "things get worse, then recover"
+      // model. S1 is a calm shift (drop below baseline), S2 is moderate
+      // pressure (rise + plateau elevated), S3 is disaster (rise sharp).
+      //
+      //   sev | ramp/climb | peak/hold     | windDown/closing
+      //   ----|------------|---------------|------------------
+      //   S1  | settle low | flat-low      | drift back to baseline
+      //   S2  | rise mod   | flat-elevated | decay toward baseline
+      //   S3  | rise hard  | flat-high     | decay toward baseline
       const now = metricValue('nedocsScore', activeScenario);
       const phase = scenarioTick.phase;
-      if (phase === 'ramp' || phase === 'climb') {
-        baseLoad = { now, plus30: now + 8, plus60: now + 14, plus90: now + 18 };
-        prevLoad = Math.max(60, now - 10);
-      } else if (phase === 'peak' || phase === 'hold') {
-        baseLoad = { now, plus30: now + 3, plus60: now + 4, plus90: now + 2 };
-        prevLoad = Math.max(60, now - 4);
+      const sev = activeScenario.severity;
+      const baseline = 112; // NEDOCS baseline anchor
+
+      if (sev === 1) {
+        if (phase === 'ramp' || phase === 'climb') {
+          // We just dropped from baseline; forecast continues calmly low.
+          baseLoad = {
+            now,
+            plus30: Math.max(60, now - 3),
+            plus60: Math.max(60, now - 5),
+            plus90: Math.max(60, now - 6),
+          };
+          prevLoad = baseline; // 30m ago we were at baseline
+        } else if (phase === 'peak' || phase === 'hold') {
+          // Settled into the calm plateau.
+          baseLoad = { now, plus30: now + 1, plus60: now + 2, plus90: now + 3 };
+          prevLoad = Math.max(60, now - 2);
+        } else {
+          // windDown / closing — drifting back up toward baseline.
+          baseLoad = {
+            now,
+            plus30: Math.min(baseline, now + 5),
+            plus60: Math.min(baseline, now + 9),
+            plus90: Math.min(baseline, now + 12),
+          };
+          prevLoad = Math.max(60, now - 4);
+        }
+      } else if (sev === 2) {
+        if (phase === 'ramp' || phase === 'climb') {
+          baseLoad = { now, plus30: now + 5, plus60: now + 9, plus90: now + 12 };
+          prevLoad = Math.max(60, now - 6);
+        } else if (phase === 'peak' || phase === 'hold') {
+          baseLoad = { now, plus30: now + 2, plus60: now + 3, plus90: now + 1 };
+          prevLoad = Math.max(60, now - 3);
+        } else {
+          baseLoad = { now, plus30: now - 4, plus60: now - 9, plus90: now - 13 };
+          prevLoad = now + 3;
+        }
       } else {
-        // windDown / closing
-        baseLoad = { now, plus30: now - 6, plus60: now - 14, plus90: now - 20 };
-        prevLoad = now + 4;
+        // S3 — disaster trajectory (original aggressive curve)
+        if (phase === 'ramp' || phase === 'climb') {
+          baseLoad = { now, plus30: now + 8, plus60: now + 14, plus90: now + 18 };
+          prevLoad = Math.max(60, now - 10);
+        } else if (phase === 'peak' || phase === 'hold') {
+          baseLoad = { now, plus30: now + 3, plus60: now + 4, plus90: now + 2 };
+          prevLoad = Math.max(60, now - 4);
+        } else {
+          baseLoad = { now, plus30: now - 6, plus60: now - 14, plus90: now - 20 };
+          prevLoad = now + 4;
+        }
       }
     } else if (isSurgeActive) {
       baseLoad = { now: 32, plus30: 30, plus60: 28, plus90: 25 };
@@ -390,6 +436,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 ? 'MANUAL'
                 : systemStatus === 'stale'
                 ? 'DEGRADED'
+                : activeScenario && scenarioTick.remainingMs > 0
+                ? activeScenario.severity === 3
+                  ? 'CRITICAL'
+                  : activeScenario.severity === 2
+                  ? 'ELEVATED'
+                  : 'NORMAL OPS'
                 : isSafe
                 ? 'NOMINAL'
                 : 'CRITICAL'
@@ -399,6 +451,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 ? 'crit'
                 : systemStatus === 'stale'
                 ? 'warn'
+                : activeScenario && scenarioTick.remainingMs > 0
+                ? activeScenario.severity === 3
+                  ? 'crit'
+                  : activeScenario.severity === 2
+                  ? 'warn'
+                  : 'ok'
                 : isSafe
                 ? 'ok'
                 : 'crit'
