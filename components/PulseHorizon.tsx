@@ -244,28 +244,23 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       const baseline = 112; // NEDOCS baseline anchor
 
       if (sev === 1) {
+        // S1 is a CALM shift. We override the chart with explicit low
+        // load% values rather than passing NEDOCS through, because the
+        // chart axis is 0–100% and NEDOCS values (still 80–95 for S1)
+        // would read as "high load" even on the calm trajectory.
+        // Reference lines: WARN 85, CAPACITY 100. S1 sits well below.
         if (phase === 'ramp' || phase === 'climb') {
-          // We just dropped from baseline; forecast continues calmly low.
-          baseLoad = {
-            now,
-            plus30: Math.max(60, now - 3),
-            plus60: Math.max(60, now - 5),
-            plus90: Math.max(60, now - 6),
-          };
-          prevLoad = baseline; // 30m ago we were at baseline
+          // We were running normal-busy; now visibly calming down.
+          baseLoad = { now: 42, plus30: 38, plus60: 34, plus90: 32 };
+          prevLoad = 78;
         } else if (phase === 'peak' || phase === 'hold') {
-          // Settled into the calm plateau.
-          baseLoad = { now, plus30: now + 1, plus60: now + 2, plus90: now + 3 };
-          prevLoad = Math.max(60, now - 2);
+          // Settled into the calm plateau — far below WARN line.
+          baseLoad = { now: 30, plus30: 30, plus60: 32, plus90: 34 };
+          prevLoad = 36;
         } else {
           // windDown / closing — drifting back up toward baseline.
-          baseLoad = {
-            now,
-            plus30: Math.min(baseline, now + 5),
-            plus60: Math.min(baseline, now + 9),
-            plus90: Math.min(baseline, now + 12),
-          };
-          prevLoad = Math.max(60, now - 4);
+          baseLoad = { now: 38, plus30: 50, plus60: 65, plus90: 78 };
+          prevLoad = 32;
         }
       } else if (sev === 2) {
         if (phase === 'ramp' || phase === 'climb') {
@@ -985,18 +980,81 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     })()}
                   </p>
                 </div>
-                {!isSurgeActive && loginCount <= 1 && (
-                  <TacticalButton
-                    variant="primary"
-                    size="md"
-                    fullWidth
-                    icon={<ArrowRight size={14} strokeWidth={2} />}
-                    onClick={onActivatePlaybook}
-                    style={{ marginTop: SPACE.md }}
-                  >
-                    Activate Surge Playbook
-                  </TacticalButton>
-                )}
+                {!isSurgeActive && (() => {
+                  // CTA mirrors the recommendation tone:
+                  //   S1   → calm-ops action (Schedule Discharges)
+                  //   S2   → mid-action (Request Float Pool)
+                  //   S3   → escalate (Activate Surge Playbook)
+                  //   no scenario, first login (intervention req) → Activate Surge
+                  //   no scenario, returning login                 → no CTA
+                  if (activeScenario && scenarioTick.remainingMs > 0) {
+                    const sev = activeScenario.severity;
+                    if (sev === 1) {
+                      return (
+                        <TacticalButton
+                          variant="secondary"
+                          size="md"
+                          fullWidth
+                          icon={<ArrowRight size={14} strokeWidth={2} />}
+                          onClick={() => {
+                            if (showToast) {
+                              showToast('Discharge sweep requested · porters paged', 'success');
+                            }
+                          }}
+                          style={{ marginTop: SPACE.md }}
+                        >
+                          Schedule Discharges
+                        </TacticalButton>
+                      );
+                    }
+                    if (sev === 2) {
+                      return (
+                        <TacticalButton
+                          variant="primary"
+                          size="md"
+                          fullWidth
+                          icon={<ArrowRight size={14} strokeWidth={2} />}
+                          onClick={() => {
+                            if (showToast) {
+                              showToast('Float pool requested · ETA 20m', 'info');
+                            }
+                          }}
+                          style={{ marginTop: SPACE.md }}
+                        >
+                          Request Float Pool
+                        </TacticalButton>
+                      );
+                    }
+                    // S3
+                    return (
+                      <TacticalButton
+                        variant="primary"
+                        size="md"
+                        fullWidth
+                        icon={<ArrowRight size={14} strokeWidth={2} />}
+                        onClick={onActivatePlaybook}
+                        style={{ marginTop: SPACE.md }}
+                      >
+                        Activate Surge Playbook
+                      </TacticalButton>
+                    );
+                  }
+                  if (loginCount <= 1) {
+                    return (
+                      <TacticalButton
+                        variant="primary"
+                        size="md"
+                        fullWidth
+                        icon={<ArrowRight size={14} strokeWidth={2} />}
+                        onClick={onActivatePlaybook}
+                        style={{ marginTop: SPACE.md }}
+                      >
+                        Activate Surge Playbook
+                      </TacticalButton>
+                    );
+                  }
+                  return null;
+                })()}
               </TacticalCard>
             )}
 
