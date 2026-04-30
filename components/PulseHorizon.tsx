@@ -1859,13 +1859,37 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         <div
           role="dialog"
           aria-label="Live floor drone view"
+          aria-modal="true"
+          onClick={(e) => {
+            // Click on the backdrop (not the panel) closes the modal.
+            if (e.target === e.currentTarget) setShowDroneView(false);
+          }}
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 9999,
-            background: '#050505',
+            background: 'rgba(0, 0, 0, 0.72)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: SPACE['2xl'],
+          }}
+        >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            width: '100%',
+            maxWidth: 1280,
+            height: 'min(80vh, 820px)',
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.borderStrong}`,
+            borderRadius: RADIUS.md,
+            boxShadow: '0 24px 72px rgba(0, 0, 0, 0.65)',
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'hidden',
           }}
         >
           {/* Top HUD strip */}
@@ -1963,6 +1987,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               ))}
             </div>
           </div>
+        </div>
         </div>
       )}
 
