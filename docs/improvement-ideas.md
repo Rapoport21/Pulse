@@ -1659,6 +1659,59 @@ steps change.
 
 ## T4 · Bets
 
+### T4.0 · 3D "Live Floor" drone view — DEAD, RESURRECTABLE
+
+**Status.** Killed 2026-04-30 after three rebuild attempts.
+See `docs/decisions.md → "Killed the 3D Live Floor drone view"` for
+the autopsy. Visuals were rated "very bad" by Nick on every pass.
+
+**Original idea.** Anduril-flavored top-down 3D model of the hospital
+floor: extruded walls, color-coded beds by state, EMS arrivals as
+moving glowing dots, scenario severity tinting the lighting, drei
+`OrbitControls` for user rotation. Mounted as a windowed modal.
+
+**Why it failed.** Procedural geometry built from primitives (boxes,
+cylinders, capsules) lands in an uncanny valley between schematic
+and rendered. Looked like a low-poly toy, not a hospital. Three
+fidelity bumps (wall thickness, identity markers, furniture,
+lighting) couldn't escape that.
+
+**What was right.** The data wiring is sound and reusable: scenario
+severity tinted the ambient light, `useEmsInbound` drove moving
+dots toward the ambulance bay, bed states drove emissive headboard
+panels with critical-acuity pulse animation, ward placement was
+mapped against the real `BedUnit` ids. If you revisit this idea,
+the *rendering layer* is what needs to change, not the data layer.
+
+**What to do if we revisit.**
+
+1. **Buy or commission a real model.** Load a GLTF/GLB hospital
+   floor plan from Sketchfab Pro, an ArchViz pack, or a paid
+   modeller. Map our `BedUnit` data onto named meshes via
+   `gltf.scene.getObjectByName('ICU-1')` and only modify
+   color/emissive based on bed state. This is the most likely
+   path to "actually looks like a hospital."
+
+2. **2D isometric SVG.** Skip 3D. Render the floor plan as a
+   top-down SVG with a CSS `transform: rotateX(60deg)` and you
+   get a sharp architectural-drawing aesthetic without uncanny
+   valley. Cheaper, more legible, easier to label, no WebGL
+   bundle cost.
+
+3. **Skip floor visualization entirely.** Double down on the
+   existing 2D Bed Board grid and use motion accents to express
+   live state changes. The EMS auto-brief already covers the
+   "demo magic moment" the drone view was supposed to provide.
+
+**What was deleted.** `components/BedDroneView.tsx`, the modal +
+launcher state + button in `components/PulseHorizon.tsx`, the
+`Radar` lucide import, and three npm deps: `three`,
+`@react-three/fiber`, `@react-three/drei` (~1MB gzipped reclaimed).
+Git history has the working code at commit `63e4802` if you ever
+want to read the geometry choices.
+
+---
+
 ### T4.1 · Gemini-generated surge tasks (context-aware)
 
 **Where.** `lib/surgeTaskTemplates.ts` — 5 hardcoded tasks, cloned

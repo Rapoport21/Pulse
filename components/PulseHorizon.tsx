@@ -28,7 +28,6 @@ import {
   X,
   Activity,
   ChevronRight,
-  Radar,
   UserPlus,
   DoorOpen,
   ClipboardList,
@@ -68,7 +67,6 @@ import {
   BriefMeScreen,
 } from './clinical';
 import { seedBedState, type BedUnit } from '../data/bedMock';
-import { BedDroneView } from './BedDroneView';
 import { useRealtimeState } from '../lib/realtime';
 import {
   COLORS,
@@ -184,7 +182,6 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [selectedDriverDetails, setSelectedDriverDetails] = useState<SelectedDriver | null>(null);
   const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
-  const [showDroneView, setShowDroneView] = useState(false);
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
   const [showRoundingList, setShowRoundingList] = useState(false);
@@ -631,14 +628,6 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 <Mono tone="muted" size="xs">
                   RANGE: -30M → +90M · RES: 30M
                 </Mono>
-                <TacticalButton
-                  variant="secondary"
-                  size="sm"
-                  icon={<Radar size={12} strokeWidth={2} />}
-                  onClick={() => setShowDroneView(true)}
-                >
-                  Live Floor
-                </TacticalButton>
                 <TacticalButton
                   variant={isSimulating ? 'primary' : 'secondary'}
                   size="sm"
@@ -1849,147 +1838,6 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
         onClose={() => setShowBedBoard(false)}
         role={currentUser.role}
       />
-
-      {/* Drone-view live floor map — fullscreen modal launched from
-          the Forecast chart header. Three.js scene rendering each
-          ward as a labeled plate, beds as extruded boxes color-coded
-          by state, EMS arrivals as moving glowing dots. Camera
-          gently arcs ±5° on a slow loop. See components/BedDroneView. */}
-      {showDroneView && (
-        <div
-          role="dialog"
-          aria-label="Live floor drone view"
-          aria-modal="true"
-          onClick={(e) => {
-            // Click on the backdrop (not the panel) closes the modal.
-            if (e.target === e.currentTarget) setShowDroneView(false);
-          }}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0, 0, 0, 0.72)',
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: SPACE['2xl'],
-          }}
-        >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: '100%',
-            maxWidth: 1280,
-            height: 'min(80vh, 820px)',
-            background: COLORS.surface,
-            border: `1px solid ${COLORS.borderStrong}`,
-            borderRadius: RADIUS.md,
-            boxShadow: '0 24px 72px rgba(0, 0, 0, 0.65)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {/* Top HUD strip */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: `${SPACE.md}px ${SPACE.lg}px`,
-              borderBottom: `1px solid ${COLORS.borderStrong}`,
-              background: COLORS.surface,
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-              <Radar size={16} strokeWidth={2} color={COLORS.accent} />
-              <Mono tone="primary" size="sm">
-                Live Floor · Drone View
-              </Mono>
-              <Mono tone="muted" size="xs">
-                · {seedBedState().reduce((acc, u) => acc + u.beds.length, 0)} BEDS · LIVE
-              </Mono>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowDroneView(false)}
-              aria-label="Close drone view"
-              style={{
-                background: 'transparent',
-                border: `1px solid ${COLORS.borderStrong}`,
-                borderRadius: RADIUS.sm,
-                padding: `${SPACE.xs}px ${SPACE.sm}px`,
-                color: COLORS.textSecondary,
-                cursor: 'pointer',
-                fontFamily: FONTS.mono,
-                fontSize: 11,
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACE.xs,
-              }}
-            >
-              <X size={12} strokeWidth={2} />
-              Close
-            </button>
-          </div>
-
-          {/* 3D scene */}
-          <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-            <BedDroneView bedUnits={seedBedState()} activeScenario={activeScenario} />
-
-            {/* Legend overlay */}
-            <div
-              style={{
-                position: 'absolute',
-                bottom: SPACE.lg,
-                left: SPACE.lg,
-                background: 'rgba(10,10,10,0.85)',
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: RADIUS.sm,
-                padding: `${SPACE.sm}px ${SPACE.md}px`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: SPACE.xs,
-                fontFamily: FONTS.mono,
-                fontSize: 10,
-                letterSpacing: '0.14em',
-                color: COLORS.textSecondary,
-                textTransform: 'uppercase',
-              }}
-            >
-              <div style={{ color: COLORS.textPrimary, marginBottom: 2 }}>BED STATE</div>
-              {[
-                { label: 'Ready', color: '#19E3C2' },
-                { label: 'Occupied', color: '#F5A623' },
-                { label: 'Critical (ESI-1)', color: '#FF3838' },
-                { label: 'Reserved', color: '#E11D48' },
-                { label: 'Not staffed', color: '#FF6A00' },
-                { label: 'Dirty / EVS', color: '#FF8A2E' },
-                { label: 'Blocked', color: '#A02828' },
-              ].map((row) => (
-                <div key={row.label} style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 8,
-                      height: 8,
-                      background: row.color,
-                      boxShadow: `0 0 6px ${row.color}`,
-                    }}
-                  />
-                  {row.label}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        </div>
-      )}
 
       {/* Admit Flow fullscreen overlay */}
       <AdmitFlow

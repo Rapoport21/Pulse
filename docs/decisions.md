@@ -12,6 +12,74 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-04-30 · Killed the 3D "Live Floor" drone view
+
+**Context.** Briefly shipped a 3D hospital floor-plan modal launched
+from the Forecast chart header — `components/BedDroneView.tsx` plus a
+modal stub in `PulseHorizon`. Built on `three`, `@react-three/fiber`,
+and `@react-three/drei`. Three sequential rebuild attempts:
+
+1. **First pass.** Flat plate + extruded boxes per bed; ward
+   placements mis-mapped (`medsurg-2w` instead of actual `ms-2w`);
+   too dim to read.
+2. **Second pass.** Added wall geometry, room partitions, corridor
+   strips, ceiling lights, scenario-tinted ambient. Still felt like
+   a chart, not a hospital — walls were 0.08–0.16 thick (hairlines)
+   and the camera was too far back.
+3. **Third pass.** Bumped wall thickness 4×, added MEMORIAL GENERAL
+   on the north facade, painted ambulance bay with red cross +
+   helipad H, parking stripes, IV poles, wall monitors with tiny
+   waveform planes, nursing-station avatars, a crash cart at ED
+   Trauma, drei `OrbitControls` for user rotation/zoom. Still
+   visually unconvincing.
+
+**Decision.** Removed entirely. Deleted `components/BedDroneView.tsx`,
+the modal block in `PulseHorizon`, the `Radar` import, the
+`showDroneView` state, and the launcher button on the chart header.
+Uninstalled `three` / `@react-three/fiber` / `@react-three/drei`
+(reclaimed ~1MB gzipped from the bundle). Idea is parked in
+`docs/improvement-ideas.md` under T4 with a pointer back here.
+
+**Why.** Three iterations couldn't make it read as a real hospital.
+Procedural geometry built from primitives (boxes for walls, cylinders
+for IV poles, capsules for nurses) is the wrong tool — it lands in a
+visual uncanny valley between schematic and rendered. The SimCity-y
+look distracted from the actual operations data, and on Nick's
+review it landed as "very bad" each pass.
+
+**What we'd do differently if we revisit.** Don't build the geometry
+by hand. Either:
+  (a) Load a real GLTF/GLB hospital floor model (Sketchfab Pro,
+      ArchViz packs, or commission one). Map our `BedUnit` data onto
+      named meshes via `gltf.scene.getObjectByName('ICU-1')` and
+      drive only color/emissive based on bed state.
+  (b) Use a 2D top-down floor plan rendered in SVG with isometric
+      CSS transforms. Cheaper, sharper, no uncanny valley — looks
+      like an architectural drawing instead of a low-poly toy.
+  (c) Skip 3D entirely and double down on the existing 2D Bed Board
+      grid with motion accents.
+
+The data wiring (`useEmsInbound` for moving dots, scenario severity
+tinting, bed-state visuals) was sound — that part can be reused
+under any future approach. Only the rendering layer needs to change.
+
+**Trade-offs accepted.** No live spatial visualization in the demo
+right now. The Bed Board tab still gives the same data in 2D. The
+EMS auto-brief (also shipped this week) covers the "demo magic
+moment" function the drone view was meant to provide.
+
+**Sunset checklist** — confirmed before commit:
+- [x] `components/BedDroneView.tsx` deleted
+- [x] Modal block + state + button + import removed from
+      `components/PulseHorizon.tsx`
+- [x] `three` / `@react-three/fiber` / `@react-three/drei`
+      uninstalled
+- [x] Bundle size confirmed ~1MB smaller post-uninstall
+- [x] `npx tsc --noEmit` clean
+- [x] `npm run build` clean
+
+---
+
 ## 2026-04-18 · Bracelet generation lives on disk, not in the app
 
 **Context.** We briefly shipped an in-app pre-print flow
