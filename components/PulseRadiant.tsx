@@ -278,26 +278,26 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   return widgets.map((w, i) => {
     // Priority drives radial distance — bigger widgets near the center
     // (the "decision core"), smaller priority widgets at the periphery.
-    // Wider XZ for breathing room per Nick.
+    // Slightly wider so widgets have visible breathing room on screen.
     const priorityRadiusMap: Record<Priority, [number, number]> = {
-      5: [6, 18],
-      4: [16, 32],
-      3: [26, 46],
-      2: [36, 62],
-      1: [48, 82],
+      5: [7, 20],
+      4: [18, 34],
+      3: [28, 50],
+      2: [38, 66],
+      1: [50, 88],
     };
     const [minR, maxR] = priorityRadiusMap[w.priority];
     const radius = minR + rand() * (maxR - minR);
 
-    // Y squash 0.42 — cluster reads as a volumetric *disc*, not a
-    // sphere. Vertical extent is tightly bounded so bottom widgets
-    // don't clip below the camera frame at default fit.
+    // Y squash 0.38 — flatter disc keeps the cluster's vertical extent
+    // well inside the camera frame at the locked autofit distance,
+    // even when peripheral priority-1 widgets land near the poles.
     const theta = rand() * Math.PI * 2;
     const phi = Math.acos(2 * rand() - 1);
     const x = Math.sin(phi) * Math.cos(theta) * radius;
     const yRaw = Math.cos(phi) * radius;
     const z = Math.sin(phi) * Math.sin(theta) * radius;
-    const y = yRaw * 0.42 + 2; // tiny lift so cluster sits just above origin
+    const y = yRaw * 0.38 + 4; // lift so cluster floor sits comfortably in frame
 
     return {
       ...w,
@@ -1151,7 +1151,7 @@ const DriftWidget: React.FC<{
     <group ref={groupRef}>
       <Html
         center
-        distanceFactor={36}
+        distanceFactor={44}
         style={{
           animation: `widget-spawn 600ms cubic-bezier(0.16, 1, 0.32, 1) ${spawnDelay} backwards`,
         }}
@@ -1579,7 +1579,7 @@ const FutureTree: React.FC<{ cascadeNonce?: number }> = ({ cascadeNonce = 0 }) =
           key={n.id}
           position={n.pos}
           center
-          distanceFactor={n.kind === 'apex' ? 48 : 38}
+          distanceFactor={n.kind === 'apex' ? 60 : 46}
           style={{ pointerEvents: 'none' }}
           zIndexRange={n.kind === 'apex' ? [70, 12] : n.kind === 'dead' ? [40, 4] : [55, 8]}
         >
@@ -1750,10 +1750,15 @@ const computeFitHome = (
   const aspect = width / Math.max(1, height);
   const fovRad = (fovDeg * Math.PI) / 180;
   const tanHalf = Math.tan(fovRad / 2);
-  // 1.20 vertical padding, 1.15 horizontal padding so labels never crop
+  // 1.20 vertical padding, 1.10 horizontal padding so apex + cluster
+  // center always sit in frame. Cap at 175 so portrait viewports
+  // don't push widgets too small to read — peripheral cluster widgets
+  // at the wide end may overflow horizontally on narrow aspects, but
+  // the radiant rotates ambient + the user can drag, so they cycle
+  // back into view. Readability beats forced full-width fit.
   const distH = (halfY * 1.20) / tanHalf;
-  const distW = (halfXZ * 1.15) / (aspect * tanHalf);
-  const dist = Math.max(distH, distW, 95);
+  const distW = (halfXZ * 1.10) / (aspect * tanHalf);
+  const dist = Math.min(175, Math.max(distH, distW, 105));
   return new THREE.Vector3(0, targetY, dist);
 };
 
@@ -1766,13 +1771,14 @@ const CameraOrchestrator: React.FC<{
   const startedRef = useRef<number>(0);
   const completedRef = useRef(false);
 
-  // Cluster squashed to ±~17 around origin, apex at y=62. Target the
-  // midpoint, halfY = 48 covers the whole [-17, +62] range with the
-  // 1.20 padding factor in computeFitHome. halfXZ matches widened
-  // priority-1 reach (82) plus TimeAxis (62).
-  const targetY = 22;
+  // Cluster Y squashed to ±~33 around y=4, apex at y=62. Target y=18
+  // is the midpoint of [-30, +62]; halfY = 48 with the 1.20 padding
+  // covers the lot. halfXZ matches widened priority-1 reach (88) plus
+  // TimeAxis (62) — the autofit clamps at maxDist 175 in
+  // computeFitHome so portrait viewports don't lose readability.
+  const targetY = 18;
   const halfY = 48;
-  const halfXZ = 92;
+  const halfXZ = 96;
 
   const home = useMemo(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return new THREE.Vector3(0, targetY, 145);
@@ -1982,14 +1988,13 @@ const Scene: React.FC = () => {
       {introDone && (
         <OrbitControls
           enablePan={false}
+          enableZoom={false}
           autoRotate={false}
           enableDamping
           dampingFactor={0.09}
-          minDistance={80}
-          maxDistance={320}
           minPolarAngle={Math.PI * 0.14}
           maxPolarAngle={Math.PI * 0.86}
-          target={[0, 22, 0]}
+          target={[0, 18, 0]}
           makeDefault
         />
       )}
@@ -2063,7 +2068,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
       <Canvas
         dpr={env.mobile ? [1, 1.5] : [1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        camera={{ position: [0, 24, 145], fov: 55, near: 0.1, far: 380 }}
+        camera={{ position: [0, 18, 160], fov: 55, near: 0.1, far: 380 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
@@ -2079,8 +2084,8 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         whiteSpace: 'nowrap',
       }}>
         {env.mobile
-          ? 'Drag · pinch to zoom · ψ-projection live'
-          : 'Hover a widget · drag to rotate · scroll to zoom · ψ-projection live'}
+          ? 'Drag to rotate · ψ-projection live'
+          : 'Hover a widget · drag to rotate · ψ-projection live'}
       </div>
     </div>
   );
