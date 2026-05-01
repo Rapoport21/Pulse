@@ -1,541 +1,409 @@
 /**
- * PulseRadiant — 3D force-directed network graph rendered as a glowing
- * constellation of connected nodes suspended in dark space.
+ * PulseRadiant — reverse decision-tree topology of how PULSE thinks.
  *
- * 2026-05-01 · Inspiration: Foundation's Prime Radiant device. A handheld
- * projector blooms a luminous cloud of mathematical relationships —
- * glowing particles, faint connecting threads, slow drift, warm amber-
- * gold light against deep navy/black.
+ * 2026-05-01 (rewrite) · Out: glowing constellation of abstract spheres
+ * with starfield. In: PULSE-tactical data widgets arranged as an
+ * inverted decision tree — wide base of raw inputs, narrowing through
+ * pattern recognition + scenarios, converging to a small tip of
+ * decisions. Pulses propagate UP the tree (data → decisions).
  *
- * Treats PULSE's reasoning as something you LOOK INTO rather than READ.
- * The cluster represents the entities PULSE thinks about (patients,
- * beds, EMS, alerts, scenarios, forecasts, interventions) and the
- * relationships between them. Hubs are units; leaves are decisions.
+ * Architecture:
  *
- * Data is synthesized — believable but not live. The point is the FEEL.
+ *                               [ DECISIONS ]                    ← layer 4 (3 widgets)
+ *                                  / | \
+ *                            [ SCENARIOS ]                       ← layer 3 (6 widgets)
+ *                              / | | | \
+ *                       [ PATTERNS / RISKS ]                     ← layer 2 (12 widgets)
+ *                        / / | | | | | \ \
+ *               [ RAW DATA INPUTS ]                              ← layer 1 (30 widgets)
  *
- * Stack:
- *   • three.js + @react-three/fiber for scene graph
- *   • @react-three/drei for OrbitControls, instanced primitives
- *   • @react-three/postprocessing for the Bloom glow
+ * All four layers stacked vertically in 3D. Camera looks at the
+ * structure from the side (slightly above mid-height). Slow auto-
+ * rotate continues under user grab.
  *
- * Visual properties (per the brief):
- *   • Dark background, deep navy → black radial gradient
- *   • Nodes glow via additive blending (soft falloff, not solid spheres)
- *   • Most nodes warm amber-gold; minority rose-accent (PULSE brand
- *     marker for predictive entities)
- *   • Edge brightness decays with distance between connected nodes
- *   • Faint starfield background drifting opposite to main rotation
- *   • Hub nodes naturally appear brighter (more incident light + more
- *     edges meeting there)
+ * Widgets:
+ *   • Rendered as drei <Html> overlays so they're real DOM, real
+ *     PULSE styling (tactical cards, Mono labels, BracketLabel,
+ *     rose accent). Not WebGL primitives.
+ *   • Each carries a label + (sometimes) a value + a category dot.
+ *   • Colors graduate from neutral at the base to rose at the tip.
  *
- * Motion:
- *   • Slow continuous auto-rotate
- *   • Each node pulses at its own slow rhythm — cluster breathes
- *   • Edges shimmer faintly
- *   • User can grab + rotate; auto-rotate continues underneath
- *   • Periodic bright "thought" pulses travel along random edges,
- *     simulating decision propagation
+ * Edges:
+ *   • Line segments (WebGL) connecting each widget to 1-3 widgets
+ *     in the layer above.
+ *   • Bloom post-processing for the cinematic glow.
+ *   • Decision pulses spawn at the bottom and travel UP, threading
+ *     through the network. ~32% are rose-accent (decision-relevant);
+ *     rest are amber (data flow).
  *
- * Layout: pre-computed once via lightweight relaxation iterations.
- * Not a real-time force simulation (per the brief — that's heavier).
+ * Background: deep black + faint rose radial glow at the floor. NO
+ * stars. Matches PULSE canvas.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import { COLORS, FONTS, SPACE, RADIUS } from './design';
 
 // ──────────────────────────────────────────────────────────────────
-// Palette
+// Widget catalog — what PULSE actually thinks about
 // ──────────────────────────────────────────────────────────────────
-const PALETTE = {
-  // Main amber-gold — the warm "thought" color
-  amber: new THREE.Color('#F5B85B'),
-  amberDim: new THREE.Color('#8B7340'),
-  amberBright: new THREE.Color('#FFD688'),
-  // Rose accent — PULSE brand, used for predictive/decision nodes
-  rose: new THREE.Color('#F43F5E'),
-  roseBright: new THREE.Color('#FF6680'),
-  // Edge color — neutral warm
-  edge: new THREE.Color('#6B5230'),
-  edgeBright: new THREE.Color('#D4A05A'),
-  // Background star color
-  star: new THREE.Color('#A89B7A'),
-  // Bg
-  bg: new THREE.Color('#040206'),
+
+type Layer = 1 | 2 | 3 | 4;
+
+type Tone = 'muted' | 'info' | 'warn' | 'accent';
+
+interface Widget {
+  id: number;
+  layer: Layer;
+  label: string;
+  value?: string;
+  /** Used to color the dot. */
+  tone: Tone;
+}
+
+// LAYER 1 — RAW INPUTS (the wide base, 30 widgets)
+const LAYER_1: Omit<Widget, 'id' | 'layer'>[] = [
+  { label: 'I-95 traffic',          value: '+18m', tone: 'warn' },
+  { label: 'Weather',               value: '54°F · rain', tone: 'muted' },
+  { label: 'Wind speed',            value: '22 kt',  tone: 'warn' },
+  { label: 'Time of day',           value: '14:22', tone: 'muted' },
+  { label: 'Day of week',           value: 'Wed',  tone: 'muted' },
+  { label: 'Season',                value: 'Spring', tone: 'muted' },
+  { label: 'Holiday calendar',      value: '—',    tone: 'muted' },
+  { label: 'Public events',         value: 'Concert · 18:00', tone: 'warn' },
+  { label: 'School schedule',       value: 'In session', tone: 'muted' },
+  { label: '911 call volume',       value: '+24%', tone: 'warn' },
+  { label: '911 call types',        value: '34% MVC', tone: 'warn' },
+  { label: 'Police dispatch',       value: '12 active', tone: 'muted' },
+  { label: 'Fire dispatch',         value: '3 active',  tone: 'muted' },
+  { label: 'Ambulance availability', value: '6 / 9',   tone: 'warn' },
+  { label: 'Highway crashes',       value: '2 reported', tone: 'warn' },
+  { label: 'Air quality index',     value: '92',  tone: 'muted' },
+  { label: 'Pollen count',          value: 'High', tone: 'muted' },
+  { label: 'Flu surveillance',      value: 'Rising', tone: 'warn' },
+  { label: 'Pharmacy supply',       value: 'Nominal', tone: 'muted' },
+  { label: 'Blood bank',            value: 'O- · 4u', tone: 'warn' },
+  { label: 'OR schedule',           value: '7 elective', tone: 'info' },
+  { label: 'Lab turnaround',        value: '38m avg', tone: 'muted' },
+  { label: 'Imaging queue',         value: '5 waiting', tone: 'info' },
+  { label: 'Discharge queue',       value: '12 ready', tone: 'info' },
+  { label: 'ICU beds',              value: '1 / 12',  tone: 'warn' },
+  { label: 'ED waiting room',       value: '34 patients', tone: 'warn' },
+  { label: 'Triage acuity',         value: '6 ESI-2', tone: 'warn' },
+  { label: 'RN staffing',           value: '1:4.2',  tone: 'info' },
+  { label: 'Insurance auth',        value: '17 pending', tone: 'muted' },
+  { label: 'Prior pattern match',   value: '94% sim', tone: 'info' },
+];
+
+// LAYER 2 — PATTERNS / RISK SIGNALS (12 widgets)
+const LAYER_2: Omit<Widget, 'id' | 'layer'>[] = [
+  { label: 'Boarding pressure',   value: '18 admitted', tone: 'warn' },
+  { label: 'EMS offload risk',    value: '30m avg', tone: 'warn' },
+  { label: 'Staffing gap (RN)',   value: '−2 FTE', tone: 'warn' },
+  { label: 'Bed turnover',        value: '38m avg', tone: 'info' },
+  { label: 'Surge probability',   value: '64% · 4h', tone: 'warn' },
+  { label: 'Trauma likelihood',   value: '+38%',  tone: 'warn' },
+  { label: 'ICU saturation',      value: '92% by 16:00', tone: 'warn' },
+  { label: 'ED wait forecast',    value: '+22m',  tone: 'warn' },
+  { label: 'Discharge throughput', value: '−18%',  tone: 'info' },
+  { label: 'Float pool',          value: '2 RN warm', tone: 'info' },
+  { label: 'Regional divert',     value: '2 of 4',  tone: 'warn' },
+  { label: 'Resource bottleneck', value: 'CT-1',   tone: 'warn' },
+];
+
+// LAYER 3 — SCENARIOS / WHAT-IFS (6 widgets)
+const LAYER_3: Omit<Widget, 'id' | 'layer'>[] = [
+  { label: 'Baseline projection',  value: 'NEDOCS 124', tone: 'info' },
+  { label: 'Mild surge',          value: 'NEDOCS 142', tone: 'warn' },
+  { label: 'Moderate surge',      value: 'NEDOCS 168', tone: 'warn' },
+  { label: 'Mass casualty',       value: 'NEDOCS 184', tone: 'accent' },
+  { label: 'Regional divert',     value: '4 hospitals', tone: 'warn' },
+  { label: 'Recovery curve',      value: '−40m by 18:00', tone: 'info' },
+];
+
+// LAYER 4 — DECISIONS (3 widgets at the tip)
+const LAYER_4: Omit<Widget, 'id' | 'layer'>[] = [
+  { label: 'Pre-stage float',     value: '2 RN · 20m warm', tone: 'accent' },
+  { label: 'Activate surge',      value: 'Tier 2 · ready',  tone: 'accent' },
+  { label: 'Post divert',         value: 'Regional grid',   tone: 'accent' },
+];
+
+// Build all widgets with assigned ids + layers
+const buildCatalog = (): Widget[] => {
+  const out: Widget[] = [];
+  let id = 0;
+  LAYER_1.forEach((w) => out.push({ ...w, id: id++, layer: 1 }));
+  LAYER_2.forEach((w) => out.push({ ...w, id: id++, layer: 2 }));
+  LAYER_3.forEach((w) => out.push({ ...w, id: id++, layer: 3 }));
+  LAYER_4.forEach((w) => out.push({ ...w, id: id++, layer: 4 }));
+  return out;
 };
 
 // ──────────────────────────────────────────────────────────────────
-// PULSE entity catalog — the things the cluster represents
+// Layout — stacked rings, decreasing radius going UP
 // ──────────────────────────────────────────────────────────────────
-type Category =
-  | 'patient'   // amber, leaves
-  | 'bed'       // amber
-  | 'ems'       // amber
-  | 'staff'     // amber
-  | 'alert'     // amber
-  | 'forecast'  // rose accent
-  | 'scenario'  // rose accent
-  | 'risk'      // rose accent
-  | 'unit';     // hub — many connections, brighter
-
-interface NodeDef {
-  id: number;
-  category: Category;
-  label: string;
-  /** "Importance" — higher = larger + brighter */
-  weight: number;
-}
-
-interface PreparedNode extends NodeDef {
+interface PreparedWidget extends Widget {
   position: THREE.Vector3;
-  /** Per-node pulse phase (0..2π) so they breathe at different rhythms */
+  /** Pulse phase for breathing animation */
   phase: number;
-  /** Per-node pulse speed (slight variance) */
-  pulseSpeed: number;
 }
 
+const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
+  const prepared: PreparedWidget[] = [];
+  // Layer geometry — Y increases going up (toward decisions).
+  // Radius decreases going up so the tree narrows.
+  const layerSpec = {
+    1: { y: -8.5, radius: 13 },
+    2: { y: -2.5, radius: 7.5 },
+    3: { y:  3.5, radius: 4.0 },
+    4: { y:  8.5, radius: 1.6 },
+  } as const;
+
+  // Group widgets by layer
+  const byLayer = new Map<Layer, Widget[]>([[1, []], [2, []], [3, []], [4, []]]);
+  widgets.forEach((w) => byLayer.get(w.layer)!.push(w));
+
+  // Place each layer in a ring on the X-Z plane at its Y
+  byLayer.forEach((items, layer) => {
+    const spec = layerSpec[layer];
+    const n = items.length;
+    items.forEach((w, i) => {
+      // Slight stagger / phase offset per layer to break perfect ring
+      const angle = (i / n) * Math.PI * 2 + (layer * 0.3);
+      const r = spec.radius * (1 + (Math.sin(i * 1.7 + layer) * 0.06));
+      const yJitter = Math.sin(i * 2.3 + layer * 1.1) * 0.4;
+      prepared.push({
+        ...w,
+        position: new THREE.Vector3(
+          Math.cos(angle) * r,
+          spec.y + yJitter,
+          Math.sin(angle) * r,
+        ),
+        phase: (i + layer * 4.7) * 0.6,
+      });
+    });
+  });
+
+  return prepared;
+};
+
+// ──────────────────────────────────────────────────────────────────
+// Edge generation — fan UP from each lower widget to nearest in upper
+// ──────────────────────────────────────────────────────────────────
 interface Edge {
   from: number;
   to: number;
-  /** Cached length — computed after layout */
-  len: number;
+  /** 1 if this edge crosses to a higher layer (used for pulse direction) */
+  upward: 1;
 }
 
-const UNIT_LABELS = ['ED Trauma', 'ED Acute', 'ED Fast', 'ICU', 'Stepdown', 'MS-2W', 'MS-3E', 'OR'];
-const PATIENT_NAMES = [
-  'Donovan', 'Lopez', 'Wright', 'Torres', 'Sellers', 'Hernandez', 'Lin', 'Flores',
-  'Garcia', 'Jensen', 'Martinez', 'Tariq', 'Brooks', 'Park', 'Singh', 'Davis',
-  'Kim', 'Reeves', 'Nguyen', 'Adams', 'Foster', 'Wilson', 'Chen', 'Patel',
-  'Sato', 'Rivera', 'Espinoza', 'Nguyen-T', 'Watts', 'Robinson', 'Walsh', 'Fitzgerald',
-];
-const STAFF_NAMES = [
-  'N. Chen', 'R. Patel', 'S. Lee', 'J. Kim', 'M. Davis', 'T. Reeves', 'A. Torres', 'L. Brown',
-  'K. Foster', 'R. Gomez', 'P. Walsh', 'D. Miller', 'H. Park', 'V. Singh', 'C. Adams', 'B. Wells',
-];
-const SCENARIO_LABELS = ['MCI ramp', 'Surge S2', 'Mass-cas peak', 'EMS divert', 'Float pool warm'];
-const RISK_LABELS = ['Boarding', 'Offload', 'Staff gap', 'Bed turn', 'OR backlog', 'Trauma activation'];
-
-// Build the catalog — 120-ish entities
-const buildCatalog = (): NodeDef[] => {
-  const nodes: NodeDef[] = [];
-  let id = 0;
-
-  // Hubs (8) — units, high weight
-  UNIT_LABELS.forEach((label) => {
-    nodes.push({ id: id++, category: 'unit', label, weight: 1.7 });
-  });
-
-  // Beds (24)
-  for (let i = 0; i < 24; i++) {
-    const unit = UNIT_LABELS[i % UNIT_LABELS.length];
-    nodes.push({ id: id++, category: 'bed', label: `${unit} · ${i + 1}`, weight: 0.6 });
-  }
-
-  // Patients (32)
-  for (let i = 0; i < 32; i++) {
-    nodes.push({
-      id: id++,
-      category: 'patient',
-      label: PATIENT_NAMES[i % PATIENT_NAMES.length],
-      weight: 0.5 + Math.random() * 0.35,
-    });
-  }
-
-  // EMS runs (8)
-  for (let i = 0; i < 8; i++) {
-    nodes.push({
-      id: id++,
-      category: 'ems',
-      label: `Medic ${10 + i}`,
-      weight: 0.7,
-    });
-  }
-
-  // Staff (16)
-  for (let i = 0; i < 16; i++) {
-    nodes.push({
-      id: id++,
-      category: 'staff',
-      label: STAFF_NAMES[i % STAFF_NAMES.length],
-      weight: 0.55,
-    });
-  }
-
-  // Alerts (12)
-  for (let i = 0; i < 12; i++) {
-    nodes.push({
-      id: id++,
-      category: 'alert',
-      label: `Alert ${i + 1}`,
-      weight: 0.4,
-    });
-  }
-
-  // Forecast nodes (6) — rose accent, predictive
-  for (let i = 0; i < 6; i++) {
-    nodes.push({
-      id: id++,
-      category: 'forecast',
-      label: `Forecast +${(i + 1) * 30}m`,
-      weight: 1.1,
-    });
-  }
-
-  // Scenarios (5) — rose accent
-  SCENARIO_LABELS.forEach((label) => {
-    nodes.push({ id: id++, category: 'scenario', label, weight: 1.0 });
-  });
-
-  // Risks (6) — rose accent
-  RISK_LABELS.forEach((label) => {
-    nodes.push({ id: id++, category: 'risk', label, weight: 0.85 });
-  });
-
-  return nodes;
-};
-
-// Build edges — categorical relationships
-const buildEdges = (nodes: NodeDef[]): Edge[] => {
+const buildEdges = (widgets: PreparedWidget[]): Edge[] => {
   const edges: Edge[] = [];
-  const byCat = new Map<Category, NodeDef[]>();
-  nodes.forEach((n) => {
-    if (!byCat.has(n.category)) byCat.set(n.category, []);
-    byCat.get(n.category)!.push(n);
-  });
+  const byLayer = new Map<Layer, PreparedWidget[]>([[1, []], [2, []], [3, []], [4, []]]);
+  widgets.forEach((w) => byLayer.get(w.layer)!.push(w));
 
-  const units = byCat.get('unit') ?? [];
-  const beds = byCat.get('bed') ?? [];
-  const patients = byCat.get('patient') ?? [];
-  const ems = byCat.get('ems') ?? [];
-  const staff = byCat.get('staff') ?? [];
-  const alerts = byCat.get('alert') ?? [];
-  const forecasts = byCat.get('forecast') ?? [];
-  const scenarios = byCat.get('scenario') ?? [];
-  const risks = byCat.get('risk') ?? [];
-
-  const link = (a: NodeDef, b: NodeDef) => {
-    edges.push({ from: a.id, to: b.id, len: 1 });
+  // For each lower-layer widget, find K nearest in the layer above and
+  // connect to them. K controls fan-in density.
+  const connectLayer = (lower: Layer, upper: Layer, k: number) => {
+    const lowerNodes = byLayer.get(lower)!;
+    const upperNodes = byLayer.get(upper)!;
+    lowerNodes.forEach((from) => {
+      // Compute distance to every upper node, sort, take top-k
+      const distances = upperNodes
+        .map((to) => ({ to, d: from.position.distanceTo(to.position) }))
+        .sort((a, b) => a.d - b.d);
+      for (let i = 0; i < Math.min(k, distances.length); i++) {
+        edges.push({ from: from.id, to: distances[i].to.id, upward: 1 });
+      }
+    });
   };
 
-  // Each bed → its unit
-  beds.forEach((b, i) => link(b, units[i % units.length]));
-  // Each patient → a bed (most) or unit (some)
-  patients.forEach((p, i) => {
-    if (i < beds.length) link(p, beds[i]);
-    else link(p, units[i % units.length]);
-  });
-  // Each EMS → a unit (typically ED-Trauma) and a forecast
-  ems.forEach((e, i) => {
-    link(e, units[0]); // ED Trauma
-    if (forecasts[i % forecasts.length]) link(e, forecasts[i % forecasts.length]);
-  });
-  // Each staff → a unit + 1-2 patients
-  staff.forEach((s, i) => {
-    link(s, units[i % units.length]);
-    if (patients[i * 2 % patients.length]) link(s, patients[i * 2 % patients.length]);
-    if (patients[(i * 2 + 1) % patients.length]) link(s, patients[(i * 2 + 1) % patients.length]);
-  });
-  // Alerts → patients or units
-  alerts.forEach((a, i) => {
-    if (i % 2 === 0 && patients[i % patients.length]) link(a, patients[i % patients.length]);
-    else link(a, units[i % units.length]);
-  });
-  // Forecasts → all units (forecasts span the hospital)
-  forecasts.forEach((f) => {
-    units.forEach((u, i) => {
-      if (i % 2 === 0) link(f, u);
-    });
-  });
-  // Scenarios → forecasts + risks
-  scenarios.forEach((s, i) => {
-    if (forecasts[i % forecasts.length]) link(s, forecasts[i % forecasts.length]);
-    if (risks[i % risks.length]) link(s, risks[i % risks.length]);
-    if (risks[(i + 1) % risks.length]) link(s, risks[(i + 1) % risks.length]);
-  });
-  // Risks → relevant units
-  risks.forEach((r, i) => {
-    link(r, units[i % units.length]);
-    link(r, units[(i + 2) % units.length]);
-  });
+  connectLayer(1, 2, 2);  // each input feeds 2 patterns
+  connectLayer(2, 3, 2);  // each pattern feeds 2 scenarios
+  connectLayer(3, 4, 2);  // each scenario feeds 2 decisions
 
   return edges;
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Layout — pre-computed via N iterations of simple relaxation
+// Widget HTML card (drei Html overlay — real PULSE tactical style)
 // ──────────────────────────────────────────────────────────────────
-const SPHERE_RADIUS = 8;
-
-const layoutNodes = (nodes: NodeDef[], edges: Edge[]): PreparedNode[] => {
-  // Seeded pseudo-random for deterministic init
-  let seed = 1337;
-  const rand = () => {
-    seed = (seed * 9301 + 49297) % 233280;
-    return seed / 233280;
-  };
-
-  // Initialize random positions in a sphere
-  const positions: THREE.Vector3[] = nodes.map(() => {
-    const r = SPHERE_RADIUS * Math.cbrt(rand());
-    const theta = rand() * Math.PI * 2;
-    const phi = Math.acos(2 * rand() - 1);
-    return new THREE.Vector3(
-      r * Math.sin(phi) * Math.cos(theta),
-      r * Math.sin(phi) * Math.sin(theta),
-      r * Math.cos(phi),
-    );
-  });
-
-  // Adjacency list for fast lookups
-  const adj: number[][] = nodes.map(() => []);
-  edges.forEach((e) => {
-    adj[e.from].push(e.to);
-    adj[e.to].push(e.from);
-  });
-
-  // Relaxation: weak repulsion + edge-spring + center pull
-  const ITERATIONS = 80;
-  const REPULSION = 0.4;
-  const SPRING = 0.18;
-  const SPRING_REST = 1.6;
-  const CENTER_PULL = 0.012;
-
-  for (let iter = 0; iter < ITERATIONS; iter++) {
-    const forces = positions.map(() => new THREE.Vector3());
-
-    // Repulsion (sampled — every node vs every 3rd to keep cost down)
-    for (let i = 0; i < positions.length; i++) {
-      for (let j = i + 1; j < positions.length; j += 3) {
-        const delta = positions[i].clone().sub(positions[j]);
-        const dist = Math.max(0.1, delta.length());
-        const force = REPULSION / (dist * dist);
-        delta.normalize().multiplyScalar(force);
-        forces[i].add(delta);
-        forces[j].sub(delta);
-      }
-    }
-
-    // Spring along edges
-    for (const edge of edges) {
-      const delta = positions[edge.to].clone().sub(positions[edge.from]);
-      const dist = delta.length();
-      const stretch = dist - SPRING_REST;
-      const force = SPRING * stretch;
-      delta.normalize().multiplyScalar(force);
-      forces[edge.from].add(delta);
-      forces[edge.to].sub(delta);
-    }
-
-    // Center pull
-    for (let i = 0; i < positions.length; i++) {
-      const center = positions[i].clone().multiplyScalar(-CENTER_PULL);
-      forces[i].add(center);
-    }
-
-    // Apply forces (capped step)
-    for (let i = 0; i < positions.length; i++) {
-      const step = forces[i];
-      const len = step.length();
-      const cap = 0.5;
-      if (len > cap) step.multiplyScalar(cap / len);
-      positions[i].add(step);
-    }
+const toneColor = (tone: Tone): string => {
+  switch (tone) {
+    case 'accent':
+      return COLORS.accent;
+    case 'warn':
+      return COLORS.warn;
+    case 'info':
+      return COLORS.info;
+    case 'muted':
+    default:
+      return COLORS.textMuted;
   }
-
-  return nodes.map((n, i) => ({
-    ...n,
-    position: positions[i],
-    phase: rand() * Math.PI * 2,
-    pulseSpeed: 0.4 + rand() * 0.6,
-  }));
 };
 
-// Compute final edge lengths after layout
-const measureEdges = (edges: Edge[], nodes: PreparedNode[]): Edge[] =>
-  edges.map((e) => ({
-    ...e,
-    len: nodes[e.from].position.distanceTo(nodes[e.to].position),
-  }));
+const layerWidth = (layer: Layer): number => {
+  switch (layer) {
+    case 4:
+      return 168;
+    case 3:
+      return 156;
+    case 2:
+      return 144;
+    case 1:
+    default:
+      return 134;
+  }
+};
 
-// ──────────────────────────────────────────────────────────────────
-// Renderers
-// ──────────────────────────────────────────────────────────────────
-
-const Stars: React.FC = () => {
-  const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const arr = new Float32Array(900);
-    for (let i = 0; i < 300; i++) {
-      const r = 25 + Math.random() * 30;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(2 * Math.random() - 1);
-      arr[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      arr[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      arr[i * 3 + 2] = r * Math.cos(phi);
-    }
-    return arr;
-  }, []);
-
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      // Drift opposite to main rotation
-      ref.current.rotation.y = -clock.getElapsedTime() * 0.018;
-      ref.current.rotation.x = clock.getElapsedTime() * 0.008;
-    }
-  });
+const WidgetCard: React.FC<{ widget: PreparedWidget }> = ({ widget }) => {
+  const dotColor = toneColor(widget.tone);
+  const isAccent = widget.tone === 'accent';
+  const w = layerWidth(widget.layer);
+  const borderColor = isAccent
+    ? COLORS.accent
+    : widget.layer >= 3
+    ? COLORS.borderStrong
+    : COLORS.border;
+  const labelTone = isAccent ? COLORS.accent : COLORS.textPrimary;
 
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
+    <div
+      style={{
+        // Counteract the 3D rotation — keep cards flat to camera (handled
+        // by drei Html `transform={false}` mode, default.) Width fixed
+        // so multi-line labels wrap predictably.
+        width: w,
+        background: COLORS.surface,
+        border: `1px solid ${borderColor}`,
+        borderRadius: RADIUS.sm,
+        padding: `${SPACE.xs + 2}px ${SPACE.sm + 2}px`,
+        fontFamily: FONTS.mono,
+        boxShadow: isAccent
+          ? `0 0 14px ${COLORS.accentGlow}`
+          : `0 4px 12px rgba(0, 0, 0, 0.6)`,
+        userSelect: 'none',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* Top row — dot + label */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: widget.value ? 4 : 0,
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-block',
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: dotColor,
+            boxShadow: `0 0 6px ${dotColor}`,
+            flexShrink: 0,
+          }}
         />
-      </bufferGeometry>
-      <pointsMaterial
-        size={0.12}
-        color={PALETTE.star}
-        transparent
-        opacity={0.55}
-        sizeAttenuation
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: labelTone,
+            lineHeight: 1.15,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            flex: 1,
+          }}
+          title={widget.label}
+        >
+          {widget.label}
+        </span>
+      </div>
+      {/* Value row */}
+      {widget.value && (
+        <div
+          style={{
+            fontSize: widget.layer >= 3 ? 12 : 10,
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            color: isAccent ? COLORS.accentBright : COLORS.textPrimary,
+            fontVariantNumeric: 'tabular-nums',
+            paddingLeft: 11, // align under label after the dot
+            lineHeight: 1.15,
+          }}
+        >
+          {widget.value}
+        </div>
+      )}
+    </div>
   );
 };
 
-interface NodesProps {
-  nodes: PreparedNode[];
-}
+// ──────────────────────────────────────────────────────────────────
+// Edge renderer — single LineSegments geometry, shimmer over time
+// ──────────────────────────────────────────────────────────────────
+const Edges: React.FC<{ widgets: PreparedWidget[]; edges: Edge[] }> = ({
+  widgets,
+  edges,
+}) => {
+  const meshRef = useRef<THREE.LineSegments>(null);
 
-const Nodes: React.FC<NodesProps> = ({ nodes }) => {
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const colorBuf = useMemo(() => new THREE.Color(), []);
-
-  // Initialize colors + base scale per node
-  useEffect(() => {
-    if (!meshRef.current) return;
-    nodes.forEach((node, i) => {
-      dummy.position.copy(node.position);
-      const baseScale = 0.08 + node.weight * 0.10;
-      dummy.scale.setScalar(baseScale);
-      dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
-
-      // Category color — most amber, predictive in rose
-      const isAccent =
-        node.category === 'forecast' ||
-        node.category === 'scenario' ||
-        node.category === 'risk';
-      const baseColor = isAccent ? PALETTE.rose : PALETTE.amber;
-      meshRef.current!.setColorAt(i, baseColor);
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-  }, [nodes, dummy]);
-
-  // Per-frame: pulse each node by phase
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const t = clock.getElapsedTime();
-    nodes.forEach((node, i) => {
-      dummy.position.copy(node.position);
-      const baseScale = 0.08 + node.weight * 0.10;
-      const pulse = 1 + Math.sin(t * node.pulseSpeed + node.phase) * 0.20;
-      dummy.scale.setScalar(baseScale * pulse);
-      dummy.updateMatrix();
-      meshRef.current!.setMatrixAt(i, dummy.matrix);
-
-      // Subtle color brightness shimmer for accent nodes
-      const isAccent =
-        node.category === 'forecast' ||
-        node.category === 'scenario' ||
-        node.category === 'risk';
-      if (isAccent) {
-        const shimmer = 0.85 + Math.sin(t * 0.7 + node.phase * 1.7) * 0.15;
-        colorBuf.copy(PALETTE.rose).multiplyScalar(shimmer);
-        meshRef.current!.setColorAt(i, colorBuf);
-      }
-    });
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, nodes.length]}>
-      <sphereGeometry args={[1, 14, 14]} />
-      <meshBasicMaterial
-        transparent
-        opacity={0.95}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </instancedMesh>
-  );
-};
-
-interface EdgesProps {
-  nodes: PreparedNode[];
-  edges: Edge[];
-}
-
-const Edges: React.FC<EdgesProps> = ({ nodes, edges }) => {
-  // Build a single LineSegments geometry for performance
   const { geometry, baseColors } = useMemo(() => {
     const positions = new Float32Array(edges.length * 6);
     const colors = new Float32Array(edges.length * 6);
     edges.forEach((e, i) => {
-      const a = nodes[e.from].position;
-      const b = nodes[e.to].position;
-      positions[i * 6] = a.x;
+      const a = widgets[e.from].position;
+      const b = widgets[e.to].position;
+      positions[i * 6 + 0] = a.x;
       positions[i * 6 + 1] = a.y;
       positions[i * 6 + 2] = a.z;
       positions[i * 6 + 3] = b.x;
       positions[i * 6 + 4] = b.y;
       positions[i * 6 + 5] = b.z;
-      // Brightness inversely proportional to length
-      const brightness = Math.max(0.12, Math.min(0.55, 1 / e.len));
-      const color = PALETTE.edge.clone().multiplyScalar(brightness * 1.4);
-      colors[i * 6] = color.r;
-      colors[i * 6 + 1] = color.g;
-      colors[i * 6 + 2] = color.b;
-      colors[i * 6 + 3] = color.r;
-      colors[i * 6 + 4] = color.g;
-      colors[i * 6 + 5] = color.b;
+
+      // Color: dim rose for upward edges, brightness scales with how
+      // close the edge is to the decision tip (higher Y = brighter).
+      const tipY = (a.y + b.y) / 2;
+      const brightness = 0.18 + Math.max(0, (tipY + 9) / 18) * 0.4;
+      const c = new THREE.Color('#7a3a4a').multiplyScalar(brightness);
+      colors[i * 6 + 0] = c.r;
+      colors[i * 6 + 1] = c.g;
+      colors[i * 6 + 2] = c.b;
+      colors[i * 6 + 3] = c.r;
+      colors[i * 6 + 4] = c.g;
+      colors[i * 6 + 5] = c.b;
     });
+
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     return { geometry: g, baseColors: colors };
-  }, [nodes, edges]);
+  }, [widgets, edges]);
 
-  // Slow shimmer — modulate the color buffer over time
-  const meshRef = useRef<THREE.LineSegments>(null);
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
     const t = clock.getElapsedTime();
     const colorAttr = meshRef.current.geometry.attributes.color;
     const arr = colorAttr.array as Float32Array;
     for (let i = 0; i < edges.length; i++) {
-      const shimmer = 0.85 + Math.sin(t * 0.4 + i * 0.13) * 0.25;
-      const baseR = baseColors[i * 6];
-      const baseG = baseColors[i * 6 + 1];
-      const baseB = baseColors[i * 6 + 2];
-      arr[i * 6] = baseR * shimmer;
-      arr[i * 6 + 1] = baseG * shimmer;
-      arr[i * 6 + 2] = baseB * shimmer;
-      arr[i * 6 + 3] = baseR * shimmer;
-      arr[i * 6 + 4] = baseG * shimmer;
-      arr[i * 6 + 5] = baseB * shimmer;
+      const shimmer = 0.85 + Math.sin(t * 0.45 + i * 0.13) * 0.25;
+      const r = baseColors[i * 6 + 0] * shimmer;
+      const g = baseColors[i * 6 + 1] * shimmer;
+      const b = baseColors[i * 6 + 2] * shimmer;
+      arr[i * 6 + 0] = r;
+      arr[i * 6 + 1] = g;
+      arr[i * 6 + 2] = b;
+      arr[i * 6 + 3] = r;
+      arr[i * 6 + 4] = g;
+      arr[i * 6 + 5] = b;
     }
     colorAttr.needsUpdate = true;
   });
@@ -545,7 +413,7 @@ const Edges: React.FC<EdgesProps> = ({ nodes, edges }) => {
       <lineBasicMaterial
         vertexColors
         transparent
-        opacity={0.85}
+        opacity={0.95}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
         toneMapped={false}
@@ -555,7 +423,7 @@ const Edges: React.FC<EdgesProps> = ({ nodes, edges }) => {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Decision pulses — bright travelers along edges
+// Decision pulses — bright travelers moving UP the tree
 // ──────────────────────────────────────────────────────────────────
 interface PulseTraveler {
   edgeIdx: number;
@@ -564,39 +432,41 @@ interface PulseTraveler {
   color: THREE.Color;
 }
 
-const TRAVEL_DURATION_BASE = 1400;
-
-const Pulses: React.FC<{ nodes: PreparedNode[]; edges: Edge[] }> = ({ nodes, edges }) => {
+const Pulses: React.FC<{ widgets: PreparedWidget[]; edges: Edge[] }> = ({
+  widgets,
+  edges,
+}) => {
   const pulsesRef = useRef<PulseTraveler[]>([]);
   const meshRef = useRef<THREE.InstancedMesh>(null);
-  const MAX_PULSES = 12;
+  const MAX_PULSES = 14;
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const colorBuf = useMemo(() => new THREE.Color(), []);
 
-  // Spawn a new pulse every ~700ms
   useEffect(() => {
     const id = window.setInterval(() => {
       if (pulsesRef.current.length >= MAX_PULSES) return;
       const edgeIdx = Math.floor(Math.random() * edges.length);
-      const isAccent = Math.random() < 0.32;
-      const color = isAccent ? PALETTE.roseBright.clone() : PALETTE.amberBright.clone();
+      const isAccent = Math.random() < 0.42;
+      const color = isAccent
+        ? new THREE.Color(COLORS.accentBright)
+        : new THREE.Color('#FFB070');
       pulsesRef.current.push({
         edgeIdx,
         startedAt: performance.now(),
-        duration: TRAVEL_DURATION_BASE + Math.random() * 600,
+        duration: 1100 + Math.random() * 700,
         color,
       });
-    }, 700);
+    }, 480);
     return () => window.clearInterval(id);
   }, [edges]);
 
   useFrame(() => {
     if (!meshRef.current) return;
     const now = performance.now();
-    // Cull expired pulses
-    pulsesRef.current = pulsesRef.current.filter((p) => now - p.startedAt < p.duration);
+    pulsesRef.current = pulsesRef.current.filter(
+      (p) => now - p.startedAt < p.duration,
+    );
 
-    // Render up to MAX_PULSES instances; hide the rest
     for (let i = 0; i < MAX_PULSES; i++) {
       const p = pulsesRef.current[i];
       if (!p) {
@@ -606,19 +476,23 @@ const Pulses: React.FC<{ nodes: PreparedNode[]; edges: Edge[] }> = ({ nodes, edg
         continue;
       }
       const edge = edges[p.edgeIdx];
-      const a = nodes[edge.from].position;
-      const b = nodes[edge.to].position;
+      const from = widgets[edge.from];
+      const to = widgets[edge.to];
+      // Always travel from the lower-layer widget to the upper-layer
+      // widget, regardless of edge from/to ordering.
+      const a = from.layer < to.layer ? from.position : to.position;
+      const b = from.layer < to.layer ? to.position : from.position;
       const t = Math.min(1, (now - p.startedAt) / p.duration);
       const pos = a.clone().lerp(b, t);
       dummy.position.copy(pos);
-      // Bright at midpoint, fade at ends
-      const envelope = Math.sin(t * Math.PI);
-      dummy.scale.setScalar(0.06 + envelope * 0.10);
+      const env = Math.sin(t * Math.PI);
+      dummy.scale.setScalar(0.06 + env * 0.16);
       dummy.updateMatrix();
       meshRef.current.setMatrixAt(i, dummy.matrix);
-      colorBuf.copy(p.color).multiplyScalar(envelope);
+      colorBuf.copy(p.color).multiplyScalar(env);
       meshRef.current.setColorAt(i, colorBuf);
     }
+
     meshRef.current.instanceMatrix.needsUpdate = true;
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   });
@@ -638,64 +512,163 @@ const Pulses: React.FC<{ nodes: PreparedNode[]; edges: Edge[] }> = ({ nodes, edg
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Camera rig — slow auto-rotate, OrbitControls layered on top
+// Camera rig — slight angle, slow auto-rotate
 // ──────────────────────────────────────────────────────────────────
 const Rig: React.FC = () => {
   const { camera } = useThree();
   useEffect(() => {
-    camera.position.set(0, 4, 22);
+    camera.position.set(0, 2, 28);
   }, [camera]);
   return (
     <OrbitControls
       enablePan={false}
       autoRotate
-      autoRotateSpeed={0.45}
+      autoRotateSpeed={0.35}
       enableDamping
-      dampingFactor={0.08}
-      minDistance={10}
-      maxDistance={45}
+      dampingFactor={0.09}
+      minDistance={14}
+      maxDistance={55}
+      // Constrain so user can't go below the floor or fully above.
+      minPolarAngle={Math.PI * 0.18}
+      maxPolarAngle={Math.PI * 0.82}
+      target={[0, 1, 0]}
+      makeDefault
     />
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
+// Layer markers — subtle floor/ceiling tags reading "INPUTS" / "DECISIONS"
+// ──────────────────────────────────────────────────────────────────
+const LayerMarkers: React.FC = () => (
+  <>
+    <Html
+      position={[0, -10.5, 0]}
+      center
+      distanceFactor={14}
+      style={{ pointerEvents: 'none' }}
+    >
+      <div
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          letterSpacing: '0.32em',
+          color: COLORS.textMuted,
+          textTransform: 'uppercase',
+          opacity: 0.7,
+          whiteSpace: 'nowrap',
+        }}
+      >
+        ▼ RAW INPUTS · 30 SOURCES
+      </div>
+    </Html>
+    <Html
+      position={[0, 10.6, 0]}
+      center
+      distanceFactor={14}
+      style={{ pointerEvents: 'none' }}
+    >
+      <div
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          letterSpacing: '0.32em',
+          color: COLORS.accent,
+          textTransform: 'uppercase',
+          opacity: 0.95,
+          whiteSpace: 'nowrap',
+          textShadow: `0 0 8px ${COLORS.accentGlow}`,
+        }}
+      >
+        ▲ DECISIONS · 3 ACTIONABLE
+      </div>
+    </Html>
+  </>
+);
+
+// ──────────────────────────────────────────────────────────────────
 // Scene composition
 // ──────────────────────────────────────────────────────────────────
 const Scene: React.FC = () => {
-  const { nodes, edges } = useMemo(() => {
+  const { widgets, edges } = useMemo(() => {
     const catalog = buildCatalog();
-    const rawEdges = buildEdges(catalog);
-    const positioned = layoutNodes(catalog, rawEdges);
-    const measured = measureEdges(rawEdges, positioned);
-    return { nodes: positioned, edges: measured };
+    const positioned = layoutWidgets(catalog);
+    const e = buildEdges(positioned);
+    return { widgets: positioned, edges: e };
   }, []);
 
   return (
     <>
-      <color attach="background" args={['#040206']} />
-      <Stars />
-      <Edges nodes={nodes} edges={edges} />
-      <Nodes nodes={nodes} />
-      <Pulses nodes={nodes} edges={edges} />
+      <color attach="background" args={[COLORS.bg]} />
+      <Edges widgets={widgets} edges={edges} />
+      <Pulses widgets={widgets} edges={edges} />
+
+      {widgets.map((w) => (
+        <Html
+          key={w.id}
+          position={[w.position.x, w.position.y, w.position.z]}
+          center
+          distanceFactor={14}
+          style={{ pointerEvents: 'none' }}
+          // zIndexRange caps the overlay z so the HUD stays above
+          zIndexRange={[100, 0]}
+          occlude={false}
+        >
+          <WidgetCard widget={w} />
+        </Html>
+      ))}
+
+      <LayerMarkers />
       <Rig />
+
       <EffectComposer>
-        <Bloom intensity={1.2} luminanceThreshold={0.05} luminanceSmoothing={0.7} mipmapBlur />
+        <Bloom intensity={0.85} luminanceThreshold={0.18} luminanceSmoothing={0.7} mipmapBlur />
       </EffectComposer>
     </>
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Public component — renders the canvas
+// Public component
 // ──────────────────────────────────────────────────────────────────
-export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = '100%' }) => {
+export const PulseRadiant: React.FC<{ height?: number | string }> = ({
+  height = '100%',
+}) => {
   return (
-    <div style={{ width: '100%', height, background: '#040206', position: 'relative' }}>
+    <div style={{ width: '100%', height, background: COLORS.bg, position: 'relative' }}>
+      {/* Floor glow — radial rose at bottom, matches PULSE canvas */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse 70% 45% at 50% 110%, ${COLORS.accentDim}, transparent 60%)`,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+      {/* Faint dot grid masked to center — same pattern as the rest of PULSE */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          opacity: 0.18,
+          maskImage:
+            'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
       <Canvas
         dpr={[1, 2]}
-        gl={{ antialias: true, alpha: false }}
-        camera={{ position: [0, 4, 22], fov: 50, near: 0.1, far: 200 }}
-        style={{ background: 'radial-gradient(ellipse 80% 70% at center, #0a0814 0%, #040206 60%, #000000 100%)' }}
+        gl={{ antialias: true, alpha: true }}
+        camera={{ position: [0, 2, 28], fov: 50, near: 0.1, far: 200 }}
+        style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
       </Canvas>
@@ -707,13 +680,14 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
           bottom: 14,
           left: '50%',
           transform: 'translateX(-50%)',
-          color: '#A89B7A',
-          opacity: 0.7,
-          fontFamily: 'ui-monospace, "Geist Mono", monospace',
+          color: COLORS.textMuted,
+          opacity: 0.65,
+          fontFamily: FONTS.mono,
           fontSize: 10,
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
           pointerEvents: 'none',
+          zIndex: 2,
         }}
       >
         Drag to rotate · Scroll to zoom
