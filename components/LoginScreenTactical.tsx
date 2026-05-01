@@ -9,13 +9,13 @@ import {
   SPACE,
   RADIUS,
   MOTION,
+  MESH,
+  SHADOW,
   Mono,
   BracketLabel,
   StatusPill,
   CornerBracket,
   HudStrip,
-  DotGridBg,
-  GlowBg,
   TacticalCard,
 } from './design';
 
@@ -134,6 +134,7 @@ const RoleCard: React.FC<{
       onHoverEnd={() => setHovered(false)}
     >
       <TacticalCard
+        variant="glass"
         interactive
         role="button"
         tabIndex={0}
@@ -149,7 +150,13 @@ const RoleCard: React.FC<{
           width: '100%',
           textAlign: 'left',
           cursor: 'pointer',
-          padding: '18px 20px 16px',
+          padding: '20px 22px 18px',
+          // Magnetic hover lift — pure CSS, GPU-safe
+          transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+          transition: `transform ${MOTION.base}s ${MOTION.cssEaseSpring}, background ${MOTION.fast}s ${MOTION.cssEase}, border-color ${MOTION.fast}s ${MOTION.cssEase}, box-shadow ${MOTION.base}s ${MOTION.cssEase}`,
+          boxShadow: hovered
+            ? `${SHADOW.glassAmbient}, ${SHADOW.glassInsetTop}, ${SHADOW.haloRose}`
+            : `${SHADOW.glassAmbient}, ${SHADOW.glassInsetTop}`,
         }}
       >
         {/* Header row: id + status */}
@@ -176,20 +183,24 @@ const RoleCard: React.FC<{
         >
           <div
             style={{
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: COLORS.surfaceElev,
-              border: `1px solid ${COLORS.borderStrong}`,
-              borderRadius: RADIUS.sm,
+              background: 'rgba(225, 29, 72, 0.10)',
+              border: `1px solid rgba(225, 29, 72, ${hovered ? 0.45 : 0.22})`,
+              borderRadius: RADIUS.full,
               fontFamily: FONTS.mono,
-              fontSize: 14,
+              fontSize: 15,
               fontWeight: 600,
               letterSpacing: '0.08em',
               color: COLORS.textPrimary,
+              boxShadow: hovered
+                ? `inset 0 0 12px rgba(225, 29, 72, 0.18), 0 0 18px rgba(225, 29, 72, 0.20)`
+                : 'inset 0 0 8px rgba(225, 29, 72, 0.10)',
+              transition: `border-color ${MOTION.fast}s ${MOTION.cssEase}, box-shadow ${MOTION.fast}s ${MOTION.cssEase}`,
             }}
           >
             {entry.personnelInitials}
@@ -306,17 +317,74 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
       style={{
         position: 'fixed',
         inset: 0,
-        background: COLORS.bg,
+        // Ethereal Glass canvas — OLED black under three drifting
+        // mesh orbs (rose / violet / emerald). Same atmosphere as
+        // CinematicBoot so the boot→login transition feels continuous.
+        background: '#050507',
         color: COLORS.textPrimary,
         fontFamily: FONTS.sans,
         overflow: 'hidden',
       }}
     >
-      {/* Background layers — login is a stationary surface, so the
-          decorative ScanningLine was removed to let the role cards
-          breathe. */}
-      <DotGridBg />
-      <GlowBg origin="bottom" color={COLORS.info + '08'} intensity={0.5} />
+      {/* Drifting mesh orbs — animated atmosphere */}
+      <style>{`
+        @keyframes login-orb-drift {
+          0%, 100% { transform: translate(0, 0); }
+          50%      { transform: translate(2%, -2%); }
+        }
+      `}</style>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-10%',
+          background: MESH.roseOrb,
+          animation: 'login-orb-drift 18s ease-in-out infinite',
+          filter: 'blur(40px)',
+          opacity: 0.85,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-10%',
+          background: MESH.violetOrb,
+          animation: 'login-orb-drift 22s ease-in-out infinite reverse',
+          filter: 'blur(50px)',
+          opacity: 0.75,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: '-10%',
+          background: MESH.emeraldOrb,
+          animation: 'login-orb-drift 26s ease-in-out infinite',
+          filter: 'blur(60px)',
+          opacity: 0.65,
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Faint dot grid masked to center */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: `radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)`,
+          backgroundSize: '28px 28px',
+          opacity: 0.5,
+          maskImage:
+            'radial-gradient(ellipse 70% 55% at center, black 35%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 55% at center, black 35%, transparent 100%)',
+          pointerEvents: 'none',
+        }}
+      />
 
       {/* ── TOP HUD ─────────────────────────────────────────── */}
       <HudStrip side="top" fixed height={36}>

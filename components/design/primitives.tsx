@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { COLORS, FONTS, TYPE, RADIUS, SPACE, MOTION, CHROME } from './tokens';
+import { COLORS, FONTS, TYPE, RADIUS, SPACE, MOTION, CHROME, SHADOW } from './tokens';
 
 /**
  * PULSE Tactical Design Primitives
@@ -276,6 +276,12 @@ export interface TacticalCardProps extends Omit<React.HTMLAttributes<HTMLDivElem
   accentBar?: boolean;
   /** Padding preset */
   padding?: 'none' | 'sm' | 'md' | 'lg';
+  /** Variant — `'tactical'` (default) keeps the sharp HUD chrome.
+   *  `'glass'` switches to the premium Ethereal Glass treatment:
+   *  squircle radius, soft ambient shadow, inner highlight, subtle
+   *  backdrop blur. Use on hero / signature surfaces only — don't
+   *  glass up dashboards. */
+  variant?: 'tactical' | 'glass';
   children?: React.ReactNode;
 }
 
@@ -286,6 +292,7 @@ export const TacticalCard = React.forwardRef<HTMLDivElement, TacticalCardProps>(
       highlight = false,
       accentBar = false,
       padding = 'md',
+      variant = 'tactical',
       children,
       style,
       ...rest
@@ -302,12 +309,24 @@ export const TacticalCard = React.forwardRef<HTMLDivElement, TacticalCardProps>(
         ? SPACE.xl
         : SPACE.base;
 
+    const isGlass = variant === 'glass';
+
     const borderColor = highlight
       ? COLORS.accent
       : interactive && hovered
       ? COLORS.accent
+      : isGlass
+      ? 'rgba(255, 255, 255, 0.08)'
       : COLORS.border;
-    const bg = interactive && hovered ? COLORS.surfaceElev : COLORS.surface;
+    const bg = isGlass
+      ? interactive && hovered
+        ? 'rgba(20, 20, 22, 0.72)'
+        : 'rgba(14, 14, 16, 0.62)'
+      : interactive && hovered
+      ? COLORS.surfaceElev
+      : COLORS.surface;
+
+    const glassShadow = `${SHADOW.glassAmbient}, ${SHADOW.glassInsetTop}`;
 
     return (
       <div
@@ -318,12 +337,19 @@ export const TacticalCard = React.forwardRef<HTMLDivElement, TacticalCardProps>(
           position: 'relative',
           background: bg,
           border: `1px solid ${borderColor}`,
-          borderRadius: RADIUS.sm,
+          borderRadius: isGlass ? RADIUS.xl : RADIUS.sm,
           padding: pad,
-          transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+          transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, transform ${MOTION.base}s ${MOTION.cssEaseFluid}`,
           fontFamily: FONTS.sans,
           color: COLORS.textPrimary,
           overflow: 'hidden',
+          ...(isGlass
+            ? {
+                backdropFilter: 'blur(20px) saturate(140%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(140%)',
+                boxShadow: glassShadow,
+              }
+            : {}),
           ...style,
         }}
         {...rest}
@@ -674,6 +700,12 @@ interface TacticalButtonProps
   size?: ButtonSize;
   icon?: React.ReactNode;
   fullWidth?: boolean;
+  /** Trailing icon shown in a nested circular wrapper (Apple/Linear-style
+   *  button-in-button). When present, replaces the standard right edge
+   *  with a flush-mounted disc that translates on hover. */
+  trailing?: React.ReactNode;
+  /** Pill button — fully rounded radius. Use on premium CTAs. */
+  pill?: boolean;
 }
 
 export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButtonProps>(
@@ -683,6 +715,8 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
       size = 'md',
       icon,
       fullWidth,
+      trailing,
+      pill = false,
       children,
       style,
       disabled,
@@ -691,6 +725,7 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
     ref,
   ) => {
     const [hovered, setHovered] = React.useState(false);
+    const [pressed, setPressed] = React.useState(false);
     const height = size === 'sm' ? 28 : 36;
     const padX = size === 'sm' ? 12 : 16;
     const fontSize = size === 'sm' ? 11 : 12;
@@ -729,25 +764,46 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
       }
     })();
 
+    // Magnetic hover physics — translate + scale for a haptic press feel.
+    // Disabled buttons stay static. Pressed state shrinks slightly and
+    // dampens the shadow for the "pushing into the surface" gesture.
+    const transform = disabled
+      ? 'none'
+      : pressed
+      ? 'translateY(0.5px) scale(0.985)'
+      : hovered
+      ? 'translateY(-1px)'
+      : 'translateY(0)';
+    const dynamicShadow = disabled
+      ? 'none'
+      : pressed
+      ? SHADOW.magneticPress
+      : palette.glow;
+
     return (
       <button
         ref={ref}
         disabled={disabled}
         onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseLeave={() => {
+          setHovered(false);
+          setPressed(false);
+        }}
+        onMouseDown={() => setPressed(true)}
+        onMouseUp={() => setPressed(false)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 8,
           height,
-          padding: `0 ${padX}px`,
+          padding: trailing ? `0 4px 0 ${padX}px` : `0 ${padX}px`,
           width: fullWidth ? '100%' : undefined,
           background: palette.bg,
           border: `1px solid ${palette.border}`,
-          borderRadius: RADIUS.sm,
+          borderRadius: pill ? RADIUS.full : RADIUS.sm,
           color: palette.color,
-          boxShadow: palette.glow,
+          boxShadow: dynamicShadow,
           fontFamily: FONTS.mono,
           fontSize,
           fontWeight: 500,
@@ -755,13 +811,46 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
           textTransform: 'uppercase',
           cursor: disabled ? 'not-allowed' : 'pointer',
           opacity: disabled ? 0.4 : 1,
-          transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, box-shadow ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
+          transform,
+          transition: [
+            `background ${MOTION.fast}s ${MOTION.cssEase}`,
+            `border-color ${MOTION.fast}s ${MOTION.cssEase}`,
+            `box-shadow ${MOTION.fast}s ${MOTION.cssEase}`,
+            `color ${MOTION.fast}s ${MOTION.cssEase}`,
+            `transform ${MOTION.fast}s ${MOTION.cssEaseSpring}`,
+          ].join(', '),
           ...style,
         }}
         {...rest}
       >
         {icon}
         {children}
+        {trailing && (
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: height - 8,
+              height: height - 8,
+              marginLeft: 6,
+              borderRadius: RADIUS.full,
+              background: variant === 'primary'
+                ? hovered
+                  ? 'rgba(255, 255, 255, 0.18)'
+                  : 'rgba(225, 29, 72, 0.18)'
+                : 'rgba(255, 255, 255, 0.06)',
+              color: 'currentColor',
+              transform: hovered
+                ? 'translate(2px, -1px) scale(1.05)'
+                : 'translate(0, 0) scale(1)',
+              transition: `transform ${MOTION.fast}s ${MOTION.cssEaseSpring}, background ${MOTION.fast}s ${MOTION.cssEase}`,
+            }}
+          >
+            {trailing}
+          </span>
+        )}
       </button>
     );
   },

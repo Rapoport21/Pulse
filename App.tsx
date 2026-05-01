@@ -96,6 +96,7 @@ import {
   SPACE,
   RADIUS,
   SHADOW,
+  MESH,
   MOTION,
   CHROME,
   cssTransition,
@@ -1369,7 +1370,9 @@ function App() {
             display: 'flex',
             flexDirection: 'column',
             height: '100vh',
-            background: COLORS.bg,
+            // Layered: faint app-ambient mesh on top of OLED black.
+            // Way fainter than Boot/Login — won't fight dashboards.
+            background: `${MESH.appAmbient}, ${COLORS.bg}`,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
             overflow: 'hidden',
