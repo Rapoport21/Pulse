@@ -278,13 +278,14 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   return widgets.map((w, i) => {
     // Priority drives radial distance — bigger widgets near the center
     // (the "decision core"), smaller priority widgets at the periphery.
-    // Slightly wider so widgets have visible breathing room on screen.
+    // Pushed every shell outward so widgets don't crowd each other in
+    // the inner core where the read used to fall apart.
     const priorityRadiusMap: Record<Priority, [number, number]> = {
-      5: [7, 20],
-      4: [18, 34],
-      3: [28, 50],
-      2: [38, 66],
-      1: [50, 88],
+      5: [16, 40],
+      4: [32, 58],
+      3: [50, 78],
+      2: [68, 100],
+      1: [88, 126],
     };
     const [minR, maxR] = priorityRadiusMap[w.priority];
     const radius = minR + rand() * (maxR - minR);
@@ -898,17 +899,18 @@ const IngestionLayer: React.FC<{
   const beamColors = useMemo(() => new Float32Array(MAX_BEAMS * SEGS_PER_BEAM * 6), []);
   const beamRef = useRef<THREE.LineSegments>(null);
 
-  // Spawn a new ingestion every 4.5s — one widget visible at a time
-  // unless tail end overlaps with next spawn (cadence > flight duration).
+  // Spawn a new ingestion every 7s — slower so the asymmetric arrival
+  // doesn't dominate the radiant's perceived center over time. Also
+  // alternates ±X sides deterministically (counter-based) instead of
+  // pure random, so over short spans the asymmetry averages out.
+  const sideCounterRef = useRef(0);
   useEffect(() => {
     const id = window.setInterval(() => {
       const target = widgets[Math.floor(Math.random() * widgets.length)];
-      // Bias to ±X side so it clearly enters from offscreen-ish, with
-      // moderate Y/Z jitter so they don't all line up.
-      const sideSign = Math.random() < 0.5 ? -1 : 1;
+      const sideSign = sideCounterRef.current++ % 2 === 0 ? -1 : 1;
       const startPos = new THREE.Vector3(
-        sideSign * (95 + Math.random() * 18),
-        (Math.random() - 0.5) * 26 + 12,
+        sideSign * (130 + Math.random() * 20),
+        (Math.random() - 0.5) * 26 + 8,
         (Math.random() - 0.5) * 30,
       );
       const payload = INGEST_PAYLOADS[Math.floor(Math.random() * INGEST_PAYLOADS.length)];
@@ -925,7 +927,7 @@ const IngestionLayer: React.FC<{
           source: payload.source,
         },
       ]);
-    }, 4500);
+    }, 7000);
     return () => window.clearInterval(id);
   }, [widgets]);
 
@@ -1043,35 +1045,35 @@ const IngestionLayer: React.FC<{
           }}
           position={[e.startPos.x, e.startPos.y, e.startPos.z]}
         >
-          <Html center distanceFactor={36} style={{ pointerEvents: 'none' }} zIndexRange={[120, 60]}>
+          <Html center distanceFactor={32} style={{ pointerEvents: 'none' }} zIndexRange={[120, 60]}>
             <div style={{
-              width: 360,
-              padding: `${SPACE.md}px ${SPACE.base}px`,
-              background: 'rgba(6, 16, 12, 0.94)',
-              border: `2px solid ${COLORS.ok}`,
+              width: 240,
+              padding: `${SPACE.sm}px ${SPACE.md}px`,
+              background: 'rgba(6, 16, 12, 0.92)',
+              border: `1px solid ${COLORS.ok}`,
               borderRadius: RADIUS.sm,
               fontFamily: FONTS.mono,
-              boxShadow: `0 0 28px rgba(16, 185, 129, 0.55), inset 0 0 0 1px rgba(16, 185, 129, 0.18)`,
+              boxShadow: `0 0 12px rgba(16, 185, 129, 0.35)`,
               animation: 'ingest-card 600ms cubic-bezier(0.16, 1, 0.32, 1) backwards',
             }}>
               <div style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                marginBottom: SPACE.xs,
+                marginBottom: 4,
               }}>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 10,
-                  letterSpacing: '0.22em',
+                  fontSize: 9,
+                  letterSpacing: '0.20em',
                   color: COLORS.ok,
                   textTransform: 'uppercase',
                 }}>
-                  + INBOUND SIGNAL
+                  + INBOUND
                 </span>
                 <span style={{
                   fontFamily: FONTS.mono,
-                  fontSize: 9,
+                  fontSize: 8,
                   letterSpacing: '0.18em',
                   color: COLORS.textMuted,
                   textTransform: 'uppercase',
@@ -1081,17 +1083,17 @@ const IngestionLayer: React.FC<{
               </div>
               <div style={{
                 fontWeight: 600,
-                fontSize: 17,
-                letterSpacing: '0.06em',
+                fontSize: 13,
+                letterSpacing: '0.05em',
                 color: COLORS.textPrimary,
                 textTransform: 'uppercase',
-                marginBottom: 4,
+                marginBottom: 2,
               }}>
                 {e.label}
               </div>
               <div style={{
                 fontFamily: FONTS.mono,
-                fontSize: 22,
+                fontSize: 16,
                 fontWeight: 600,
                 letterSpacing: '0.02em',
                 color: COLORS.ok,
@@ -1771,24 +1773,25 @@ const CameraOrchestrator: React.FC<{
   const startedRef = useRef<number>(0);
   const completedRef = useRef(false);
 
-  // Cluster Y squashed to ±~33 around y=4, apex at y=62. Target y=18
-  // is the midpoint of [-30, +62]; halfY = 48 with the 1.20 padding
-  // covers the lot. halfXZ matches widened priority-1 reach (88) plus
-  // TimeAxis (62) — the autofit clamps at maxDist 175 in
+  // Cluster Y squashed to ±~48 around y=4 (priority-1 outer at 126
+  // squashed by 0.38 = 48), apex at y=62. Target y=12 keeps the
+  // visual mass (cluster) closer to the screen's vertical center.
+  // halfXZ tracks the widest priority-1 reach (126) so autofit aims
+  // to fit the wider cluster — capped at maxDist 175 in
   // computeFitHome so portrait viewports don't lose readability.
-  const targetY = 18;
-  const halfY = 48;
-  const halfXZ = 96;
+  const targetY = 12;
+  const halfY = 56;
+  const halfXZ = 126;
 
   const home = useMemo(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return new THREE.Vector3(0, targetY, 145);
     return computeFitHome(camera.fov, size.width, size.height, targetY, halfY, halfXZ);
   }, [camera, size.width, size.height]);
 
-  // Start point: shifted up + back, tilted off-axis, so the intro
-  // dollies forward and tilts down into the radiant.
+  // Start point: shifted up + back along Y/Z only — NO horizontal
+  // offset so the intro lands the camera dead-centered horizontally.
   const start = useMemo(
-    () => new THREE.Vector3(home.x + 18, home.y + 26, home.z * 1.55),
+    () => new THREE.Vector3(home.x, home.y + 26, home.z * 1.55),
     [home],
   );
 
@@ -1998,7 +2001,7 @@ const Scene: React.FC = () => {
           dampingFactor={0.09}
           minPolarAngle={Math.PI * 0.14}
           maxPolarAngle={Math.PI * 0.86}
-          target={[0, 18, 0]}
+          target={[0, 12, 0]}
           makeDefault
         />
       )}
@@ -2072,7 +2075,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
       <Canvas
         dpr={env.mobile ? [1, 1.5] : [1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        camera={{ position: [0, 18, 160], fov: 55, near: 0.1, far: 380 }}
+        camera={{ position: [0, 12, 175], fov: 55, near: 0.1, far: 420 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
