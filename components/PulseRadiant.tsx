@@ -278,13 +278,14 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   return widgets.map((w, i) => {
     // Priority drives radial distance — bigger widgets near the center
     // (the "decision core"), smaller priority widgets at the periphery.
-    // Spread MUCH more so widgets don't crowd each other.
+    // Wider spread to keep the now-much-larger widgets from crashing
+    // into each other on screen.
     const priorityRadiusMap: Record<Priority, [number, number]> = {
-      5: [4, 12],
-      4: [10, 22],
-      3: [18, 32],
-      2: [26, 42],
-      1: [34, 56],
+      5: [5, 16],
+      4: [13, 28],
+      3: [22, 40],
+      2: [32, 54],
+      1: [42, 70],
     };
     const [minR, maxR] = priorityRadiusMap[w.priority];
     const radius = minR + rand() * (maxR - minR);
@@ -377,37 +378,37 @@ const toneColor = (tone: Tone): string => {
   }
 };
 
-// Bumped HARD per Nick ("much much larger by a lot")
+// Bumped HARD per Nick ("much much larger" — third pass)
 const widthByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 600;
-    case 4: return 520;
-    case 3: return 460;
-    case 2: return 400;
+    case 5: return 860;
+    case 4: return 740;
+    case 3: return 640;
+    case 2: return 560;
     case 1:
-    default: return 360;
+    default: return 500;
   }
 };
 
 const labelFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 22;
-    case 4: return 19;
-    case 3: return 17;
-    case 2: return 15;
+    case 5: return 30;
+    case 4: return 26;
+    case 3: return 22;
+    case 2: return 19;
     case 1:
-    default: return 14;
+    default: return 17;
   }
 };
 
 const valueFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 38;
-    case 4: return 32;
-    case 3: return 26;
-    case 2: return 22;
+    case 5: return 54;
+    case 4: return 46;
+    case 3: return 38;
+    case 2: return 32;
     case 1:
-    default: return 19;
+    default: return 26;
   }
 };
 
@@ -424,6 +425,8 @@ interface WidgetCardProps {
   patternHighlight?: boolean;
   /** True when an ingestion event just merged into this widget */
   absorbing?: boolean;
+  /** True when this widget is the cycle's "newly arrived" — green flash */
+  fresh?: boolean;
 }
 
 const WidgetCard: React.FC<WidgetCardProps> = ({
@@ -432,6 +435,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
   trackedConf,
   patternHighlight,
   absorbing,
+  fresh,
 }) => {
   const [hovered, setHovered] = useState(false);
   const dotColor = toneColor(widget.tone);
@@ -440,7 +444,9 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
 
   // Border + scale state
   const borderColor =
-    tracked || patternHighlight
+    fresh
+      ? COLORS.ok
+      : tracked || patternHighlight
       ? COLORS.accent
       : isAccent
       ? COLORS.accent
@@ -448,7 +454,14 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
       ? COLORS.borderStrong
       : COLORS.border;
 
-  const scale = hovered ? 1.18 : absorbing ? 1.10 : 1.0;
+  const scale = hovered ? 1.32 : fresh ? 1.18 : absorbing ? 1.10 : 1.0;
+  const shadow = fresh
+    ? `0 0 22px rgba(16, 185, 129, 0.55)`
+    : hovered
+    ? `0 0 26px rgba(225, 29, 72, 0.45), 0 8px 28px rgba(0, 0, 0, 0.7)`
+    : tracked || patternHighlight
+    ? `0 0 16px rgba(225, 29, 72, 0.30)`
+    : `0 4px 14px rgba(0, 0, 0, 0.55)`;
 
   return (
     <div
@@ -460,20 +473,42 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
         background: COLORS.surface,
         border: `1px solid ${borderColor}`,
         borderRadius: RADIUS.sm,
-        padding: `${SPACE.sm + 2}px ${SPACE.md + 2}px`,
+        padding: `${SPACE.md}px ${SPACE.base}px`,
         fontFamily: FONTS.mono,
-        boxShadow: tracked || patternHighlight
-          ? `0 0 16px rgba(225, 29, 72, 0.30)`
-          : `0 4px 14px rgba(0, 0, 0, 0.55)`,
+        boxShadow: shadow,
         userSelect: 'none',
         pointerEvents: 'auto',
         cursor: 'default',
         transform: `scale(${scale})`,
         transformOrigin: 'center',
-        transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1), border-color 220ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1)',
-        zIndex: hovered ? 50 : 10,
+        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 280ms cubic-bezier(0.23, 1, 0.32, 1)',
+        zIndex: hovered ? 90 : fresh ? 60 : 10,
       }}
     >
+      {/* "+ NEW DATA" badge during fresh-arrival pulse */}
+      {fresh && (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: -10,
+            left: 14,
+            padding: '3px 8px',
+            background: COLORS.ok,
+            color: '#020202',
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            borderRadius: RADIUS.sm,
+            boxShadow: `0 0 14px rgba(16, 185, 129, 0.55)`,
+            pointerEvents: 'none',
+          }}
+        >
+          + NEW DATA
+        </span>
+      )}
       {/* CV tracker brackets */}
       {tracked && (
         <>
@@ -899,19 +934,20 @@ const IngestionLayer: React.FC<{
           }}
           position={[e.startPos.x, e.startPos.y, e.startPos.z]}
         >
-          <Html center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
+          <Html center distanceFactor={28} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
             <div style={{
-              padding: '6px 10px',
-              background: 'rgba(20, 20, 24, 0.85)',
-              border: `1px solid ${COLORS.ok}`,
+              padding: '8px 14px',
+              background: 'rgba(8, 14, 12, 0.92)',
+              border: `1.5px solid ${COLORS.ok}`,
               borderRadius: RADIUS.sm,
               fontFamily: FONTS.mono,
-              fontSize: 9,
+              fontSize: 13,
+              fontWeight: 600,
               letterSpacing: '0.16em',
               textTransform: 'uppercase',
               color: COLORS.ok,
               whiteSpace: 'nowrap',
-              boxShadow: `0 0 12px rgba(16, 185, 129, 0.30)`,
+              boxShadow: `0 0 18px rgba(16, 185, 129, 0.45)`,
             }}>
               + {e.label}
             </div>
@@ -932,9 +968,11 @@ const DriftWidget: React.FC<{
   trackedConf?: number;
   patternHighlight: boolean;
   absorbing: boolean;
+  /** When true, this widget is the cycle's "newly arrived" — green flash */
+  fresh?: boolean;
   /** When true, freeze widget at homePosition (a11y: reduced motion) */
   paused?: boolean;
-}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, paused }) => {
+}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
 
@@ -949,15 +987,29 @@ const DriftWidget: React.FC<{
     groupRef.current.position.copy(tmp);
   });
 
+  // Stagger initial spawn — each widget animates in from scale(0.6) +
+  // blur. Delay by widget.id so cluster ripples into being. Capped at
+  // ~2.4s total even with 119 widgets.
+  const spawnDelay = `${(widget.id % 80) * 18}ms`;
+
   return (
     <group ref={groupRef}>
-      <Html center distanceFactor={22} style={{}} zIndexRange={[80, 10]} occlude={false}>
+      <Html
+        center
+        distanceFactor={36}
+        style={{
+          animation: `widget-spawn 600ms cubic-bezier(0.16, 1, 0.32, 1) ${spawnDelay} backwards`,
+        }}
+        zIndexRange={[80, 10]}
+        occlude={false}
+      >
         <WidgetCard
           widget={widget}
           tracked={tracked}
           trackedConf={trackedConf}
           patternHighlight={patternHighlight}
           absorbing={absorbing}
+          fresh={fresh}
         />
       </Html>
     </group>
@@ -1118,31 +1170,19 @@ const FutureTree: React.FC = () => {
       return COLOR_ALT;
     };
 
-    // Sample a curved path between two points via Catmull-Rom with the
-    // midpoint biased outward in XZ + lifted slightly. Drop sampled
-    // points into the segment buffer as adjacent (p0,p1,p1,p2,...).
-    // Returns the count of segments emitted.
-    const sampleCurve = (
+    // Sample a STRAIGHT line between two points at N segments. Sampled
+    // (rather than 1 segment edge to edge) so the per-frame signal-flow
+    // animation can paint a moving hot trail along the line. The
+    // visual is a straight line — no curves, no bowing — per Nick.
+    const sampleLine = (
       a: [number, number, number],
       b: [number, number, number],
-      bowOutward: number,
       kind: FutureKind,
       segments = 22,
     ): { count: number; midpoint: [number, number, number] } => {
       const va = new THREE.Vector3(...a);
       const vb = new THREE.Vector3(...b);
-      const mid = va.clone().lerp(vb, 0.5);
-      const dx = vb.x - va.x;
-      const dz = vb.z - va.z;
-      const horiz = Math.hypot(dx, dz) || 1;
-      const nx = -dz / horiz;
-      const nz = dx / horiz;
-      const reach = horiz * 0.35 + 4;
-      mid.x += nx * reach * bowOutward;
-      mid.z += nz * reach * bowOutward;
-      mid.y += 1.5 + Math.abs(bowOutward) * 2;
-
-      const curve = new THREE.CatmullRomCurve3([va, mid, vb], false, 'catmullrom', 0.5);
+      const curve = new THREE.LineCurve3(va, vb);
       const pts = curve.getPoints(segments);
       const c = colorOf(kind);
       for (let i = 0; i < pts.length - 1; i++) {
@@ -1153,25 +1193,22 @@ const FutureTree: React.FC = () => {
       return { count: pts.length - 1, midpoint: [midPt.x, midPt.y, midPt.z] };
     };
 
-    // Cluster origin → each root (bowed)
-    FUTURE_NODES.filter((n) => n.pos[1] >= 11 && n.pos[1] <= 17).forEach((n, i) => {
+    // Cluster origin → each root
+    FUTURE_NODES.filter((n) => n.pos[1] >= 11 && n.pos[1] <= 17).forEach((n) => {
       const startSeg = positions.length / 6;
-      const bow = 0.5 + (i % 3) * 0.18;
-      const { count, midpoint } = sampleCurve([0, 4, 0], n.pos, bow, n.kind);
+      const { count, midpoint } = sampleLine([0, 4, 0], n.pos, n.kind);
       curves.push({ kind: n.kind, startSeg, endSeg: startSeg + count, midpoint });
       if (n.kind === 'primary') primaryCount += 1;
       if (n.kind === 'dead') deadCount += 1;
     });
 
-    // Inter-layer links (bowed, alternating flip)
-    FUTURE_LINKS.forEach((link, i) => {
+    // Inter-layer links
+    FUTURE_LINKS.forEach((link) => {
       const a = FUTURE_NODES.find((n) => n.id === link.from);
       const b = FUTURE_NODES.find((n) => n.id === link.to);
       if (!a || !b) return;
       const startSeg = positions.length / 6;
-      const bow = link.kind === 'primary' ? 0.18 : link.kind === 'dead' ? 0.55 : 0.42;
-      const flip = i % 2 === 0 ? 1 : -1;
-      const { count, midpoint } = sampleCurve(a.pos, b.pos, bow * flip, link.kind);
+      const { count, midpoint } = sampleLine(a.pos, b.pos, link.kind);
       curves.push({ kind: link.kind, startSeg, endSeg: startSeg + count, midpoint });
       if (link.kind === 'primary') primaryCount += 1;
       if (link.kind === 'dead') deadCount += 1;
@@ -1347,7 +1384,7 @@ const FutureTree: React.FC = () => {
           key={n.id}
           position={n.pos}
           center
-          distanceFactor={n.kind === 'apex' ? 30 : 24}
+          distanceFactor={n.kind === 'apex' ? 48 : 38}
           style={{ pointerEvents: 'none' }}
           zIndexRange={n.kind === 'apex' ? [70, 12] : n.kind === 'dead' ? [40, 4] : [55, 8]}
         >
@@ -1364,12 +1401,12 @@ const FutureTree: React.FC = () => {
 // ──────────────────────────────────────────────────────────────────
 const ClusterHalo: React.FC = () => (
   <group>
-    <mesh position={[0, -12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[40, 60, 96]} />
+    <mesh position={[0, -14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[48, 76, 96]} />
       <meshBasicMaterial color={COLORS.accent} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
     </mesh>
-    <mesh position={[0, -12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[58, 60.5, 96]} />
+    <mesh position={[0, -14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[74, 76.5, 96]} />
       <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
     </mesh>
   </group>
@@ -1380,26 +1417,26 @@ const ClusterHalo: React.FC = () => (
 // ──────────────────────────────────────────────────────────────────
 const TimeAxis: React.FC = () => (
   <group>
-    {/* Spine */}
-    <mesh position={[44, 36, 0]}>
-      <boxGeometry args={[0.06, 56, 0.06]} />
+    {/* Spine — pushed out to x=58 so it clears the wider future-tree spread */}
+    <mesh position={[58, 38, 0]}>
+      <boxGeometry args={[0.07, 56, 0.07]} />
       <meshBasicMaterial color={COLORS.borderStrong} transparent opacity={0.55} toneMapped={false} />
     </mesh>
     {TIME_AXIS.map(({ y, label, emphasis }) => (
       <group key={y}>
         {/* Tick crossbar */}
-        <mesh position={[44, y, 0]}>
-          <boxGeometry args={[1.2, 0.06, 0.06]} />
+        <mesh position={[58, y, 0]}>
+          <boxGeometry args={[1.4, 0.07, 0.07]} />
           <meshBasicMaterial color={emphasis ? COLORS.accentBright : COLORS.accent} transparent opacity={emphasis ? 0.9 : 0.65} toneMapped={false} />
         </mesh>
-        <Html position={[47.5, y, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[30, 4]}>
+        <Html position={[62, y, 0]} center distanceFactor={26} style={{ pointerEvents: 'none' }} zIndexRange={[30, 4]}>
           <div style={{
-            padding: '3px 8px',
-            background: 'rgba(20, 8, 14, 0.85)',
+            padding: '4px 10px',
+            background: 'rgba(20, 8, 14, 0.88)',
             border: `1px solid ${emphasis ? COLORS.accent : COLORS.borderStrong}`,
             borderRadius: RADIUS.sm,
             fontFamily: FONTS.mono,
-            fontSize: 9,
+            fontSize: 11,
             letterSpacing: '0.22em',
             color: emphasis ? COLORS.accentBright : COLORS.textSecondary,
             textTransform: 'uppercase',
@@ -1551,9 +1588,9 @@ const CameraOrchestrator: React.FC<{
   const startedRef = useRef<number>(0);
   const completedRef = useRef(false);
 
-  const targetY = 22;
-  const halfY = 42;
-  const halfXZ = 64;
+  const targetY = 24;
+  const halfY = 50;
+  const halfXZ = 80;
 
   const home = useMemo(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return new THREE.Vector3(0, targetY, 145);
@@ -1668,9 +1705,9 @@ const Scene: React.FC = () => {
     }, 600);
   };
 
-  // Environment-aware tuning: cut dust + freeze motion on small / a11y
+  // Environment-aware tuning: freeze motion on a11y; drop ambient dust
+  // entirely per Nick (no flying dots).
   const env = useRadiantEnv();
-  const dustCount = env.mobile ? 250 : 600;
   const rotationSpeed = env.reducedMotion ? 0 : 0.035;
   const driftPaused = env.reducedMotion;
 
@@ -1678,6 +1715,24 @@ const Scene: React.FC = () => {
   // then OrbitControls mounts and takes over. Keeps the entry cinematic
   // and screen-fitted on every aspect ratio.
   const [introDone, setIntroDone] = useState(false);
+
+  // Fresh-arrival cycle — every 2.6s, mark a random widget as "newly
+  // arrived" for 1.4s. The widget gets a green border + scale pulse +
+  // "+ NEW DATA" pip. Combined with IngestionLayer's incoming
+  // labels, makes the radiant feel like it's continuously growing.
+  const [freshId, setFreshId] = useState<number | null>(null);
+  useEffect(() => {
+    if (widgets.length === 0) return;
+    const id = window.setInterval(() => {
+      const target = widgets[Math.floor(Math.random() * widgets.length)];
+      setFreshId(target.id);
+      window.setTimeout(
+        () => setFreshId((cur) => (cur === target.id ? null : cur)),
+        1400,
+      );
+    }, 2600);
+    return () => window.clearInterval(id);
+  }, [widgets]);
 
   return (
     <>
@@ -1690,12 +1745,10 @@ const Scene: React.FC = () => {
           readable while geometry rotates underneath — that's the
           Foundation Prime Radiant feel. */}
       <AmbientRotation speed={rotationSpeed}>
-        <AmbientDust count={dustCount} />
         <ClusterHalo />
         <FloatingEquations />
         <TimeAxis />
         <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
-        <CompileBurst intervalMs={5500} />
         <CenterReticle />
         <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
         <FutureTree />
@@ -1708,6 +1761,7 @@ const Scene: React.FC = () => {
             trackedConf={trackedId === w.id ? trackedConf : undefined}
             patternHighlight={patternIds.has(w.id)}
             absorbing={absorbingIds.has(w.id)}
+            fresh={freshId === w.id}
             paused={driftPaused}
           />
         ))}
@@ -1745,10 +1799,10 @@ const Scene: React.FC = () => {
           enableDamping
           dampingFactor={0.09}
           minDistance={70}
-          maxDistance={260}
+          maxDistance={300}
           minPolarAngle={Math.PI * 0.14}
           maxPolarAngle={Math.PI * 0.86}
-          target={[0, 22, 0]}
+          target={[0, 24, 0]}
           makeDefault
         />
       )}
@@ -1804,6 +1858,11 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         @keyframes apex-conf-breath {
           0%, 100% { filter: brightness(1); }
           50% { filter: brightness(1.18); }
+        }
+        @keyframes widget-spawn {
+          0%   { opacity: 0; transform: scale(0.55); filter: blur(6px); }
+          55%  { opacity: 1; }
+          100% { opacity: 1; transform: scale(1);    filter: blur(0); }
         }
         @media (prefers-reduced-motion: reduce) {
           [data-radiant-apex] { animation: none !important; }

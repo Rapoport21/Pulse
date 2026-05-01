@@ -31,36 +31,36 @@ export interface FutureLink {
 
 // Nodes are positioned organically — Y is roughly tiered for time
 // progression (T+15m at ~14 → T+4h at 60) but each node jitters off
-// its tier baseline so layers don't read as flat shelves. XZ spread
-// is wide so the future cone fans out around the cluster, not through it.
+// its tier baseline so layers don't read as flat shelves. Card sizes
+// bumped 1.3× for the third-pass "much much larger" request.
 export const FUTURE_NODES: FutureNode[] = [
   // Roots (Y~14)
-  { id: 'r0', pos: [-14, 13, 6],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 400, conf: 0.76 },
-  { id: 'r1', pos: [-4,  15, 12],  label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r2', pos: [7,   12, 8],   label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r3', pos: [16,  14, -4],  label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r4', pos: [-22, 11, -8],  label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 280 },
-  { id: 'r5', pos: [21,  16, 9],   label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 280 },
+  { id: 'r0', pos: [-18, 13, 8],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 540, conf: 0.76 },
+  { id: 'r1', pos: [-5,  15, 16],  label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 480 },
+  { id: 'r2', pos: [9,   12, 11],  label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 480 },
+  { id: 'r3', pos: [21,  14, -6],  label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 480 },
+  { id: 'r4', pos: [-28, 11, -10], label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 380 },
+  { id: 'r5', pos: [27,  16, 12],  label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 380 },
 
   // Mid (Y~26)
-  { id: 'm0', pos: [-9,  27, 4],   label: 'Triage thinning',      value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 400, conf: 0.81 },
-  { id: 'm1', pos: [3,   25, 11],  label: 'Bed cohort A',         value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm2', pos: [11,  28, -7],  label: 'OR queue resolved',    value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm3', pos: [-16, 24, -5],  label: 'Ambulance backlog',    value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm4', pos: [19,  26, 12],  label: 'INSUFFICIENT DATA',    value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 260 },
+  { id: 'm0', pos: [-12, 27, 5],   label: 'Triage thinning',      value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 540, conf: 0.81 },
+  { id: 'm1', pos: [4,   25, 14],  label: 'Bed cohort A',         value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 460 },
+  { id: 'm2', pos: [14,  28, -9],  label: 'OR queue resolved',    value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 460 },
+  { id: 'm3', pos: [-21, 24, -6],  label: 'Ambulance backlog',    value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 460 },
+  { id: 'm4', pos: [24,  26, 15],  label: 'INSUFFICIENT DATA',    value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 360 },
 
   // Deep (Y~38)
-  { id: 'd0', pos: [-6,  39, 5],   label: 'NEDOCS easing',        value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 420, conf: 0.69 },
-  { id: 'd1', pos: [6,   37, 8],   label: 'Surge subsides',       value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 360 },
-  { id: 'd2', pos: [-12, 41, -6],  label: 'ICU at 88%',           value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 360 },
-  { id: 'd3', pos: [14,  38, -10], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 260 },
+  { id: 'd0', pos: [-8,  39, 6],   label: 'NEDOCS easing',        value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 560, conf: 0.69 },
+  { id: 'd1', pos: [8,   37, 11],  label: 'Surge subsides',       value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 480 },
+  { id: 'd2', pos: [-15, 41, -8],  label: 'ICU at 88%',           value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 480 },
+  { id: 'd3', pos: [18,  38, -12], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 360 },
 
   // Final (Y~50)
-  { id: 'f0', pos: [-3,  50, 3],   label: 'Capacity recovers',    value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 440, conf: 0.71 },
-  { id: 'f1', pos: [4,   49, -4],  label: 'Wait time normal',     value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 400, conf: 0.66 },
+  { id: 'f0', pos: [-4,  50, 4],   label: 'Capacity recovers',    value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 580, conf: 0.71 },
+  { id: 'f1', pos: [5,   49, -5],  label: 'Wait time normal',     value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 540, conf: 0.66 },
 
   // Apex (Y=60)
-  { id: 'top', pos: [0,  60, 0],   label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 580, conf: 0.64 },
+  { id: 'top', pos: [0,  62, 0],   label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 760, conf: 0.64 },
 ];
 
 export const FUTURE_LINKS: FutureLink[] = [
@@ -102,7 +102,7 @@ export const TIME_AXIS: Array<{ y: number; label: string; emphasis?: boolean }> 
   { y: 26, label: 'T+30m' },
   { y: 38, label: 'T+1h' },
   { y: 50, label: 'T+2h' },
-  { y: 60, label: 'T+4h · APEX', emphasis: true },
+  { y: 62, label: 'T+4h · APEX', emphasis: true },
 ];
 
 // ──────────────────────────────────────────────────────────────────
