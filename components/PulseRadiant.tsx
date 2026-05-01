@@ -26,7 +26,7 @@
  * Pulses flow inward through edge illumination.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -278,26 +278,26 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   return widgets.map((w, i) => {
     // Priority drives radial distance — bigger widgets near the center
     // (the "decision core"), smaller priority widgets at the periphery.
-    // Wider spread to keep the now-much-larger widgets from crashing
-    // into each other on screen.
+    // Wider XZ for breathing room per Nick.
     const priorityRadiusMap: Record<Priority, [number, number]> = {
-      5: [5, 16],
-      4: [13, 28],
-      3: [22, 40],
-      2: [32, 54],
-      1: [42, 70],
+      5: [6, 18],
+      4: [16, 32],
+      3: [26, 46],
+      2: [36, 62],
+      1: [48, 82],
     };
     const [minR, maxR] = priorityRadiusMap[w.priority];
     const radius = minR + rand() * (maxR - minR);
 
-    // Random direction — full 3D. Lessen Y squash to 0.62 so the
-    // cluster reads as a volumetric cloud, not a flat disc.
+    // Y squash 0.42 — cluster reads as a volumetric *disc*, not a
+    // sphere. Vertical extent is tightly bounded so bottom widgets
+    // don't clip below the camera frame at default fit.
     const theta = rand() * Math.PI * 2;
     const phi = Math.acos(2 * rand() - 1);
     const x = Math.sin(phi) * Math.cos(theta) * radius;
     const yRaw = Math.cos(phi) * radius;
     const z = Math.sin(phi) * Math.sin(theta) * radius;
-    const y = yRaw * 0.62 - 4; // shift down a touch so future cone has headroom
+    const y = yRaw * 0.42 + 2; // tiny lift so cluster sits just above origin
 
     return {
       ...w,
@@ -427,6 +427,10 @@ interface WidgetCardProps {
   absorbing?: boolean;
   /** True when this widget is the cycle's "newly arrived" — green flash */
   fresh?: boolean;
+  /** Reports hover state UP so the parent <Html> can lift its
+   *  zIndexRange — fixes "some widgets don't expand on hover" caused
+   *  by neighbors stacking on top in the DOM. */
+  onHoverChange?: (hovered: boolean) => void;
 }
 
 const WidgetCard: React.FC<WidgetCardProps> = ({
@@ -436,6 +440,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
   patternHighlight,
   absorbing,
   fresh,
+  onHoverChange,
 }) => {
   const [hovered, setHovered] = useState(false);
   const dotColor = toneColor(widget.tone);
@@ -465,8 +470,8 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={() => { setHovered(true); onHoverChange?.(true); }}
+      onMouseLeave={() => { setHovered(false); onHoverChange?.(false); }}
       style={{
         position: 'relative',
         width: w,
@@ -840,91 +845,195 @@ const CenterReticle: React.FC = () => (
 );
 
 // ──────────────────────────────────────────────────────────────────
-// Ingestion event — new widget appears, drifts inward to a target
+// Ingestion event — new widget appears at the SIDE of the radiant,
+// floats inward into the cluster, drawing a connector beam from its
+// flight position to its target widget. On arrival, fires onAbsorb
+// (target widget pulses) AND onCascade (FutureTree lights up the
+// primary path from cluster -> apex like a relayed signal).
 // ──────────────────────────────────────────────────────────────────
 
 interface IngestionEvent {
   id: number;
   startedAt: number;
   duration: number;
-  /** Random outer position to spawn at */
+  /** Spawn position — biased to ±X side, well outside cluster */
   startPos: THREE.Vector3;
   /** Target widget id */
   targetId: number;
   label: string;
+  value: string;
+  source: string;
 }
 
-const INGEST_LABELS = [
-  'NEW DATA · 911 spike',
-  'NEW DATA · weather alert',
-  'NEW DATA · trauma alert',
-  'NEW DATA · staff callout',
-  'NEW DATA · regional divert',
-  'NEW DATA · pattern match',
-  'NEW DATA · OR delay',
-  'NEW DATA · imaging queue',
+const INGEST_PAYLOADS: Array<{ label: string; value: string; source: string }> = [
+  { label: '911 call surge',     value: '+34 / 5min',       source: 'CHP-911'  },
+  { label: 'NWS storm cell',     value: 'EF1 risk',         source: 'NOAA'     },
+  { label: 'Pediatric trauma',   value: 'EMS inbound',      source: 'EMS-NET'  },
+  { label: 'Staff callout',      value: '3 RNs · noc',      source: 'KRONOS'   },
+  { label: 'Regional divert',    value: 'County Mem · ED',  source: 'STATEDIV' },
+  { label: 'OR delay flag',      value: 'Bay 4 · +18m',     source: 'EPIC-OR'  },
+  { label: 'Imaging queue',      value: 'CT · 7 backlog',   source: 'PACS'     },
+  { label: 'Heli wind alert',    value: '24 kt gust',       source: 'NOAA-AVN' },
+  { label: 'Sepsis screen hit',  value: 'Bay 12 · pos',     source: 'CDS-AI'   },
+  { label: 'Lab critical',       value: 'K+ 6.4',           source: 'CERNER'   },
 ];
 
 const IngestionLayer: React.FC<{
   widgets: PreparedWidget[];
   onAbsorb: (widgetId: number) => void;
-}> = ({ widgets, onAbsorb }) => {
+  onCascade: () => void;
+}> = ({ widgets, onAbsorb, onCascade }) => {
   const [events, setEvents] = useState<IngestionEvent[]>([]);
   const idCounterRef = useRef(0);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const groupRefs = useRef<Map<number, THREE.Group>>(new Map());
 
-  // Spawn a new ingestion every 1.6s
+  // Beam buffer — single LineSegments draws a hot line from each event's
+  // current position to its target widget. Sized for up to 4 simultaneous
+  // beams sampled at 16 segments each (so signal-flow heat can race
+  // along the beam toward the widget).
+  const MAX_BEAMS = 4;
+  const SEGS_PER_BEAM = 16;
+  const beamPositions = useMemo(() => new Float32Array(MAX_BEAMS * SEGS_PER_BEAM * 6), []);
+  const beamColors = useMemo(() => new Float32Array(MAX_BEAMS * SEGS_PER_BEAM * 6), []);
+  const beamRef = useRef<THREE.LineSegments>(null);
+
+  // Spawn a new ingestion every 4.5s — one widget visible at a time
+  // unless tail end overlaps with next spawn (cadence > flight duration).
   useEffect(() => {
     const id = window.setInterval(() => {
       const target = widgets[Math.floor(Math.random() * widgets.length)];
+      // Bias to ±X side so it clearly enters from offscreen-ish, with
+      // moderate Y/Z jitter so they don't all line up.
+      const sideSign = Math.random() < 0.5 ? -1 : 1;
       const startPos = new THREE.Vector3(
-        (Math.random() - 0.5) * 36,
-        (Math.random() - 0.5) * 24,
-        (Math.random() - 0.5) * 36,
-      ).normalize().multiplyScalar(20 + Math.random() * 4);
+        sideSign * (95 + Math.random() * 18),
+        (Math.random() - 0.5) * 26 + 12,
+        (Math.random() - 0.5) * 30,
+      );
+      const payload = INGEST_PAYLOADS[Math.floor(Math.random() * INGEST_PAYLOADS.length)];
       setEvents((prev) => [
         ...prev,
         {
           id: idCounterRef.current++,
           startedAt: performance.now(),
-          duration: 2000,
+          duration: 3200,
           startPos,
           targetId: target.id,
-          label: INGEST_LABELS[Math.floor(Math.random() * INGEST_LABELS.length)],
+          label: payload.label,
+          value: payload.value,
+          source: payload.source,
         },
       ]);
-    }, 1600);
+    }, 4500);
     return () => window.clearInterval(id);
   }, [widgets]);
 
-  // Per-frame: update positions and clean up
+  // Per-frame: update card positions, beam geometry, fire absorb+cascade
   useFrame(({ clock }) => {
     const now = performance.now();
     const t = clock.getElapsedTime();
     const stillActive: IngestionEvent[] = [];
+    let beamIdx = 0;
+    let dirty = false;
+
     events.forEach((e) => {
       const tt = (now - e.startedAt) / e.duration;
       if (tt >= 1) {
         onAbsorb(e.targetId);
+        onCascade();
+        dirty = true;
         return;
       }
       stillActive.push(e);
-      const target = widgets.find((w) => w.id === e.targetId)!;
+
+      const target = widgets.find((w) => w.id === e.targetId);
+      if (!target) return;
       driftPosition(tmp, target.homePosition, t, target.driftPhase, target.driftSpeed, target.driftAmp);
-      const pos = e.startPos.clone().lerp(tmp, tt * tt); // ease-in
+
+      // Easing — slow start, accelerating arrival
+      const ease = tt < 0.5 ? 2 * tt * tt : 1 - Math.pow(-2 * tt + 2, 2) / 2;
+      const pos = e.startPos.clone().lerp(tmp, ease);
+
+      // Move card group
       const group = groupRefs.current.get(e.id);
-      if (group) {
-        group.position.copy(pos);
+      if (group) group.position.copy(pos);
+
+      // Write beam segments — sampled line from card position to target
+      if (beamIdx < MAX_BEAMS) {
+        // Signal head walks along the beam — bright at head, dim at tail
+        const head = ease;
+        for (let s = 0; s < SEGS_PER_BEAM; s++) {
+          const t0 = s / SEGS_PER_BEAM;
+          const t1 = (s + 1) / SEGS_PER_BEAM;
+          const a = pos.clone().lerp(tmp, t0);
+          const b = pos.clone().lerp(tmp, t1);
+          const o = (beamIdx * SEGS_PER_BEAM + s) * 6;
+          beamPositions[o] = a.x; beamPositions[o + 1] = a.y; beamPositions[o + 2] = a.z;
+          beamPositions[o + 3] = b.x; beamPositions[o + 4] = b.y; beamPositions[o + 5] = b.z;
+          // Heat profile: hot near `head`, fade away in both directions
+          const segMid = (t0 + t1) / 2;
+          const dist = Math.abs(segMid - head);
+          const heat = Math.max(0, 1 - dist * 4) * 0.85 + 0.15;
+          beamColors[o]     = 0.10 + heat * 0.06;
+          beamColors[o + 1] = 0.55 + heat * 0.30;
+          beamColors[o + 2] = 0.40 + heat * 0.18;
+          beamColors[o + 3] = beamColors[o];
+          beamColors[o + 4] = beamColors[o + 1];
+          beamColors[o + 5] = beamColors[o + 2];
+        }
+        beamIdx += 1;
       }
     });
-    if (stillActive.length !== events.length) {
+
+    // Zero out unused beam slots so prior beams don't ghost
+    for (let i = beamIdx; i < MAX_BEAMS; i++) {
+      const baseO = i * SEGS_PER_BEAM * 6;
+      for (let s = 0; s < SEGS_PER_BEAM * 6; s++) {
+        beamPositions[baseO + s] = 0;
+        beamColors[baseO + s] = 0;
+      }
+    }
+
+    if (beamRef.current) {
+      const posAttr = beamRef.current.geometry.getAttribute('position') as THREE.BufferAttribute;
+      const colAttr = beamRef.current.geometry.getAttribute('color') as THREE.BufferAttribute;
+      (posAttr.array as Float32Array).set(beamPositions);
+      (colAttr.array as Float32Array).set(beamColors);
+      posAttr.needsUpdate = true;
+      colAttr.needsUpdate = true;
+    }
+
+    if (dirty || stillActive.length !== events.length) {
       setEvents(stillActive);
     }
   });
 
   return (
     <>
+      {/* Inbound beam — sampled hot line from each card's flight
+          position to its target widget */}
+      <lineSegments ref={beamRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[beamPositions, 3]}
+            count={beamPositions.length / 3}
+            array={beamPositions}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            args={[beamColors, 3]}
+            count={beamColors.length / 3}
+            array={beamColors}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial vertexColors transparent opacity={0.85} depthWrite={false} toneMapped={false} />
+      </lineSegments>
+
+      {/* Inbound widget card — full styled card, mid-flight from side */}
       {events.map((e) => (
         <group
           key={e.id}
@@ -934,22 +1043,62 @@ const IngestionLayer: React.FC<{
           }}
           position={[e.startPos.x, e.startPos.y, e.startPos.z]}
         >
-          <Html center distanceFactor={28} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
+          <Html center distanceFactor={36} style={{ pointerEvents: 'none' }} zIndexRange={[120, 60]}>
             <div style={{
-              padding: '8px 14px',
-              background: 'rgba(8, 14, 12, 0.92)',
-              border: `1.5px solid ${COLORS.ok}`,
+              width: 360,
+              padding: `${SPACE.md}px ${SPACE.base}px`,
+              background: 'rgba(6, 16, 12, 0.94)',
+              border: `2px solid ${COLORS.ok}`,
               borderRadius: RADIUS.sm,
               fontFamily: FONTS.mono,
-              fontSize: 13,
-              fontWeight: 600,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: COLORS.ok,
-              whiteSpace: 'nowrap',
-              boxShadow: `0 0 18px rgba(16, 185, 129, 0.45)`,
+              boxShadow: `0 0 28px rgba(16, 185, 129, 0.55), inset 0 0 0 1px rgba(16, 185, 129, 0.18)`,
+              animation: 'ingest-card 600ms cubic-bezier(0.16, 1, 0.32, 1) backwards',
             }}>
-              + {e.label}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: SPACE.xs,
+              }}>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 10,
+                  letterSpacing: '0.22em',
+                  color: COLORS.ok,
+                  textTransform: 'uppercase',
+                }}>
+                  + INBOUND SIGNAL
+                </span>
+                <span style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 9,
+                  letterSpacing: '0.18em',
+                  color: COLORS.textMuted,
+                  textTransform: 'uppercase',
+                }}>
+                  {e.source}
+                </span>
+              </div>
+              <div style={{
+                fontWeight: 600,
+                fontSize: 17,
+                letterSpacing: '0.06em',
+                color: COLORS.textPrimary,
+                textTransform: 'uppercase',
+                marginBottom: 4,
+              }}>
+                {e.label}
+              </div>
+              <div style={{
+                fontFamily: FONTS.mono,
+                fontSize: 22,
+                fontWeight: 600,
+                letterSpacing: '0.02em',
+                color: COLORS.ok,
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {e.value}
+              </div>
             </div>
           </Html>
         </group>
@@ -975,6 +1124,7 @@ const DriftWidget: React.FC<{
 }> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
+  const [hovered, setHovered] = useState(false);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
@@ -988,9 +1138,14 @@ const DriftWidget: React.FC<{
   });
 
   // Stagger initial spawn — each widget animates in from scale(0.6) +
-  // blur. Delay by widget.id so cluster ripples into being. Capped at
-  // ~2.4s total even with 119 widgets.
+  // blur. Delay by widget.id so cluster ripples into being.
   const spawnDelay = `${(widget.id % 80) * 18}ms`;
+
+  // Hovered widget jumps to a higher zIndexRange so it lifts above
+  // every neighbor on screen (drei's <Html> uses these to assign
+  // DOM z-index from camera depth — without the lift, a closer
+  // neighbor's stacking context blocks pointer events on this card).
+  const zRange: [number, number] = hovered ? [400, 250] : fresh ? [180, 90] : [80, 10];
 
   return (
     <group ref={groupRef}>
@@ -1000,7 +1155,7 @@ const DriftWidget: React.FC<{
         style={{
           animation: `widget-spawn 600ms cubic-bezier(0.16, 1, 0.32, 1) ${spawnDelay} backwards`,
         }}
-        zIndexRange={[80, 10]}
+        zIndexRange={zRange}
         occlude={false}
       >
         <WidgetCard
@@ -1010,6 +1165,7 @@ const DriftWidget: React.FC<{
           patternHighlight={patternHighlight}
           absorbing={absorbing}
           fresh={fresh}
+          onHoverChange={setHovered}
         />
       </Html>
     </group>
@@ -1151,7 +1307,7 @@ const COLOR_ALT: [number, number, number] = [0.45, 0.14, 0.22];
 const COLOR_DEAD: [number, number, number] = [0.18, 0.10, 0.10];
 const COLOR_FLOW_HEAD: [number, number, number] = [1.0, 0.55, 0.65];
 
-const FutureTree: React.FC = () => {
+const FutureTree: React.FC<{ cascadeNonce?: number }> = ({ cascadeNonce = 0 }) => {
   const linesRef = useRef<THREE.LineSegments>(null);
   const matRef = useRef<THREE.LineBasicMaterial>(null);
   const flowsRef = useRef<FlowEvent[]>([]);
@@ -1271,6 +1427,45 @@ const FutureTree: React.FC = () => {
     }, 220);
     return () => window.clearInterval(id);
   }, [curves]);
+
+  // ── Cascade — every IngestionLayer absorb increments cascadeNonce.
+  //    Light up the primary path stages (cluster→r0, r0→m0, m0→d0,
+  //    d0→f0, f0→top) in sequence so the eye traces a single signal
+  //    racing from the cluster all the way to the apex.
+  useEffect(() => {
+    if (cascadeNonce === 0 || curves.length === 0) return;
+    // Find primary curves by kind, ordered by their starting Y so the
+    // sequence reads bottom→top. The first one (lowest Y) is the
+    // cluster→r0 arrival; subsequent ones move through the layers.
+    const sorted = curves
+      .map((c, i) => ({ c, i, y: c.midpoint[1] }))
+      .filter((x) => x.c.kind === 'primary' || x.c.kind === 'apex')
+      .sort((a, b) => a.y - b.y);
+    const stages = sorted.slice(0, 6);
+    const baseAt = performance.now();
+    const timeouts: number[] = [];
+    stages.forEach((s, idx) => {
+      const id = window.setTimeout(() => {
+        flowsRef.current.push({
+          curveIdx: s.i,
+          startedAt: performance.now(),
+          duration: 950,
+        });
+        // Double up — second flow on the same curve, half-step later
+        const id2 = window.setTimeout(() => {
+          flowsRef.current.push({
+            curveIdx: s.i,
+            startedAt: performance.now(),
+            duration: 850,
+          });
+        }, 220);
+        timeouts.push(id2);
+      }, idx * 280);
+      timeouts.push(id);
+      void baseAt;
+    });
+    return () => timeouts.forEach((id) => window.clearTimeout(id));
+  }, [cascadeNonce, curves]);
 
   // Per-frame: reset to base, apply pruning override, apply flow heat
   useFrame(({ clock }) => {
@@ -1394,23 +1589,6 @@ const FutureTree: React.FC = () => {
     </group>
   );
 };
-
-// ──────────────────────────────────────────────────────────────────
-// ClusterHalo — disc on the floor under the cluster, separates the
-// "now" data sphere from the "future" cone above without text.
-// ──────────────────────────────────────────────────────────────────
-const ClusterHalo: React.FC = () => (
-  <group>
-    <mesh position={[0, -14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[48, 76, 96]} />
-      <meshBasicMaterial color={COLORS.accent} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-    </mesh>
-    <mesh position={[0, -14, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-      <ringGeometry args={[74, 76.5, 96]} />
-      <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
-    </mesh>
-  </group>
-);
 
 // ──────────────────────────────────────────────────────────────────
 // TimeAxis — vertical ticks on +X side, mapping Y to T+15m..T+4h
@@ -1588,9 +1766,13 @@ const CameraOrchestrator: React.FC<{
   const startedRef = useRef<number>(0);
   const completedRef = useRef(false);
 
-  const targetY = 24;
-  const halfY = 50;
-  const halfXZ = 80;
+  // Cluster squashed to ±~17 around origin, apex at y=62. Target the
+  // midpoint, halfY = 48 covers the whole [-17, +62] range with the
+  // 1.20 padding factor in computeFitHome. halfXZ matches widened
+  // priority-1 reach (82) plus TimeAxis (62).
+  const targetY = 22;
+  const halfY = 48;
+  const halfXZ = 92;
 
   const home = useMemo(() => {
     if (!(camera instanceof THREE.PerspectiveCamera)) return new THREE.Vector3(0, targetY, 145);
@@ -1734,6 +1916,12 @@ const Scene: React.FC = () => {
     return () => window.clearInterval(id);
   }, [widgets]);
 
+  // Signal cascade — incremented every time IngestionLayer absorbs.
+  // FutureTree watches this and lights up the primary path from the
+  // cluster up to the apex like a relayed signal.
+  const [cascadeNonce, setCascadeNonce] = useState(0);
+  const triggerCascade = useCallback(() => setCascadeNonce((n) => n + 1), []);
+
   return (
     <>
       <color attach="background" args={[COLORS.bg]} />
@@ -1745,13 +1933,12 @@ const Scene: React.FC = () => {
           readable while geometry rotates underneath — that's the
           Foundation Prime Radiant feel. */}
       <AmbientRotation speed={rotationSpeed}>
-        <ClusterHalo />
         <FloatingEquations />
         <TimeAxis />
         <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
         <CenterReticle />
-        <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
-        <FutureTree />
+        <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} onCascade={triggerCascade} />
+        <FutureTree cascadeNonce={cascadeNonce} />
 
         {widgets.map((w) => (
           <DriftWidget
@@ -1798,11 +1985,11 @@ const Scene: React.FC = () => {
           autoRotate={false}
           enableDamping
           dampingFactor={0.09}
-          minDistance={70}
-          maxDistance={300}
+          minDistance={80}
+          maxDistance={320}
           minPolarAngle={Math.PI * 0.14}
           maxPolarAngle={Math.PI * 0.86}
-          target={[0, 24, 0]}
+          target={[0, 22, 0]}
           makeDefault
         />
       )}
@@ -1863,6 +2050,10 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
           0%   { opacity: 0; transform: scale(0.55); filter: blur(6px); }
           55%  { opacity: 1; }
           100% { opacity: 1; transform: scale(1);    filter: blur(0); }
+        }
+        @keyframes ingest-card {
+          0%   { opacity: 0; transform: scale(0.7); }
+          100% { opacity: 1; transform: scale(1); }
         }
         @media (prefers-reduced-motion: reduce) {
           [data-radiant-apex] { animation: none !important; }
