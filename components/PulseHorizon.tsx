@@ -1,4 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
+
+// Lazy-load PulseRadiant — three.js is ~1MB; only pay the cost when
+// the user actually opens the Radiant overlay.
+const PulseRadiant = lazy(() =>
+  import('./PulseRadiant').then((m) => ({ default: m.PulseRadiant })),
+);
 import { motion, AnimatePresence } from 'motion/react';
 import {
   XAxis,
@@ -183,6 +189,7 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   const [bedUnits] = useRealtimeState<BedUnit[]>('bed-units', seedBedState());
   const [showBedBoard, setShowBedBoard] = useState(false);
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
+  const [showRadiant, setShowRadiant] = useState(false);
   const [showDischargeFlow, setShowDischargeFlow] = useState(false);
   const [showRoundingList, setShowRoundingList] = useState(false);
   const [showNoteComposer, setShowNoteComposer] = useState(false);
@@ -628,6 +635,15 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                 <Mono tone="muted" size="xs">
                   RANGE: -30M → +90M · RES: 30M
                 </Mono>
+                <TacticalButton
+                  variant="secondary"
+                  size="sm"
+                  icon={<BrainCircuit size={12} strokeWidth={2} />}
+                  onClick={() => setShowRadiant(true)}
+                  title="Open the Pulse Radiant — a 3D visualization of how PULSE thinks"
+                >
+                  Pulse Radiant
+                </TacticalButton>
                 <TacticalButton
                   variant={isSimulating ? 'primary' : 'secondary'}
                   size="sm"
@@ -2317,8 +2333,149 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           .pulse-horizon-drivers::-webkit-scrollbar-track { background: transparent; }
           .pulse-horizon-drivers::-webkit-scrollbar-thumb { background: ${COLORS.border}; border-radius: 2px; }
           .pulse-horizon-drivers::-webkit-scrollbar-thumb:hover { background: ${COLORS.borderStrong}; }
+          @keyframes radiant-fade-in {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+          }
         `}
       </style>
+
+      {/* PULSE RADIANT overlay — 3D constellation of how PULSE thinks.
+          Lazy-loaded; the three.js bundle (~1MB) only loads when this
+          opens. Esc / × / backdrop-click all dismiss. */}
+      {showRadiant && (
+        <div
+          role="dialog"
+          aria-label="Pulse Radiant"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowRadiant(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowRadiant(false);
+          }}
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: '#000',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'radiant-fade-in 280ms ease-out',
+          }}
+        >
+          {/* Top HUD strip */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: `${SPACE.md}px ${SPACE.lg}px`,
+              background: 'linear-gradient(180deg, rgba(0,0,0,0.7), transparent)',
+              pointerEvents: 'none',
+            }}
+          >
+            <div style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: SPACE.md }}>
+              <BrainCircuit size={16} strokeWidth={1.6} color="#F5B85B" />
+              <Mono tone="primary" size="sm" style={{ color: '#F5B85B' }}>
+                Pulse Radiant
+              </Mono>
+              <Mono tone="muted" size="xs">
+                · DECISION TOPOLOGY · LIVE
+              </Mono>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowRadiant(false)}
+              aria-label="Close radiant"
+              style={{
+                pointerEvents: 'auto',
+                background: 'rgba(20, 20, 24, 0.6)',
+                border: `1px solid rgba(245, 184, 91, 0.25)`,
+                borderRadius: RADIUS.sm,
+                padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                color: '#F5B85B',
+                cursor: 'pointer',
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+              }}
+            >
+              <X size={12} strokeWidth={2} />
+              Close
+            </button>
+          </div>
+
+          {/* Bottom legend strip */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: `${SPACE.lg}px ${SPACE.lg}px ${SPACE.md}px`,
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.7), transparent)',
+              pointerEvents: 'none',
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: '#A89B7A',
+            }}
+          >
+            <div style={{ display: 'flex', gap: SPACE.lg, alignItems: 'center' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F5B85B', boxShadow: '0 0 8px #F5B85B' }} />
+                Patients · beds · EMS · staff · alerts
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F43F5E', boxShadow: '0 0 8px #F43F5E' }} />
+                Forecasts · scenarios · risks
+              </span>
+            </div>
+            <span style={{ opacity: 0.55 }}>Synthesized topology · 120 nodes</span>
+          </div>
+
+          {/* The radiant itself */}
+          <Suspense
+            fallback={
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  letterSpacing: '0.22em',
+                  color: '#F5B85B',
+                  textTransform: 'uppercase',
+                  background: '#040206',
+                }}
+              >
+                ▮ Initializing radiant…
+              </div>
+            }
+          >
+            <PulseRadiant height="100%" />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 };
