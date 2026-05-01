@@ -1,22 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight } from 'lucide-react';
 import { UserRole } from '../types';
 import {
   COLORS,
   FONTS,
-  TYPE,
   SPACE,
-  RADIUS,
   MOTION,
+  MACRO,
+  SCANLINES,
   Mono,
   BracketLabel,
   StatusPill,
-  CornerBracket,
+  Crosshair,
   HudStrip,
-  DotGridBg,
-  GlowBg,
-  TacticalCard,
 } from './design';
 
 interface LoginScreenProps {
@@ -133,8 +129,7 @@ const RoleCard: React.FC<{
       onHoverStart={() => setHovered(true)}
       onHoverEnd={() => setHovered(false)}
     >
-      <TacticalCard
-        interactive
+      <div
         role="button"
         tabIndex={0}
         onClick={() => onSelect(entry.role)}
@@ -144,65 +139,103 @@ const RoleCard: React.FC<{
             onSelect(entry.role);
           }
         }}
-        padding="none"
         style={{
+          position: 'relative',
           width: '100%',
           textAlign: 'left',
           cursor: 'pointer',
-          padding: '18px 20px 16px',
+          background: hovered ? COLORS.surfaceElev : COLORS.surface,
+          border: `1px solid ${hovered ? COLORS.accent : COLORS.borderStrong}`,
+          borderRadius: 0, // brutalist: 90 degrees
+          transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+          outline: 'none',
         }}
       >
-        {/* Header row: id + status */}
+        {/* Crosshairs at corners — appear on hover */}
+        {hovered && (
+          <>
+            <Crosshair position="tl" color={COLORS.accent} size={10} thickness={1} overlap />
+            <Crosshair position="tr" color={COLORS.accent} size={10} thickness={1} overlap />
+            <Crosshair position="bl" color={COLORS.accent} size={10} thickness={1} overlap />
+            <Crosshair position="br" color={COLORS.accent} size={10} thickness={1} overlap />
+          </>
+        )}
+
+        {/* TOP STRIP — operator id band, full-width */}
         <div
           style={{
-            display: 'flex',
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr auto',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 14,
+            gap: SPACE.md,
+            padding: `${SPACE.sm}px ${SPACE.lg}px`,
+            background: COLORS.bgDeep,
+            borderBottom: `1px solid ${COLORS.borderStrong}`,
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: COLORS.textMuted,
           }}
         >
-          <Mono tone="secondary">// {entry.id}</Mono>
-          <StatusPill label="Ready" tone="ok" />
+          <span>{entry.id}</span>
+          <span style={{ color: hovered ? COLORS.accent : COLORS.textDim, justifySelf: 'start' }}>
+            {`>>>`} {entry.scope}
+          </span>
+          <StatusPill label="Ready" tone="ok" size="xs" />
         </div>
 
-        {/* Identity row: avatar + name + title */}
+        {/* MAIN — square block + identity + arrow column */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            marginBottom: 12,
+            display: 'grid',
+            gridTemplateColumns: '64px 1fr auto',
+            alignItems: 'stretch',
+            gap: 0,
           }}
         >
+          {/* Square initials block — sharp, brutalist, accent-tinted */}
           <div
             style={{
-              width: 44,
-              height: 44,
-              flexShrink: 0,
+              width: 64,
+              minHeight: 64,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: COLORS.surfaceElev,
-              border: `1px solid ${COLORS.borderStrong}`,
-              borderRadius: RADIUS.sm,
+              background: hovered ? COLORS.accent : COLORS.surfaceElev,
+              borderRight: `1px solid ${COLORS.borderStrong}`,
               fontFamily: FONTS.mono,
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: 18,
+              fontWeight: 700,
               letterSpacing: '0.08em',
-              color: COLORS.textPrimary,
+              color: hovered ? COLORS.textPrimary : COLORS.accent,
+              transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
             }}
           >
             {entry.personnelInitials}
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* Identity column */}
+          <div
+            style={{
+              padding: `${SPACE.md}px ${SPACE.lg}px`,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              gap: 4,
+              minWidth: 0,
+            }}
+          >
             <div
               style={{
                 fontFamily: FONTS.sans,
                 fontSize: 17,
-                fontWeight: 600,
+                fontWeight: 700,
                 letterSpacing: '-0.01em',
                 color: COLORS.textPrimary,
-                lineHeight: 1.2,
+                lineHeight: 1.15,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -210,65 +243,92 @@ const RoleCard: React.FC<{
             >
               {entry.personnelName}
             </div>
-            <Mono tone="muted" size="xs" style={{ marginTop: 4, display: 'block' }}>
+            <div
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: 10,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: COLORS.textSecondary,
+              }}
+            >
               {entry.title}
-            </Mono>
-          </div>
-        </div>
-
-        {/* Description */}
-        <p
-          style={{
-            fontFamily: FONTS.sans,
-            fontSize: 13,
-            color: COLORS.textSecondary,
-            lineHeight: 1.45,
-            margin: 0,
-            marginBottom: 14,
-            maxWidth: '92%',
-          }}
-        >
-          {entry.description}
-        </p>
-
-        {/* Footer row: access / last-active / enter */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: 12,
-            borderTop: `1px dashed ${COLORS.border}`,
-          }}
-        >
-          <div style={{ display: 'flex', gap: 18 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Mono tone="muted">Access</Mono>
-              <Mono tone="primary">{entry.access}</Mono>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Mono tone="muted">Last Active</Mono>
-              <Mono tone="primary">{entry.lastActive}</Mono>
             </div>
           </div>
-          <motion.div
-            animate={{ x: hovered ? 4 : 0 }}
-            transition={{ duration: MOTION.fast, ease: MOTION.ease }}
+
+          {/* Right arrow column — ASCII brutalist, not a chip */}
+          <div
             style={{
+              borderLeft: `1px solid ${COLORS.borderStrong}`,
+              padding: `0 ${SPACE.lg}px`,
               display: 'flex',
               alignItems: 'center',
-              gap: 6,
+              justifyContent: 'center',
+              fontFamily: FONTS.mono,
+              fontSize: 13,
+              letterSpacing: '0.12em',
+              color: hovered ? COLORS.accent : COLORS.textMuted,
+              transform: hovered ? 'translateX(2px)' : 'translateX(0)',
+              transition: `color ${MOTION.fast}s ease, transform ${MOTION.fast}s ${MOTION.cssEase}`,
             }}
           >
-            <Mono tone={hovered ? 'accent' : 'secondary'}>Enter</Mono>
-            <ArrowRight
-              size={14}
-              color={hovered ? COLORS.accent : COLORS.textSecondary}
-              strokeWidth={2}
-            />
-          </motion.div>
+            {`>>>`}
+          </div>
         </div>
-      </TacticalCard>
+
+        {/* TABULAR DATA GRID — gap-1px divider trick */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 1,
+            background: COLORS.borderStrong,
+            borderTop: `1px solid ${COLORS.borderStrong}`,
+          }}
+        >
+          {[
+            ['ACCESS', entry.access],
+            ['SCOPE', entry.scope.replace('_', ' ')],
+            ['LAST', entry.lastActive],
+            ['STATE', 'READY'],
+          ].map(([k, v]) => (
+            <div
+              key={k}
+              style={{
+                background: COLORS.surface,
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 8,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: COLORS.textDim,
+                }}
+              >
+                {k}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  letterSpacing: '0.10em',
+                  textTransform: 'uppercase',
+                  color: COLORS.textPrimary,
+                  fontWeight: 600,
+                }}
+              >
+                {v}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </motion.div>
   );
 };
@@ -312,11 +372,17 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
         overflow: 'hidden',
       }}
     >
-      {/* Background layers — login is a stationary surface, so the
-          decorative ScanningLine was removed to let the role cards
-          breathe. */}
-      <DotGridBg />
-      <GlowBg origin="bottom" color={COLORS.info + '08'} intensity={0.5} />
+      {/* CRT scanline static — full-bleed, on top of canvas, below content */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: SCANLINES.medium,
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      />
 
       {/* ── TOP HUD ─────────────────────────────────────────── */}
       <HudStrip side="top" fixed height={36}>
@@ -401,58 +467,98 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
         <div
           style={{
             width: '100%',
-            maxWidth: 520,
+            maxWidth: 720,
             display: 'flex',
             flexDirection: 'column',
-            gap: SPACE.lg,
+            gap: SPACE.xl,
           }}
         >
-          {/* Brand block */}
+          {/* HERO BAND — section tag + accent rule + macro typography */}
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            style={{ marginBottom: 12 }}
           >
+            {/* Section tag with full-width rule */}
             <div
               style={{
                 display: 'flex',
-                alignItems: 'baseline',
-                gap: 14,
-                marginBottom: 6,
+                alignItems: 'center',
+                gap: SPACE.sm,
+                marginBottom: SPACE.md,
+                fontFamily: FONTS.mono,
+                fontSize: 10,
+                letterSpacing: '0.24em',
+                textTransform: 'uppercase',
+                color: COLORS.accent,
               }}
             >
-              <h1
+              <span>+++</span>
+              <span>OPERATOR · AUTHENTICATION</span>
+              <span style={{ flex: 1, height: 1, background: COLORS.accent, opacity: 0.6, marginLeft: SPACE.sm }} />
+              <span style={{ color: COLORS.textPrimary }}>{timeStr} UTC</span>
+            </div>
+
+            {/* MACRO HEADER — fluid clamp typography */}
+            <h1
+              style={{
+                fontFamily: FONTS.sans,
+                fontSize: isMobile ? 'clamp(3rem, 10vw, 5rem)' : MACRO.banner,
+                fontWeight: 800,
+                letterSpacing: '-0.04em',
+                lineHeight: 0.86,
+                margin: 0,
+                color: COLORS.textPrimary,
+                textTransform: 'uppercase',
+              }}
+            >
+              SELECT<br />OPERATOR
+              <sup
                 style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: isMobile ? TYPE.displaySm.size : TYPE.display.size,
-                  fontWeight: TYPE.display.weight,
-                  letterSpacing: TYPE.display.tracking,
-                  lineHeight: TYPE.display.lineHeight,
-                  margin: 0,
-                  color: COLORS.textPrimary,
+                  fontSize: '0.18em',
+                  fontFamily: FONTS.mono,
+                  fontWeight: 500,
+                  letterSpacing: '0.16em',
+                  color: COLORS.accent,
+                  marginLeft: '0.05em',
+                  verticalAlign: 'top',
+                  top: '-0.6em',
+                  position: 'relative',
                 }}
               >
-                PULSE
-              </h1>
-              <div
-                style={{
-                  height: 1,
-                  flex: 1,
-                  background: `linear-gradient(90deg, ${COLORS.accent}, transparent)`,
-                }}
-              />
-              <Mono tone="accent">{timeStr} UTC</Mono>
+                ®
+              </sup>
+            </h1>
+
+            {/* Sub-line with action prompt */}
+            <div
+              style={{
+                marginTop: SPACE.sm,
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: COLORS.textSecondary,
+                display: 'flex',
+                gap: SPACE.lg,
+              }}
+            >
+              <span>3 PERSONNEL ON ROSTER</span>
+              <span style={{ color: COLORS.textDim }}>│</span>
+              <span>BIOMETRIC + SESSION-BOUND</span>
+              <span style={{ color: COLORS.textDim }}>│</span>
+              <span style={{ color: COLORS.ok }}>UPLINK STABLE</span>
             </div>
-            <Mono tone="secondary">// Secure access · Select operator to proceed</Mono>
           </motion.div>
 
-          {/* Role cards */}
+          {/* Role cards stack — 1px gap divider trick */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: 1,
+              background: COLORS.borderStrong,
+              border: `1px solid ${COLORS.borderStrong}`,
             }}
           >
             {ROLES.map((entry, i) => (

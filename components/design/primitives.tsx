@@ -234,6 +234,91 @@ export const CornerBracket: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────────────────
+// Crosshair — `+` registration mark, used at panel corners and grid
+// intersections. Industrial-brutalist alternative to CornerBracket.
+// More NASA-control-room than Palantir-glass.
+// ─────────────────────────────────────────────────────────────────────────
+export const Crosshair: React.FC<{
+  position?: 'tl' | 'tr' | 'bl' | 'br' | 'center';
+  color?: string;
+  size?: number;
+  thickness?: number;
+  inset?: number;
+  /** When true, the crosshair is offset to overlap a corner. */
+  overlap?: boolean;
+}> = ({
+  position = 'tl',
+  color = COLORS.textMuted,
+  size = 10,
+  thickness = 1,
+  inset = 0,
+  overlap = false,
+}) => {
+  const off = overlap ? -size / 2 : inset;
+  const placement: React.CSSProperties = position === 'center'
+    ? { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
+    : (() => {
+        const [v, h] = position.split('') as Array<'t' | 'b' | 'l' | 'r'>;
+        return {
+          [v === 't' ? 'top' : 'bottom']: off,
+          [h === 'l' ? 'left' : 'right']: off,
+        } as React.CSSProperties;
+      })();
+  return (
+    <span
+      aria-hidden
+      style={{
+        position: 'absolute',
+        width: size,
+        height: size,
+        pointerEvents: 'none',
+        ...placement,
+      }}
+    >
+      {/* Horizontal arm */}
+      <span
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: '50%',
+          height: thickness,
+          marginTop: -thickness / 2,
+          background: color,
+        }}
+      />
+      {/* Vertical arm */}
+      <span
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: '50%',
+          width: thickness,
+          marginLeft: -thickness / 2,
+          background: color,
+        }}
+      />
+    </span>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// CrosshairFrame — places `+` marks at all four corners of children
+// ─────────────────────────────────────────────────────────────────────────
+export const CrosshairFrame: React.FC<{
+  color?: string;
+  size?: number;
+  thickness?: number;
+}> = ({ color = COLORS.textMuted, size = 12, thickness = 1 }) => (
+  <>
+    {(['tl', 'tr', 'bl', 'br'] as const).map((p) => (
+      <Crosshair key={p} position={p} color={color} size={size} thickness={thickness} overlap />
+    ))}
+  </>
+);
+
+// ─────────────────────────────────────────────────────────────────────────
 // BracketFrame — wraps children with four corner brackets
 // ─────────────────────────────────────────────────────────────────────────
 export const BracketFrame: React.FC<{

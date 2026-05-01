@@ -96,6 +96,7 @@ import {
   SPACE,
   RADIUS,
   SHADOW,
+  SCANLINES,
   MOTION,
   CHROME,
   cssTransition,
@@ -1366,6 +1367,7 @@ function App() {
       ) : (
         <div
           style={{
+            position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             height: '100vh',
@@ -1376,6 +1378,18 @@ function App() {
             border: systemStatus === 'manual' ? `2px solid ${COLORS.warn}` : 'none',
           }}
         >
+          {/* Subtle CRT scanline overlay — pure tactile texture, doesn't
+              fight dashboard data. Sits under all content. */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: SCANLINES.subtle,
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          />
           {/* ═══════════════════════════════════════════════════════
               TOP HUD STRIP — header + nav
               ═══════════════════════════════════════════════════════ */}
