@@ -341,37 +341,37 @@ const toneColor = (tone: Tone): string => {
   }
 };
 
-// All bigger than v3 (was 134-220)
+// Bumped again per Nick — all sizes larger than v4 (was 200-290)
 const widthByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 290;
-    case 4: return 260;
-    case 3: return 240;
-    case 2: return 220;
+    case 5: return 380;
+    case 4: return 340;
+    case 3: return 300;
+    case 2: return 270;
     case 1:
-    default: return 200;
+    default: return 240;
   }
 };
 
 const labelFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 13;
-    case 4: return 12;
-    case 3: return 11;
-    case 2: return 11;
+    case 5: return 16;
+    case 4: return 14;
+    case 3: return 13;
+    case 2: return 12;
     case 1:
-    default: return 10;
+    default: return 12;
   }
 };
 
 const valueFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 22;
-    case 4: return 18;
-    case 3: return 16;
-    case 2: return 14;
+    case 5: return 28;
+    case 4: return 23;
+    case 3: return 19;
+    case 2: return 16;
     case 1:
-    default: return 13;
+    default: return 15;
   }
 };
 
@@ -923,6 +923,342 @@ const DriftWidget: React.FC<{
 };
 
 // ──────────────────────────────────────────────────────────────────
+// FUTURE BRANCH — Foundation Prime Radiant style.
+// A branching projection of likely futures emerging from the decision
+// center along the +X axis. Most-likely path is highlighted; alts are
+// dimmer ghosts showing alternate possibilities.
+// ──────────────────────────────────────────────────────────────────
+
+interface FutureNode {
+  /** Time horizon label, e.g. "T+15m" */
+  time: string;
+  /** Position along +X */
+  x: number;
+  primary: { label: string; value: string; prob: number; tone: Tone };
+  alts: { label: string; value: string; prob: number; tone: Tone }[];
+}
+
+const FUTURE_TIMELINE: FutureNode[] = [
+  {
+    time: 'T+15m',
+    x: 12,
+    primary: { label: 'Census holding', value: '38 ED · NEDOCS 124', prob: 0.68, tone: 'info' },
+    alts: [
+      { label: 'Surge ramp begins', value: '+8 admits · 142', prob: 0.22, tone: 'warn' },
+      { label: 'Discharge wave', value: '−12 census', prob: 0.10, tone: 'info' },
+    ],
+  },
+  {
+    time: 'T+30m',
+    x: 19,
+    primary: { label: 'EMS arrivals +2', value: 'NEDOCS 132', prob: 0.62, tone: 'info' },
+    alts: [
+      { label: 'Trauma 1 inbound', value: 'Bay 1 stage', prob: 0.24, tone: 'warn' },
+      { label: 'Float pool warm', value: '2 RN active', prob: 0.14, tone: 'info' },
+    ],
+  },
+  {
+    time: 'T+1h',
+    x: 26,
+    primary: { label: 'Pressure forming', value: 'NEDOCS 142', prob: 0.58, tone: 'warn' },
+    alts: [
+      { label: 'ICU full', value: '12 / 12 beds', prob: 0.22, tone: 'warn' },
+      { label: 'Divert posted', value: 'Regional grid', prob: 0.20, tone: 'warn' },
+    ],
+  },
+  {
+    time: 'T+2h',
+    x: 33,
+    primary: { label: 'Surge tier 2 active', value: 'NEDOCS 156', prob: 0.51, tone: 'warn' },
+    alts: [
+      { label: 'Mass cas declared', value: 'NEDOCS 184', prob: 0.06, tone: 'accent' },
+      { label: 'Recovery begins', value: 'NEDOCS 138', prob: 0.43, tone: 'info' },
+    ],
+  },
+  {
+    time: 'T+4h',
+    x: 40,
+    primary: { label: 'NEDOCS easing', value: '118 by 19:00', prob: 0.61, tone: 'info' },
+    alts: [
+      { label: 'Divert lifted', value: 'Regional clear', prob: 0.27, tone: 'info' },
+      { label: 'Hold sustained', value: 'NEDOCS 148', prob: 0.12, tone: 'warn' },
+    ],
+  },
+];
+
+interface PreparedFuture {
+  /** Position in 3D for placement */
+  position: THREE.Vector3;
+  /** Future node payload */
+  node: FutureNode;
+  /** "primary" or alternative index 0/1 */
+  variant: 'primary' | 'alt0' | 'alt1';
+}
+
+const layoutFutures = (timeline: FutureNode[]): PreparedFuture[] => {
+  const out: PreparedFuture[] = [];
+  timeline.forEach((node) => {
+    out.push({
+      position: new THREE.Vector3(node.x, 0, 0),
+      node,
+      variant: 'primary',
+    });
+    out.push({
+      position: new THREE.Vector3(node.x, 3.6, -1.2),
+      node,
+      variant: 'alt0',
+    });
+    out.push({
+      position: new THREE.Vector3(node.x, -3.6, 1.2),
+      node,
+      variant: 'alt1',
+    });
+  });
+  return out;
+};
+
+interface FutureCardProps {
+  future: PreparedFuture;
+  /** Time label only shown on first widget at each marker */
+  showTimeMarker: boolean;
+}
+
+const FutureCard: React.FC<FutureCardProps> = ({ future, showTimeMarker }) => {
+  const { node, variant } = future;
+  const isPrimary = variant === 'primary';
+  const data = isPrimary ? node.primary : variant === 'alt0' ? node.alts[0] : node.alts[1];
+  const dotColor = toneColor(data.tone);
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: isPrimary ? 240 : 180,
+      background: COLORS.surface,
+      border: `1px solid ${isPrimary ? COLORS.accent : COLORS.border}`,
+      borderRadius: RADIUS.sm,
+      padding: isPrimary ? '12px 14px' : '8px 10px',
+      fontFamily: FONTS.mono,
+      opacity: isPrimary ? 1 : 0.45,
+      transform: `scale(${isPrimary ? 1 : 0.85})`,
+      boxShadow: isPrimary
+        ? `0 0 18px rgba(225, 29, 72, 0.32)`
+        : `0 4px 10px rgba(0, 0, 0, 0.5)`,
+      pointerEvents: 'none',
+      userSelect: 'none',
+    }}>
+      {/* Time marker label (above primary only) */}
+      {isPrimary && showTimeMarker && (
+        <div style={{
+          position: 'absolute',
+          top: -22,
+          left: 0,
+          right: 0,
+          textAlign: 'center',
+          fontFamily: FONTS.mono,
+          fontSize: 11,
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+          color: COLORS.accent,
+          textShadow: `0 0 6px ${COLORS.bg}`,
+        }}>
+          ▸ {node.time}
+        </div>
+      )}
+
+      {/* "MOST LIKELY · 64%" tag for primary */}
+      {isPrimary && (
+        <div style={{
+          position: 'absolute',
+          top: -14,
+          right: 0,
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          letterSpacing: '0.18em',
+          color: COLORS.accent,
+          textShadow: `0 0 4px ${COLORS.bg}`,
+        }}>
+          MOST LIKELY · {Math.round(node.primary.prob * 100)}%
+        </div>
+      )}
+
+      {/* Top row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor }} />
+        <span style={{
+          fontSize: isPrimary ? 11 : 9,
+          fontWeight: 500,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: COLORS.textPrimary,
+          flex: 1,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+        }}>
+          {data.label}
+        </span>
+        {!isPrimary && (
+          <span style={{
+            fontSize: 8,
+            fontFamily: FONTS.mono,
+            letterSpacing: '0.18em',
+            color: COLORS.textMuted,
+          }}>
+            {Math.round(data.prob * 100)}%
+          </span>
+        )}
+      </div>
+
+      {/* Value */}
+      <div style={{
+        fontSize: isPrimary ? 16 : 12,
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        color: data.tone === 'accent' ? COLORS.accentBright : COLORS.textPrimary,
+        fontVariantNumeric: 'tabular-nums',
+        paddingLeft: 12,
+      }}>
+        {data.value}
+      </div>
+    </div>
+  );
+};
+
+const FutureBranch: React.FC = () => {
+  const futures = useMemo(() => layoutFutures(FUTURE_TIMELINE), []);
+  const meshRef = useRef<THREE.LineSegments>(null);
+
+  // Build branching edges:
+  //   - primary chain: origin → T+15 primary → T+30 primary → ... → T+4h primary
+  //   - secondary fans: T+N primary → T+N alts
+  const { positions, colors } = useMemo(() => {
+    const lines: { a: THREE.Vector3; b: THREE.Vector3; primary: boolean }[] = [];
+    let prevPrimary = new THREE.Vector3(0, 0, 0); // origin = decision center
+
+    FUTURE_TIMELINE.forEach((node) => {
+      const primaryPos = new THREE.Vector3(node.x, 0, 0);
+      const alt0Pos = new THREE.Vector3(node.x, 3.6, -1.2);
+      const alt1Pos = new THREE.Vector3(node.x, -3.6, 1.2);
+
+      // Primary chain
+      lines.push({ a: prevPrimary.clone(), b: primaryPos.clone(), primary: true });
+      // Alt fans
+      lines.push({ a: primaryPos.clone(), b: alt0Pos.clone(), primary: false });
+      lines.push({ a: primaryPos.clone(), b: alt1Pos.clone(), primary: false });
+
+      prevPrimary = primaryPos;
+    });
+
+    const positions = new Float32Array(lines.length * 6);
+    const colors = new Float32Array(lines.length * 6);
+    lines.forEach((l, i) => {
+      positions[i * 6] = l.a.x; positions[i * 6 + 1] = l.a.y; positions[i * 6 + 2] = l.a.z;
+      positions[i * 6 + 3] = l.b.x; positions[i * 6 + 4] = l.b.y; positions[i * 6 + 5] = l.b.z;
+      const r = l.primary ? 0.88 : 0.32;
+      const g = l.primary ? 0.18 : 0.08;
+      const b = l.primary ? 0.32 : 0.14;
+      colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = b;
+      colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = b;
+    });
+    return { positions, colors };
+  }, []);
+
+  // Subtle shimmer on the primary chain
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return;
+    const t = clock.getElapsedTime();
+    const colorAttr = meshRef.current.geometry.attributes.color;
+    const arr = colorAttr.array as Float32Array;
+    // Every 3rd line is primary (since we push primary, alt0, alt1 per node)
+    for (let i = 0; i < positions.length / 6; i++) {
+      const isPrimary = i % 3 === 0;
+      const baseR = isPrimary ? 0.88 : 0.32;
+      const baseG = isPrimary ? 0.18 : 0.08;
+      const baseB = isPrimary ? 0.32 : 0.14;
+      const shimmer = isPrimary ? 0.85 + Math.sin(t * 0.8 + i * 0.4) * 0.30 : 1.0;
+      arr[i * 6] = baseR * shimmer;
+      arr[i * 6 + 1] = baseG * shimmer;
+      arr[i * 6 + 2] = baseB * shimmer;
+      arr[i * 6 + 3] = arr[i * 6];
+      arr[i * 6 + 4] = arr[i * 6 + 1];
+      arr[i * 6 + 5] = arr[i * 6 + 2];
+    }
+    colorAttr.needsUpdate = true;
+  });
+
+  return (
+    <>
+      {/* Branching lines */}
+      <lineSegments ref={meshRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            args={[positions, 3]}
+            count={positions.length / 3}
+            array={positions}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            args={[colors, 3]}
+            count={colors.length / 3}
+            array={colors}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial vertexColors transparent opacity={0.95} depthWrite={false} toneMapped={false} />
+      </lineSegments>
+
+      {/* Future widgets */}
+      {futures.map((f, i) => (
+        <Html
+          key={`${f.node.time}-${f.variant}`}
+          position={[f.position.x, f.position.y, f.position.z]}
+          center
+          distanceFactor={14}
+          style={{}}
+          zIndexRange={[60, 5]}
+          occlude={false}
+        >
+          <FutureCard future={f} showTimeMarker={i % 3 === 0} />
+        </Html>
+      ))}
+
+      {/* "PROJECTED FUTURES" header at the start of the branch */}
+      <Html
+        position={[7, 6.5, 0]}
+        center
+        distanceFactor={14}
+        style={{ pointerEvents: 'none' }}
+        zIndexRange={[40, 5]}
+      >
+        <div style={{
+          padding: '6px 12px',
+          background: 'rgba(15, 5, 10, 0.85)',
+          border: `1px solid ${COLORS.accent}`,
+          borderRadius: RADIUS.sm,
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          letterSpacing: '0.24em',
+          textTransform: 'uppercase',
+          color: COLORS.accent,
+          whiteSpace: 'nowrap',
+          boxShadow: `0 0 12px rgba(225, 29, 72, 0.35)`,
+        }}>
+          ▸ PROJECTED FUTURES · NEXT 4H
+        </div>
+      </Html>
+
+      {/* Endpoint marker — bright dot at T+4h primary */}
+      <mesh position={[40, 0, 0]}>
+        <sphereGeometry args={[0.18, 16, 16]} />
+        <meshBasicMaterial color={COLORS.accent} toneMapped={false} />
+      </mesh>
+    </>
+  );
+};
+
+// ──────────────────────────────────────────────────────────────────
 // Scene composition
 // ──────────────────────────────────────────────────────────────────
 
@@ -1002,6 +1338,7 @@ const Scene: React.FC = () => {
       <CompileBurst intervalMs={5500} />
       <CenterReticle />
       <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
+      <FutureBranch />
 
       {widgets.map((w) => (
         <DriftWidget
@@ -1036,17 +1373,19 @@ const Scene: React.FC = () => {
         </Html>
       )}
 
-      {/* Camera — dead center, no auto-rotate */}
+      {/* Camera — pulled back + biased to view both cluster (origin)
+          and the future branch extending to +X (target ~T+2h primary).
+          Target offset to ~x=14 so the framing covers both. */}
       <OrbitControls
         enablePan={false}
         autoRotate={false}
         enableDamping
         dampingFactor={0.09}
-        minDistance={20}
-        maxDistance={70}
+        minDistance={28}
+        maxDistance={90}
         minPolarAngle={Math.PI * 0.28}
         maxPolarAngle={Math.PI * 0.72}
-        target={[0, 0, 0]}
+        target={[14, 0, 0]}
         makeDefault
       />
 
@@ -1092,7 +1431,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 32], fov: 50, near: 0.1, far: 200 }}
+        camera={{ position: [14, 0, 50], fov: 50, near: 0.1, far: 200 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
