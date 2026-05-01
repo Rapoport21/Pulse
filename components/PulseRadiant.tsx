@@ -234,42 +234,49 @@ interface PreparedWidget extends Widget {
   driftAmp: number;
 }
 
-const SHELL_RADIUS: Record<Layer, number> = {
-  4: 2.0,
-  3: 6.5,
-  2: 11.5,
-  1: 17.0,
-};
-
-const fibonacciSphere = (n: number, radius: number): THREE.Vector3[] => {
-  const pts: THREE.Vector3[] = [];
-  const phi = Math.PI * (3 - Math.sqrt(5));
-  for (let i = 0; i < n; i++) {
-    const y = 1 - (i / (n - 1)) * 2;
-    const r = Math.sqrt(1 - y * y);
-    const theta = phi * i;
-    pts.push(new THREE.Vector3(Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius));
-  }
-  return pts;
-};
-
+// Non-spherical organic distribution. Radius derives from priority:
+// p5 widgets cluster tight around center, p1 widgets scatter wide.
+// Y is squashed so the cluster reads as a flattened radiant disk
+// (leaves room above for the future branches to rise upward).
+// Seeded RNG = same layout each render.
 const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
-  const byLayer = new Map<Layer, Widget[]>([[1, []], [2, []], [3, []], [4, []]]);
-  widgets.forEach((w) => byLayer.get(w.layer)!.push(w));
-  const out: PreparedWidget[] = [];
-  byLayer.forEach((items, layer) => {
-    const positions = fibonacciSphere(items.length, SHELL_RADIUS[layer]);
-    items.forEach((w, i) => {
-      out.push({
-        ...w,
-        homePosition: positions[i],
-        driftPhase: (i + layer * 3.7) * 0.7,
-        driftSpeed: 0.14 + Math.random() * 0.18,
-        driftAmp: layer === 4 ? 0.10 : 0.45,
-      });
-    });
+  let seed = 7331;
+  const rand = () => {
+    seed = (seed * 9301 + 49297) % 233280;
+    return seed / 233280;
+  };
+
+  return widgets.map((w, i) => {
+    // Priority drives radial distance — bigger widgets near the center
+    // (the "decision core"), smaller priority widgets at the periphery.
+    const priorityRadiusMap: Record<Priority, [number, number]> = {
+      5: [3, 8],
+      4: [7, 14],
+      3: [12, 20],
+      2: [16, 26],
+      1: [20, 32],
+    };
+    const [minR, maxR] = priorityRadiusMap[w.priority];
+    const radius = minR + rand() * (maxR - minR);
+
+    // Random direction — full 3D, then squash Y so cluster is wider
+    // than tall (the future branches rise above).
+    const theta = rand() * Math.PI * 2;
+    const phi = Math.acos(2 * rand() - 1);
+    const x = Math.sin(phi) * Math.cos(theta) * radius;
+    const yRaw = Math.cos(phi) * radius;
+    const z = Math.sin(phi) * Math.sin(theta) * radius;
+    // Squash Y to ~40% so cluster is flatter
+    const y = yRaw * 0.42 - 2; // also shift down slightly so future has more headroom
+
+    return {
+      ...w,
+      homePosition: new THREE.Vector3(x, y, z),
+      driftPhase: (i + w.priority * 1.7) * 0.7,
+      driftSpeed: 0.14 + rand() * 0.20,
+      driftAmp: w.priority >= 4 ? 0.18 : 0.55,
+    };
   });
-  return out;
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -341,37 +348,37 @@ const toneColor = (tone: Tone): string => {
   }
 };
 
-// Bumped again per Nick — all sizes larger than v4 (was 200-290)
+// Bumped HARD per Nick ("much much larger by a lot")
 const widthByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 380;
-    case 4: return 340;
-    case 3: return 300;
-    case 2: return 270;
+    case 5: return 600;
+    case 4: return 520;
+    case 3: return 460;
+    case 2: return 400;
     case 1:
-    default: return 240;
+    default: return 360;
   }
 };
 
 const labelFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 16;
-    case 4: return 14;
-    case 3: return 13;
-    case 2: return 12;
+    case 5: return 22;
+    case 4: return 19;
+    case 3: return 17;
+    case 2: return 15;
     case 1:
-    default: return 12;
+    default: return 14;
   }
 };
 
 const valueFontByPriority = (p: Priority): number => {
   switch (p) {
-    case 5: return 28;
-    case 4: return 23;
-    case 3: return 19;
-    case 2: return 16;
+    case 5: return 38;
+    case 4: return 32;
+    case 3: return 26;
+    case 2: return 22;
     case 1:
-    default: return 15;
+    default: return 19;
   }
 };
 
@@ -909,7 +916,7 @@ const DriftWidget: React.FC<{
 
   return (
     <group ref={groupRef}>
-      <Html center distanceFactor={14} style={{}} zIndexRange={[80, 10]} occlude={false}>
+      <Html center distanceFactor={22} style={{}} zIndexRange={[80, 10]} occlude={false}>
         <WidgetCard
           widget={widget}
           tracked={tracked}
@@ -923,340 +930,297 @@ const DriftWidget: React.FC<{
 };
 
 // ──────────────────────────────────────────────────────────────────
-// FUTURE BRANCH — Foundation Prime Radiant style.
-// A branching projection of likely futures emerging from the decision
-// center along the +X axis. Most-likely path is highlighted; alts are
-// dimmer ghosts showing alternate possibilities.
+// FutureTree — Y-axis branching tree of projected futures
+// Multiple paths radiate UP from the cluster, converge into a single
+// prediction at the apex. Some branches are dead-ends (ruled-out
+// futures). Inspired by the Foundation Prime Radiant.
 // ──────────────────────────────────────────────────────────────────
 
+type FutureKind = 'primary' | 'alt' | 'dead' | 'apex';
+
 interface FutureNode {
-  /** Time horizon label, e.g. "T+15m" */
-  time: string;
-  /** Position along +X */
-  x: number;
-  primary: { label: string; value: string; prob: number; tone: Tone };
-  alts: { label: string; value: string; prob: number; tone: Tone }[];
+  id: string;
+  pos: [number, number, number];
+  label: string;
+  value?: string;
+  detail?: string;
+  time?: string;
+  conf?: number; // 0..1
+  kind: FutureKind;
+  size: number; // px width
 }
 
-const FUTURE_TIMELINE: FutureNode[] = [
-  {
-    time: 'T+15m',
-    x: 12,
-    primary: { label: 'Census holding', value: '38 ED · NEDOCS 124', prob: 0.68, tone: 'info' },
-    alts: [
-      { label: 'Surge ramp begins', value: '+8 admits · 142', prob: 0.22, tone: 'warn' },
-      { label: 'Discharge wave', value: '−12 census', prob: 0.10, tone: 'info' },
-    ],
-  },
-  {
-    time: 'T+30m',
-    x: 19,
-    primary: { label: 'EMS arrivals +2', value: 'NEDOCS 132', prob: 0.62, tone: 'info' },
-    alts: [
-      { label: 'Trauma 1 inbound', value: 'Bay 1 stage', prob: 0.24, tone: 'warn' },
-      { label: 'Float pool warm', value: '2 RN active', prob: 0.14, tone: 'info' },
-    ],
-  },
-  {
-    time: 'T+1h',
-    x: 26,
-    primary: { label: 'Pressure forming', value: 'NEDOCS 142', prob: 0.58, tone: 'warn' },
-    alts: [
-      { label: 'ICU full', value: '12 / 12 beds', prob: 0.22, tone: 'warn' },
-      { label: 'Divert posted', value: 'Regional grid', prob: 0.20, tone: 'warn' },
-    ],
-  },
-  {
-    time: 'T+2h',
-    x: 33,
-    primary: { label: 'Surge tier 2 active', value: 'NEDOCS 156', prob: 0.51, tone: 'warn' },
-    alts: [
-      { label: 'Mass cas declared', value: 'NEDOCS 184', prob: 0.06, tone: 'accent' },
-      { label: 'Recovery begins', value: 'NEDOCS 138', prob: 0.43, tone: 'info' },
-    ],
-  },
-  {
-    time: 'T+4h',
-    x: 40,
-    primary: { label: 'NEDOCS easing', value: '118 by 19:00', prob: 0.61, tone: 'info' },
-    alts: [
-      { label: 'Divert lifted', value: 'Regional clear', prob: 0.27, tone: 'info' },
-      { label: 'Hold sustained', value: 'NEDOCS 148', prob: 0.12, tone: 'warn' },
-    ],
-  },
+interface FutureLink {
+  from: string;
+  to: string;
+  kind: FutureKind;
+}
+
+// Layered nodes (Y-up). Roots near cluster, top is the predicted future.
+//   Y=6   roots (6)         → 4 alive, 2 dead-ends
+//   Y=12  mid (5)           → 4 alive, 1 dead-end
+//   Y=18  deep (4)          → 3 alive, 1 dead-end
+//   Y=24  final (2)         → both alive, converging
+//   Y=30  apex (1)          → the prediction
+const FUTURE_NODES: FutureNode[] = [
+  // Roots (Y=6) — branching upward from cluster
+  { id: 'r0', pos: [-7, 6, 0],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 380, conf: 0.76 },
+  { id: 'r1', pos: [-2, 6, 4],   label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 340 },
+  { id: 'r2', pos: [3, 6, 2],    label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 340 },
+  { id: 'r3', pos: [7, 6, -2],   label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 340 },
+  { id: 'r4', pos: [-9, 6, -4],  label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 260 },
+  { id: 'r5', pos: [10, 6, 4],   label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 260 },
+
+  // Mid layer (Y=12)
+  { id: 'm0', pos: [-5, 12, 1],  label: 'Triage thinning',     value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 380, conf: 0.81 },
+  { id: 'm1', pos: [1, 12, 5],   label: 'Bed cohort A',        value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 320 },
+  { id: 'm2', pos: [5, 12, -3],  label: 'OR queue resolved',   value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 320 },
+  { id: 'm3', pos: [-8, 12, -2], label: 'Ambulance backlog',   value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 320 },
+  { id: 'm4', pos: [9, 12, 5],   label: 'INSUFFICIENT DATA',   value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 240 },
+
+  // Deep layer (Y=18)
+  { id: 'd0', pos: [-3, 18, 2],  label: 'NEDOCS easing',       value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 400, conf: 0.69 },
+  { id: 'd1', pos: [3, 18, 4],   label: 'Surge subsides',      value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 340 },
+  { id: 'd2', pos: [-6, 18, -3], label: 'ICU at 88%',          value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 340 },
+  { id: 'd3', pos: [7, 18, -4],  label: 'INCOMPATIBLE SIGNAL', value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 240 },
+
+  // Final (Y=24) — convergence layer
+  { id: 'f0', pos: [-1, 24, 1],  label: 'Capacity recovers',   value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 420, conf: 0.71 },
+  { id: 'f1', pos: [3, 24, -2],  label: 'Wait time normal',    value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 380, conf: 0.66 },
+
+  // Apex (Y=30) — the prediction
+  { id: 'top', pos: [0, 30, 0],  label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 560, conf: 0.64 },
 ];
 
-interface PreparedFuture {
-  /** Position in 3D for placement */
-  position: THREE.Vector3;
-  /** Future node payload */
-  node: FutureNode;
-  /** "primary" or alternative index 0/1 */
-  variant: 'primary' | 'alt0' | 'alt1';
-}
+const FUTURE_LINKS: FutureLink[] = [
+  // Roots → mid
+  { from: 'r0', to: 'm0', kind: 'primary' },
+  { from: 'r0', to: 'm3', kind: 'alt' },
+  { from: 'r1', to: 'm0', kind: 'alt' },
+  { from: 'r1', to: 'm1', kind: 'alt' },
+  { from: 'r2', to: 'm2', kind: 'alt' },
+  { from: 'r3', to: 'm2', kind: 'alt' },
+  { from: 'r3', to: 'm1', kind: 'alt' },
+  { from: 'r4', to: 'm4', kind: 'dead' },
+  { from: 'r5', to: 'm4', kind: 'dead' },
 
-const layoutFutures = (timeline: FutureNode[]): PreparedFuture[] => {
-  const out: PreparedFuture[] = [];
-  timeline.forEach((node) => {
-    out.push({
-      position: new THREE.Vector3(node.x, 0, 0),
-      node,
-      variant: 'primary',
-    });
-    out.push({
-      position: new THREE.Vector3(node.x, 3.6, -1.2),
-      node,
-      variant: 'alt0',
-    });
-    out.push({
-      position: new THREE.Vector3(node.x, -3.6, 1.2),
-      node,
-      variant: 'alt1',
-    });
-  });
-  return out;
-};
+  // Mid → deep
+  { from: 'm0', to: 'd0', kind: 'primary' },
+  { from: 'm0', to: 'd2', kind: 'alt' },
+  { from: 'm1', to: 'd1', kind: 'alt' },
+  { from: 'm2', to: 'd1', kind: 'alt' },
+  { from: 'm3', to: 'd2', kind: 'alt' },
+  { from: 'm4', to: 'd3', kind: 'dead' },
 
-interface FutureCardProps {
-  future: PreparedFuture;
-  /** Time label only shown on first widget at each marker */
-  showTimeMarker: boolean;
-}
+  // Deep → final (convergence)
+  { from: 'd0', to: 'f0', kind: 'primary' },
+  { from: 'd0', to: 'f1', kind: 'alt' },
+  { from: 'd1', to: 'f1', kind: 'primary' },
+  { from: 'd2', to: 'f0', kind: 'alt' },
 
-const FutureCard: React.FC<FutureCardProps> = ({ future, showTimeMarker }) => {
-  const { node, variant } = future;
-  const isPrimary = variant === 'primary';
-  const data = isPrimary ? node.primary : variant === 'alt0' ? node.alts[0] : node.alts[1];
-  const dotColor = toneColor(data.tone);
+  // Final → apex
+  { from: 'f0', to: 'top', kind: 'primary' },
+  { from: 'f1', to: 'top', kind: 'primary' },
+];
+
+const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
+  const isDead = node.kind === 'dead';
+  const isApex = node.kind === 'apex';
+  const isPrimary = node.kind === 'primary';
+  const accent = isApex ? COLORS.accentBright : isPrimary ? COLORS.accent : isDead ? COLORS.textMuted : COLORS.textSecondary;
+  const bg = isDead ? 'rgba(8, 6, 8, 0.78)' : isApex ? 'rgba(28, 8, 16, 0.95)' : 'rgba(14, 8, 12, 0.92)';
+  const borderColor = isApex ? COLORS.accentBright : isPrimary ? COLORS.accent : isDead ? COLORS.border : COLORS.borderStrong;
+  const opacity = isDead ? 0.55 : 1;
 
   return (
-    <div style={{
-      position: 'relative',
-      width: isPrimary ? 240 : 180,
-      background: COLORS.surface,
-      border: `1px solid ${isPrimary ? COLORS.accent : COLORS.border}`,
-      borderRadius: RADIUS.sm,
-      padding: isPrimary ? '12px 14px' : '8px 10px',
-      fontFamily: FONTS.mono,
-      opacity: isPrimary ? 1 : 0.45,
-      transform: `scale(${isPrimary ? 1 : 0.85})`,
-      boxShadow: isPrimary
-        ? `0 0 18px rgba(225, 29, 72, 0.32)`
-        : `0 4px 10px rgba(0, 0, 0, 0.5)`,
-      pointerEvents: 'none',
-      userSelect: 'none',
-    }}>
-      {/* Time marker label (above primary only) */}
-      {isPrimary && showTimeMarker && (
-        <div style={{
-          position: 'absolute',
-          top: -22,
-          left: 0,
-          right: 0,
-          textAlign: 'center',
-          fontFamily: FONTS.mono,
-          fontSize: 11,
-          letterSpacing: '0.24em',
-          textTransform: 'uppercase',
-          color: COLORS.accent,
-          textShadow: `0 0 6px ${COLORS.bg}`,
-        }}>
-          ▸ {node.time}
-        </div>
-      )}
-
-      {/* "MOST LIKELY · 64%" tag for primary */}
-      {isPrimary && (
-        <div style={{
-          position: 'absolute',
-          top: -14,
-          right: 0,
-          fontFamily: FONTS.mono,
-          fontSize: 9,
-          letterSpacing: '0.18em',
-          color: COLORS.accent,
-          textShadow: `0 0 4px ${COLORS.bg}`,
-        }}>
-          MOST LIKELY · {Math.round(node.primary.prob * 100)}%
-        </div>
-      )}
-
-      {/* Top row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-        <span style={{ width: 5, height: 5, borderRadius: '50%', background: dotColor }} />
-        <span style={{
-          fontSize: isPrimary ? 11 : 9,
-          fontWeight: 500,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: COLORS.textPrimary,
-          flex: 1,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}>
-          {data.label}
+    <div
+      style={{
+        width: node.size,
+        padding: isApex ? `${SPACE.lg}px ${SPACE.xl}px` : `${SPACE.md}px ${SPACE.base}px`,
+        background: bg,
+        border: `${isApex ? 2 : 1}px solid ${borderColor}`,
+        borderRadius: RADIUS.sm,
+        fontFamily: FONTS.sans,
+        color: COLORS.textPrimary,
+        opacity,
+        boxShadow: isApex ? `0 0 28px rgba(225, 29, 72, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04)` : isPrimary ? `0 0 14px rgba(225, 29, 72, 0.35)` : 'none',
+        position: 'relative',
+        textDecoration: isDead ? 'line-through' : 'none',
+      }}
+    >
+      {/* Top meta row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE.xs, gap: SPACE.sm }}>
+        <span style={{ fontFamily: FONTS.mono, fontSize: isApex ? 12 : 10, letterSpacing: '0.20em', color: accent, textTransform: 'uppercase' }}>
+          {isApex ? '◆ PREDICTION' : isPrimary ? '▲ PRIMARY' : isDead ? '× RULED OUT' : '· ALT'}
         </span>
-        {!isPrimary && (
-          <span style={{
-            fontSize: 8,
-            fontFamily: FONTS.mono,
-            letterSpacing: '0.18em',
-            color: COLORS.textMuted,
-          }}>
-            {Math.round(data.prob * 100)}%
+        {node.time && (
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.18em', color: COLORS.textMuted, textTransform: 'uppercase' }}>
+            {node.time}
           </span>
         )}
       </div>
 
-      {/* Value */}
+      {/* Main label */}
       <div style={{
-        fontSize: isPrimary ? 16 : 12,
         fontWeight: 600,
-        letterSpacing: '0.02em',
-        color: data.tone === 'accent' ? COLORS.accentBright : COLORS.textPrimary,
-        fontVariantNumeric: 'tabular-nums',
-        paddingLeft: 12,
+        fontSize: isApex ? 22 : isPrimary ? 17 : 15,
+        letterSpacing: '-0.01em',
+        lineHeight: 1.2,
+        color: isDead ? COLORS.textMuted : COLORS.textPrimary,
+        marginBottom: node.value ? SPACE.xs : 0,
       }}>
-        {data.value}
+        {node.label}
       </div>
+
+      {/* Value */}
+      {node.value && (
+        <div style={{
+          fontFamily: FONTS.mono,
+          fontSize: isApex ? 16 : 13,
+          letterSpacing: '0.05em',
+          color: isDead ? COLORS.textDim : isPrimary || isApex ? COLORS.accent : COLORS.textSecondary,
+        }}>
+          {node.value}
+        </div>
+      )}
+
+      {/* Detail (apex / dead-end) */}
+      {node.detail && (
+        <div style={{
+          marginTop: SPACE.xs,
+          fontFamily: FONTS.mono,
+          fontSize: 10,
+          letterSpacing: '0.14em',
+          color: COLORS.textMuted,
+          textTransform: 'uppercase',
+        }}>
+          {node.detail}
+        </div>
+      )}
+
+      {/* Confidence bar (primary + apex) */}
+      {(isApex || isPrimary) && typeof node.conf === 'number' && (
+        <div style={{ marginTop: SPACE.sm, display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
+          <div style={{ flex: 1, height: 3, background: COLORS.border, borderRadius: 999, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(node.conf * 100).toFixed(0)}%`,
+              height: '100%',
+              background: `linear-gradient(90deg, ${COLORS.accent}, ${COLORS.accentBright})`,
+              boxShadow: `0 0 6px ${COLORS.accentGlow}`,
+            }} />
+          </div>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.16em', color: COLORS.textSecondary }}>
+            {(node.conf * 100).toFixed(0)}%
+          </span>
+        </div>
+      )}
     </div>
   );
 };
 
-const FutureBranch: React.FC = () => {
-  const futures = useMemo(() => layoutFutures(FUTURE_TIMELINE), []);
-  const meshRef = useRef<THREE.LineSegments>(null);
+const FutureTree: React.FC = () => {
+  const linesRef = useRef<THREE.LineSegments>(null);
 
-  // Build branching edges:
-  //   - primary chain: origin → T+15 primary → T+30 primary → ... → T+4h primary
-  //   - secondary fans: T+N primary → T+N alts
-  const { positions, colors } = useMemo(() => {
-    const lines: { a: THREE.Vector3; b: THREE.Vector3; primary: boolean }[] = [];
-    let prevPrimary = new THREE.Vector3(0, 0, 0); // origin = decision center
+  // Build line geometry: cluster→roots, plus all FUTURE_LINKS
+  const { geom, primaryCount, deadCount } = useMemo(() => {
+    const positions: number[] = [];
+    const colors: number[] = [];
+    let primaryCount = 0;
+    let deadCount = 0;
 
-    FUTURE_TIMELINE.forEach((node) => {
-      const primaryPos = new THREE.Vector3(node.x, 0, 0);
-      const alt0Pos = new THREE.Vector3(node.x, 3.6, -1.2);
-      const alt1Pos = new THREE.Vector3(node.x, -3.6, 1.2);
+    const colorOf = (kind: FutureKind): [number, number, number] => {
+      if (kind === 'primary' || kind === 'apex') return [0.95, 0.20, 0.36];
+      if (kind === 'dead') return [0.18, 0.10, 0.10];
+      return [0.45, 0.14, 0.22];
+    };
 
-      // Primary chain
-      lines.push({ a: prevPrimary.clone(), b: primaryPos.clone(), primary: true });
-      // Alt fans
-      lines.push({ a: primaryPos.clone(), b: alt0Pos.clone(), primary: false });
-      lines.push({ a: primaryPos.clone(), b: alt1Pos.clone(), primary: false });
-
-      prevPrimary = primaryPos;
+    // Cluster (origin) → each root
+    FUTURE_NODES.filter((n) => n.pos[1] === 6).forEach((n) => {
+      const c = colorOf(n.kind);
+      positions.push(0, 3, 0, n.pos[0], n.pos[1], n.pos[2]);
+      colors.push(c[0], c[1], c[2], c[0], c[1], c[2]);
+      if (n.kind === 'primary') primaryCount += 1;
+      if (n.kind === 'dead') deadCount += 1;
     });
 
-    const positions = new Float32Array(lines.length * 6);
-    const colors = new Float32Array(lines.length * 6);
-    lines.forEach((l, i) => {
-      positions[i * 6] = l.a.x; positions[i * 6 + 1] = l.a.y; positions[i * 6 + 2] = l.a.z;
-      positions[i * 6 + 3] = l.b.x; positions[i * 6 + 4] = l.b.y; positions[i * 6 + 5] = l.b.z;
-      const r = l.primary ? 0.88 : 0.32;
-      const g = l.primary ? 0.18 : 0.08;
-      const b = l.primary ? 0.32 : 0.14;
-      colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = b;
-      colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = b;
+    // Inter-layer links
+    FUTURE_LINKS.forEach((link) => {
+      const a = FUTURE_NODES.find((n) => n.id === link.from);
+      const b = FUTURE_NODES.find((n) => n.id === link.to);
+      if (!a || !b) return;
+      const c = colorOf(link.kind);
+      positions.push(...a.pos, ...b.pos);
+      colors.push(c[0], c[1], c[2], c[0], c[1], c[2]);
+      if (link.kind === 'primary') primaryCount += 1;
+      if (link.kind === 'dead') deadCount += 1;
     });
-    return { positions, colors };
+
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    return { geom: g, primaryCount, deadCount };
   }, []);
 
-  // Subtle shimmer on the primary chain
+  // Shimmer the primary path's color subtly
+  const matRef = useRef<THREE.LineBasicMaterial>(null);
   useFrame(({ clock }) => {
-    if (!meshRef.current) return;
+    if (!matRef.current) return;
     const t = clock.getElapsedTime();
-    const colorAttr = meshRef.current.geometry.attributes.color;
-    const arr = colorAttr.array as Float32Array;
-    // Every 3rd line is primary (since we push primary, alt0, alt1 per node)
-    for (let i = 0; i < positions.length / 6; i++) {
-      const isPrimary = i % 3 === 0;
-      const baseR = isPrimary ? 0.88 : 0.32;
-      const baseG = isPrimary ? 0.18 : 0.08;
-      const baseB = isPrimary ? 0.32 : 0.14;
-      const shimmer = isPrimary ? 0.85 + Math.sin(t * 0.8 + i * 0.4) * 0.30 : 1.0;
-      arr[i * 6] = baseR * shimmer;
-      arr[i * 6 + 1] = baseG * shimmer;
-      arr[i * 6 + 2] = baseB * shimmer;
-      arr[i * 6 + 3] = arr[i * 6];
-      arr[i * 6 + 4] = arr[i * 6 + 1];
-      arr[i * 6 + 5] = arr[i * 6 + 2];
-    }
-    colorAttr.needsUpdate = true;
+    matRef.current.opacity = 0.78 + Math.sin(t * 1.6) * 0.08;
   });
 
   return (
-    <>
-      {/* Branching lines */}
-      <lineSegments ref={meshRef}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            args={[positions, 3]}
-            count={positions.length / 3}
-            array={positions}
-            itemSize={3}
-          />
-          <bufferAttribute
-            attach="attributes-color"
-            args={[colors, 3]}
-            count={colors.length / 3}
-            array={colors}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <lineBasicMaterial vertexColors transparent opacity={0.95} depthWrite={false} toneMapped={false} />
+    <group>
+      {/* All edges (single LineSegments using vertex colors) */}
+      <lineSegments ref={linesRef} geometry={geom}>
+        <lineBasicMaterial ref={matRef} vertexColors transparent opacity={0.85} linewidth={1} />
       </lineSegments>
 
-      {/* Future widgets */}
-      {futures.map((f, i) => (
-        <Html
-          key={`${f.node.time}-${f.variant}`}
-          position={[f.position.x, f.position.y, f.position.z]}
-          center
-          distanceFactor={14}
-          style={{}}
-          zIndexRange={[60, 5]}
-          occlude={false}
-        >
-          <FutureCard future={f} showTimeMarker={i % 3 === 0} />
-        </Html>
-      ))}
+      {/* Apex marker — small bright sphere just behind the apex card */}
+      <mesh position={[0, 30, -0.6]}>
+        <sphereGeometry args={[0.55, 16, 16]} />
+        <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.85} />
+      </mesh>
+      <mesh position={[0, 30, -0.6]}>
+        <sphereGeometry args={[0.85, 16, 16]} />
+        <meshBasicMaterial color={COLORS.accent} transparent opacity={0.20} />
+      </mesh>
 
-      {/* "PROJECTED FUTURES" header at the start of the branch */}
-      <Html
-        position={[7, 6.5, 0]}
-        center
-        distanceFactor={14}
-        style={{ pointerEvents: 'none' }}
-        zIndexRange={[40, 5]}
-      >
+      {/* Section header floating above the cluster, below the roots */}
+      <Html position={[0, 4.5, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
         <div style={{
-          padding: '6px 12px',
-          background: 'rgba(15, 5, 10, 0.85)',
-          border: `1px solid ${COLORS.accent}`,
+          padding: `${SPACE.xs}px ${SPACE.md}px`,
+          background: 'rgba(20, 8, 14, 0.88)',
+          border: `1px solid ${COLORS.borderStrong}`,
           borderRadius: RADIUS.sm,
           fontFamily: FONTS.mono,
           fontSize: 10,
           letterSpacing: '0.24em',
+          color: COLORS.textSecondary,
           textTransform: 'uppercase',
-          color: COLORS.accent,
           whiteSpace: 'nowrap',
-          boxShadow: `0 0 12px rgba(225, 29, 72, 0.35)`,
         }}>
-          ▸ PROJECTED FUTURES · NEXT 4H
+          ▲ PROJECTED FUTURES · 4-HOUR HORIZON · {primaryCount} PRIMARY · {deadCount} RULED-OUT
         </div>
       </Html>
 
-      {/* Endpoint marker — bright dot at T+4h primary */}
-      <mesh position={[40, 0, 0]}>
-        <sphereGeometry args={[0.18, 16, 16]} />
-        <meshBasicMaterial color={COLORS.accent} toneMapped={false} />
-      </mesh>
-    </>
+      {/* All future nodes as Html cards */}
+      {FUTURE_NODES.map((n) => (
+        <Html
+          key={n.id}
+          position={n.pos}
+          center
+          distanceFactor={n.kind === 'apex' ? 28 : 22}
+          style={{ pointerEvents: 'none' }}
+          zIndexRange={n.kind === 'apex' ? [70, 12] : n.kind === 'dead' ? [40, 4] : [55, 8]}
+        >
+          <FutureCard node={n} />
+        </Html>
+      ))}
+    </group>
   );
 };
+
 
 // ──────────────────────────────────────────────────────────────────
 // Scene composition
@@ -1338,7 +1302,7 @@ const Scene: React.FC = () => {
       <CompileBurst intervalMs={5500} />
       <CenterReticle />
       <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
-      <FutureBranch />
+      <FutureTree />
 
       {widgets.map((w) => (
         <DriftWidget
@@ -1351,9 +1315,9 @@ const Scene: React.FC = () => {
         />
       ))}
 
-      {/* Pattern-match floating label — shown at center top during burst */}
+      {/* Pattern-match floating label — shown at left of cluster during burst */}
       {patternLabel && (
-        <Html position={[0, 14, 0]} center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[60, 5]}>
+        <Html position={[-14, 0, 0]} center distanceFactor={20} style={{ pointerEvents: 'none' }} zIndexRange={[60, 5]}>
           <div style={{
             padding: '8px 14px',
             background: 'rgba(20, 8, 14, 0.92)',
@@ -1373,19 +1337,19 @@ const Scene: React.FC = () => {
         </Html>
       )}
 
-      {/* Camera — pulled back + biased to view both cluster (origin)
-          and the future branch extending to +X (target ~T+2h primary).
-          Target offset to ~x=14 so the framing covers both. */}
+      {/* Camera — vertical composition. Cluster sits at origin, the
+          future tree extends UP (+Y) to the apex at y=30. Target the
+          midpoint at y=12 so both cluster and apex are framed. */}
       <OrbitControls
         enablePan={false}
         autoRotate={false}
         enableDamping
         dampingFactor={0.09}
-        minDistance={28}
-        maxDistance={90}
-        minPolarAngle={Math.PI * 0.28}
-        maxPolarAngle={Math.PI * 0.72}
-        target={[14, 0, 0]}
+        minDistance={36}
+        maxDistance={120}
+        minPolarAngle={Math.PI * 0.18}
+        maxPolarAngle={Math.PI * 0.82}
+        target={[0, 12, 0]}
         makeDefault
       />
 
@@ -1431,7 +1395,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        camera={{ position: [14, 0, 50], fov: 50, near: 0.1, far: 200 }}
+        camera={{ position: [0, 12, 80], fov: 50, near: 0.1, far: 240 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
