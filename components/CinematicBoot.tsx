@@ -1,26 +1,28 @@
 /**
- * CinematicBoot — PULSE startup sequence (Industrial Brutalist).
+ * CinematicBoot — PULSE startup sequence.
  *
- * 2026-04-30 · Rewrite under industrial-brutalist-ui skill.
- * Pure Tactical Telemetry / CRT Terminal aesthetic. No glass,
- * no mesh orbs, no halos. Heavy structural typography, razor-thin
- * grid dividers, crosshairs at intersections, CRT static overlay.
+ * 2026-04-22 · A 4-second tactical boot with phased reveals:
  *
- *   0.0–0.3s   page reveals · CRT static fades in · scanline sweep
- *   0.3–2.2s   terminal log stream — left column, mono uppercase
- *   1.7–2.6s   PULSE wordmark snaps in at hero scale (clamp 6→12rem)
- *   2.4–3.1s   accent rule under wordmark draws L→R
- *   2.7–3.0s   tagline + technical metadata appear
- *   2.9–3.7s   ECG ribbon draws across — single 6-cycle heartbeat
- *   3.0–4.0s   progress bar fills · GO callout flips to OK
- *   4.0–4.2s   white flash · crossfade to login
+ *   0.0–0.5s  scanline sweeps down once over a fading-in dot grid
+ *   0.3–2.2s  terminal log stream — 10 mono lines stagger in left-aligned,
+ *             each printing as if dispatched live (telemetry, EHR, EMS,
+ *             realtime mesh, audit chain). Last one is `[GO] All systems
+ *             nominal` in green.
+ *   1.8–2.6s  PULSE wordmark fades up + scales 0.92 → 1.0
+ *   2.4–3.1s  rose underline draws left → right beneath the wordmark
+ *   2.7–3.0s  tagline fades in
+ *   2.9–3.7s  ECG ribbon draws across the brand block — single 6-cycle
+ *             heartbeat trace. The signature PULSE motif.
+ *   3.0–4.0s  progress bar fills · `[GO] SYSTEM ONLINE` flips green at end
+ *   4.0–4.2s  white flash + crossfade hands off to login
  *
- * Tap or any key skips to the engage flash.
+ * Tap or press any key to skip — a brief flash takes you straight to the
+ * engage phase. After that the parent unmounts the boot anyway.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { COLORS, FONTS, SPACE, MACRO, SCANLINES, MOTION } from './design';
+import { COLORS, FONTS, SPACE, RADIUS, TYPE, MOTION } from './design';
 
 // ──────────────────────────────────────────────────────────────────
 // Boot log lines — staggered terminal stream
@@ -38,14 +40,19 @@ const BOOT_LINES: { tag: string; msg: string; status: 'OK' | 'GO' }[] = [
   { tag: 'MISSION', msg: 'All systems nominal',                              status: 'GO' },
 ];
 
+// Each line appears at roughly 0.30s + i*0.18s — total ~2.1s for the stream.
 const LINE_BASE_DELAY = 0.30;
 const LINE_STAGGER = 0.18;
 
+// Cinematic phase guards — the parent App.tsx flips off after 4200ms.
 type Phase = 'init' | 'logs' | 'reveal' | 'engage';
+
 const TOTAL_DURATION_MS = 4200;
 
 // ──────────────────────────────────────────────────────────────────
-// ECG path — 6-cycle heartbeat across 600×60 viewBox
+// ECG path — synthesized 6-cycle heartbeat trace across full width.
+// Each cycle = baseline · P · QRS · T · baseline. Output is an SVG d
+// string sized to a 600 × 60 viewBox.
 // ──────────────────────────────────────────────────────────────────
 const buildEcgPath = (): string => {
   const cycles = 6;
@@ -54,49 +61,29 @@ const buildEcgPath = (): string => {
   let d = `M 0 ${baseY}`;
   for (let i = 0; i < cycles; i++) {
     const x0 = i * cycleW;
+    // Baseline runs ~50% of cycle, then quick complex
     d += ` L ${x0 + cycleW * 0.32} ${baseY}`;
+    // P wave — gentle bump up
     d += ` Q ${x0 + cycleW * 0.36} ${baseY - 4} ${x0 + cycleW * 0.40} ${baseY}`;
+    // PR segment
     d += ` L ${x0 + cycleW * 0.44} ${baseY}`;
+    // Q dip
     d += ` L ${x0 + cycleW * 0.46} ${baseY + 4}`;
+    // R spike
     d += ` L ${x0 + cycleW * 0.49} ${baseY - 22}`;
+    // S dip
     d += ` L ${x0 + cycleW * 0.52} ${baseY + 6}`;
+    // ST segment
     d += ` L ${x0 + cycleW * 0.58} ${baseY}`;
+    // T wave
     d += ` Q ${x0 + cycleW * 0.66} ${baseY - 6} ${x0 + cycleW * 0.74} ${baseY}`;
+    // Baseline tail
     d += ` L ${x0 + cycleW} ${baseY}`;
   }
   return d;
 };
-const ECG_PATH = buildEcgPath();
 
-// ──────────────────────────────────────────────────────────────────
-// Crosshair — inline `+` mark for panel corners
-// ──────────────────────────────────────────────────────────────────
-const Crosshair: React.FC<{
-  top?: number | string;
-  left?: number | string;
-  right?: number | string;
-  bottom?: number | string;
-  size?: number;
-  color?: string;
-}> = ({ top, left, right, bottom, size = 18, color = COLORS.accent }) => (
-  <span
-    aria-hidden
-    style={{
-      position: 'absolute',
-      top,
-      left,
-      right,
-      bottom,
-      width: size,
-      height: size,
-      transform: 'translate(-50%, -50%)',
-      pointerEvents: 'none',
-    }}
-  >
-    <span style={{ position: 'absolute', inset: 0, top: '50%', height: 1, marginTop: -0.5, background: color }} />
-    <span style={{ position: 'absolute', inset: 0, left: '50%', width: 1, marginLeft: -0.5, background: color }} />
-  </span>
-);
+const ECG_PATH = buildEcgPath();
 
 // ──────────────────────────────────────────────────────────────────
 // Component
@@ -106,6 +93,7 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
   const [skipping, setSkipping] = useState(false);
   const skipRef = useRef(false);
 
+  // Phase progression — drives the engage overlay timing.
   useEffect(() => {
     const t1 = window.setTimeout(() => setPhase('logs'), 250);
     const t2 = window.setTimeout(() => setPhase('reveal'), 1700);
@@ -117,6 +105,7 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
     };
   }, []);
 
+  // Skip handler — tap or any key fast-forwards to the engage flash.
   useEffect(() => {
     const handler = () => {
       if (skipRef.current) return;
@@ -135,9 +124,9 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
     };
   }, [onComplete]);
 
+  // Build date stamp for the top corner
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
   const timeStr = new Date().toISOString().slice(11, 19);
-  const serial = 'D-01-MEMG-2026';
 
   return (
     <div
@@ -147,9 +136,10 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
         background: COLORS.bg,
         overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
         fontFamily: FONTS.mono,
-        color: COLORS.textPrimary,
+        color: COLORS.textSecondary,
         zIndex: 9999,
       }}
     >
@@ -160,7 +150,11 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           90%  { opacity: 1; }
           100% { transform: translateY(100vh); opacity: 0; }
         }
-        @keyframes cb-rule-draw {
+        @keyframes cb-dot-grid-fade {
+          from { opacity: 0; }
+          to   { opacity: 0.32; }
+        }
+        @keyframes cb-rose-underline {
           from { transform: scaleX(0); }
           to   { transform: scaleX(1); }
         }
@@ -176,31 +170,43 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           from { transform: scaleX(0); }
           to   { transform: scaleX(1); }
         }
-        @keyframes cb-go-pulse {
-          0%, 100% { opacity: 0.85; }
-          50%      { opacity: 1; }
+        @keyframes cb-engage-flash {
+          0%   { opacity: 0; }
+          12%  { opacity: 1; }
+          100% { opacity: 0; }
         }
-        @keyframes cb-static-flicker {
-          0%, 96%, 100% { opacity: 1; }
-          97%           { opacity: 0.92; }
-          98%           { opacity: 1; }
-          99%           { opacity: 0.95; }
+        @keyframes cb-go-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+          50%      { box-shadow: 0 0 18px 2px rgba(16, 185, 129, 0.55); }
         }
       `}</style>
 
-      {/* ───── CRT STATIC OVERLAY (full-bleed) ───────────────────── */}
+      {/* ═════════════════════════════════════════════════════════════
+          BACKGROUND LAYERS — dot grid · scanline · rose glow
+          ═════════════════════════════════════════════════════════════ */}
       <div
         aria-hidden
         style={{
           position: 'absolute',
           inset: 0,
-          background: SCANLINES.medium,
-          pointerEvents: 'none',
-          zIndex: 1,
+          backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+          opacity: 0,
+          animation: 'cb-dot-grid-fade 700ms ease-out forwards',
+          maskImage:
+            'radial-gradient(ellipse 70% 55% at center, black 35%, transparent 100%)',
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 55% at center, black 35%, transparent 100%)',
         }}
       />
-
-      {/* Single scanline pass (one-shot) */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse 60% 40% at 50% 110%, ${COLORS.accentDim}, transparent 60%)`,
+        }}
+      />
       <div
         aria-hidden
         style={{
@@ -214,311 +220,157 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           animation: 'cb-scanline-sweep 700ms cubic-bezier(0.4, 0, 0.6, 1) forwards',
           animationDelay: '120ms',
           boxShadow: `0 0 14px ${COLORS.accent}`,
-          zIndex: 2,
         }}
       />
 
-      {/* ───── TOP CHROME — RAW METADATA STRIP ───────────────────── */}
+      {/* ═════════════════════════════════════════════════════════════
+          MAIN BOOT FRAME — left log column, right brand stack
+          ═════════════════════════════════════════════════════════════ */}
       <div
         style={{
           position: 'relative',
-          zIndex: 5,
+          zIndex: 10,
+          width: '100%',
+          maxWidth: 1080,
+          padding: SPACE['3xl'],
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          borderBottom: `1px solid ${COLORS.borderStrong}`,
-          background: COLORS.surface,
-          fontFamily: FONTS.mono,
-          fontSize: 9,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: COLORS.textMuted,
+          gridTemplateColumns: '1fr 1.2fr',
+          gap: SPACE['3xl'],
+          alignItems: 'center',
         }}
       >
-        {[
-          ['REV', '2.6.7'],
-          ['NODE', 'ER-01'],
-          ['UNIT', serial],
-          ['BUILD', dateStr],
-        ].map(([k, v], i) => (
-          <div
-            key={k}
-            style={{
-              padding: `${SPACE.sm}px ${SPACE.lg}px`,
-              borderRight: i < 3 ? `1px solid ${COLORS.borderStrong}` : undefined,
-              display: 'flex',
-              gap: SPACE.md,
-            }}
-          >
-            <span style={{ color: COLORS.textDim }}>{k}</span>
-            <span style={{ color: COLORS.textPrimary }}>{v}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* ───── CENTER: HERO + LOG STREAM ─────────────────────────── */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 5,
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '1.1fr 0.9fr',
-          gap: 0,
-          overflow: 'hidden',
-        }}
-      >
-        {/* LEFT — terminal stream, framed */}
-        <div
-          style={{
-            position: 'relative',
-            padding: `${SPACE['3xl']}px ${SPACE['2xl']}px`,
-            borderRight: `1px solid ${COLORS.borderStrong}`,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-          }}
-        >
-          {/* Crosshair markers at column corners */}
-          <Crosshair top={0} left={0} color={COLORS.accent} />
-          <Crosshair bottom={0} right={0} color={COLORS.accent} />
-
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: 10,
-              letterSpacing: '0.24em',
-              textTransform: 'uppercase',
-              color: COLORS.accent,
-              marginBottom: SPACE.lg,
-            }}
-          >
-            // BOOT.SEQUENCE · TELEMETRY
-          </div>
-
-          {/* Lines rendered as a 1px-gap grid for razor-thin dividers */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: 1,
-              background: COLORS.borderStrong,
-              border: `1px solid ${COLORS.borderStrong}`,
-            }}
-          >
-            {BOOT_LINES.map((l, i) => {
-              const delay = LINE_BASE_DELAY + i * LINE_STAGGER;
-              const isGo = l.status === 'GO';
-              return (
-                <motion.div
-                  key={l.tag + i}
-                  initial={{ opacity: 0, x: -6 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay, duration: 0.22, ease: 'easeOut' }}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '36px 78px 1fr 36px',
-                    alignItems: 'center',
-                    background: COLORS.bg,
-                    padding: `${SPACE.sm}px ${SPACE.md}px`,
-                    fontFamily: FONTS.mono,
-                    fontSize: 10,
-                    letterSpacing: '0.10em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  <span
-                    style={{
-                      color: COLORS.textMuted,
-                      fontVariantNumeric: 'tabular-nums',
-                      fontSize: 9,
-                      letterSpacing: '0.16em',
-                    }}
-                  >
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span style={{ color: COLORS.textDim }}>[{l.tag}]</span>
-                  <span style={{ color: COLORS.textSecondary }}>{l.msg}</span>
-                  <span
-                    style={{
-                      color: isGo ? COLORS.ok : COLORS.textMuted,
-                      fontWeight: 600,
-                      textAlign: 'right',
-                    }}
-                  >
-                    {l.status}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* RIGHT — hero block: massive wordmark + metadata + ECG */}
-        <div
-          style={{
-            position: 'relative',
-            padding: `${SPACE['3xl']}px ${SPACE['2xl']}px`,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            gap: SPACE.xl,
-          }}
-        >
-          {/* Crosshair markers at column corners */}
-          <Crosshair top={0} right={0} color={COLORS.accent} />
-          <Crosshair bottom={0} left={0} color={COLORS.accent} />
-
-          {/* Top tag */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.3 }}
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: 10,
-              letterSpacing: '0.24em',
-              textTransform: 'uppercase',
-              color: COLORS.accent,
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACE.sm,
-            }}
-          >
-            <span>+++</span>
-            <span>PREDICTIVE UNIFIED LOGISTICS &amp; SURGE ENGINE</span>
-            <span style={{ flex: 1, height: 1, background: COLORS.accent, opacity: 0.6, marginLeft: SPACE.sm }} />
-          </motion.div>
-
-          {/* HERO WORDMARK — fluid clamp, tight tracking, compressed leading.
-              This is the structural anchor of the whole boot. */}
-          <motion.h1
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.7, duration: 0.5, ease: 'easeOut' }}
-            style={{
-              fontFamily: FONTS.sans,
-              fontSize: MACRO.hero,
-              fontWeight: 800,
-              letterSpacing: '-0.045em',
-              lineHeight: 0.86,
-              color: COLORS.textPrimary,
-              margin: 0,
-              // Slight CRT-glow without the SaaS-y diffused halo
-              textShadow: `0 0 1px ${COLORS.accent}`,
-            }}
-          >
-            PULSE
-            <sup
-              style={{
-                fontSize: '0.16em',
-                fontFamily: FONTS.mono,
-                fontWeight: 500,
-                letterSpacing: '0.16em',
-                color: COLORS.accent,
-                marginLeft: '0.05em',
-                verticalAlign: 'top',
-                top: '-0.6em',
-                position: 'relative',
-              }}
-            >
-              ®
-            </sup>
-          </motion.h1>
-
-          {/* Accent rule — full-width, draws on */}
-          <div
-            style={{
-              height: 2,
-              width: '100%',
-              background: COLORS.accent,
-              transformOrigin: 'left',
-              animation: 'cb-rule-draw 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              animationDelay: '2.4s',
-              transform: 'scaleX(0)',
-            }}
-          />
-
-          {/* Tech metadata grid — bimodal density: small mono in tight grid */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2.7, duration: 0.4 }}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 1,
-              background: COLORS.borderStrong,
-              border: `1px solid ${COLORS.borderStrong}`,
-            }}
-          >
-            {[
-              ['CLEARANCE', 'L3'],
-              ['MODE', 'TACTICAL'],
-              ['UPLINK', 'STABLE'],
-              ['LATENCY', '18MS'],
-            ].map(([k, v]) => (
-              <div
-                key={k}
+        {/* ─── LEFT: terminal stream ─── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
+          {BOOT_LINES.map((l, i) => {
+            const delay = LINE_BASE_DELAY + i * LINE_STAGGER;
+            const isGo = l.status === 'GO';
+            return (
+              <motion.div
+                key={l.tag + i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay, duration: 0.32, ease: MOTION.ease }}
                 style={{
-                  background: COLORS.bg,
-                  padding: `${SPACE.sm}px ${SPACE.md}px`,
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
+                  alignItems: 'center',
+                  gap: SPACE.md,
+                  padding: `${SPACE.xs}px ${SPACE.sm}px`,
+                  fontFamily: FONTS.mono,
+                  fontSize: 11,
+                  letterSpacing: '0.08em',
                 }}
               >
                 <span
                   style={{
-                    fontFamily: FONTS.mono,
+                    color: COLORS.textMuted,
+                    fontVariantNumeric: 'tabular-nums',
+                    minWidth: 32,
                     fontSize: 9,
-                    letterSpacing: '0.20em',
-                    textTransform: 'uppercase',
-                    color: COLORS.textDim,
                   }}
                 >
-                  {k}
+                  {String(i + 1).padStart(2, '0')}
                 </span>
+                <span style={{ color: COLORS.textDim, minWidth: 70 }}>[{l.tag}]</span>
+                <span style={{ color: COLORS.textSecondary, flex: 1 }}>{l.msg}</span>
                 <span
                   style={{
-                    fontFamily: FONTS.mono,
-                    fontSize: 12,
-                    letterSpacing: '0.10em',
-                    textTransform: 'uppercase',
-                    color: COLORS.textPrimary,
+                    color: isGo ? COLORS.ok : COLORS.textMuted,
                     fontWeight: 600,
+                    minWidth: 24,
+                    textAlign: 'right',
                   }}
                 >
-                  {v}
+                  {l.status}
                 </span>
-              </div>
-            ))}
+              </motion.div>
+            );
+          })}
+        </div>
+
+        {/* ─── RIGHT: brand block, ECG ribbon, progress, GO pill ─── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
+          {/* Top meta row */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontFamily: FONTS.mono,
+              fontSize: 9,
+              letterSpacing: '0.18em',
+              color: COLORS.textDim,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span>BUILD {dateStr}</span>
+            <span>NODE ER-01 · {timeStr}Z</span>
           </motion.div>
 
-          {/* ECG ribbon — bordered as a tactical readout */}
+          {/* Wordmark */}
+          <motion.div
+            initial={{ opacity: 0, y: 10, scale: 0.93 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 1.7, duration: 0.7, ease: MOTION.ease }}
+            style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}
+          >
+            <h1
+              style={{
+                margin: 0,
+                fontFamily: FONTS.sans,
+                fontSize: 96,
+                fontWeight: 600,
+                letterSpacing: '0.18em',
+                lineHeight: 0.92,
+                color: COLORS.textPrimary,
+                textShadow: `0 0 24px rgba(225, 29, 72, 0.18)`,
+              }}
+            >
+              PULSE
+            </h1>
+            {/* Rose underline that draws on left→right */}
+            <div
+              style={{
+                height: 3,
+                width: 320,
+                background: `linear-gradient(90deg, ${COLORS.accentBright}, ${COLORS.accent} 80%, transparent)`,
+                transformOrigin: 'left',
+                animation: 'cb-rose-underline 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                animationDelay: '2.4s',
+                transform: 'scaleX(0)',
+                boxShadow: `0 0 16px ${COLORS.accentGlow}`,
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 2.7, duration: 0.4 }}
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                letterSpacing: '0.24em',
+                color: COLORS.textSecondary,
+                textTransform: 'uppercase',
+              }}
+            >
+              Predictive Unified Logistics &amp; Surge Engine
+            </motion.div>
+          </motion.div>
+
+          {/* ECG ribbon — the pulse motif */}
           <div
             aria-hidden
             style={{
               width: '100%',
               height: 60,
-              border: `1px solid ${COLORS.borderStrong}`,
-              background: 'linear-gradient(180deg, transparent, rgba(225, 29, 72, 0.05), transparent)',
+              borderTop: `1px solid ${COLORS.border}`,
+              borderBottom: `1px solid ${COLORS.border}`,
+              padding: 0,
               position: 'relative',
+              background: `linear-gradient(180deg, transparent, rgba(225, 29, 72, 0.04), transparent)`,
             }}
           >
-            <span
-              style={{
-                position: 'absolute',
-                top: 4,
-                left: 6,
-                fontFamily: FONTS.mono,
-                fontSize: 8,
-                letterSpacing: '0.24em',
-                textTransform: 'uppercase',
-                color: COLORS.textDim,
-              }}
-            >
-              ECG / 72 BPM / LEAD II
-            </span>
             <svg
               viewBox="0 0 600 60"
               preserveAspectRatio="none"
@@ -529,10 +381,10 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
               <path
                 d={ECG_PATH}
                 stroke={COLORS.accentBright}
-                strokeWidth={1.4}
+                strokeWidth={1.5}
                 fill="none"
-                strokeLinejoin="miter"
-                strokeLinecap="butt"
+                strokeLinejoin="round"
+                strokeLinecap="round"
                 style={{
                   strokeDasharray: 1200,
                   strokeDashoffset: 1200,
@@ -545,85 +397,79 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           </div>
 
           {/* Progress bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md }}>
-            <span
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: 9,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: COLORS.textMuted,
-              }}
-            >
-              INIT
-            </span>
+          <div
+            style={{
+              height: 2,
+              width: '100%',
+              background: COLORS.border,
+              borderRadius: RADIUS.full,
+              overflow: 'hidden',
+              position: 'relative',
+            }}
+          >
             <div
               style={{
-                flex: 1,
-                height: 2,
-                background: COLORS.borderStrong,
-                overflow: 'hidden',
-                position: 'relative',
+                position: 'absolute',
+                inset: 0,
+                background: `linear-gradient(90deg, ${COLORS.accentBright}, ${COLORS.accent})`,
+                transformOrigin: 'left',
+                animation: 'cb-progress-fill 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                animationDelay: '3s',
+                transform: 'scaleX(0)',
+                boxShadow: `0 0 10px ${COLORS.accentGlow}`,
               }}
-            >
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: COLORS.accent,
-                  transformOrigin: 'left',
-                  animation: 'cb-progress-fill 1000ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                  animationDelay: '3s',
-                  transform: 'scaleX(0)',
-                }}
-              />
-            </div>
+            />
+          </div>
+
+          {/* Footer row — GO pill + skip hint */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              color: COLORS.textDim,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span>// Biometric auth · TLS 1.3 · session-bound</span>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 3.5, duration: 0.3 }}
               style={{
-                fontFamily: FONTS.mono,
-                fontSize: 11,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                padding: `${SPACE.xs}px ${SPACE.sm}px`,
                 color: COLORS.ok,
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: `1px solid ${COLORS.ok}`,
+                borderRadius: RADIUS.full,
+                fontWeight: 600,
                 animation: 'cb-go-pulse 1.4s ease-in-out infinite',
               }}
             >
-              [ ONLINE ]
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background: COLORS.ok,
+                  boxShadow: `0 0 8px ${COLORS.ok}`,
+                }}
+              />
+              SYSTEM ONLINE
             </motion.span>
           </div>
         </div>
       </div>
 
-      {/* ───── BOTTOM CHROME — STATUS RAIL ──────────────────────── */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 5,
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr',
-          alignItems: 'center',
-          padding: `${SPACE.sm}px ${SPACE.lg}px`,
-          borderTop: `1px solid ${COLORS.borderStrong}`,
-          background: COLORS.surface,
-          fontFamily: FONTS.mono,
-          fontSize: 9,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: COLORS.textMuted,
-        }}
-      >
-        <span>{`>>>`} TLS 1.3 / SESSION-BOUND / BIOMETRIC AUTH</span>
-        <span style={{ color: COLORS.textPrimary, padding: `0 ${SPACE.lg}px` }}>
-          {timeStr}
-        </span>
-        <span style={{ textAlign: 'right' }}>{`PRESS ANY KEY TO SKIP <<<`}</span>
-      </div>
-
-      {/* ───── ENGAGE FLASH ─────────────────────────────────────── */}
+      {/* ═════════════════════════════════════════════════════════════
+          ENGAGE FLASH — final wipe to login
+          ═════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
         {(phase === 'engage' || skipping) && (
           <motion.div
@@ -642,6 +488,26 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           />
         )}
       </AnimatePresence>
+
+      {/* Skip hint */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: phase === 'engage' ? 0 : 1 }}
+        transition={{ delay: 0.9, duration: 0.4 }}
+        style={{
+          position: 'absolute',
+          bottom: SPACE.lg,
+          right: SPACE.lg,
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          letterSpacing: '0.2em',
+          color: COLORS.textMuted,
+          textTransform: 'uppercase',
+          zIndex: 11,
+        }}
+      >
+        Press any key to skip
+      </motion.div>
     </div>
   );
 };

@@ -128,50 +128,13 @@ export const SPACE = {
   '5xl': 72,
 } as const;
 
-/** Sharp by default — industrial-brutalist mandate: 90° corners.
- *  RADIUS.sm is kept at 2 for legacy compatibility with existing
- *  tactical surfaces, but new brutalist work uses RADIUS.none = 0
- *  and treats anything else as a deliberate exception. */
+/** Sharp by default — tactical chrome uses minimal border radius */
 export const RADIUS = {
   none: 0,
-  sm: 2,  // legacy — existing cards/buttons. New brutalist work uses 0.
-  md: 4,  // legacy
-  lg: 6,  // legacy
-  full: 999, // for dots, status pills, avatars (the only exception)
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────
-// Macro typography clamps — for industrial-brutalist hero displays.
-// These are intentionally enormous, sized fluidly via CSS clamp().
-// Use sparingly — one per surface max. Text becomes structure.
-// ─────────────────────────────────────────────────────────────────────────
-export const MACRO = {
-  /** Building-block hero — boot wordmark, login header.
-   *  6rem floor at narrow viewports, ~14vw fluid, 12rem ceiling. */
-  hero: 'clamp(6rem, 14vw, 12rem)',
-  /** Section banner — large uppercase callouts. */
-  banner: 'clamp(3rem, 7vw, 6rem)',
-  /** Architectural number — large numerics that anchor a layout. */
-  num: 'clamp(4rem, 10vw, 8rem)',
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────
-// CRT scanline overlay — static repeating-linear-gradient
-//
-// Apply as a `background-image` on the page canvas (or a
-// pointer-events:none overlay layer). Multiple presets for different
-// substrates: subtle for app shell, stronger for hero/boot surfaces.
-// ─────────────────────────────────────────────────────────────────────────
-export const SCANLINES = {
-  /** Subtle — for app shell. Barely visible, just enough texture. */
-  subtle:
-    'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.012) 2px, rgba(255, 255, 255, 0.012) 3px)',
-  /** Medium — for boot, login. Reads as CRT-on. */
-  medium:
-    'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255, 255, 255, 0.025) 3px, rgba(255, 255, 255, 0.025) 4px)',
-  /** Strong — for terminal frames within heroes. */
-  strong:
-    'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255, 255, 255, 0.04) 2px, rgba(255, 255, 255, 0.04) 3px)',
+  sm: 2,  // default for cards, buttons
+  md: 4,  // slightly softer for modals, pills
+  lg: 6,  // largest we use — reserved for top-level containers
+  full: 999, // for dots, status pills, avatars
 } as const;
 
 export const Z = {
