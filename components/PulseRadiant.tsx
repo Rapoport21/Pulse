@@ -1,41 +1,29 @@
 /**
- * PulseRadiant — radiant computer-vision visualization of how PULSE
- * thinks: data being detected, classified, organized, and compiled
- * into decisions at the bright center.
+ * PulseRadiant v4 — radiant decision-topology that looks like
+ * computer vision actively thinking.
  *
- * 2026-05-01 (v3) · Per Nick:
- *   1. Larger widgets, drifting in 3D (no longer static)
- *   2. No auto-rotation (camera stays still; user can drag)
- *   3. Radiant shape (concentric spherical shells, NOT a tree)
- *   4. Computer-vision style — tracker brackets, confidence scores,
- *      scan reticle, detection callouts that "lock onto" widgets
- *   5. Dimmer glow — bloom dialed way back (was blinding)
- *   6. Live data flow — new data appears at the periphery with
- *      "+ ADDED" callout, drifts inward to its category shell,
- *      occasional "RECLASSIFIED" / "COMPILED" events
+ * 2026-05-01 (v4) · Per Nick's 9 fixes:
+ *   1. (How would I improve it) Self-critique woven below
+ *   2. Higher fidelity — sharper widget design, more typography,
+ *      status indicators, sub-priority ticks
+ *   3. Many more data points — 80 raw inputs (was 30), 24 patterns,
+ *      10 scenarios, 5 decisions = 119 widgets
+ *   4. Variable sizing by priority (1-5). Even priority-1 widgets
+ *      are bigger than v3's largest
+ *   5. Hover-to-expand — widgets grow + reveal detail rows
+ *   6. Centered — camera dead-on (0, 0, 28) looking at origin
+ *   7. NO flying spheres — replaced with edge illumination (signals
+ *      fire along the wires themselves)
+ *   8. Ingestion events — new "+ INGEST" widgets appear at periphery,
+ *      fly into a target widget, target absorbs + briefly grows
+ *   9. Looks like thinking — edge signals + pattern-match bursts
+ *      (groups of related widgets simultaneously glow + connecting
+ *      edges flare with "PATTERN MATCH" callout) + frequent compile
+ *      ring + active CV tracker scanning
  *
- * Architecture:
- *
- *                       ····  outer shell (30 raw inputs) ····
- *                  ··                                        ··
- *               ·    ··    inner shell (12 patterns)    ··    ·
- *             ·   ·        ·· (6 scenarios) ··               ·  ·
- *           ·   ·     ·    [ DECISIONS · 3 ]    ·     ·       ·  ·
- *           ·   ·     ·    bright center        ·     ·       ·  ·
- *             ·   ·                                       ·    ·
- *                ·   ··                              ··  ·
- *                  ··                                        ··
- *                       ····      pulses flow IN      ····
- *
- * All shells centered on origin. Decision widgets tight at center;
- * inputs widely scattered on outer surface. Each widget drifts
- * around its home position via per-widget sine offsets so the whole
- * thing breathes.
- *
- * Pulses travel INWARD (data → decisions). CV brackets snap onto
- * one widget at a time, hold ~2.5s, jump to another. Periodic
- * "+ ADDED · 0.87" callouts at the periphery. Periodic "COMPILED"
- * ring at center.
+ * Architecture identical to v3: 4 spherical shells (Fibonacci sphere
+ * distribution), decisions at center, raw inputs on outer shell.
+ * Pulses flow inward through edge illumination.
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -46,85 +34,183 @@ import * as THREE from 'three';
 import { COLORS, FONTS, SPACE, RADIUS } from './design';
 
 // ──────────────────────────────────────────────────────────────────
-// Widget catalog
+// Types
 // ──────────────────────────────────────────────────────────────────
 
 type Layer = 1 | 2 | 3 | 4;
 type Tone = 'muted' | 'info' | 'warn' | 'accent';
+/** 1 = trivial / 5 = critical. Drives widget size + edge weight. */
+type Priority = 1 | 2 | 3 | 4 | 5;
 
 interface Widget {
   id: number;
   layer: Layer;
   label: string;
   value?: string;
+  /** Optional secondary line shown when expanded */
+  detail?: string;
+  /** Optional source / provenance shown when expanded */
+  source?: string;
   tone: Tone;
+  priority: Priority;
+  /** Live / stale / hold — drives the right-corner indicator */
+  status?: 'LIVE' | 'STALE' | 'HOLD';
 }
 
-// LAYER 1 — RAW INPUTS (the wide outer shell, 30 widgets)
+// ──────────────────────────────────────────────────────────────────
+// Catalog — 119 widgets total
+// ──────────────────────────────────────────────────────────────────
+
 const LAYER_1: Omit<Widget, 'id' | 'layer'>[] = [
-  { label: 'I-95 traffic',          value: '+18m', tone: 'warn' },
-  { label: 'Weather',               value: '54°F · rain', tone: 'muted' },
-  { label: 'Wind speed',            value: '22 kt',  tone: 'warn' },
-  { label: 'Time of day',           value: '14:22', tone: 'muted' },
-  { label: 'Day of week',           value: 'Wed',  tone: 'muted' },
-  { label: 'Season',                value: 'Spring', tone: 'muted' },
-  { label: 'Holiday calendar',      value: '—',    tone: 'muted' },
-  { label: 'Public events',         value: 'Concert · 18:00', tone: 'warn' },
-  { label: 'School schedule',       value: 'In session', tone: 'muted' },
-  { label: '911 call volume',       value: '+24%', tone: 'warn' },
-  { label: '911 call types',        value: '34% MVC', tone: 'warn' },
-  { label: 'Police dispatch',       value: '12 active', tone: 'muted' },
-  { label: 'Fire dispatch',         value: '3 active',  tone: 'muted' },
-  { label: 'Ambulance fleet',       value: '6 / 9',   tone: 'warn' },
-  { label: 'Highway crashes',       value: '2 reported', tone: 'warn' },
-  { label: 'Air quality index',     value: '92',  tone: 'muted' },
-  { label: 'Pollen count',          value: 'High', tone: 'muted' },
-  { label: 'Flu surveillance',      value: 'Rising', tone: 'warn' },
-  { label: 'Pharmacy supply',       value: 'Nominal', tone: 'muted' },
-  { label: 'Blood bank',            value: 'O- · 4u', tone: 'warn' },
-  { label: 'OR schedule',           value: '7 elective', tone: 'info' },
-  { label: 'Lab turnaround',        value: '38m avg', tone: 'muted' },
-  { label: 'Imaging queue',         value: '5 waiting', tone: 'info' },
-  { label: 'Discharge queue',       value: '12 ready', tone: 'info' },
-  { label: 'ICU beds',              value: '1 / 12',  tone: 'warn' },
-  { label: 'ED waiting room',       value: '34 patients', tone: 'warn' },
-  { label: 'Triage acuity',         value: '6 ESI-2', tone: 'warn' },
-  { label: 'RN staffing',           value: '1:4.2',  tone: 'info' },
-  { label: 'Insurance auth',        value: '17 pending', tone: 'muted' },
-  { label: 'Prior pattern match',   value: '94% sim', tone: 'info' },
+  // Traffic & roads (8)
+  { label: 'I-95 traffic', value: '+18m delay', detail: 'Northbound mile 142', source: 'WAZE-API', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Beltway congestion', value: '34% slow', detail: 'Westbound', source: 'WAZE', tone: 'warn', priority: 3, status: 'LIVE' },
+  { label: 'Highway 50 crash', value: '2 vehicles', detail: 'EMS dispatched', source: 'CHP-911', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Bridge closure', value: 'I-275 west', detail: 'ETA 2h reopen', source: 'DOT', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Construction zone', value: 'Route 9', detail: 'Lane drop', source: 'DOT', tone: 'muted', priority: 2 },
+  { label: 'Avg commute time', value: '+22%', source: 'GOOGLE-API', tone: 'info', priority: 2, status: 'LIVE' },
+  { label: 'Tunnel volume', value: '8200 cars/hr', source: 'DOT', tone: 'muted', priority: 1 },
+  { label: 'Bike-share volume', value: '−18%', source: 'CITYAPI', tone: 'muted', priority: 1 },
+
+  // Weather & environment (10)
+  { label: 'Weather', value: '54°F · rain', detail: 'Heavy thunderstorm', source: 'NOAA', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Wind speed', value: '22 kt', detail: 'Helo flight risk', source: 'NOAA', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Visibility', value: '0.4 mi', source: 'NOAA', tone: 'warn', priority: 3, status: 'LIVE' },
+  { label: 'Pressure drop', value: '−6 mb / 6h', source: 'NOAA', tone: 'warn', priority: 3 },
+  { label: 'Lightning strikes', value: '38 / 1h', detail: 'Convective cell', source: 'NOAA', tone: 'warn', priority: 3, status: 'LIVE' },
+  { label: 'Heat index', value: '78°F', source: 'NOAA', tone: 'muted', priority: 1 },
+  { label: 'UV index', value: '6 high', source: 'NOAA', tone: 'muted', priority: 1 },
+  { label: 'Air quality', value: '92 AQI', source: 'EPA', tone: 'muted', priority: 2 },
+  { label: 'Pollen count', value: 'High oak', source: 'WEATHER-CO', tone: 'muted', priority: 1 },
+  { label: 'Sunset', value: '20:42', source: 'NOAA', tone: 'muted', priority: 1 },
+
+  // Time & calendar (6)
+  { label: 'Time of day', value: '14:22', source: 'NTP', tone: 'muted', priority: 2 },
+  { label: 'Day of week', value: 'Wed · weekday', source: 'CAL', tone: 'muted', priority: 2 },
+  { label: 'Season', value: 'Spring · pollen', source: 'CAL', tone: 'muted', priority: 1 },
+  { label: 'Holiday calendar', value: 'No conflicts', source: 'CAL', tone: 'muted', priority: 1 },
+  { label: 'School schedule', value: 'In session', source: 'DISTRICT', tone: 'muted', priority: 2 },
+  { label: 'Shift change window', value: 'T−38m', source: 'WORKDAY', tone: 'info', priority: 3 },
+
+  // Public events (5)
+  { label: 'Concert at arena', value: '18:00 · 18k cap', detail: 'Hard rock · 21+', source: 'TICKETMASTER', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Marathon route', value: 'Saturday 7am', source: 'EVENTS', tone: 'warn', priority: 3 },
+  { label: 'Convention center', value: '12k expected', source: 'CITY', tone: 'info', priority: 2 },
+  { label: 'Stadium event', value: 'College ball · 19:30', source: 'NCAA', tone: 'warn', priority: 3 },
+  { label: 'Protest planned', value: 'City hall · 16:00', source: 'PD', tone: 'warn', priority: 3 },
+
+  // 911 / EMS / Police / Fire (10)
+  { label: '911 call volume', value: '+24% vs avg', detail: 'Spike past 30m', source: 'PSAP', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: '911 call types', value: '34% MVC', source: 'PSAP', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: '911 wait time', value: '12s avg', source: 'PSAP', tone: 'info', priority: 2, status: 'LIVE' },
+  { label: 'Police dispatch', value: '12 active', source: 'CAD', tone: 'muted', priority: 2, status: 'LIVE' },
+  { label: 'Fire dispatch', value: '3 active', source: 'CAD', tone: 'muted', priority: 2, status: 'LIVE' },
+  { label: 'Ambulance fleet', value: '6 / 9 in service', source: 'CAD', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Mutual aid status', value: '2 units inbound', source: 'CAD', tone: 'info', priority: 3 },
+  { label: 'Trauma alerts', value: '2 in past hr', source: 'CAD', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'STEMI alerts', value: '1 in transit', source: 'CAD', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Stroke alerts', value: '0 active', source: 'CAD', tone: 'muted', priority: 1 },
+
+  // Hospital ops (10)
+  { label: 'ED waiting room', value: '34 patients', source: 'EHR', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'ED triage acuity', value: '6 ESI-2', source: 'EHR', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'ICU beds', value: '1 / 12 free', detail: 'Occupancy 92%', source: 'BED-MGMT', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Med/Surg beds', value: '0 / 240', source: 'BED-MGMT', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'PACU census', value: '8 / 12', source: 'BED-MGMT', tone: 'info', priority: 2 },
+  { label: 'OR utilization', value: '87% next 4h', source: 'EPIC-OR', tone: 'info', priority: 3 },
+  { label: 'Discharge queue', value: '12 ready', source: 'EHR', tone: 'info', priority: 3, status: 'LIVE' },
+  { label: 'Boarding holds', value: '18 admits', source: 'EHR', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Floor census', value: '284', source: 'EHR', tone: 'info', priority: 3, status: 'LIVE' },
+  { label: 'L&D activity', value: '2 active labors', source: 'EHR', tone: 'muted', priority: 1, status: 'LIVE' },
+
+  // Staffing (6)
+  { label: 'RN ratio', value: '1:4.2', source: 'WORKDAY', tone: 'info', priority: 4, status: 'LIVE' },
+  { label: 'RN call-outs', value: '4 in past hr', source: 'WORKDAY', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'MD coverage', value: '3 attending', source: 'WORKDAY', tone: 'info', priority: 3 },
+  { label: 'Tech staffing', value: '−1 ED tech', source: 'WORKDAY', tone: 'warn', priority: 3 },
+  { label: 'Float pool', value: '2 RN warm', source: 'WORKDAY', tone: 'info', priority: 4 },
+  { label: 'PRN availability', value: '3 confirmed', source: 'WORKDAY', tone: 'info', priority: 2 },
+
+  // Resources & supply (8)
+  { label: 'Blood bank', value: 'O- · 4u', detail: 'Below threshold', source: 'LIS', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Pharmacy supply', value: 'Nominal', source: 'PYXIS', tone: 'muted', priority: 2 },
+  { label: 'Vent inventory', value: '6 available', source: 'BIOMED', tone: 'info', priority: 4 },
+  { label: 'Crash cart count', value: '3 available', source: 'BIOMED', tone: 'muted', priority: 2 },
+  { label: 'Lab turnaround', value: '38m avg', source: 'LIS', tone: 'muted', priority: 2, status: 'LIVE' },
+  { label: 'Imaging queue', value: '5 CT pending', source: 'PACS', tone: 'info', priority: 3, status: 'LIVE' },
+  { label: 'MRI availability', value: '2 / 3 slots', source: 'EPIC-RAD', tone: 'info', priority: 2 },
+  { label: 'EVS turnover', value: '34m bed turn', source: 'EVS', tone: 'info', priority: 3 },
+
+  // Public health & disease (6)
+  { label: 'Flu surveillance', value: 'Rising trend', source: 'CDC-FLUVIEW', tone: 'warn', priority: 4 },
+  { label: 'COVID positivity', value: '4.2%', source: 'PUBHEALTH', tone: 'info', priority: 3 },
+  { label: 'Local outbreak', value: 'Norovirus · school', source: 'PUBHEALTH', tone: 'warn', priority: 3 },
+  { label: 'Vaccine uptake', value: '67% flu', source: 'CDC', tone: 'muted', priority: 1 },
+  { label: 'STD trend', value: 'Stable', source: 'PUBHEALTH', tone: 'muted', priority: 1 },
+  { label: 'Sepsis screening', value: '3 alerts', source: 'EHR', tone: 'warn', priority: 4, status: 'LIVE' },
+
+  // Regional / network (6)
+  { label: 'St Mary divert', value: 'ACTIVE · 2h', source: 'REGIONAL', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'County trauma load', value: 'Saturated', source: 'REGIONAL', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Regional ED census', value: '+14% vs avg', source: 'REGIONAL', tone: 'warn', priority: 3 },
+  { label: 'Helo availability', value: '1 of 2 grounded', source: 'AIRMED', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Trauma bay availability', value: '3 ready', source: 'BED-MGMT', tone: 'info', priority: 4 },
+  { label: 'Receiving hospital', value: 'Mercy · 22m', source: 'REGIONAL', tone: 'info', priority: 2 },
+
+  // Historical / pattern matching (5)
+  { label: 'Prior pattern match', value: '94% similar', detail: 'Wed eve + concert + storm', source: 'AI-PRIOR', tone: 'info', priority: 4 },
+  { label: 'Last surge replay', value: '14 days ago', source: 'AI-PRIOR', tone: 'info', priority: 3 },
+  { label: 'Seasonal baseline', value: '+18% over Q-avg', source: 'AI-PRIOR', tone: 'info', priority: 2 },
+  { label: 'Day-of-week curve', value: 'Wed · 2nd peak', source: 'AI-PRIOR', tone: 'info', priority: 2 },
+  { label: 'Weather × census model', value: 'r² 0.78', source: 'AI-PRIOR', tone: 'info', priority: 3 },
 ];
 
-// LAYER 2 — PATTERNS / RISK SIGNALS (12 widgets)
 const LAYER_2: Omit<Widget, 'id' | 'layer'>[] = [
-  { label: 'Boarding pressure',   value: '18 admitted', tone: 'warn' },
-  { label: 'EMS offload risk',    value: '30m avg', tone: 'warn' },
-  { label: 'Staffing gap (RN)',   value: '−2 FTE', tone: 'warn' },
-  { label: 'Bed turnover',        value: '38m avg', tone: 'info' },
-  { label: 'Surge probability',   value: '64% · 4h', tone: 'warn' },
-  { label: 'Trauma likelihood',   value: '+38%',  tone: 'warn' },
-  { label: 'ICU saturation',      value: '92% by 16:00', tone: 'warn' },
-  { label: 'ED wait forecast',    value: '+22m',  tone: 'warn' },
-  { label: 'Discharge throughput', value: '−18%',  tone: 'info' },
-  { label: 'Float pool',          value: '2 RN warm', tone: 'info' },
-  { label: 'Regional divert',     value: '2 of 4',  tone: 'warn' },
-  { label: 'Resource bottleneck', value: 'CT-1',   tone: 'warn' },
+  { label: 'Boarding pressure', value: '18 admitted', detail: 'Up 12% in 1h', source: 'AGGREGATE', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'EMS offload risk', value: '30m avg wait', source: 'AGGREGATE', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Staffing gap (RN)', value: '−2 FTE', source: 'PREDICTIVE', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Bed turnover', value: '38m avg', source: 'AGGREGATE', tone: 'info', priority: 3 },
+  { label: 'Surge probability', value: '64% · 4h', detail: 'Confidence 0.87', source: 'PREDICTIVE', tone: 'warn', priority: 5, status: 'LIVE' },
+  { label: 'Trauma likelihood', value: '+38% next 2h', source: 'PREDICTIVE', tone: 'warn', priority: 4 },
+  { label: 'ICU saturation', value: '92% by 16:00', source: 'PREDICTIVE', tone: 'warn', priority: 5 },
+  { label: 'ED wait forecast', value: '+22m by 17:00', source: 'PREDICTIVE', tone: 'warn', priority: 4 },
+  { label: 'Discharge throughput', value: '−18% projected', source: 'PREDICTIVE', tone: 'info', priority: 3 },
+  { label: 'Float pool', value: '2 RN warm', source: 'AGGREGATE', tone: 'info', priority: 3 },
+  { label: 'Regional divert', value: '2 of 4 hospitals', source: 'AGGREGATE', tone: 'warn', priority: 4 },
+  { label: 'Resource bottleneck', value: 'CT-1 · imaging', source: 'PREDICTIVE', tone: 'warn', priority: 4 },
+  { label: 'STEMI window risk', value: '0 active · ready', source: 'PREDICTIVE', tone: 'info', priority: 3 },
+  { label: 'Stroke window risk', value: 'Coverage gap 18:00', source: 'PREDICTIVE', tone: 'warn', priority: 4 },
+  { label: 'Mass-cas latent prob', value: '12% · 4h', source: 'PREDICTIVE', tone: 'warn', priority: 4 },
+  { label: 'Helo offload bottleneck', value: 'Peak 17:30', source: 'PREDICTIVE', tone: 'warn', priority: 3 },
+  { label: 'Crash cart utilization', value: 'Trending up', source: 'AGGREGATE', tone: 'info', priority: 2 },
+  { label: 'Lab queue projection', value: '12 by 16:30', source: 'PREDICTIVE', tone: 'info', priority: 3 },
+  { label: 'OR overrun risk', value: '38% · 16:00', source: 'PREDICTIVE', tone: 'warn', priority: 3 },
+  { label: 'Sepsis cohort risk', value: '3 high-prob', source: 'PREDICTIVE', tone: 'warn', priority: 4, status: 'LIVE' },
+  { label: 'Pediatric admit risk', value: 'Above threshold', source: 'PREDICTIVE', tone: 'warn', priority: 3 },
+  { label: 'Psych hold risk', value: '4 PT delays', source: 'AGGREGATE', tone: 'warn', priority: 3 },
+  { label: 'Burn capacity strain', value: 'Watch · network', source: 'REGIONAL', tone: 'info', priority: 2 },
+  { label: 'OR-PACU coupling', value: 'Tight · monitor', source: 'PREDICTIVE', tone: 'info', priority: 2 },
 ];
 
-// LAYER 3 — SCENARIOS (6 widgets)
 const LAYER_3: Omit<Widget, 'id' | 'layer'>[] = [
-  { label: 'Baseline projection',  value: 'NEDOCS 124', tone: 'info' },
-  { label: 'Mild surge',          value: 'NEDOCS 142', tone: 'warn' },
-  { label: 'Moderate surge',      value: 'NEDOCS 168', tone: 'warn' },
-  { label: 'Mass casualty',       value: 'NEDOCS 184', tone: 'accent' },
-  { label: 'Regional divert',     value: '4 hospitals', tone: 'warn' },
-  { label: 'Recovery curve',      value: '−40m by 18:00', tone: 'info' },
+  { label: 'Baseline projection', value: 'NEDOCS 124', source: 'SCENARIO', tone: 'info', priority: 4, status: 'LIVE' },
+  { label: 'Mild surge scenario', value: 'NEDOCS 142', detail: 'Probability 38%', source: 'SCENARIO', tone: 'warn', priority: 4 },
+  { label: 'Moderate surge', value: 'NEDOCS 168', detail: 'Probability 22%', source: 'SCENARIO', tone: 'warn', priority: 5 },
+  { label: 'Mass casualty', value: 'NEDOCS 184', detail: 'Probability 4%', source: 'SCENARIO', tone: 'accent', priority: 5 },
+  { label: 'Regional divert', value: '4 hospitals', source: 'SCENARIO', tone: 'warn', priority: 4 },
+  { label: 'Recovery curve', value: '−40m by 18:00', source: 'SCENARIO', tone: 'info', priority: 3 },
+  { label: 'Float-pool activation', value: 'Reduces 28m wait', source: 'SCENARIO', tone: 'info', priority: 4 },
+  { label: 'Hall C overflow', value: '+12 beds', source: 'SCENARIO', tone: 'info', priority: 3 },
+  { label: 'No-action baseline', value: 'NEDOCS 156', source: 'SCENARIO', tone: 'warn', priority: 4 },
+  { label: 'Optimal-action path', value: 'NEDOCS 118', source: 'SCENARIO', tone: 'info', priority: 5 },
 ];
 
-// LAYER 4 — DECISIONS at center (3 widgets)
 const LAYER_4: Omit<Widget, 'id' | 'layer'>[] = [
-  { label: 'Pre-stage float',     value: '2 RN · 20m warm', tone: 'accent' },
-  { label: 'Activate surge',      value: 'Tier 2 · ready',  tone: 'accent' },
-  { label: 'Post divert',         value: 'Regional grid',   tone: 'accent' },
+  { label: 'Pre-stage float pool', value: '2 RN · 20m warm', detail: 'Estimated impact: −18m ED wait', source: 'DECISION', tone: 'accent', priority: 5, status: 'LIVE' },
+  { label: 'Activate surge protocol', value: 'Tier 2 · ready', detail: 'Approval queued · charge nurse', source: 'DECISION', tone: 'accent', priority: 5, status: 'LIVE' },
+  { label: 'Post regional divert', value: 'Coordination ready', detail: 'Notify dispatch + 4 hospitals', source: 'DECISION', tone: 'accent', priority: 5, status: 'LIVE' },
+  { label: 'Open Hall C overflow', value: '+12 beds · 35m', detail: 'EVS turnover dependent', source: 'DECISION', tone: 'accent', priority: 4 },
+  { label: 'Hold all electives', value: '7 cases pending', detail: 'Reschedule next 24h', source: 'DECISION', tone: 'accent', priority: 4 },
 ];
 
 const buildCatalog = (): Widget[] => {
@@ -138,43 +224,38 @@ const buildCatalog = (): Widget[] => {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Layout — concentric spherical shells (Fibonacci-sphere distribution)
+// Layout — concentric spherical shells
 // ──────────────────────────────────────────────────────────────────
 
 interface PreparedWidget extends Widget {
   homePosition: THREE.Vector3;
-  /** Per-widget drift parameters so each one floats on its own rhythm */
   driftPhase: number;
   driftSpeed: number;
   driftAmp: number;
 }
 
 const SHELL_RADIUS: Record<Layer, number> = {
-  4: 1.6,   // tight cluster at center for the 3 decisions
-  3: 5.5,   // scenarios
-  2: 9.5,   // patterns
-  1: 14.5,  // wide outer shell of raw inputs
+  4: 2.0,
+  3: 6.5,
+  2: 11.5,
+  1: 17.0,
 };
 
-// Distribute N points uniformly on a sphere via Fibonacci spiral.
 const fibonacciSphere = (n: number, radius: number): THREE.Vector3[] => {
-  const points: THREE.Vector3[] = [];
-  const phi = Math.PI * (3 - Math.sqrt(5)); // golden angle
+  const pts: THREE.Vector3[] = [];
+  const phi = Math.PI * (3 - Math.sqrt(5));
   for (let i = 0; i < n; i++) {
     const y = 1 - (i / (n - 1)) * 2;
     const r = Math.sqrt(1 - y * y);
     const theta = phi * i;
-    const x = Math.cos(theta) * r;
-    const z = Math.sin(theta) * r;
-    points.push(new THREE.Vector3(x * radius, y * radius, z * radius));
+    pts.push(new THREE.Vector3(Math.cos(theta) * r * radius, y * radius, Math.sin(theta) * r * radius));
   }
-  return points;
+  return pts;
 };
 
 const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   const byLayer = new Map<Layer, Widget[]>([[1, []], [2, []], [3, []], [4, []]]);
   widgets.forEach((w) => byLayer.get(w.layer)!.push(w));
-
   const out: PreparedWidget[] = [];
   byLayer.forEach((items, layer) => {
     const positions = fibonacciSphere(items.length, SHELL_RADIUS[layer]);
@@ -183,8 +264,8 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
         ...w,
         homePosition: positions[i],
         driftPhase: (i + layer * 3.7) * 0.7,
-        driftSpeed: 0.18 + Math.random() * 0.18,
-        driftAmp: layer === 4 ? 0.12 : 0.5,
+        driftSpeed: 0.14 + Math.random() * 0.18,
+        driftAmp: layer === 4 ? 0.10 : 0.45,
       });
     });
   });
@@ -192,13 +273,14 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Edges — fan IN: each outer-shell widget connects to k nearest in
-// the next shell down. Pulses travel from outer to center.
+// Edges — fan IN
 // ──────────────────────────────────────────────────────────────────
 
 interface Edge {
   from: number;
   to: number;
+  /** Importance — derives from the higher-priority of the two endpoints */
+  weight: number;
 }
 
 const buildEdges = (widgets: PreparedWidget[]): Edge[] => {
@@ -214,7 +296,8 @@ const buildEdges = (widgets: PreparedWidget[]): Edge[] => {
         .map((to) => ({ to, d: from.homePosition.distanceTo(to.homePosition) }))
         .sort((a, b) => a.d - b.d);
       for (let j = 0; j < Math.min(k, sorted.length); j++) {
-        edges.push({ from: from.id, to: sorted[j].to.id });
+        const to = sorted[j].to;
+        edges.push({ from: from.id, to: to.id, weight: Math.max(from.priority, to.priority) });
       }
     });
   };
@@ -222,12 +305,11 @@ const buildEdges = (widgets: PreparedWidget[]): Edge[] => {
   connect(1, 2, 2);
   connect(2, 3, 2);
   connect(3, 4, 2);
-
   return edges;
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Drift helper — small spherical perturbation around home
+// Drift helper
 // ──────────────────────────────────────────────────────────────────
 
 const driftPosition = (
@@ -246,45 +328,34 @@ const driftPosition = (
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Widget HTML card — larger, animatable
+// Widget styling helpers
 // ──────────────────────────────────────────────────────────────────
 
 const toneColor = (tone: Tone): string => {
   switch (tone) {
-    case 'accent':
-      return COLORS.accent;
-    case 'warn':
-      return COLORS.warn;
-    case 'info':
-      return COLORS.info;
+    case 'accent': return COLORS.accent;
+    case 'warn': return COLORS.warn;
+    case 'info': return COLORS.info;
     case 'muted':
-    default:
-      return COLORS.textMuted;
+    default: return COLORS.textMuted;
   }
 };
 
-interface WidgetCardProps {
-  widget: PreparedWidget;
-  /** True when the CV tracker has locked onto this widget */
-  tracked?: boolean;
-  /** Pseudo-confidence score shown when tracked */
-  trackedConf?: number;
-  /** Brief flash for "added" / "reclassified" events */
-  flash?: 'added' | 'reclassified' | null;
-}
-
-const widgetWidth = (layer: Layer): number => {
-  switch (layer) {
-    case 4: return 220;
-    case 3: return 200;
-    case 2: return 180;
+// All bigger than v3 (was 134-220)
+const widthByPriority = (p: Priority): number => {
+  switch (p) {
+    case 5: return 290;
+    case 4: return 260;
+    case 3: return 240;
+    case 2: return 220;
     case 1:
-    default: return 170;
+    default: return 200;
   }
 };
 
-const labelFontSize = (layer: Layer): number => {
-  switch (layer) {
+const labelFontByPriority = (p: Priority): number => {
+  switch (p) {
+    case 5: return 13;
     case 4: return 12;
     case 3: return 11;
     case 2: return 11;
@@ -293,166 +364,226 @@ const labelFontSize = (layer: Layer): number => {
   }
 };
 
-const valueFontSize = (layer: Layer): number => {
-  switch (layer) {
+const valueFontByPriority = (p: Priority): number => {
+  switch (p) {
+    case 5: return 22;
     case 4: return 18;
-    case 3: return 15;
+    case 3: return 16;
     case 2: return 14;
     case 1:
     default: return 13;
   }
 };
 
-const WidgetCard: React.FC<WidgetCardProps> = ({ widget, tracked, trackedConf, flash }) => {
+// ──────────────────────────────────────────────────────────────────
+// WidgetCard — bigger, hoverable, expands on hover, higher fidelity
+// ──────────────────────────────────────────────────────────────────
+
+interface WidgetCardProps {
+  widget: PreparedWidget;
+  /** True when CV tracker has locked onto this widget */
+  tracked?: boolean;
+  trackedConf?: number;
+  /** True during pattern-match flash */
+  patternHighlight?: boolean;
+  /** True when an ingestion event just merged into this widget */
+  absorbing?: boolean;
+}
+
+const WidgetCard: React.FC<WidgetCardProps> = ({
+  widget,
+  tracked,
+  trackedConf,
+  patternHighlight,
+  absorbing,
+}) => {
+  const [hovered, setHovered] = useState(false);
   const dotColor = toneColor(widget.tone);
   const isAccent = widget.tone === 'accent';
-  const w = widgetWidth(widget.layer);
-  const borderColor = tracked
-    ? COLORS.accent
-    : isAccent
-    ? COLORS.accent
-    : widget.layer >= 3
-    ? COLORS.borderStrong
-    : COLORS.border;
+  const w = widthByPriority(widget.priority);
+
+  // Border + scale state
+  const borderColor =
+    tracked || patternHighlight
+      ? COLORS.accent
+      : isAccent
+      ? COLORS.accent
+      : widget.layer >= 3
+      ? COLORS.borderStrong
+      : COLORS.border;
+
+  const scale = hovered ? 1.18 : absorbing ? 1.10 : 1.0;
 
   return (
     <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative',
         width: w,
         background: COLORS.surface,
         border: `1px solid ${borderColor}`,
         borderRadius: RADIUS.sm,
-        padding: `${SPACE.sm}px ${SPACE.md}px`,
+        padding: `${SPACE.sm + 2}px ${SPACE.md + 2}px`,
         fontFamily: FONTS.mono,
-        boxShadow: tracked
-          ? `0 0 18px rgba(225, 29, 72, 0.30)`
-          : `0 4px 14px rgba(0, 0, 0, 0.5)`,
+        boxShadow: tracked || patternHighlight
+          ? `0 0 16px rgba(225, 29, 72, 0.30)`
+          : `0 4px 14px rgba(0, 0, 0, 0.55)`,
         userSelect: 'none',
-        pointerEvents: 'none',
-        transition: 'border-color 240ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 240ms cubic-bezier(0.23, 1, 0.32, 1)',
+        pointerEvents: 'auto',
+        cursor: 'default',
+        transform: `scale(${scale})`,
+        transformOrigin: 'center',
+        transition: 'transform 220ms cubic-bezier(0.23, 1, 0.32, 1), border-color 220ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 220ms cubic-bezier(0.23, 1, 0.32, 1)',
+        zIndex: hovered ? 50 : 10,
       }}
     >
-      {/* CV tracker brackets — appear when this widget is locked */}
+      {/* CV tracker brackets */}
       {tracked && (
         <>
-          {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => {
-            const isTop = corner.startsWith('t');
-            const isLeft = corner.endsWith('l');
+          {(['tl', 'tr', 'bl', 'br'] as const).map((c) => {
+            const isTop = c.startsWith('t');
+            const isLeft = c.endsWith('l');
             return (
-              <span
-                key={corner}
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  width: 9,
-                  height: 9,
-                  [isTop ? 'top' : 'bottom']: -4,
-                  [isLeft ? 'left' : 'right']: -4,
-                  borderTop: isTop ? `1.5px solid ${COLORS.accent}` : undefined,
-                  borderBottom: !isTop ? `1.5px solid ${COLORS.accent}` : undefined,
-                  borderLeft: isLeft ? `1.5px solid ${COLORS.accent}` : undefined,
-                  borderRight: !isLeft ? `1.5px solid ${COLORS.accent}` : undefined,
-                  pointerEvents: 'none',
-                }}
-              />
+              <span key={c} aria-hidden style={{
+                position: 'absolute',
+                width: 11, height: 11,
+                [isTop ? 'top' : 'bottom']: -4,
+                [isLeft ? 'left' : 'right']: -4,
+                borderTop: isTop ? `1.5px solid ${COLORS.accent}` : undefined,
+                borderBottom: !isTop ? `1.5px solid ${COLORS.accent}` : undefined,
+                borderLeft: isLeft ? `1.5px solid ${COLORS.accent}` : undefined,
+                borderRight: !isLeft ? `1.5px solid ${COLORS.accent}` : undefined,
+                pointerEvents: 'none',
+              }} />
             );
           })}
-          {/* Confidence label */}
           {trackedConf != null && (
-            <span
-              aria-hidden
-              style={{
-                position: 'absolute',
-                top: -16,
-                right: -4,
-                fontFamily: FONTS.mono,
-                fontSize: 9,
-                letterSpacing: '0.18em',
-                color: COLORS.accent,
-                whiteSpace: 'nowrap',
-                textShadow: `0 0 4px ${COLORS.bg}`,
-              }}
-            >
+            <span aria-hidden style={{
+              position: 'absolute',
+              top: -16, right: -4,
+              fontFamily: FONTS.mono, fontSize: 9,
+              letterSpacing: '0.18em',
+              color: COLORS.accent,
+              whiteSpace: 'nowrap',
+              textShadow: `0 0 4px ${COLORS.bg}`,
+            }}>
               · {trackedConf.toFixed(2)} CONF
             </span>
           )}
         </>
       )}
 
-      {/* "+ ADDED" / "RECLASSIFIED" flash callout */}
-      {flash && (
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            bottom: -16,
-            left: 0,
-            fontFamily: FONTS.mono,
-            fontSize: 9,
-            letterSpacing: '0.18em',
-            color: flash === 'added' ? COLORS.ok : COLORS.warn,
-            whiteSpace: 'nowrap',
-            textShadow: `0 0 4px ${COLORS.bg}`,
-            animation: 'cv-flash-fade 1500ms ease-out forwards',
-          }}
-        >
-          {flash === 'added' ? '+ ADDED · INGEST' : '↻ RECLASSIFIED'}
-        </span>
-      )}
-
-      {/* Top row — dot + label */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: widget.value ? 6 : 0,
-        }}
-      >
-        <span
-          style={{
-            display: 'inline-block',
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            background: dotColor,
-            flexShrink: 0,
-          }}
-        />
-        <span
-          style={{
-            fontSize: labelFontSize(widget.layer),
-            fontWeight: 500,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: COLORS.textPrimary,
-            lineHeight: 1.2,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            flex: 1,
-          }}
-          title={widget.label}
-        >
+      {/* Top row — dot + label + status */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: widget.value ? 6 : 0 }}>
+        <span style={{
+          display: 'inline-block',
+          width: widget.priority >= 4 ? 7 : 6,
+          height: widget.priority >= 4 ? 7 : 6,
+          borderRadius: '50%',
+          background: dotColor,
+          flexShrink: 0,
+        }} />
+        <span style={{
+          fontSize: labelFontByPriority(widget.priority),
+          fontWeight: 500,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: COLORS.textPrimary,
+          lineHeight: 1.2,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          flex: 1,
+        }}>
           {widget.label}
         </span>
+        {widget.status && (
+          <span style={{
+            fontSize: 8,
+            letterSpacing: '0.18em',
+            color: widget.status === 'LIVE' ? COLORS.ok : widget.status === 'STALE' ? COLORS.warn : COLORS.textMuted,
+            fontFamily: FONTS.mono,
+          }}>
+            ● {widget.status}
+          </span>
+        )}
       </div>
 
-      {/* Value row */}
+      {/* Value */}
       {widget.value && (
-        <div
-          style={{
-            fontSize: valueFontSize(widget.layer),
-            fontWeight: 600,
-            letterSpacing: '0.02em',
-            color: isAccent ? COLORS.accentBright : COLORS.textPrimary,
-            fontVariantNumeric: 'tabular-nums',
-            paddingLeft: 14,
-            lineHeight: 1.15,
-          }}
-        >
+        <div style={{
+          fontSize: valueFontByPriority(widget.priority),
+          fontWeight: 600,
+          letterSpacing: '0.02em',
+          color: isAccent ? COLORS.accentBright : COLORS.textPrimary,
+          fontVariantNumeric: 'tabular-nums',
+          paddingLeft: 14,
+          lineHeight: 1.15,
+        }}>
           {widget.value}
+        </div>
+      )}
+
+      {/* Priority pip rail (right edge) — small dots showing priority 1-5 */}
+      <div style={{
+        position: 'absolute',
+        top: 8, right: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+      }}>
+        {[5, 4, 3, 2, 1].map((p) => (
+          <span key={p} style={{
+            width: 4, height: 4,
+            borderRadius: '50%',
+            background: widget.priority >= p ? dotColor : 'rgba(255, 255, 255, 0.08)',
+            opacity: widget.priority >= p ? 0.85 : 0.4,
+          }} />
+        ))}
+      </div>
+
+      {/* Expanded detail — only on hover */}
+      {hovered && (widget.detail || widget.source) && (
+        <div style={{
+          marginTop: 8,
+          paddingTop: 8,
+          borderTop: `1px dashed ${COLORS.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 3,
+        }}>
+          {widget.detail && (
+            <div style={{
+              fontSize: 11,
+              fontFamily: FONTS.mono,
+              color: COLORS.textSecondary,
+              letterSpacing: '0.04em',
+              lineHeight: 1.4,
+            }}>
+              {widget.detail}
+            </div>
+          )}
+          {widget.source && (
+            <div style={{
+              fontSize: 9,
+              fontFamily: FONTS.mono,
+              letterSpacing: '0.18em',
+              color: COLORS.textMuted,
+              textTransform: 'uppercase',
+            }}>
+              SRC · {widget.source}
+            </div>
+          )}
+          <div style={{
+            fontSize: 9,
+            fontFamily: FONTS.mono,
+            letterSpacing: '0.18em',
+            color: COLORS.accent,
+            textTransform: 'uppercase',
+          }}>
+            LAYER {widget.layer} · PRIO {widget.priority}
+          </div>
         </div>
       )}
     </div>
@@ -460,48 +591,93 @@ const WidgetCard: React.FC<WidgetCardProps> = ({ widget, tracked, trackedConf, f
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Edge renderer — single LineSegments, dim shimmer
+// Edge illumination — replaces the flying-sphere pulses
 // ──────────────────────────────────────────────────────────────────
 
-const EdgeLines: React.FC<{ widgets: PreparedWidget[]; edges: Edge[] }> = ({ widgets, edges }) => {
+interface LitEdge {
+  edgeIdx: number;
+  startedAt: number;
+  duration: number;
+}
+
+const EdgeNetwork: React.FC<{
+  widgets: PreparedWidget[];
+  edges: Edge[];
+  patternEdges: Set<number>;
+}> = ({ widgets, edges, patternEdges }) => {
   const meshRef = useRef<THREE.LineSegments>(null);
   const positions = useMemo(() => new Float32Array(edges.length * 6), [edges]);
   const colors = useMemo(() => new Float32Array(edges.length * 6), [edges]);
-
-  // Initial colors — dim
-  useEffect(() => {
-    edges.forEach((_, i) => {
-      const c = 0.16;
-      colors[i * 6] = c * 0.95;
-      colors[i * 6 + 1] = c * 0.30;
-      colors[i * 6 + 2] = c * 0.42;
-      colors[i * 6 + 3] = colors[i * 6];
-      colors[i * 6 + 4] = colors[i * 6 + 1];
-      colors[i * 6 + 5] = colors[i * 6 + 2];
-    });
-  }, [edges, colors]);
+  const litRef = useRef<LitEdge[]>([]);
 
   const tmpA = useMemo(() => new THREE.Vector3(), []);
   const tmpB = useMemo(() => new THREE.Vector3(), []);
 
+  // Spawn lit edges continuously — visible signal flow
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const MAX = 24;
+      if (litRef.current.length >= MAX) return;
+      // Bias toward outer edges (layer 1→2 or 2→3)
+      const candidates: number[] = [];
+      edges.forEach((e, i) => {
+        const fl = widgets[e.from].layer;
+        const tl = widgets[e.to].layer;
+        const minL = Math.min(fl, tl);
+        // Higher chance for outer edges
+        const weight = minL === 1 ? 4 : minL === 2 ? 3 : 1;
+        for (let k = 0; k < weight; k++) candidates.push(i);
+      });
+      const edgeIdx = candidates[Math.floor(Math.random() * candidates.length)];
+      litRef.current.push({
+        edgeIdx,
+        startedAt: performance.now(),
+        duration: 700 + Math.random() * 700,
+      });
+    }, 90);
+    return () => window.clearInterval(id);
+  }, [edges, widgets]);
+
   useFrame(({ clock }) => {
     if (!meshRef.current) return;
     const t = clock.getElapsedTime();
+    const now = performance.now();
+
+    // Cull expired lit edges
+    litRef.current = litRef.current.filter((l) => now - l.startedAt < l.duration);
+    const litMap = new Map<number, number>();
+    litRef.current.forEach((l) => {
+      const tt = (now - l.startedAt) / l.duration;
+      const env = Math.sin(tt * Math.PI);
+      litMap.set(l.edgeIdx, Math.max(litMap.get(l.edgeIdx) ?? 0, env));
+    });
+
+    // Update positions + colors
     edges.forEach((e, i) => {
       const wa = widgets[e.from];
       const wb = widgets[e.to];
       driftPosition(tmpA, wa.homePosition, t, wa.driftPhase, wa.driftSpeed, wa.driftAmp);
       driftPosition(tmpB, wb.homePosition, t, wb.driftPhase, wb.driftSpeed, wb.driftAmp);
-      positions[i * 6] = tmpA.x;
-      positions[i * 6 + 1] = tmpA.y;
-      positions[i * 6 + 2] = tmpA.z;
-      positions[i * 6 + 3] = tmpB.x;
-      positions[i * 6 + 4] = tmpB.y;
-      positions[i * 6 + 5] = tmpB.z;
+      positions[i * 6] = tmpA.x; positions[i * 6 + 1] = tmpA.y; positions[i * 6 + 2] = tmpA.z;
+      positions[i * 6 + 3] = tmpB.x; positions[i * 6 + 4] = tmpB.y; positions[i * 6 + 5] = tmpB.z;
+
+      // Color: dim baseline + lit boost + pattern-match boost
+      const litBoost = litMap.get(i) ?? 0;
+      const patternBoost = patternEdges.has(i) ? 1.0 : 0;
+      const baseR = 0.18, baseG = 0.06, baseB = 0.10;
+      const r = baseR + litBoost * 0.85 + patternBoost * 0.95;
+      const g = baseG + litBoost * 0.18 + patternBoost * 0.18;
+      const b = baseB + litBoost * 0.30 + patternBoost * 0.30;
+      colors[i * 6] = r; colors[i * 6 + 1] = g; colors[i * 6 + 2] = b;
+      colors[i * 6 + 3] = r; colors[i * 6 + 4] = g; colors[i * 6 + 5] = b;
     });
+
     const posAttr = meshRef.current.geometry.attributes.position;
     (posAttr.array as Float32Array).set(positions);
     posAttr.needsUpdate = true;
+    const colorAttr = meshRef.current.geometry.attributes.color;
+    (colorAttr.array as Float32Array).set(colors);
+    colorAttr.needsUpdate = true;
   });
 
   return (
@@ -522,135 +698,33 @@ const EdgeLines: React.FC<{ widgets: PreparedWidget[]; edges: Edge[] }> = ({ wid
           itemSize={3}
         />
       </bufferGeometry>
-      <lineBasicMaterial
-        vertexColors
-        transparent
-        opacity={0.55}
-        depthWrite={false}
-      />
+      <lineBasicMaterial vertexColors transparent opacity={0.85} depthWrite={false} toneMapped={false} />
     </lineSegments>
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Inward pulse travelers — small + dim (was blinding)
+// Compile burst
 // ──────────────────────────────────────────────────────────────────
 
-interface PulseTraveler {
-  edgeIdx: number;
-  startedAt: number;
-  duration: number;
-  /** True if pulse should travel from outer→inner (most do); false reverses */
-  inward: boolean;
-  color: THREE.Color;
-}
-
-const InwardPulses: React.FC<{ widgets: PreparedWidget[]; edges: Edge[] }> = ({
-  widgets,
-  edges,
-}) => {
-  const pulsesRef = useRef<PulseTraveler[]>([]);
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  const MAX_PULSES = 18;
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const colorBuf = useMemo(() => new THREE.Color(), []);
-  const tmpA = useMemo(() => new THREE.Vector3(), []);
-  const tmpB = useMemo(() => new THREE.Vector3(), []);
-
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      if (pulsesRef.current.length >= MAX_PULSES) return;
-      const edgeIdx = Math.floor(Math.random() * edges.length);
-      const isAccent = Math.random() < 0.30;
-      const color = isAccent
-        ? new THREE.Color(COLORS.accent)
-        : new THREE.Color('#A88858');
-      pulsesRef.current.push({
-        edgeIdx,
-        startedAt: performance.now(),
-        duration: 1500 + Math.random() * 800,
-        inward: true,
-        color,
-      });
-    }, 360);
-    return () => window.clearInterval(id);
-  }, [edges]);
-
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return;
-    const now = performance.now();
-    const t = clock.getElapsedTime();
-    pulsesRef.current = pulsesRef.current.filter((p) => now - p.startedAt < p.duration);
-
-    for (let i = 0; i < MAX_PULSES; i++) {
-      const p = pulsesRef.current[i];
-      if (!p) {
-        dummy.scale.setScalar(0);
-        dummy.updateMatrix();
-        meshRef.current.setMatrixAt(i, dummy.matrix);
-        continue;
-      }
-      const edge = edges[p.edgeIdx];
-      const fromW = widgets[edge.from];
-      const toW = widgets[edge.to];
-      // Inward = travel from higher layer (outer) to lower layer (inner)
-      const outer = fromW.layer < toW.layer ? fromW : toW;
-      const inner = fromW.layer < toW.layer ? toW : fromW;
-      driftPosition(tmpA, outer.homePosition, t, outer.driftPhase, outer.driftSpeed, outer.driftAmp);
-      driftPosition(tmpB, inner.homePosition, t, inner.driftPhase, inner.driftSpeed, inner.driftAmp);
-
-      const tt = Math.min(1, (now - p.startedAt) / p.duration);
-      const pos = tmpA.clone().lerp(tmpB, tt);
-      dummy.position.copy(pos);
-
-      const env = Math.sin(tt * Math.PI);
-      // Smaller + dimmer than v2 — was blinding
-      dummy.scale.setScalar(0.04 + env * 0.06);
-      dummy.updateMatrix();
-      meshRef.current.setMatrixAt(i, dummy.matrix);
-      colorBuf.copy(p.color).multiplyScalar(env * 0.85);
-      meshRef.current.setColorAt(i, colorBuf);
-    }
-
-    meshRef.current.instanceMatrix.needsUpdate = true;
-    if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
-  });
-
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, MAX_PULSES]}>
-      <sphereGeometry args={[1, 10, 10]} />
-      <meshBasicMaterial
-        transparent
-        opacity={0.85}
-        depthWrite={false}
-        toneMapped={false}
-      />
-    </instancedMesh>
-  );
-};
-
-// ──────────────────────────────────────────────────────────────────
-// Compile burst — concentric ring expanding from center every ~9s
-// ──────────────────────────────────────────────────────────────────
-
-const CompileBurst: React.FC = () => {
+const CompileBurst: React.FC<{ intervalMs?: number }> = ({ intervalMs = 5500 }) => {
   const ringRef = useRef<THREE.Mesh>(null);
   const startRef = useRef<number>(performance.now());
 
   useEffect(() => {
     const id = window.setInterval(() => {
       startRef.current = performance.now();
-    }, 9_000);
+    }, intervalMs);
     return () => window.clearInterval(id);
-  }, []);
+  }, [intervalMs]);
 
   useFrame(() => {
     if (!ringRef.current) return;
     const elapsed = performance.now() - startRef.current;
     const duration = 1800;
     const tt = Math.min(1, elapsed / duration);
-    const radius = 0.5 + tt * 14;
-    const opacity = elapsed > duration ? 0 : (1 - tt) * 0.35;
+    const radius = 0.5 + tt * 18;
+    const opacity = elapsed > duration ? 0 : (1 - tt) * 0.40;
     ringRef.current.scale.setScalar(radius);
     const mat = ringRef.current.material as THREE.MeshBasicMaterial;
     mat.opacity = opacity;
@@ -659,106 +733,170 @@ const CompileBurst: React.FC = () => {
   return (
     <mesh ref={ringRef} rotation={[Math.PI / 2, 0, 0]}>
       <ringGeometry args={[0.95, 1, 64]} />
-      <meshBasicMaterial
-        color={COLORS.accent}
-        transparent
-        opacity={0}
-        side={THREE.DoubleSide}
-        depthWrite={false}
-        toneMapped={false}
-      />
+      <meshBasicMaterial color={COLORS.accent} transparent opacity={0} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
     </mesh>
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Center reticle — subtle CV crosshair fixed at origin
+// Center reticle
 // ──────────────────────────────────────────────────────────────────
 
-const CenterReticle: React.FC = () => {
+const CenterReticle: React.FC = () => (
+  <Html position={[0, 0, 0]} center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[5, 0]}>
+    <div style={{ position: 'relative', width: 90, height: 90, opacity: 0.45 }}>
+      {(['tl', 'tr', 'bl', 'br'] as const).map((c) => {
+        const isTop = c.startsWith('t');
+        const isLeft = c.endsWith('l');
+        return (
+          <span key={c} style={{
+            position: 'absolute',
+            width: 16, height: 16,
+            [isTop ? 'top' : 'bottom']: 0,
+            [isLeft ? 'left' : 'right']: 0,
+            borderTop: isTop ? `1px solid ${COLORS.accent}` : undefined,
+            borderBottom: !isTop ? `1px solid ${COLORS.accent}` : undefined,
+            borderLeft: isLeft ? `1px solid ${COLORS.accent}` : undefined,
+            borderRight: !isLeft ? `1px solid ${COLORS.accent}` : undefined,
+          }} />
+        );
+      })}
+      <span style={{ position: 'absolute', top: '50%', left: 35, right: 35, height: 1, background: COLORS.accent, opacity: 0.6 }} />
+      <span style={{ position: 'absolute', left: '50%', top: 35, bottom: 35, width: 1, background: COLORS.accent, opacity: 0.6 }} />
+      <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 4, height: 4, background: COLORS.accent, borderRadius: '50%' }} />
+    </div>
+  </Html>
+);
+
+// ──────────────────────────────────────────────────────────────────
+// Ingestion event — new widget appears, drifts inward to a target
+// ──────────────────────────────────────────────────────────────────
+
+interface IngestionEvent {
+  id: number;
+  startedAt: number;
+  duration: number;
+  /** Random outer position to spawn at */
+  startPos: THREE.Vector3;
+  /** Target widget id */
+  targetId: number;
+  label: string;
+}
+
+const INGEST_LABELS = [
+  'NEW DATA · 911 spike',
+  'NEW DATA · weather alert',
+  'NEW DATA · trauma alert',
+  'NEW DATA · staff callout',
+  'NEW DATA · regional divert',
+  'NEW DATA · pattern match',
+  'NEW DATA · OR delay',
+  'NEW DATA · imaging queue',
+];
+
+const IngestionLayer: React.FC<{
+  widgets: PreparedWidget[];
+  onAbsorb: (widgetId: number) => void;
+}> = ({ widgets, onAbsorb }) => {
+  const [events, setEvents] = useState<IngestionEvent[]>([]);
+  const idCounterRef = useRef(0);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  const groupRefs = useRef<Map<number, THREE.Group>>(new Map());
+
+  // Spawn a new ingestion every 1.6s
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const target = widgets[Math.floor(Math.random() * widgets.length)];
+      const startPos = new THREE.Vector3(
+        (Math.random() - 0.5) * 36,
+        (Math.random() - 0.5) * 24,
+        (Math.random() - 0.5) * 36,
+      ).normalize().multiplyScalar(20 + Math.random() * 4);
+      setEvents((prev) => [
+        ...prev,
+        {
+          id: idCounterRef.current++,
+          startedAt: performance.now(),
+          duration: 2000,
+          startPos,
+          targetId: target.id,
+          label: INGEST_LABELS[Math.floor(Math.random() * INGEST_LABELS.length)],
+        },
+      ]);
+    }, 1600);
+    return () => window.clearInterval(id);
+  }, [widgets]);
+
+  // Per-frame: update positions and clean up
+  useFrame(({ clock }) => {
+    const now = performance.now();
+    const t = clock.getElapsedTime();
+    const stillActive: IngestionEvent[] = [];
+    events.forEach((e) => {
+      const tt = (now - e.startedAt) / e.duration;
+      if (tt >= 1) {
+        onAbsorb(e.targetId);
+        return;
+      }
+      stillActive.push(e);
+      const target = widgets.find((w) => w.id === e.targetId)!;
+      driftPosition(tmp, target.homePosition, t, target.driftPhase, target.driftSpeed, target.driftAmp);
+      const pos = e.startPos.clone().lerp(tmp, tt * tt); // ease-in
+      const group = groupRefs.current.get(e.id);
+      if (group) {
+        group.position.copy(pos);
+      }
+    });
+    if (stillActive.length !== events.length) {
+      setEvents(stillActive);
+    }
+  });
+
   return (
-    <Html position={[0, 0, 0]} center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[5, 0]}>
-      <div
-        style={{
-          position: 'relative',
-          width: 80,
-          height: 80,
-          opacity: 0.55,
-        }}
-      >
-        {/* Outer brackets */}
-        {(['tl', 'tr', 'bl', 'br'] as const).map((c) => {
-          const isTop = c.startsWith('t');
-          const isLeft = c.endsWith('l');
-          return (
-            <span
-              key={c}
-              style={{
-                position: 'absolute',
-                width: 14,
-                height: 14,
-                [isTop ? 'top' : 'bottom']: 0,
-                [isLeft ? 'left' : 'right']: 0,
-                borderTop: isTop ? `1px solid ${COLORS.accent}` : undefined,
-                borderBottom: !isTop ? `1px solid ${COLORS.accent}` : undefined,
-                borderLeft: isLeft ? `1px solid ${COLORS.accent}` : undefined,
-                borderRight: !isLeft ? `1px solid ${COLORS.accent}` : undefined,
-              }}
-            />
-          );
-        })}
-        {/* Inner crosshair */}
-        <span
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: 30,
-            right: 30,
-            height: 1,
-            background: COLORS.accent,
-            opacity: 0.6,
+    <>
+      {events.map((e) => (
+        <group
+          key={e.id}
+          ref={(node) => {
+            if (node) groupRefs.current.set(e.id, node);
+            else groupRefs.current.delete(e.id);
           }}
-        />
-        <span
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: 30,
-            bottom: 30,
-            width: 1,
-            background: COLORS.accent,
-            opacity: 0.6,
-          }}
-        />
-        {/* Center dot */}
-        <span
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 3,
-            height: 3,
-            background: COLORS.accent,
-            borderRadius: '50%',
-          }}
-        />
-      </div>
-    </Html>
+          position={[e.startPos.x, e.startPos.y, e.startPos.z]}
+        >
+          <Html center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
+            <div style={{
+              padding: '6px 10px',
+              background: 'rgba(20, 20, 24, 0.85)',
+              border: `1px solid ${COLORS.ok}`,
+              borderRadius: RADIUS.sm,
+              fontFamily: FONTS.mono,
+              fontSize: 9,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              color: COLORS.ok,
+              whiteSpace: 'nowrap',
+              boxShadow: `0 0 12px rgba(16, 185, 129, 0.30)`,
+            }}>
+              + {e.label}
+            </div>
+          </Html>
+        </group>
+      ))}
+    </>
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Driftable widget group — wraps each widget in a <group> whose
-// position updates per-frame so the Html overlay follows.
+// Drift widget wrapper
 // ──────────────────────────────────────────────────────────────────
 
 const DriftWidget: React.FC<{
   widget: PreparedWidget;
   tracked: boolean;
   trackedConf?: number;
-  flash: 'added' | 'reclassified' | null;
-}> = ({ widget, tracked, trackedConf, flash }) => {
+  patternHighlight: boolean;
+  absorbing: boolean;
+}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
 
@@ -771,62 +909,99 @@ const DriftWidget: React.FC<{
 
   return (
     <group ref={groupRef}>
-      <Html center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[80, 10]} occlude={false}>
-        <WidgetCard widget={widget} tracked={tracked} trackedConf={trackedConf} flash={flash} />
+      <Html center distanceFactor={14} style={{}} zIndexRange={[80, 10]} occlude={false}>
+        <WidgetCard
+          widget={widget}
+          tracked={tracked}
+          trackedConf={trackedConf}
+          patternHighlight={patternHighlight}
+          absorbing={absorbing}
+        />
       </Html>
     </group>
   );
 };
 
 // ──────────────────────────────────────────────────────────────────
-// Scene composition + state for tracker / flashes
+// Scene composition
 // ──────────────────────────────────────────────────────────────────
 
 const Scene: React.FC = () => {
-  const { widgets, edges } = useMemo(() => {
+  const { widgets, edges, edgeIndexByPair } = useMemo(() => {
     const cat = buildCatalog();
     const positioned = layoutWidgets(cat);
     const e = buildEdges(positioned);
-    return { widgets: positioned, edges: e };
+    const map = new Map<string, number>();
+    e.forEach((edge, i) => map.set(`${edge.from}-${edge.to}`, i));
+    return { widgets: positioned, edges: e, edgeIndexByPair: map };
   }, []);
 
-  // CV tracker state — which widget is locked, and confidence value
+  // CV tracker
   const [trackedId, setTrackedId] = useState<number>(0);
   const [trackedConf, setTrackedConf] = useState<number>(0.91);
-
   useEffect(() => {
     const id = window.setInterval(() => {
-      const next = Math.floor(Math.random() * widgets.length);
-      setTrackedId(next);
+      setTrackedId(Math.floor(Math.random() * widgets.length));
       setTrackedConf(0.78 + Math.random() * 0.20);
-    }, 2400);
+    }, 2200);
     return () => window.clearInterval(id);
   }, [widgets.length]);
 
-  // Flash events — periodically tag a widget as ADDED or RECLASSIFIED
-  const [flashId, setFlashId] = useState<number | null>(null);
-  const [flashType, setFlashType] = useState<'added' | 'reclassified' | null>(null);
+  // Pattern-match bursts — pick 4-6 connected widgets, briefly highlight
+  const [patternIds, setPatternIds] = useState<Set<number>>(new Set());
+  const [patternEdgeIds, setPatternEdgeIds] = useState<Set<number>>(new Set());
+  const [patternLabel, setPatternLabel] = useState<string | null>(null);
   useEffect(() => {
     const id = window.setInterval(() => {
-      const next = Math.floor(Math.random() * widgets.length);
-      const type: 'added' | 'reclassified' = Math.random() < 0.55 ? 'added' : 'reclassified';
-      setFlashId(next);
-      setFlashType(type);
+      // Pick a layer-2 pattern widget; gather widgets connected to it
+      const patternWidgets = widgets.filter((w) => w.layer === 2);
+      const root = patternWidgets[Math.floor(Math.random() * patternWidgets.length)];
+      const ids = new Set<number>([root.id]);
+      const eIds = new Set<number>();
+      edges.forEach((edge, idx) => {
+        if (edge.from === root.id || edge.to === root.id) {
+          ids.add(edge.from);
+          ids.add(edge.to);
+          eIds.add(idx);
+        }
+      });
+      const messages = ['PATTERN MATCH', 'CORRELATION DETECTED', 'COVARIANCE FOUND', 'HISTORICAL MATCH'];
+      setPatternIds(ids);
+      setPatternEdgeIds(eIds);
+      setPatternLabel(`▸ ${messages[Math.floor(Math.random() * messages.length)]} · ${root.label.toUpperCase()}`);
       window.setTimeout(() => {
-        setFlashId(null);
-        setFlashType(null);
-      }, 1500);
-    }, 3200);
+        setPatternIds(new Set());
+        setPatternEdgeIds(new Set());
+        setPatternLabel(null);
+      }, 1400);
+    }, 4500);
     return () => window.clearInterval(id);
-  }, [widgets.length]);
+  }, [widgets, edges]);
+
+  // Absorbing widgets — set true briefly when ingestion lands on them
+  const [absorbingIds, setAbsorbingIds] = useState<Set<number>>(new Set());
+  const handleAbsorb = (widgetId: number) => {
+    setAbsorbingIds((prev) => {
+      const next = new Set(prev);
+      next.add(widgetId);
+      return next;
+    });
+    window.setTimeout(() => {
+      setAbsorbingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(widgetId);
+        return next;
+      });
+    }, 600);
+  };
 
   return (
     <>
       <color attach="background" args={[COLORS.bg]} />
-      <EdgeLines widgets={widgets} edges={edges} />
-      <InwardPulses widgets={widgets} edges={edges} />
-      <CompileBurst />
+      <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
+      <CompileBurst intervalMs={5500} />
       <CenterReticle />
+      <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
 
       {widgets.map((w) => (
         <DriftWidget
@@ -834,25 +1009,48 @@ const Scene: React.FC = () => {
           widget={w}
           tracked={trackedId === w.id}
           trackedConf={trackedId === w.id ? trackedConf : undefined}
-          flash={flashId === w.id ? flashType : null}
+          patternHighlight={patternIds.has(w.id)}
+          absorbing={absorbingIds.has(w.id)}
         />
       ))}
 
-      {/* Camera controls — rotation OFF per Nick. User can still grab. */}
+      {/* Pattern-match floating label — shown at center top during burst */}
+      {patternLabel && (
+        <Html position={[0, 14, 0]} center distanceFactor={14} style={{ pointerEvents: 'none' }} zIndexRange={[60, 5]}>
+          <div style={{
+            padding: '8px 14px',
+            background: 'rgba(20, 8, 14, 0.92)',
+            border: `1px solid ${COLORS.accent}`,
+            borderRadius: RADIUS.sm,
+            fontFamily: FONTS.mono,
+            fontSize: 11,
+            letterSpacing: '0.20em',
+            textTransform: 'uppercase',
+            color: COLORS.accent,
+            whiteSpace: 'nowrap',
+            boxShadow: `0 0 18px rgba(225, 29, 72, 0.40)`,
+            animation: 'pattern-pulse 1400ms ease-in-out',
+          }}>
+            {patternLabel}
+          </div>
+        </Html>
+      )}
+
+      {/* Camera — dead center, no auto-rotate */}
       <OrbitControls
         enablePan={false}
         autoRotate={false}
         enableDamping
         dampingFactor={0.09}
-        minDistance={14}
-        maxDistance={48}
+        minDistance={20}
+        maxDistance={70}
         minPolarAngle={Math.PI * 0.28}
         maxPolarAngle={Math.PI * 0.72}
         target={[0, 0, 0]}
         makeDefault
       />
 
-      {/* Glow dialed way back — was blinding */}
+      {/* Bloom dialed back so it's not blinding */}
       <EffectComposer>
         <Bloom intensity={0.30} luminanceThreshold={0.55} luminanceSmoothing={0.85} mipmapBlur />
       </EffectComposer>
@@ -867,72 +1065,48 @@ const Scene: React.FC = () => {
 export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = '100%' }) => {
   return (
     <div style={{ width: '100%', height, background: COLORS.bg, position: 'relative' }}>
-      {/* Floor glow — same pattern as the rest of PULSE */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `radial-gradient(ellipse 65% 40% at 50% 110%, ${COLORS.accentDim}, transparent 60%)`,
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
-      {/* Faint dot grid */}
-      <div
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
-          backgroundSize: '24px 24px',
-          opacity: 0.18,
-          maskImage:
-            'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
-          WebkitMaskImage:
-            'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
-          pointerEvents: 'none',
-          zIndex: 0,
-        }}
-      />
+      {/* Floor glow */}
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0,
+        background: `radial-gradient(ellipse 65% 40% at 50% 110%, ${COLORS.accentDim}, transparent 60%)`,
+        pointerEvents: 'none', zIndex: 0,
+      }} />
+      <div aria-hidden style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+        backgroundSize: '24px 24px', opacity: 0.16,
+        maskImage: 'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
+        WebkitMaskImage: 'radial-gradient(ellipse 75% 60% at center, black 30%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
 
-      {/* CSS keyframes for the flash callouts */}
       <style>{`
-        @keyframes cv-flash-fade {
-          0%   { opacity: 0; transform: translateY(-2px); }
-          15%  { opacity: 1; transform: translateY(0); }
-          80%  { opacity: 1; }
-          100% { opacity: 0; }
+        @keyframes pattern-pulse {
+          0% { opacity: 0; transform: scale(0.92); }
+          15% { opacity: 1; transform: scale(1.02); }
+          75% { opacity: 1; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0.98); }
         }
       `}</style>
 
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 0, 28], fov: 50, near: 0.1, far: 200 }}
+        camera={{ position: [0, 0, 32], fov: 50, near: 0.1, far: 200 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
       </Canvas>
 
-      {/* Drag hint */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 14,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          color: COLORS.textMuted,
-          opacity: 0.6,
-          fontFamily: FONTS.mono,
-          fontSize: 10,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}
-      >
-        Drag to look · Scroll to zoom
+      <div style={{
+        position: 'absolute', bottom: 14, left: '50%',
+        transform: 'translateX(-50%)',
+        color: COLORS.textMuted, opacity: 0.6,
+        fontFamily: FONTS.mono, fontSize: 10,
+        letterSpacing: '0.22em', textTransform: 'uppercase',
+        pointerEvents: 'none', zIndex: 2,
+      }}>
+        Hover a widget to expand · drag to look · scroll to zoom
       </div>
     </div>
   );
