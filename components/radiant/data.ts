@@ -53,7 +53,7 @@ export const FUTURE_NODES: FutureNode[] = [
   { id: 'd0', pos: [-8,  39, 6],   label: 'NEDOCS easing',        value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 560, conf: 0.69 },
   { id: 'd1', pos: [8,   37, 11],  label: 'Surge subsides',       value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 480 },
   { id: 'd2', pos: [-15, 41, -8],  label: 'ICU at 88%',           value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 480 },
-  { id: 'd3', pos: [18,  38, -12], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 360 },
+  { id: 'd3', pos: [-9,  38, -14], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 360 },
 
   // Final (Y~50)
   { id: 'f0', pos: [-4,  50, 4],   label: 'Capacity recovers',    value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 580, conf: 0.71 },

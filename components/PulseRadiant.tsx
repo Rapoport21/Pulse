@@ -1940,7 +1940,10 @@ const Scene: React.FC = () => {
           Foundation Prime Radiant feel. */}
       <AmbientRotation speed={rotationSpeed}>
         <FloatingEquations />
-        <TimeAxis />
+        {/* TimeAxis intentionally removed — it sat at +X and pulled the
+            entire scene's visual mass to the right side of the screen.
+            The radiant's Y axis already implies time progression
+            (apex at top = T+4h prediction). */}
         <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
         <CenterReticle />
         <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} onCascade={triggerCascade} />
@@ -1960,9 +1963,10 @@ const Scene: React.FC = () => {
         ))}
       </AmbientRotation>
 
-      {/* Pattern-match floating label — shown at left of cluster during burst */}
+      {/* Pattern-match floating label — shown above the cluster, on
+          the screen's vertical centerline, during burst */}
       {patternLabel && (
-        <Html position={[-14, 0, 0]} center distanceFactor={20} style={{ pointerEvents: 'none' }} zIndexRange={[60, 5]}>
+        <Html position={[0, -10, 0]} center distanceFactor={26} style={{ pointerEvents: 'none' }} zIndexRange={[60, 5]}>
           <div style={{
             padding: '8px 14px',
             background: 'rgba(20, 8, 14, 0.92)',
