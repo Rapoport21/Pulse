@@ -128,18 +128,12 @@ export const SPACE = {
   '5xl': 72,
 } as const;
 
-/** Sharp by default — tactical chrome uses minimal border radius.
- *  The `xl` / `2xl` / `squircle` values were added 2026-04-30 for
- *  premium glass-treatment surfaces (Boot, Login). They're opt-in:
- *  dashboards stay sharp (sm/md), only signature surfaces go soft. */
+/** Sharp by default — tactical chrome uses minimal border radius */
 export const RADIUS = {
   none: 0,
   sm: 2,  // default for cards, buttons
   md: 4,  // slightly softer for modals, pills
-  lg: 6,  // largest we use for tactical surfaces
-  xl: 16, // glass cards, premium containers
-  '2xl': 28, // double-bezel outer shells, hero glass containers
-  squircle: 32, // signature wrapper radius — Boot/Login double-bezel
+  lg: 6,  // largest we use — reserved for top-level containers
   full: 999, // for dots, status pills, avatars
 } as const;
 
@@ -197,12 +191,6 @@ export const MOTION = {
   cssEaseSmooth: 'cubic-bezier(0.22, 1, 0.36, 1)' as const,
   cssEaseInOut: 'cubic-bezier(0.77, 0, 0.175, 1)' as const,
   cssEaseDrawer: 'cubic-bezier(0.32, 0.72, 0, 1)' as const,
-  /** Spring-feel curve — overshoots subtly. Used for magnetic
-   *  button hover translations. Feels bouncy without being playful. */
-  cssEaseSpring: 'cubic-bezier(0.34, 1.56, 0.64, 1)' as const,
-  /** Fluid mass-feel curve — slow start, decisive finish. Used
-   *  for premium glass entries (Boot, Login, modal opens). */
-  cssEaseFluid: 'cubic-bezier(0.16, 1, 0.3, 1)' as const,
 
   // Durations in seconds (motion/react convention)
   fast: 0.18,
@@ -267,37 +255,4 @@ export const SHADOW = {
   critGlow: `0 0 12px ${COLORS.crit}`,
   panel: '0 4px 24px rgba(0, 0, 0, 0.5)',
   modal: '0 16px 48px rgba(0, 0, 0, 0.8)',
-
-  // ─── Glass-treatment shadows (added 2026-04-30) ───
-  /** Inner highlight — 1px white sliver at the top edge. The hairline
-   *  that makes glass cards look like physical machined hardware. */
-  glassInsetTop: 'inset 0 1px 0 rgba(255, 255, 255, 0.08)',
-  /** Soft ambient drop — diffused, low-opacity. Replaces harsh
-   *  rgba(0,0,0,0.5) drops on premium surfaces. */
-  glassAmbient:
-    '0 24px 48px -12px rgba(0, 0, 0, 0.55), 0 8px 16px -4px rgba(0, 0, 0, 0.30)',
-  /** Magnetic press — used during the active:scale-down moment. */
-  magneticPress: '0 8px 24px -8px rgba(0, 0, 0, 0.7)',
-  /** Diffused outer halos — used as luminous glow rings. */
-  haloRose: `0 0 80px -8px ${COLORS.accentGlow}`,
-  haloEmerald: '0 0 80px -8px rgba(16, 185, 129, 0.30)',
-  haloViolet: '0 0 80px -8px rgba(139, 92, 246, 0.32)',
-} as const;
-
-// ─────────────────────────────────────────────────────────────────────────
-// MESH — radial gradient orb palette for Ethereal Glass surfaces
-//
-// Used as background "atmosphere" on Boot, Login, and other premium
-// non-data screens. Three blurred orbs at different positions create
-// a sense of depth without competing with foreground content.
-// ─────────────────────────────────────────────────────────────────────────
-export const MESH = {
-  // Hero orbs — placed on Boot / Login backgrounds (full opacity)
-  roseOrb: 'radial-gradient(ellipse 60% 50% at 25% 30%, rgba(225, 29, 72, 0.18), transparent 70%)',
-  violetOrb: 'radial-gradient(ellipse 50% 40% at 80% 20%, rgba(139, 92, 246, 0.15), transparent 65%)',
-  emeraldOrb: 'radial-gradient(ellipse 55% 45% at 70% 85%, rgba(16, 185, 129, 0.12), transparent 70%)',
-  // Subtle app-shell mesh (used behind dashboards) — much fainter
-  appAmbient:
-    'radial-gradient(ellipse 70% 50% at 20% 0%, rgba(225, 29, 72, 0.06), transparent 60%), ' +
-    'radial-gradient(ellipse 60% 40% at 95% 100%, rgba(59, 130, 246, 0.05), transparent 60%)',
 } as const;
