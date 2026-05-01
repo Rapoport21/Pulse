@@ -249,32 +249,32 @@ const layoutWidgets = (widgets: Widget[]): PreparedWidget[] => {
   return widgets.map((w, i) => {
     // Priority drives radial distance — bigger widgets near the center
     // (the "decision core"), smaller priority widgets at the periphery.
+    // Spread MUCH more so widgets don't crowd each other.
     const priorityRadiusMap: Record<Priority, [number, number]> = {
-      5: [3, 8],
-      4: [7, 14],
-      3: [12, 20],
-      2: [16, 26],
-      1: [20, 32],
+      5: [4, 12],
+      4: [10, 22],
+      3: [18, 32],
+      2: [26, 42],
+      1: [34, 56],
     };
     const [minR, maxR] = priorityRadiusMap[w.priority];
     const radius = minR + rand() * (maxR - minR);
 
-    // Random direction — full 3D, then squash Y so cluster is wider
-    // than tall (the future branches rise above).
+    // Random direction — full 3D. Lessen Y squash to 0.62 so the
+    // cluster reads as a volumetric cloud, not a flat disc.
     const theta = rand() * Math.PI * 2;
     const phi = Math.acos(2 * rand() - 1);
     const x = Math.sin(phi) * Math.cos(theta) * radius;
     const yRaw = Math.cos(phi) * radius;
     const z = Math.sin(phi) * Math.sin(theta) * radius;
-    // Squash Y to ~40% so cluster is flatter
-    const y = yRaw * 0.42 - 2; // also shift down slightly so future has more headroom
+    const y = yRaw * 0.62 - 4; // shift down a touch so future cone has headroom
 
     return {
       ...w,
       homePosition: new THREE.Vector3(x, y, z),
       driftPhase: (i + w.priority * 1.7) * 0.7,
       driftSpeed: 0.14 + rand() * 0.20,
-      driftAmp: w.priority >= 4 ? 0.18 : 0.55,
+      driftAmp: w.priority >= 4 ? 0.22 : 0.65,
     };
   });
 };
@@ -956,40 +956,38 @@ interface FutureLink {
   kind: FutureKind;
 }
 
-// Layered nodes (Y-up). Roots near cluster, top is the predicted future.
-//   Y=6   roots (6)         → 4 alive, 2 dead-ends
-//   Y=12  mid (5)           → 4 alive, 1 dead-end
-//   Y=18  deep (4)          → 3 alive, 1 dead-end
-//   Y=24  final (2)         → both alive, converging
-//   Y=30  apex (1)          → the prediction
+// Nodes are positioned organically — Y is roughly tiered for time
+// progression (T+15m at ~14 → T+4h at ~58) but each node jitters off
+// its tier so the structure doesn't read as flat shelves. XZ spread is
+// wide so the future cone fans out around the cluster, not through it.
 const FUTURE_NODES: FutureNode[] = [
-  // Roots (Y=6) — branching upward from cluster
-  { id: 'r0', pos: [-7, 6, 0],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 380, conf: 0.76 },
-  { id: 'r1', pos: [-2, 6, 4],   label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 340 },
-  { id: 'r2', pos: [3, 6, 2],    label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 340 },
-  { id: 'r3', pos: [7, 6, -2],   label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 340 },
-  { id: 'r4', pos: [-9, 6, -4],  label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 260 },
-  { id: 'r5', pos: [10, 6, 4],   label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 260 },
+  // Roots (Y~14) — branches start above the cluster's outer edge
+  { id: 'r0', pos: [-14, 13, 6],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 400, conf: 0.76 },
+  { id: 'r1', pos: [-4,  15, 12],  label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 360 },
+  { id: 'r2', pos: [7,   12, 8],   label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 360 },
+  { id: 'r3', pos: [16,  14, -4],  label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 360 },
+  { id: 'r4', pos: [-22, 11, -8],  label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 280 },
+  { id: 'r5', pos: [21,  16, 9],   label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 280 },
 
-  // Mid layer (Y=12)
-  { id: 'm0', pos: [-5, 12, 1],  label: 'Triage thinning',     value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 380, conf: 0.81 },
-  { id: 'm1', pos: [1, 12, 5],   label: 'Bed cohort A',        value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 320 },
-  { id: 'm2', pos: [5, 12, -3],  label: 'OR queue resolved',   value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 320 },
-  { id: 'm3', pos: [-8, 12, -2], label: 'Ambulance backlog',   value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 320 },
-  { id: 'm4', pos: [9, 12, 5],   label: 'INSUFFICIENT DATA',   value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 240 },
+  // Mid layer (Y~26)
+  { id: 'm0', pos: [-9,  27, 4],   label: 'Triage thinning',      value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 400, conf: 0.81 },
+  { id: 'm1', pos: [3,   25, 11],  label: 'Bed cohort A',         value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 340 },
+  { id: 'm2', pos: [11,  28, -7],  label: 'OR queue resolved',    value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 340 },
+  { id: 'm3', pos: [-16, 24, -5],  label: 'Ambulance backlog',    value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 340 },
+  { id: 'm4', pos: [19,  26, 12],  label: 'INSUFFICIENT DATA',    value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 260 },
 
-  // Deep layer (Y=18)
-  { id: 'd0', pos: [-3, 18, 2],  label: 'NEDOCS easing',       value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 400, conf: 0.69 },
-  { id: 'd1', pos: [3, 18, 4],   label: 'Surge subsides',      value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 340 },
-  { id: 'd2', pos: [-6, 18, -3], label: 'ICU at 88%',          value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 340 },
-  { id: 'd3', pos: [7, 18, -4],  label: 'INCOMPATIBLE SIGNAL', value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 240 },
+  // Deep layer (Y~38) — branches start curving toward apex
+  { id: 'd0', pos: [-6,  39, 5],   label: 'NEDOCS easing',        value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 420, conf: 0.69 },
+  { id: 'd1', pos: [6,   37, 8],   label: 'Surge subsides',       value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 360 },
+  { id: 'd2', pos: [-12, 41, -6],  label: 'ICU at 88%',           value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 360 },
+  { id: 'd3', pos: [14,  38, -10], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 260 },
 
-  // Final (Y=24) — convergence layer
-  { id: 'f0', pos: [-1, 24, 1],  label: 'Capacity recovers',   value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 420, conf: 0.71 },
-  { id: 'f1', pos: [3, 24, -2],  label: 'Wait time normal',    value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 380, conf: 0.66 },
+  // Final (Y~50) — convergence
+  { id: 'f0', pos: [-3,  50, 3],   label: 'Capacity recovers',    value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 440, conf: 0.71 },
+  { id: 'f1', pos: [4,   49, -4],  label: 'Wait time normal',     value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 400, conf: 0.66 },
 
-  // Apex (Y=30) — the prediction
-  { id: 'top', pos: [0, 30, 0],  label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 560, conf: 0.64 },
+  // Apex (Y=60) — the prediction
+  { id: 'top', pos: [0,  60, 0],   label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 580, conf: 0.64 },
 ];
 
 const FUTURE_LINKS: FutureLink[] = [
@@ -1121,7 +1119,9 @@ const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
 const FutureTree: React.FC = () => {
   const linesRef = useRef<THREE.LineSegments>(null);
 
-  // Build line geometry: cluster→roots, plus all FUTURE_LINKS
+  // Build CURVED line geometry — Catmull-Rom spline per edge sampled
+  // into LineSegments. Killed the Christmas-tree look: branches now
+  // bow outward like silk threads instead of running rigid + straight.
   const { geom, primaryCount, deadCount } = useMemo(() => {
     const positions: number[] = [];
     const colors: number[] = [];
@@ -1134,23 +1134,68 @@ const FutureTree: React.FC = () => {
       return [0.45, 0.14, 0.22];
     };
 
-    // Cluster (origin) → each root
-    FUTURE_NODES.filter((n) => n.pos[1] === 6).forEach((n) => {
+    // Sample a curved path between two points via a quadratic-like
+    // Catmull-Rom with a midpoint biased outward in XZ. Drop the
+    // sampled points into LineSegments as adjacent (p0,p1,p1,p2,...)
+    // so we can use a single draw call.
+    const sampleCurve = (
+      a: [number, number, number],
+      b: [number, number, number],
+      bowOutward: number, // 0..1
+      segments = 22,
+    ): number[] => {
+      const va = new THREE.Vector3(...a);
+      const vb = new THREE.Vector3(...b);
+      const mid = va.clone().lerp(vb, 0.5);
+      // Bow XZ midpoint outward — perpendicular to the segment in XZ
+      // plane — so branches arc rather than running geometric.
+      const dx = vb.x - va.x;
+      const dz = vb.z - va.z;
+      const horiz = Math.hypot(dx, dz) || 1;
+      const nx = -dz / horiz;
+      const nz = dx / horiz;
+      const reach = horiz * 0.35 + 4;
+      mid.x += nx * reach * bowOutward;
+      mid.z += nz * reach * bowOutward;
+      // Lift midpoint slightly so the curve domes upward
+      mid.y += 1.5 + bowOutward * 2;
+
+      const curve = new THREE.CatmullRomCurve3([va, mid, vb], false, 'catmullrom', 0.5);
+      const pts = curve.getPoints(segments);
+      const out: number[] = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        out.push(pts[i].x, pts[i].y, pts[i].z, pts[i + 1].x, pts[i + 1].y, pts[i + 1].z);
+      }
+      return out;
+    };
+
+    // Cluster (origin-ish) → each root, with bowed curves
+    FUTURE_NODES.filter((n) => n.pos[1] >= 11 && n.pos[1] <= 17).forEach((n, i) => {
       const c = colorOf(n.kind);
-      positions.push(0, 3, 0, n.pos[0], n.pos[1], n.pos[2]);
-      colors.push(c[0], c[1], c[2], c[0], c[1], c[2]);
+      const bow = 0.5 + (i % 3) * 0.18;
+      const pts = sampleCurve([0, 4, 0], n.pos, bow);
+      for (let j = 0; j < pts.length; j += 3) {
+        positions.push(pts[j], pts[j + 1], pts[j + 2]);
+        colors.push(c[0], c[1], c[2]);
+      }
       if (n.kind === 'primary') primaryCount += 1;
       if (n.kind === 'dead') deadCount += 1;
     });
 
-    // Inter-layer links
-    FUTURE_LINKS.forEach((link) => {
+    // Inter-layer links — each gets its own bowed curve
+    FUTURE_LINKS.forEach((link, i) => {
       const a = FUTURE_NODES.find((n) => n.id === link.from);
       const b = FUTURE_NODES.find((n) => n.id === link.to);
       if (!a || !b) return;
       const c = colorOf(link.kind);
-      positions.push(...a.pos, ...b.pos);
-      colors.push(c[0], c[1], c[2], c[0], c[1], c[2]);
+      // Higher bow for alts, less for primary (primary feels more direct)
+      const bow = link.kind === 'primary' ? 0.18 : link.kind === 'dead' ? 0.55 : 0.42;
+      const flip = i % 2 === 0 ? 1 : -1;
+      const pts = sampleCurve(a.pos, b.pos, bow * flip);
+      for (let j = 0; j < pts.length; j += 3) {
+        positions.push(pts[j], pts[j + 1], pts[j + 2]);
+        colors.push(c[0], c[1], c[2]);
+      }
       if (link.kind === 'primary') primaryCount += 1;
       if (link.kind === 'dead') deadCount += 1;
     });
@@ -1166,7 +1211,7 @@ const FutureTree: React.FC = () => {
   useFrame(({ clock }) => {
     if (!matRef.current) return;
     const t = clock.getElapsedTime();
-    matRef.current.opacity = 0.78 + Math.sin(t * 1.6) * 0.08;
+    matRef.current.opacity = 0.74 + Math.sin(t * 1.6) * 0.10;
   });
 
   return (
@@ -1177,17 +1222,17 @@ const FutureTree: React.FC = () => {
       </lineSegments>
 
       {/* Apex marker — small bright sphere just behind the apex card */}
-      <mesh position={[0, 30, -0.6]}>
-        <sphereGeometry args={[0.55, 16, 16]} />
+      <mesh position={[0, 60, -0.6]}>
+        <sphereGeometry args={[0.85, 20, 20]} />
         <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.85} />
       </mesh>
-      <mesh position={[0, 30, -0.6]}>
-        <sphereGeometry args={[0.85, 16, 16]} />
+      <mesh position={[0, 60, -0.6]}>
+        <sphereGeometry args={[1.6, 20, 20]} />
         <meshBasicMaterial color={COLORS.accent} transparent opacity={0.20} />
       </mesh>
 
-      {/* Section header floating above the cluster, below the roots */}
-      <Html position={[0, 4.5, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
+      {/* Section header floating between cluster and roots */}
+      <Html position={[0, 7, 0]} center distanceFactor={20} style={{ pointerEvents: 'none' }} zIndexRange={[40, 5]}>
         <div style={{
           padding: `${SPACE.xs}px ${SPACE.md}px`,
           background: 'rgba(20, 8, 14, 0.88)',
@@ -1210,7 +1255,7 @@ const FutureTree: React.FC = () => {
           key={n.id}
           position={n.pos}
           center
-          distanceFactor={n.kind === 'apex' ? 28 : 22}
+          distanceFactor={n.kind === 'apex' ? 30 : 24}
           style={{ pointerEvents: 'none' }}
           zIndexRange={n.kind === 'apex' ? [70, 12] : n.kind === 'dead' ? [40, 4] : [55, 8]}
         >
@@ -1219,6 +1264,79 @@ const FutureTree: React.FC = () => {
       ))}
     </group>
   );
+};
+
+// ──────────────────────────────────────────────────────────────────
+// AmbientDust — sparse particle field for atmosphere
+// (no animation per-frame; gets motion from the scene's rotation)
+// ──────────────────────────────────────────────────────────────────
+
+const AmbientDust: React.FC = () => {
+  const { positions, sizes } = useMemo(() => {
+    const N = 600;
+    const pos = new Float32Array(N * 3);
+    const siz = new Float32Array(N);
+    let seed = 17;
+    const rand = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    for (let i = 0; i < N; i++) {
+      const r = 30 + rand() * 60;
+      const theta = rand() * Math.PI * 2;
+      const phi = Math.acos(2 * rand() - 1);
+      pos[i * 3] = Math.sin(phi) * Math.cos(theta) * r;
+      pos[i * 3 + 1] = Math.cos(phi) * r * 0.7 + 22; // bias upward into the future cone
+      pos[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
+      siz[i] = 0.05 + rand() * 0.18;
+    }
+    return { positions: pos, sizes: siz };
+  }, []);
+
+  return (
+    <points>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[positions, 3]}
+          count={positions.length / 3}
+          array={positions}
+          itemSize={3}
+        />
+        <bufferAttribute
+          attach="attributes-size"
+          args={[sizes, 1]}
+          count={sizes.length}
+          array={sizes}
+          itemSize={1}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.18}
+        color={COLORS.accent}
+        transparent
+        opacity={0.30}
+        sizeAttenuation
+        depthWrite={false}
+        toneMapped={false}
+      />
+    </points>
+  );
+};
+
+// ──────────────────────────────────────────────────────────────────
+// AmbientRotation — slow Y-axis rotation of the entire 3D structure
+// HTML labels in drei <Html> are rendered in screen space, so they
+// stay readable while the geometry rotates underneath them. Gives
+// the Foundation Prime Radiant "live hologram" feel.
+// ──────────────────────────────────────────────────────────────────
+
+const AmbientRotation: React.FC<{ speed?: number; children: React.ReactNode }> = ({ speed = 0.04, children }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  useFrame((_, delta) => {
+    if (groupRef.current) groupRef.current.rotation.y += speed * delta;
+  });
+  return <group ref={groupRef}>{children}</group>;
 };
 
 
@@ -1298,22 +1416,29 @@ const Scene: React.FC = () => {
   return (
     <>
       <color attach="background" args={[COLORS.bg]} />
-      <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
-      <CompileBurst intervalMs={5500} />
-      <CenterReticle />
-      <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
-      <FutureTree />
+      {/* Everything 3D lives inside a slowly rotating group. HTML cards
+          stay screen-locked (drei <Html> default), so labels remain
+          readable while geometry rotates underneath — that's the
+          Foundation Prime Radiant feel. */}
+      <AmbientRotation speed={0.035}>
+        <AmbientDust />
+        <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
+        <CompileBurst intervalMs={5500} />
+        <CenterReticle />
+        <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} />
+        <FutureTree />
 
-      {widgets.map((w) => (
-        <DriftWidget
-          key={w.id}
-          widget={w}
-          tracked={trackedId === w.id}
-          trackedConf={trackedId === w.id ? trackedConf : undefined}
-          patternHighlight={patternIds.has(w.id)}
-          absorbing={absorbingIds.has(w.id)}
-        />
-      ))}
+        {widgets.map((w) => (
+          <DriftWidget
+            key={w.id}
+            widget={w}
+            tracked={trackedId === w.id}
+            trackedConf={trackedId === w.id ? trackedConf : undefined}
+            patternHighlight={patternIds.has(w.id)}
+            absorbing={absorbingIds.has(w.id)}
+          />
+        ))}
+      </AmbientRotation>
 
       {/* Pattern-match floating label — shown at left of cluster during burst */}
       {patternLabel && (
@@ -1337,19 +1462,19 @@ const Scene: React.FC = () => {
         </Html>
       )}
 
-      {/* Camera — vertical composition. Cluster sits at origin, the
-          future tree extends UP (+Y) to the apex at y=30. Target the
-          midpoint at y=12 so both cluster and apex are framed. */}
+      {/* Camera — cluster at origin (radius up to ~56), future cone
+          rises to apex at y=60. Target ~y=22 frames the whole arc.
+          Wider polar range so user can swing under or over the radiant. */}
       <OrbitControls
         enablePan={false}
         autoRotate={false}
         enableDamping
         dampingFactor={0.09}
-        minDistance={36}
-        maxDistance={120}
-        minPolarAngle={Math.PI * 0.18}
-        maxPolarAngle={Math.PI * 0.82}
-        target={[0, 12, 0]}
+        minDistance={70}
+        maxDistance={240}
+        minPolarAngle={Math.PI * 0.14}
+        maxPolarAngle={Math.PI * 0.86}
+        target={[0, 22, 0]}
         makeDefault
       />
 
@@ -1395,7 +1520,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
       <Canvas
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 12, 80], fov: 50, near: 0.1, far: 240 }}
+        camera={{ position: [0, 24, 145], fov: 55, near: 0.1, far: 360 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
@@ -1409,7 +1534,7 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         letterSpacing: '0.22em', textTransform: 'uppercase',
         pointerEvents: 'none', zIndex: 2,
       }}>
-        Hover a widget to expand · drag to look · scroll to zoom
+        Hover a widget to expand · drag to rotate · scroll to zoom · ψ-projection live
       </div>
     </div>
   );
