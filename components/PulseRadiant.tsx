@@ -32,6 +32,35 @@ import { OrbitControls, Html } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
 import { COLORS, FONTS, SPACE, RADIUS } from './design';
+import {
+  FUTURE_NODES,
+  FUTURE_LINKS,
+  TIME_AXIS,
+  FLOATING_EQUATIONS,
+  type FutureKind,
+  type FutureNode,
+} from './radiant/data';
+
+// ──────────────────────────────────────────────────────────────────
+// Environment — single hook captures viewport + a11y intent. Read
+// once at mount; mobile + reduced-motion don't toggle within a
+// session frequently enough to justify reactive re-renders.
+// ──────────────────────────────────────────────────────────────────
+interface RadiantEnv {
+  /** True under ~700px width — used to cut dust + dpr. */
+  mobile: boolean;
+  /** OS-level prefers-reduced-motion. Kills ambient rotation + drift. */
+  reducedMotion: boolean;
+}
+
+const useRadiantEnv = (): RadiantEnv =>
+  useMemo<RadiantEnv>(() => {
+    if (typeof window === 'undefined') return { mobile: false, reducedMotion: false };
+    return {
+      mobile: window.matchMedia('(max-width: 700px)').matches,
+      reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    };
+  }, []);
 
 // ──────────────────────────────────────────────────────────────────
 // Types
@@ -903,12 +932,18 @@ const DriftWidget: React.FC<{
   trackedConf?: number;
   patternHighlight: boolean;
   absorbing: boolean;
-}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing }) => {
+  /** When true, freeze widget at homePosition (a11y: reduced motion) */
+  paused?: boolean;
+}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
+    if (paused) {
+      groupRef.current.position.copy(widget.homePosition);
+      return;
+    }
     const t = clock.getElapsedTime();
     driftPosition(tmp, widget.homePosition, t, widget.driftPhase, widget.driftSpeed, widget.driftAmp);
     groupRef.current.position.copy(tmp);
@@ -931,95 +966,13 @@ const DriftWidget: React.FC<{
 
 // ──────────────────────────────────────────────────────────────────
 // FutureTree — Y-axis branching tree of projected futures
-// Multiple paths radiate UP from the cluster, converge into a single
+//
+// Multiple paths radiate up from the cluster, converge into a single
 // prediction at the apex. Some branches are dead-ends (ruled-out
-// futures). Inspired by the Foundation Prime Radiant.
+// futures). Inspired by the Foundation Prime Radiant. Node + link
+// data lives in ./radiant/data so it can be swapped from a real
+// prediction stream later.
 // ──────────────────────────────────────────────────────────────────
-
-type FutureKind = 'primary' | 'alt' | 'dead' | 'apex';
-
-interface FutureNode {
-  id: string;
-  pos: [number, number, number];
-  label: string;
-  value?: string;
-  detail?: string;
-  time?: string;
-  conf?: number; // 0..1
-  kind: FutureKind;
-  size: number; // px width
-}
-
-interface FutureLink {
-  from: string;
-  to: string;
-  kind: FutureKind;
-}
-
-// Nodes are positioned organically — Y is roughly tiered for time
-// progression (T+15m at ~14 → T+4h at ~58) but each node jitters off
-// its tier so the structure doesn't read as flat shelves. XZ spread is
-// wide so the future cone fans out around the cluster, not through it.
-const FUTURE_NODES: FutureNode[] = [
-  // Roots (Y~14) — branches start above the cluster's outer edge
-  { id: 'r0', pos: [-14, 13, 6],   label: 'Surge protocol HOT',  value: '76% conf', time: 'T+15m', kind: 'primary', size: 400, conf: 0.76 },
-  { id: 'r1', pos: [-4,  15, 12],  label: 'EMS rerouting',        value: '4 hospitals', time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r2', pos: [7,   12, 8],   label: 'Trauma OR open',       value: 'Bay 3',      time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r3', pos: [16,  14, -4],  label: 'Staff recall sent',    value: '12 nurses',  time: 'T+15m', kind: 'alt',     size: 360 },
-  { id: 'r4', pos: [-22, 11, -8],  label: 'Helo offload',         value: 'Wind 22kt',  detail: 'Weather scrub', kind: 'dead', size: 280 },
-  { id: 'r5', pos: [21,  16, 9],   label: 'Storm bypass route',   value: 'I-95 closed', detail: 'Geography blocks', kind: 'dead', size: 280 },
-
-  // Mid layer (Y~26)
-  { id: 'm0', pos: [-9,  27, 4],   label: 'Triage thinning',      value: '−14% wait',  time: 'T+30m', kind: 'primary', size: 400, conf: 0.81 },
-  { id: 'm1', pos: [3,   25, 11],  label: 'Bed cohort A',         value: '6 freed',    time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm2', pos: [11,  28, -7],  label: 'OR queue resolved',    value: '3 cases',    time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm3', pos: [-16, 24, -5],  label: 'Ambulance backlog',    value: '−2 in queue', time: 'T+30m', kind: 'alt',     size: 340 },
-  { id: 'm4', pos: [19,  26, 12],  label: 'INSUFFICIENT DATA',    value: 'Pattern weak', detail: 'Below threshold', kind: 'dead', size: 260 },
-
-  // Deep layer (Y~38) — branches start curving toward apex
-  { id: 'd0', pos: [-6,  39, 5],   label: 'NEDOCS easing',        value: '−24 pts',    time: 'T+1h',  kind: 'primary', size: 420, conf: 0.69 },
-  { id: 'd1', pos: [6,   37, 8],   label: 'Surge subsides',       value: '−18% load',  time: 'T+1h',  kind: 'alt',     size: 360 },
-  { id: 'd2', pos: [-12, 41, -6],  label: 'ICU at 88%',           value: 'Stable',     time: 'T+1h',  kind: 'alt',     size: 360 },
-  { id: 'd3', pos: [14,  38, -10], label: 'INCOMPATIBLE SIGNAL',  value: 'Rejected',   detail: 'Anti-correlation', kind: 'dead', size: 260 },
-
-  // Final (Y~50) — convergence
-  { id: 'f0', pos: [-3,  50, 3],   label: 'Capacity recovers',    value: '88% nominal', time: 'T+2h',  kind: 'primary', size: 440, conf: 0.71 },
-  { id: 'f1', pos: [4,   49, -4],  label: 'Wait time normal',     value: '< 28 min',   time: 'T+2h',  kind: 'primary', size: 400, conf: 0.66 },
-
-  // Apex (Y=60) — the prediction
-  { id: 'top', pos: [0,  60, 0],   label: 'NEDOCS easing 118 by 19:00', value: '64% confidence', detail: 'Convergent forecast — 4 paths', time: 'T+4h', kind: 'apex', size: 580, conf: 0.64 },
-];
-
-const FUTURE_LINKS: FutureLink[] = [
-  // Roots → mid
-  { from: 'r0', to: 'm0', kind: 'primary' },
-  { from: 'r0', to: 'm3', kind: 'alt' },
-  { from: 'r1', to: 'm0', kind: 'alt' },
-  { from: 'r1', to: 'm1', kind: 'alt' },
-  { from: 'r2', to: 'm2', kind: 'alt' },
-  { from: 'r3', to: 'm2', kind: 'alt' },
-  { from: 'r3', to: 'm1', kind: 'alt' },
-  { from: 'r4', to: 'm4', kind: 'dead' },
-  { from: 'r5', to: 'm4', kind: 'dead' },
-
-  // Mid → deep
-  { from: 'm0', to: 'd0', kind: 'primary' },
-  { from: 'm0', to: 'd2', kind: 'alt' },
-  { from: 'm1', to: 'd1', kind: 'alt' },
-  { from: 'm2', to: 'd1', kind: 'alt' },
-  { from: 'm3', to: 'd2', kind: 'alt' },
-  { from: 'm4', to: 'd3', kind: 'dead' },
-
-  // Deep → final (convergence)
-  { from: 'd0', to: 'f0', kind: 'primary' },
-  { from: 'd0', to: 'f1', kind: 'alt' },
-  { from: 'd1', to: 'f1', kind: 'primary' },
-  { from: 'd2', to: 'f0', kind: 'alt' },
-
-  // Final → apex
-  { from: 'f0', to: 'top', kind: 'primary' },
-  { from: 'f1', to: 'top', kind: 'primary' },
-];
 
 const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
   const isDead = node.kind === 'dead';
@@ -1032,6 +985,7 @@ const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
 
   return (
     <div
+      data-radiant-apex={isApex || undefined}
       style={{
         width: node.size,
         padding: isApex ? `${SPACE.lg}px ${SPACE.xl}px` : `${SPACE.md}px ${SPACE.base}px`,
@@ -1044,6 +998,7 @@ const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
         boxShadow: isApex ? `0 0 28px rgba(225, 29, 72, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04)` : isPrimary ? `0 0 14px rgba(225, 29, 72, 0.35)` : 'none',
         position: 'relative',
         textDecoration: isDead ? 'line-through' : 'none',
+        animation: isApex ? 'apex-breath 4.2s ease-in-out infinite' : undefined,
       }}
     >
       {/* Top meta row */}
@@ -1105,9 +1060,16 @@ const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
               height: '100%',
               background: `linear-gradient(90deg, ${COLORS.accent}, ${COLORS.accentBright})`,
               boxShadow: `0 0 6px ${COLORS.accentGlow}`,
+              animation: isApex ? 'apex-conf-breath 4.2s ease-in-out infinite' : undefined,
             }} />
           </div>
-          <span style={{ fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.16em', color: COLORS.textSecondary }}>
+          <span style={{
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.16em',
+            color: COLORS.textSecondary,
+            animation: isApex ? 'apex-conf-breath 4.2s ease-in-out infinite' : undefined,
+          }}>
             {(node.conf * 100).toFixed(0)}%
           </span>
         </div>
@@ -1116,39 +1078,60 @@ const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
   );
 };
 
+interface CurveMeta {
+  kind: FutureKind;
+  /** Inclusive index of the curve's first line-segment (each segment = 6 floats in colors[]) */
+  startSeg: number;
+  /** Exclusive index of the curve's last line-segment */
+  endSeg: number;
+  /** World-space midpoint position (for the "× PRUNED" badge) */
+  midpoint: [number, number, number];
+}
+
+interface FlowEvent {
+  curveIdx: number;
+  startedAt: number;
+  duration: number;
+}
+
+const COLOR_PRIMARY: [number, number, number] = [0.95, 0.20, 0.36];
+const COLOR_ALT: [number, number, number] = [0.45, 0.14, 0.22];
+const COLOR_DEAD: [number, number, number] = [0.18, 0.10, 0.10];
+const COLOR_FLOW_HEAD: [number, number, number] = [1.0, 0.55, 0.65];
+
 const FutureTree: React.FC = () => {
   const linesRef = useRef<THREE.LineSegments>(null);
+  const matRef = useRef<THREE.LineBasicMaterial>(null);
+  const flowsRef = useRef<FlowEvent[]>([]);
 
-  // Build CURVED line geometry — Catmull-Rom spline per edge sampled
-  // into LineSegments. Killed the Christmas-tree look: branches now
-  // bow outward like silk threads instead of running rigid + straight.
-  const { geom, primaryCount, deadCount } = useMemo(() => {
+  // ── Build geometry: bowed Catmull-Rom splines, one per edge ─────
+  const { geom, curves, primaryCount, deadCount } = useMemo(() => {
     const positions: number[] = [];
     const colors: number[] = [];
+    const curves: CurveMeta[] = [];
     let primaryCount = 0;
     let deadCount = 0;
 
     const colorOf = (kind: FutureKind): [number, number, number] => {
-      if (kind === 'primary' || kind === 'apex') return [0.95, 0.20, 0.36];
-      if (kind === 'dead') return [0.18, 0.10, 0.10];
-      return [0.45, 0.14, 0.22];
+      if (kind === 'primary' || kind === 'apex') return COLOR_PRIMARY;
+      if (kind === 'dead') return COLOR_DEAD;
+      return COLOR_ALT;
     };
 
-    // Sample a curved path between two points via a quadratic-like
-    // Catmull-Rom with a midpoint biased outward in XZ. Drop the
-    // sampled points into LineSegments as adjacent (p0,p1,p1,p2,...)
-    // so we can use a single draw call.
+    // Sample a curved path between two points via Catmull-Rom with the
+    // midpoint biased outward in XZ + lifted slightly. Drop sampled
+    // points into the segment buffer as adjacent (p0,p1,p1,p2,...).
+    // Returns the count of segments emitted.
     const sampleCurve = (
       a: [number, number, number],
       b: [number, number, number],
-      bowOutward: number, // 0..1
+      bowOutward: number,
+      kind: FutureKind,
       segments = 22,
-    ): number[] => {
+    ): { count: number; midpoint: [number, number, number] } => {
       const va = new THREE.Vector3(...a);
       const vb = new THREE.Vector3(...b);
       const mid = va.clone().lerp(vb, 0.5);
-      // Bow XZ midpoint outward — perpendicular to the segment in XZ
-      // plane — so branches arc rather than running geometric.
       const dx = vb.x - va.x;
       const dz = vb.z - va.z;
       const horiz = Math.hypot(dx, dz) || 1;
@@ -1157,45 +1140,39 @@ const FutureTree: React.FC = () => {
       const reach = horiz * 0.35 + 4;
       mid.x += nx * reach * bowOutward;
       mid.z += nz * reach * bowOutward;
-      // Lift midpoint slightly so the curve domes upward
-      mid.y += 1.5 + bowOutward * 2;
+      mid.y += 1.5 + Math.abs(bowOutward) * 2;
 
       const curve = new THREE.CatmullRomCurve3([va, mid, vb], false, 'catmullrom', 0.5);
       const pts = curve.getPoints(segments);
-      const out: number[] = [];
+      const c = colorOf(kind);
       for (let i = 0; i < pts.length - 1; i++) {
-        out.push(pts[i].x, pts[i].y, pts[i].z, pts[i + 1].x, pts[i + 1].y, pts[i + 1].z);
+        positions.push(pts[i].x, pts[i].y, pts[i].z, pts[i + 1].x, pts[i + 1].y, pts[i + 1].z);
+        colors.push(c[0], c[1], c[2], c[0], c[1], c[2]);
       }
-      return out;
+      const midPt = pts[Math.floor(pts.length / 2)];
+      return { count: pts.length - 1, midpoint: [midPt.x, midPt.y, midPt.z] };
     };
 
-    // Cluster (origin-ish) → each root, with bowed curves
+    // Cluster origin → each root (bowed)
     FUTURE_NODES.filter((n) => n.pos[1] >= 11 && n.pos[1] <= 17).forEach((n, i) => {
-      const c = colorOf(n.kind);
+      const startSeg = positions.length / 6;
       const bow = 0.5 + (i % 3) * 0.18;
-      const pts = sampleCurve([0, 4, 0], n.pos, bow);
-      for (let j = 0; j < pts.length; j += 3) {
-        positions.push(pts[j], pts[j + 1], pts[j + 2]);
-        colors.push(c[0], c[1], c[2]);
-      }
+      const { count, midpoint } = sampleCurve([0, 4, 0], n.pos, bow, n.kind);
+      curves.push({ kind: n.kind, startSeg, endSeg: startSeg + count, midpoint });
       if (n.kind === 'primary') primaryCount += 1;
       if (n.kind === 'dead') deadCount += 1;
     });
 
-    // Inter-layer links — each gets its own bowed curve
+    // Inter-layer links (bowed, alternating flip)
     FUTURE_LINKS.forEach((link, i) => {
       const a = FUTURE_NODES.find((n) => n.id === link.from);
       const b = FUTURE_NODES.find((n) => n.id === link.to);
       if (!a || !b) return;
-      const c = colorOf(link.kind);
-      // Higher bow for alts, less for primary (primary feels more direct)
+      const startSeg = positions.length / 6;
       const bow = link.kind === 'primary' ? 0.18 : link.kind === 'dead' ? 0.55 : 0.42;
       const flip = i % 2 === 0 ? 1 : -1;
-      const pts = sampleCurve(a.pos, b.pos, bow * flip);
-      for (let j = 0; j < pts.length; j += 3) {
-        positions.push(pts[j], pts[j + 1], pts[j + 2]);
-        colors.push(c[0], c[1], c[2]);
-      }
+      const { count, midpoint } = sampleCurve(a.pos, b.pos, bow * flip, link.kind);
+      curves.push({ kind: link.kind, startSeg, endSeg: startSeg + count, midpoint });
       if (link.kind === 'primary') primaryCount += 1;
       if (link.kind === 'dead') deadCount += 1;
     });
@@ -1203,25 +1180,119 @@ const FutureTree: React.FC = () => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    return { geom: g, primaryCount, deadCount };
+    return { geom: g, curves, primaryCount, deadCount };
   }, []);
 
-  // Shimmer the primary path's color subtly
-  const matRef = useRef<THREE.LineBasicMaterial>(null);
+  // Snapshot of the "neutral" colors so each frame can reset before
+  // applying flow heat + pruning overrides.
+  const baseColorsTemplate = useMemo(() => {
+    const a = geom.getAttribute('color').array as Float32Array;
+    return new Float32Array(a);
+  }, [geom]);
+
+  // ── Branch pruning — every 12s, pick a random alt curve and "rule
+  //    it out" for ~7s. The curve dims to dead-grey, a "× PATH PRUNED"
+  //    badge fades up at its midpoint, then it heals and the cycle
+  //    picks another curve. Makes the radiant feel like it's actively
+  //    evaluating, not just decorating.
+  const [prunedIdx, setPrunedIdx] = useState<number | null>(null);
+  const altCurveIndices = useMemo(
+    () => curves.map((c, i) => (c.kind === 'alt' ? i : -1)).filter((i) => i >= 0),
+    [curves],
+  );
+  useEffect(() => {
+    if (altCurveIndices.length === 0) return;
+    let pickAt = -1;
+    const id = window.setInterval(() => {
+      pickAt = altCurveIndices[Math.floor(Math.random() * altCurveIndices.length)];
+      setPrunedIdx(pickAt);
+      window.setTimeout(() => setPrunedIdx((cur) => (cur === pickAt ? null : cur)), 6800);
+    }, 12000);
+    return () => window.clearInterval(id);
+  }, [altCurveIndices]);
+
+  // ── Flow events — primary curves fire signals constantly, alts
+  //    occasionally. Each flow walks from t=0 to t=1 along its
+  //    curve over ~900ms with a 5-segment hot trail.
+  useEffect(() => {
+    if (curves.length === 0) return;
+    const id = window.setInterval(() => {
+      const MAX = 18;
+      if (flowsRef.current.length >= MAX) return;
+      // Weighted pool — primary 6×, alt 2×, dead 0×
+      const pool: number[] = [];
+      curves.forEach((c, i) => {
+        const w = c.kind === 'primary' || c.kind === 'apex' ? 6 : c.kind === 'alt' ? 2 : 0;
+        for (let k = 0; k < w; k++) pool.push(i);
+      });
+      if (pool.length === 0) return;
+      flowsRef.current.push({
+        curveIdx: pool[Math.floor(Math.random() * pool.length)],
+        startedAt: performance.now(),
+        duration: 750 + Math.random() * 350,
+      });
+    }, 220);
+    return () => window.clearInterval(id);
+  }, [curves]);
+
+  // Per-frame: reset to base, apply pruning override, apply flow heat
   useFrame(({ clock }) => {
-    if (!matRef.current) return;
-    const t = clock.getElapsedTime();
-    matRef.current.opacity = 0.74 + Math.sin(t * 1.6) * 0.10;
+    if (!linesRef.current) return;
+    const colorAttr = linesRef.current.geometry.getAttribute('color') as THREE.BufferAttribute;
+    const arr = colorAttr.array as Float32Array;
+    arr.set(baseColorsTemplate);
+
+    // Pruning override — dim the pruned curve to dead-grey
+    if (prunedIdx != null && prunedIdx >= 0 && prunedIdx < curves.length) {
+      const c = curves[prunedIdx];
+      for (let i = c.startSeg; i < c.endSeg; i++) {
+        const o = i * 6;
+        arr[o] = COLOR_DEAD[0]; arr[o + 1] = COLOR_DEAD[1]; arr[o + 2] = COLOR_DEAD[2];
+        arr[o + 3] = COLOR_DEAD[0]; arr[o + 4] = COLOR_DEAD[1]; arr[o + 5] = COLOR_DEAD[2];
+      }
+    }
+
+    // Flow heat — head + 5-segment trail
+    const now = performance.now();
+    flowsRef.current = flowsRef.current.filter((f) => now - f.startedAt < f.duration);
+    flowsRef.current.forEach((f) => {
+      const c = curves[f.curveIdx];
+      if (!c) return;
+      const tt = (now - f.startedAt) / f.duration;
+      const segCount = c.endSeg - c.startSeg;
+      const head = tt * (segCount - 1);
+      for (let i = 0; i < segCount; i++) {
+        const dist = head - i;
+        // Trail behind the head, fade ahead
+        const heat = dist >= 0 && dist <= 5 ? 1 - dist / 5 : dist < 0 && dist >= -1 ? 1 + dist : 0;
+        if (heat <= 0) continue;
+        const o = (c.startSeg + i) * 6;
+        const r = arr[o] + (COLOR_FLOW_HEAD[0] - arr[o]) * heat;
+        const g = arr[o + 1] + (COLOR_FLOW_HEAD[1] - arr[o + 1]) * heat;
+        const bl = arr[o + 2] + (COLOR_FLOW_HEAD[2] - arr[o + 2]) * heat;
+        arr[o] = r; arr[o + 1] = g; arr[o + 2] = bl;
+        arr[o + 3] = r; arr[o + 4] = g; arr[o + 5] = bl;
+      }
+    });
+
+    colorAttr.needsUpdate = true;
+
+    // Subtle global opacity breath
+    if (matRef.current) {
+      matRef.current.opacity = 0.78 + Math.sin(clock.getElapsedTime() * 1.4) * 0.08;
+    }
   });
+
+  const prunedMid = prunedIdx != null ? curves[prunedIdx]?.midpoint : null;
 
   return (
     <group>
-      {/* All edges (single LineSegments using vertex colors) */}
+      {/* All edges */}
       <lineSegments ref={linesRef} geometry={geom}>
-        <lineBasicMaterial ref={matRef} vertexColors transparent opacity={0.85} linewidth={1} />
+        <lineBasicMaterial ref={matRef} vertexColors transparent opacity={0.85} linewidth={1} depthWrite={false} toneMapped={false} />
       </lineSegments>
 
-      {/* Apex marker — small bright sphere just behind the apex card */}
+      {/* Apex marker — bright sphere just behind the apex card */}
       <mesh position={[0, 60, -0.6]}>
         <sphereGeometry args={[0.85, 20, 20]} />
         <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.85} />
@@ -1249,6 +1320,27 @@ const FutureTree: React.FC = () => {
         </div>
       </Html>
 
+      {/* Pruning notice — fades up at the midpoint of the currently-pruned alt curve */}
+      {prunedMid && (
+        <Html position={prunedMid} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[60, 8]}>
+          <div style={{
+            padding: '5px 10px',
+            background: 'rgba(20, 6, 10, 0.92)',
+            border: `1px solid ${COLORS.textMuted}`,
+            borderRadius: RADIUS.sm,
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.20em',
+            color: COLORS.textMuted,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+            animation: 'prune-fade 6800ms ease-in-out',
+          }}>
+            × PATH PRUNED
+          </div>
+        </Html>
+      )}
+
       {/* All future nodes as Html cards */}
       {FUTURE_NODES.map((n) => (
         <Html
@@ -1267,13 +1359,93 @@ const FutureTree: React.FC = () => {
 };
 
 // ──────────────────────────────────────────────────────────────────
+// ClusterHalo — disc on the floor under the cluster, separates the
+// "now" data sphere from the "future" cone above without text.
+// ──────────────────────────────────────────────────────────────────
+const ClusterHalo: React.FC = () => (
+  <group>
+    <mesh position={[0, -12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[40, 60, 96]} />
+      <meshBasicMaterial color={COLORS.accent} transparent opacity={0.18} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+    </mesh>
+    <mesh position={[0, -12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[58, 60.5, 96]} />
+      <meshBasicMaterial color={COLORS.accentBright} transparent opacity={0.55} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+    </mesh>
+  </group>
+);
+
+// ──────────────────────────────────────────────────────────────────
+// TimeAxis — vertical ticks on +X side, mapping Y to T+15m..T+4h
+// ──────────────────────────────────────────────────────────────────
+const TimeAxis: React.FC = () => (
+  <group>
+    {/* Spine */}
+    <mesh position={[44, 36, 0]}>
+      <boxGeometry args={[0.06, 56, 0.06]} />
+      <meshBasicMaterial color={COLORS.borderStrong} transparent opacity={0.55} toneMapped={false} />
+    </mesh>
+    {TIME_AXIS.map(({ y, label, emphasis }) => (
+      <group key={y}>
+        {/* Tick crossbar */}
+        <mesh position={[44, y, 0]}>
+          <boxGeometry args={[1.2, 0.06, 0.06]} />
+          <meshBasicMaterial color={emphasis ? COLORS.accentBright : COLORS.accent} transparent opacity={emphasis ? 0.9 : 0.65} toneMapped={false} />
+        </mesh>
+        <Html position={[47.5, y, 0]} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[30, 4]}>
+          <div style={{
+            padding: '3px 8px',
+            background: 'rgba(20, 8, 14, 0.85)',
+            border: `1px solid ${emphasis ? COLORS.accent : COLORS.borderStrong}`,
+            borderRadius: RADIUS.sm,
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.22em',
+            color: emphasis ? COLORS.accentBright : COLORS.textSecondary,
+            textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>
+            {label}
+          </div>
+        </Html>
+      </group>
+    ))}
+  </group>
+);
+
+// ──────────────────────────────────────────────────────────────────
+// FloatingEquations — psychohistory-flavored mono labels in 3D space
+// ──────────────────────────────────────────────────────────────────
+const FloatingEquations: React.FC = () => (
+  <>
+    {FLOATING_EQUATIONS.map((eq, i) => (
+      <Html key={i} position={eq.pos} center distanceFactor={18} style={{ pointerEvents: 'none' }} zIndexRange={[20, 3]}>
+        <div style={{
+          padding: '3px 9px',
+          background: 'rgba(20, 8, 14, 0.55)',
+          border: `1px dashed ${COLORS.border}`,
+          fontFamily: FONTS.mono,
+          fontSize: 11,
+          letterSpacing: '0.04em',
+          color: COLORS.textSecondary,
+          opacity: 0.62,
+          whiteSpace: 'nowrap',
+        }}>
+          {eq.text}
+        </div>
+      </Html>
+    ))}
+  </>
+);
+
+// ──────────────────────────────────────────────────────────────────
 // AmbientDust — sparse particle field for atmosphere
 // (no animation per-frame; gets motion from the scene's rotation)
 // ──────────────────────────────────────────────────────────────────
 
-const AmbientDust: React.FC = () => {
+const AmbientDust: React.FC<{ count?: number }> = ({ count = 600 }) => {
   const { positions, sizes } = useMemo(() => {
-    const N = 600;
+    const N = count;
     const pos = new Float32Array(N * 3);
     const siz = new Float32Array(N);
     let seed = 17;
@@ -1291,7 +1463,7 @@ const AmbientDust: React.FC = () => {
       siz[i] = 0.05 + rand() * 0.18;
     }
     return { positions: pos, sizes: siz };
-  }, []);
+  }, [count]);
 
   return (
     <points>
@@ -1334,9 +1506,92 @@ const AmbientDust: React.FC = () => {
 const AmbientRotation: React.FC<{ speed?: number; children: React.ReactNode }> = ({ speed = 0.04, children }) => {
   const groupRef = useRef<THREE.Group>(null);
   useFrame((_, delta) => {
-    if (groupRef.current) groupRef.current.rotation.y += speed * delta;
+    if (groupRef.current && speed !== 0) groupRef.current.rotation.y += speed * delta;
   });
   return <group ref={groupRef}>{children}</group>;
+};
+
+// ──────────────────────────────────────────────────────────────────
+// CameraOrchestrator — handles BOTH initial intro flight AND aspect-
+// ratio fit so the radiant always lands inside the viewport. On mount
+// we compute a "home" distance from the canvas size + camera FOV that
+// frames the structure with padding, drop the camera at a far/tilted
+// start position, then ease to home over ~1.7s. After the intro
+// completes, OrbitControls mounts and reads the camera's current
+// position to initialize its spherical coords — so the user's first
+// drag continues from wherever the intro landed.
+// ──────────────────────────────────────────────────────────────────
+
+const computeFitHome = (
+  fovDeg: number,
+  width: number,
+  height: number,
+  /** Y the camera looks at — chosen midway between cluster floor & apex */
+  targetY: number,
+  /** Half-extents of the structure to fit (radius from target along each axis) */
+  halfY: number,
+  halfXZ: number,
+): THREE.Vector3 => {
+  const aspect = width / Math.max(1, height);
+  const fovRad = (fovDeg * Math.PI) / 180;
+  const tanHalf = Math.tan(fovRad / 2);
+  // 1.20 vertical padding, 1.15 horizontal padding so labels never crop
+  const distH = (halfY * 1.20) / tanHalf;
+  const distW = (halfXZ * 1.15) / (aspect * tanHalf);
+  const dist = Math.max(distH, distW, 95);
+  return new THREE.Vector3(0, targetY, dist);
+};
+
+const CameraOrchestrator: React.FC<{
+  paused: boolean;
+  onIntroDone: () => void;
+}> = ({ paused, onIntroDone }) => {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  const startedRef = useRef<number>(0);
+  const completedRef = useRef(false);
+
+  const targetY = 22;
+  const halfY = 42;
+  const halfXZ = 64;
+
+  const home = useMemo(() => {
+    if (!(camera instanceof THREE.PerspectiveCamera)) return new THREE.Vector3(0, targetY, 145);
+    return computeFitHome(camera.fov, size.width, size.height, targetY, halfY, halfXZ);
+  }, [camera, size.width, size.height]);
+
+  // Start point: shifted up + back, tilted off-axis, so the intro
+  // dollies forward and tilts down into the radiant.
+  const start = useMemo(
+    () => new THREE.Vector3(home.x + 18, home.y + 26, home.z * 1.55),
+    [home],
+  );
+
+  // One-time mount: snap camera to start, kick off intro timer
+  useEffect(() => {
+    if (completedRef.current) return;
+    camera.position.copy(start);
+    camera.lookAt(0, targetY, 0);
+    startedRef.current = performance.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useFrame(() => {
+    if (paused || completedRef.current) return;
+    const DURATION = 1700; // ms
+    const elapsed = performance.now() - startedRef.current;
+    const tt = Math.min(1, elapsed / DURATION);
+    const ease = 1 - Math.pow(1 - tt, 3);
+    const pos = start.clone().lerp(home, ease);
+    camera.position.copy(pos);
+    camera.lookAt(0, targetY, 0);
+    if (tt >= 1) {
+      completedRef.current = true;
+      onIntroDone();
+    }
+  });
+
+  return null;
 };
 
 
@@ -1413,15 +1668,32 @@ const Scene: React.FC = () => {
     }, 600);
   };
 
+  // Environment-aware tuning: cut dust + freeze motion on small / a11y
+  const env = useRadiantEnv();
+  const dustCount = env.mobile ? 250 : 600;
+  const rotationSpeed = env.reducedMotion ? 0 : 0.035;
+  const driftPaused = env.reducedMotion;
+
+  // Camera intro: orchestrator handles camera until intro completes,
+  // then OrbitControls mounts and takes over. Keeps the entry cinematic
+  // and screen-fitted on every aspect ratio.
+  const [introDone, setIntroDone] = useState(false);
+
   return (
     <>
       <color attach="background" args={[COLORS.bg]} />
+
+      <CameraOrchestrator paused={env.reducedMotion} onIntroDone={() => setIntroDone(true)} />
+
       {/* Everything 3D lives inside a slowly rotating group. HTML cards
           stay screen-locked (drei <Html> default), so labels remain
           readable while geometry rotates underneath — that's the
           Foundation Prime Radiant feel. */}
-      <AmbientRotation speed={0.035}>
-        <AmbientDust />
+      <AmbientRotation speed={rotationSpeed}>
+        <AmbientDust count={dustCount} />
+        <ClusterHalo />
+        <FloatingEquations />
+        <TimeAxis />
         <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
         <CompileBurst intervalMs={5500} />
         <CenterReticle />
@@ -1436,6 +1708,7 @@ const Scene: React.FC = () => {
             trackedConf={trackedId === w.id ? trackedConf : undefined}
             patternHighlight={patternIds.has(w.id)}
             absorbing={absorbingIds.has(w.id)}
+            paused={driftPaused}
           />
         ))}
       </AmbientRotation>
@@ -1462,21 +1735,23 @@ const Scene: React.FC = () => {
         </Html>
       )}
 
-      {/* Camera — cluster at origin (radius up to ~56), future cone
-          rises to apex at y=60. Target ~y=22 frames the whole arc.
-          Wider polar range so user can swing under or over the radiant. */}
-      <OrbitControls
-        enablePan={false}
-        autoRotate={false}
-        enableDamping
-        dampingFactor={0.09}
-        minDistance={70}
-        maxDistance={240}
-        minPolarAngle={Math.PI * 0.14}
-        maxPolarAngle={Math.PI * 0.86}
-        target={[0, 22, 0]}
-        makeDefault
-      />
+      {/* OrbitControls mount only after the intro completes. Reads camera
+          position from current state to initialize spherical coords, so
+          user picks up wherever the intro landed. */}
+      {introDone && (
+        <OrbitControls
+          enablePan={false}
+          autoRotate={false}
+          enableDamping
+          dampingFactor={0.09}
+          minDistance={70}
+          maxDistance={260}
+          minPolarAngle={Math.PI * 0.14}
+          maxPolarAngle={Math.PI * 0.86}
+          target={[0, 22, 0]}
+          makeDefault
+        />
+      )}
 
       {/* Bloom dialed back so it's not blinding */}
       <EffectComposer>
@@ -1491,6 +1766,7 @@ const Scene: React.FC = () => {
 // ──────────────────────────────────────────────────────────────────
 
 export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = '100%' }) => {
+  const env = useRadiantEnv();
   return (
     <div style={{ width: '100%', height, background: COLORS.bg, position: 'relative' }}>
       {/* Floor glow */}
@@ -1515,12 +1791,29 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
           75% { opacity: 1; transform: scale(1); }
           100% { opacity: 0; transform: scale(0.98); }
         }
+        @keyframes prune-fade {
+          0% { opacity: 0; transform: scale(0.85); }
+          14% { opacity: 1; transform: scale(1.02); }
+          80% { opacity: 0.85; transform: scale(1); }
+          100% { opacity: 0; transform: scale(0.92); }
+        }
+        @keyframes apex-breath {
+          0%, 100% { opacity: 0.92; }
+          50% { opacity: 1; box-shadow: 0 0 12px rgba(244, 63, 94, 0.65); }
+        }
+        @keyframes apex-conf-breath {
+          0%, 100% { filter: brightness(1); }
+          50% { filter: brightness(1.18); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-radiant-apex] { animation: none !important; }
+        }
       `}</style>
 
       <Canvas
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
-        camera={{ position: [0, 24, 145], fov: 55, near: 0.1, far: 360 }}
+        dpr={env.mobile ? [1, 1.5] : [1, 2]}
+        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        camera={{ position: [0, 24, 145], fov: 55, near: 0.1, far: 380 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
         <Scene />
@@ -1533,8 +1826,11 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         fontFamily: FONTS.mono, fontSize: 10,
         letterSpacing: '0.22em', textTransform: 'uppercase',
         pointerEvents: 'none', zIndex: 2,
+        whiteSpace: 'nowrap',
       }}>
-        Hover a widget to expand · drag to rotate · scroll to zoom · ψ-projection live
+        {env.mobile
+          ? 'Drag · pinch to zoom · ψ-projection live'
+          : 'Hover a widget · drag to rotate · scroll to zoom · ψ-projection live'}
       </div>
     </div>
   );
