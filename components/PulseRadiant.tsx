@@ -41,6 +41,7 @@ import {
   type FutureNode,
 } from './radiant/data';
 import { WidgetDetailCard, FutureDetailCard, type DetailWidget } from './radiant/DetailCards';
+import { vizTypeFor } from './radiant/Visualizations';
 
 // ──────────────────────────────────────────────────────────────────
 // Environment — single hook captures viewport + a11y intent. Read
@@ -1176,8 +1177,9 @@ const DriftWidget: React.FC<{
     : [80, 10];
 
   // Build the DetailWidget shape for the expanded card. Memoized so
-  // the inner detail card (with its 24h sparkline buildSeries call)
-  // doesn't recompute every frame.
+  // the inner detail card (with its 24h time-series buildSeries call)
+  // doesn't recompute every frame. vizType is hashed from widget id
+  // + layer so each widget gets a stable, distinct visualization.
   const detail: DetailWidget = useMemo(
     () => ({
       id: widget.id,
@@ -1190,6 +1192,7 @@ const DriftWidget: React.FC<{
       priority: widget.priority,
       toneColor: toneColor(widget.tone),
       isAccent: widget.tone === 'accent',
+      vizType: vizTypeFor(widget.id, widget.layer),
     }),
     [widget],
   );
@@ -1840,13 +1843,20 @@ const AmbientDust: React.FC<{ count?: number }> = ({ count = 600 }) => {
 // the Foundation Prime Radiant "live hologram" feel.
 // ──────────────────────────────────────────────────────────────────
 
-const AmbientRotation: React.FC<{ speed?: number; children: React.ReactNode }> = ({ speed = 0.04, children }) => {
-  const groupRef = useRef<THREE.Group>(null);
+const AmbientRotation = React.forwardRef<
+  THREE.Group,
+  { speed?: number; paused?: boolean; children: React.ReactNode }
+>(({ speed = 0.04, paused = false, children }, ref) => {
+  const localRef = useRef<THREE.Group>(null);
+  React.useImperativeHandle(ref, () => localRef.current as THREE.Group, []);
   useFrame((_, delta) => {
-    if (groupRef.current && speed !== 0) groupRef.current.rotation.y += speed * delta;
+    if (localRef.current && !paused && speed !== 0) {
+      localRef.current.rotation.y += speed * delta;
+    }
   });
-  return <group ref={groupRef}>{children}</group>;
-};
+  return <group ref={localRef}>{children}</group>;
+});
+AmbientRotation.displayName = 'AmbientRotation';
 
 // ──────────────────────────────────────────────────────────────────
 // CameraOrchestrator — handles BOTH initial intro flight AND aspect-
@@ -2086,11 +2096,15 @@ const Scene: React.FC<SceneProps> = ({
   // and screen-fitted on every aspect ratio.
   const [introDone, setIntroDone] = useState(false);
 
-  // 3D position of whatever is focused — fed to CameraOrchestrator so
-  // it can dolly in. Cluster widgets drift, so we use the homePosition
-  // (camera dolly is fine pointing at a slowly-moving target; we'd
-  // rather a stable look-at than chasing the drift).
-  const focusedTarget = useMemo<THREE.Vector3 | null>(() => {
+  // Ref to the rotating group — needed to read its current rotation.y
+  // when focus engages so we can compute a STABLE world-space target
+  // for the camera (otherwise the local position rotates underneath
+  // the camera and the focused card "drifts" off-center).
+  const ambientRotationRef = useRef<THREE.Group>(null);
+
+  // Local 3D position of whatever is focused. We snapshot the group's
+  // rotation.y at focus time and apply it to get the world position.
+  const focusedLocal = useMemo<THREE.Vector3 | null>(() => {
     if (focusedClusterId != null) {
       const w = widgets.find((x) => x.id === focusedClusterId);
       if (w) return w.homePosition.clone();
@@ -2101,7 +2115,29 @@ const Scene: React.FC<SceneProps> = ({
     }
     return null;
   }, [focusedClusterId, focusedFutureId, widgets]);
-  const isFocused = focusedTarget !== null;
+  const isFocused = focusedLocal !== null;
+
+  // World-space focus target — recomputed when focus changes by
+  // applying the rotating group's CURRENT rotation.y to the local
+  // position. From that moment the rotation is paused (see below),
+  // so the world position stays put and the camera stays aimed.
+  const [focusedTarget, setFocusedTarget] = useState<THREE.Vector3 | null>(null);
+  useEffect(() => {
+    if (!focusedLocal) {
+      setFocusedTarget(null);
+      return;
+    }
+    const ry = ambientRotationRef.current?.rotation.y ?? 0;
+    const cosY = Math.cos(ry);
+    const sinY = Math.sin(ry);
+    setFocusedTarget(
+      new THREE.Vector3(
+        focusedLocal.x * cosY + focusedLocal.z * sinY,
+        focusedLocal.y,
+        -focusedLocal.x * sinY + focusedLocal.z * cosY,
+      ),
+    );
+  }, [focusedLocal]);
 
   // Fresh-arrival cycle — every 2.6s, mark a random widget as "newly
   // arrived" for 1.4s. The widget gets a green border + scale pulse +
@@ -2142,7 +2178,11 @@ const Scene: React.FC<SceneProps> = ({
           stay screen-locked (drei <Html> default), so labels remain
           readable while geometry rotates underneath — that's the
           Foundation Prime Radiant feel. */}
-      <AmbientRotation speed={rotationSpeed}>
+      <AmbientRotation
+        ref={ambientRotationRef}
+        speed={rotationSpeed}
+        paused={isFocused}
+      >
         <FloatingEquations />
         {/* TimeAxis intentionally removed — it sat at +X and pulled the
             entire scene's visual mass to the right side of the screen.
@@ -2172,7 +2212,7 @@ const Scene: React.FC<SceneProps> = ({
             focused={focusedClusterId === w.id}
             onClick={() => onSelectCluster(w.id)}
             onDismiss={onDismiss}
-            paused={driftPaused}
+            paused={driftPaused || isFocused}
           />
         ))}
       </AmbientRotation>

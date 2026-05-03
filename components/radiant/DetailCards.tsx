@@ -17,6 +17,16 @@ import {
   type WidgetSeries,
 } from './mockData';
 import { type FutureNode } from './data';
+import {
+  HalfGauge,
+  RadarSweep,
+  PulseWave,
+  HeatStrip,
+  Histogram,
+  EventLog,
+  Compass,
+  type VizType,
+} from './Visualizations';
 
 // ─────────────────────────────────────────────────────────────────────
 // Sparkline — SVG line chart of the 48-point 24h series with a
@@ -90,6 +100,59 @@ export const Sparkline: React.FC<SparklineProps> = ({
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// Viz router — given a widget + its time series, render whichever
+// visualization the widget was assigned. Plus a label so the user
+// knows what kind of view they're looking at.
+// ─────────────────────────────────────────────────────────────────────
+
+const vizLabel = (v: VizType): string => {
+  switch (v) {
+    case 'sparkline': return '24-HOUR TREND';
+    case 'gauge':     return 'CURRENT UTILIZATION';
+    case 'radar':     return 'CORRELATION FIELD';
+    case 'pulse':     return 'CYCLE WAVEFORM';
+    case 'heatstrip': return '24-HOUR HEAT MAP';
+    case 'histogram': return 'DISTRIBUTION · 12 BINS';
+    case 'eventlog':  return 'RECENT EVENT LOG';
+    case 'compass':   return 'DIRECTIONAL READOUT';
+  }
+};
+
+const renderViz = (widget: DetailWidget, series: WidgetSeries, accent: string): React.ReactNode => {
+  switch (widget.vizType) {
+    case 'gauge': {
+      // Convert current value into a 0..1 gauge fill. If the widget's
+      // value parses as 0..100 we use it directly; otherwise we map
+      // the current value's position within the 24h min/max.
+      const numericVal = numericFromValue(widget.value);
+      const inRange01 = numericVal >= 0 && numericVal <= 100 ? numericVal / 100 : null;
+      const v = inRange01 ?? Math.max(0.05, Math.min(0.95, (series.current - series.min) / (series.max - series.min || 1)));
+      return <HalfGauge value={v} label={widget.value ?? formatNumber(series.current)} unit="of capacity" stroke={accent} />;
+    }
+    case 'radar':     return <RadarSweep points={series.points} stroke={accent} />;
+    case 'pulse':     return <PulseWave points={series.points} stroke={accent} />;
+    case 'heatstrip': return <HeatStrip points={series.points} stroke={accent} />;
+    case 'histogram': return <Histogram points={series.points} stroke={accent} />;
+    case 'eventlog':  return <EventLog widgetId={widget.id} stroke={accent} />;
+    case 'compass':   return <Compass points={series.points} stroke={accent} />;
+    case 'sparkline':
+    default:
+      return (
+        <>
+          <Sparkline points={series.points} width={560} height={96} stroke={accent} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: SPACE.xs, fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.20em', color: COLORS.textMuted, textTransform: 'uppercase' }}>
+            <span>−24h</span>
+            <span>−18h</span>
+            <span>−12h</span>
+            <span>−6h</span>
+            <span>now</span>
+          </div>
+        </>
+      );
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────
 // Shared layout primitives
 // ─────────────────────────────────────────────────────────────────────
 
@@ -147,6 +210,8 @@ export interface DetailWidget {
   priority: number;
   toneColor: string;
   isAccent: boolean;
+  /** Which visualization to render in the body of the detail card. */
+  vizType: VizType;
 }
 
 export const WidgetDetailCard: React.FC<{
@@ -254,16 +319,20 @@ export const WidgetDetailCard: React.FC<{
         )}
       </div>
 
-      {/* Sparkline */}
+      {/* Visualization — different per widget. The label above tells
+          the user what kind of view they're looking at. */}
       <div style={{ padding: `${SPACE.md}px ${SPACE.xl}px ${SPACE.base}px` }}>
-        <Sparkline points={series.points} width={560} height={96} stroke={accent} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: SPACE.xs, fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.20em', color: COLORS.textMuted, textTransform: 'uppercase' }}>
-          <span>−24h</span>
-          <span>−18h</span>
-          <span>−12h</span>
-          <span>−6h</span>
-          <span>now</span>
+        <div style={{
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          letterSpacing: '0.22em',
+          color: COLORS.textMuted,
+          textTransform: 'uppercase',
+          marginBottom: SPACE.sm,
+        }}>
+          ▸ {vizLabel(widget.vizType)}
         </div>
+        {renderViz(widget, series, accent)}
       </div>
 
       <SectionDivider />
