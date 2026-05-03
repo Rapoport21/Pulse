@@ -478,9 +478,10 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
 
   return (
     <div
+      data-radiant-clickable="true"
       onMouseEnter={() => { setHovered(true); onHoverChange?.(true); }}
       onMouseLeave={() => { setHovered(false); onHoverChange?.(false); }}
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
       style={{
         position: 'relative',
         width: w,
@@ -1137,11 +1138,15 @@ const DriftWidget: React.FC<{
   fresh?: boolean;
   /** Another widget is focused — fade this one back. */
   dimmed?: boolean;
+  /** This widget is the focused one — swap in the expanded detail card. */
+  focused?: boolean;
   /** Click bubbles up to Scene to open the detail card. */
   onClick?: () => void;
+  /** Close the focused state — passed to the expanded card's X. */
+  onDismiss?: () => void;
   /** When true, freeze widget at homePosition (a11y: reduced motion) */
   paused?: boolean;
-}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, onClick, paused }) => {
+}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, focused, onClick, onDismiss, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const [hovered, setHovered] = useState(false);
@@ -1161,34 +1166,62 @@ const DriftWidget: React.FC<{
   // blur. Delay by widget.id so cluster ripples into being.
   const spawnDelay = `${(widget.id % 80) * 18}ms`;
 
-  // Hovered widget jumps to a higher zIndexRange so it lifts above
-  // every neighbor on screen (drei's <Html> uses these to assign
-  // DOM z-index from camera depth — without the lift, a closer
-  // neighbor's stacking context blocks pointer events on this card).
-  const zRange: [number, number] = hovered ? [400, 250] : fresh ? [180, 90] : [80, 10];
+  // Focused widget gets the highest zIndex band — its expanded card
+  // must sit above every other widget on screen. Hover gets the next
+  // tier; everything else is normal stack.
+  const zRange: [number, number] = focused
+    ? [900, 700]
+    : hovered ? [400, 250]
+    : fresh ? [180, 90]
+    : [80, 10];
+
+  // Build the DetailWidget shape for the expanded card. Memoized so
+  // the inner detail card (with its 24h sparkline buildSeries call)
+  // doesn't recompute every frame.
+  const detail: DetailWidget = useMemo(
+    () => ({
+      id: widget.id,
+      label: widget.label,
+      value: widget.value,
+      detail: widget.detail,
+      source: widget.source,
+      status: widget.status,
+      layer: widget.layer,
+      priority: widget.priority,
+      toneColor: toneColor(widget.tone),
+      isAccent: widget.tone === 'accent',
+    }),
+    [widget],
+  );
 
   return (
     <group ref={groupRef}>
       <Html
         center
-        distanceFactor={44}
+        distanceFactor={focused ? 36 : 44}
         style={{
-          animation: `widget-spawn 600ms cubic-bezier(0.16, 1, 0.32, 1) ${spawnDelay} backwards`,
+          animation: focused
+            ? undefined
+            : `widget-spawn 600ms cubic-bezier(0.16, 1, 0.32, 1) ${spawnDelay} backwards`,
         }}
         zIndexRange={zRange}
         occlude={false}
       >
-        <WidgetCard
-          widget={widget}
-          tracked={tracked}
-          trackedConf={trackedConf}
-          patternHighlight={patternHighlight}
-          absorbing={absorbing}
-          fresh={fresh}
-          dimmed={dimmed}
-          onClick={onClick}
-          onHoverChange={setHovered}
-        />
+        {focused ? (
+          <WidgetDetailCard widget={detail} onClose={onDismiss ?? (() => undefined)} />
+        ) : (
+          <WidgetCard
+            widget={widget}
+            tracked={tracked}
+            trackedConf={trackedConf}
+            patternHighlight={patternHighlight}
+            absorbing={absorbing}
+            fresh={fresh}
+            dimmed={dimmed}
+            onClick={onClick}
+            onHoverChange={setHovered}
+          />
+        )}
       </Html>
     </group>
   );
@@ -1224,9 +1257,10 @@ const FutureCard: React.FC<{
   return (
     <div
       data-radiant-apex={isApex || undefined}
+      data-radiant-clickable="true"
       onMouseEnter={() => { setHovered(true); onHoverChange?.(true); }}
       onMouseLeave={() => { setHovered(false); onHoverChange?.(false); }}
-      onClick={onClick}
+      onClick={(e) => { e.stopPropagation(); onClick?.(); }}
       style={{
         width: node.size,
         padding: isApex ? `${SPACE.lg}px ${SPACE.xl}px` : `${SPACE.md}px ${SPACE.base}px`,
@@ -1357,29 +1391,40 @@ const COLOR_FLOW_HEAD: [number, number, number] = [1.0, 0.55, 0.65];
 const FutureNodeRender: React.FC<{
   node: FutureNode;
   dimmed: boolean;
+  focused: boolean;
   onClick: () => void;
-}> = ({ node, dimmed, onClick }) => {
+  onDismiss: () => void;
+}> = ({ node, dimmed, focused, onClick, onDismiss }) => {
   const [hovered, setHovered] = useState(false);
   const baseRange: [number, number] =
     node.kind === 'apex' ? [70, 12] : node.kind === 'dead' ? [40, 4] : [55, 8];
-  const zRange: [number, number] = hovered ? [500, 320] : baseRange;
+  const zRange: [number, number] = focused
+    ? [900, 700]
+    : hovered ? [500, 320]
+    : baseRange;
   return (
     <Html
       position={node.pos}
       center
-      distanceFactor={node.kind === 'apex' ? 60 : 46}
+      distanceFactor={focused ? 38 : node.kind === 'apex' ? 60 : 46}
       zIndexRange={zRange}
     >
-      <FutureCard node={node} dimmed={dimmed} onClick={onClick} onHoverChange={setHovered} />
+      {focused ? (
+        <FutureDetailCard node={node} onClose={onDismiss} />
+      ) : (
+        <FutureCard node={node} dimmed={dimmed} onClick={onClick} onHoverChange={setHovered} />
+      )}
     </Html>
   );
 };
 
 const FutureTree: React.FC<{
   cascadeNonce?: number;
+  focusedClusterId?: number | null;
   focusedFutureId?: string | null;
   onSelect?: (id: string) => void;
-}> = ({ cascadeNonce = 0, focusedFutureId, onSelect }) => {
+  onDismiss?: () => void;
+}> = ({ cascadeNonce = 0, focusedClusterId, focusedFutureId, onSelect, onDismiss }) => {
   const linesRef = useRef<THREE.LineSegments>(null);
   const matRef = useRef<THREE.LineBasicMaterial>(null);
   const flowsRef = useRef<FlowEvent[]>([]);
@@ -1653,8 +1698,14 @@ const FutureTree: React.FC<{
         <FutureNodeRender
           key={n.id}
           node={n}
-          dimmed={focusedFutureId != null && focusedFutureId !== n.id}
+          dimmed={
+            // Dim when ANY widget anywhere is focused and it's not this one
+            (focusedClusterId != null) ||
+            (focusedFutureId != null && focusedFutureId !== n.id)
+          }
+          focused={focusedFutureId === n.id}
           onClick={() => onSelect?.(n.id)}
+          onDismiss={() => onDismiss?.()}
         />
       ))}
     </group>
@@ -1947,6 +1998,7 @@ interface SceneProps {
   focusedFutureId: string | null;
   onSelectCluster: (id: number) => void;
   onSelectFuture: (id: string) => void;
+  onDismiss: () => void;
 }
 
 const Scene: React.FC<SceneProps> = ({
@@ -1955,6 +2007,7 @@ const Scene: React.FC<SceneProps> = ({
   focusedFutureId,
   onSelectCluster,
   onSelectFuture,
+  onDismiss,
 }) => {
   const { edges, edgeIndexByPair } = useMemo(() => {
     const e = buildEdges(widgets);
@@ -2100,8 +2153,10 @@ const Scene: React.FC<SceneProps> = ({
         <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} onCascade={triggerCascade} />
         <FutureTree
           cascadeNonce={cascadeNonce}
+          focusedClusterId={focusedClusterId}
           focusedFutureId={focusedFutureId}
           onSelect={onSelectFuture}
+          onDismiss={onDismiss}
         />
 
         {widgets.map((w) => (
@@ -2114,7 +2169,9 @@ const Scene: React.FC<SceneProps> = ({
             absorbing={absorbingIds.has(w.id)}
             fresh={freshId === w.id}
             dimmed={isFocused && focusedClusterId !== w.id}
+            focused={focusedClusterId === w.id}
             onClick={() => onSelectCluster(w.id)}
+            onDismiss={onDismiss}
             paused={driftPaused}
           />
         ))}
@@ -2183,11 +2240,9 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
   const [focusedClusterId, setFocusedClusterId] = useState<number | null>(null);
   const [focusedFutureId, setFocusedFutureId] = useState<string | null>(null);
 
-  const focusedWidget = focusedClusterId != null ? widgets.find((w) => w.id === focusedClusterId) ?? null : null;
-  const focusedNode = focusedFutureId != null ? FUTURE_NODES.find((n) => n.id === focusedFutureId) ?? null : null;
-  const isFocused = focusedWidget !== null || focusedNode !== null;
+  const isFocused = focusedClusterId !== null || focusedFutureId !== null;
 
-  // Selecting one clears the other so we never have both overlays at once.
+  // Selecting one clears the other so we never have both expansions at once.
   const selectCluster = useCallback((id: number) => {
     setFocusedFutureId(null);
     setFocusedClusterId(id);
@@ -2211,21 +2266,29 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
     return () => window.removeEventListener('keydown', onKey);
   }, [isFocused, dismiss]);
 
-  // Map a PreparedWidget to the DetailWidget shape expected by the card
-  const detailWidget: DetailWidget | null = focusedWidget
-    ? {
-        id: focusedWidget.id,
-        label: focusedWidget.label,
-        value: focusedWidget.value,
-        detail: focusedWidget.detail,
-        source: focusedWidget.source,
-        status: focusedWidget.status,
-        layer: focusedWidget.layer,
-        priority: focusedWidget.priority,
-        toneColor: toneColor(focusedWidget.tone),
-        isAccent: focusedWidget.tone === 'accent',
-      }
-    : null;
+  // Click outside the focused expanded card dismisses focus. Detail
+  // cards mark themselves with data-radiant-focused="true"; we walk
+  // the DOM up from the click target and dismiss if we don't hit it.
+  // Defer registration by one frame so the click that opened the
+  // focus doesn't immediately close it.
+  useEffect(() => {
+    if (!isFocused) return;
+    let alive = true;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (target && target.closest('[data-radiant-focused="true"]')) return;
+      if (target && target.closest('[data-radiant-clickable="true"]')) return;
+      dismiss();
+    };
+    const t = window.setTimeout(() => {
+      if (alive) window.addEventListener('click', onClick);
+    }, 80);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+      window.removeEventListener('click', onClick);
+    };
+  }, [isFocused, dismiss]);
 
   return (
     <div style={{ width: '100%', height, background: COLORS.bg, position: 'relative' }}>
@@ -2299,33 +2362,14 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
           focusedFutureId={focusedFutureId}
           onSelectCluster={selectCluster}
           onSelectFuture={selectFuture}
+          onDismiss={dismiss}
         />
       </Canvas>
 
-      {/* Detail overlay — appears center-screen when a widget is
-          focused. Click backdrop or press Escape to dismiss. */}
-      {isFocused && (
-        <div
-          role="presentation"
-          onClick={dismiss}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 5,
-            background: 'rgba(2, 2, 4, 0.55)',
-            backdropFilter: 'blur(2px)',
-            WebkitBackdropFilter: 'blur(2px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: SPACE.lg,
-            animation: 'detail-backdrop 240ms ease-out backwards',
-          }}
-        >
-          {detailWidget && <WidgetDetailCard widget={detailWidget} onClose={dismiss} />}
-          {focusedNode && <FutureDetailCard node={focusedNode} onClose={dismiss} />}
-        </div>
-      )}
+      {/* No 2D overlay — when a widget is focused, the camera dollies
+          to it and the card itself swaps to its expanded form right
+          there in 3D space. Like flying to a planet and seeing it
+          closer rather than reading a brochure about it. */}
 
       <div style={{
         position: 'absolute', bottom: 14, left: '50%',

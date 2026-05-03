@@ -166,9 +166,10 @@ export const WidgetDetailCard: React.FC<{
     <div
       role="dialog"
       aria-label={`${widget.label} detail`}
+      data-radiant-focused="true"
       onClick={(e) => e.stopPropagation()}
       style={{
-        width: 'min(620px, 92vw)',
+        width: 620,
         maxHeight: '88vh',
         overflowY: 'auto',
         background: 'rgba(8, 6, 10, 0.96)',
@@ -178,6 +179,7 @@ export const WidgetDetailCard: React.FC<{
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         animation: 'detail-pop 320ms cubic-bezier(0.16, 1, 0.32, 1) backwards',
+        pointerEvents: 'auto',
       }}
     >
       {/* Header */}
@@ -412,9 +414,10 @@ export const FutureDetailCard: React.FC<{
     <div
       role="dialog"
       aria-label={`${node.label} detail`}
+      data-radiant-focused="true"
       onClick={(e) => e.stopPropagation()}
       style={{
-        width: 'min(620px, 92vw)',
+        width: 620,
         maxHeight: '88vh',
         overflowY: 'auto',
         background: isApex ? 'rgba(28, 8, 16, 0.96)' : 'rgba(10, 8, 12, 0.96)',
@@ -424,6 +427,7 @@ export const FutureDetailCard: React.FC<{
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         animation: 'detail-pop 320ms cubic-bezier(0.16, 1, 0.32, 1) backwards',
+        pointerEvents: 'auto',
       }}
     >
       {/* Header */}
