@@ -1192,7 +1192,7 @@ const DriftWidget: React.FC<{
       priority: widget.priority,
       toneColor: toneColor(widget.tone),
       isAccent: widget.tone === 'accent',
-      vizType: vizTypeFor(widget.id, widget.layer),
+      vizType: vizTypeFor(widget.label, widget.layer),
     }),
     [widget],
   );
@@ -1982,7 +1982,10 @@ const CameraOrchestrator: React.FC<{
       // Approach a point ~55 units back from the widget along the
       // current view direction, lifted slightly so we look down at it.
       const dir = focusOriginRef.current.clone().sub(target).normalize();
-      const focusCamera = target.clone().add(dir.multiplyScalar(58)).add(new THREE.Vector3(0, 6, 0));
+      // Pull in close — at distanceFactor 36 + camera 32 units back,
+      // the 620px card lands at ~700px on a 1200px viewport. Clearly
+      // the focal subject, not a tile floating in space.
+      const focusCamera = target.clone().add(dir.multiplyScalar(32)).add(new THREE.Vector3(0, 4, 0));
       const pos = focusOriginRef.current.clone().lerp(focusCamera, ease);
       camera.position.copy(pos);
       camera.lookAt(target);

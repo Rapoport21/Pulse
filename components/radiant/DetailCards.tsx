@@ -25,6 +25,7 @@ import {
   Histogram,
   EventLog,
   Compass,
+  RecentSamples,
   type VizType,
 } from './Visualizations';
 
@@ -105,14 +106,15 @@ export const Sparkline: React.FC<SparklineProps> = ({
 // knows what kind of view they're looking at.
 // ─────────────────────────────────────────────────────────────────────
 
-const vizLabel = (v: VizType): string => {
+const vizLabel = (v: VizType): string | null => {
   switch (v) {
+    case 'none':      return 'RECENT SAMPLES';
     case 'sparkline': return '24-HOUR TREND';
     case 'gauge':     return 'CURRENT UTILIZATION';
     case 'radar':     return 'CORRELATION FIELD';
     case 'pulse':     return 'CYCLE WAVEFORM';
     case 'heatstrip': return '24-HOUR HEAT MAP';
-    case 'histogram': return 'DISTRIBUTION · 12 BINS';
+    case 'histogram': return 'DISTRIBUTION';
     case 'eventlog':  return 'RECENT EVENT LOG';
     case 'compass':   return 'DIRECTIONAL READOUT';
   }
@@ -120,6 +122,8 @@ const vizLabel = (v: VizType): string => {
 
 const renderViz = (widget: DetailWidget, series: WidgetSeries, accent: string): React.ReactNode => {
   switch (widget.vizType) {
+    case 'none':
+      return <RecentSamples widgetId={widget.id} currentValue={widget.value ?? '—'} stroke={accent} />;
     case 'gauge': {
       // Convert current value into a 0..1 gauge fill. If the widget's
       // value parses as 0..100 we use it directly; otherwise we map
@@ -337,20 +341,26 @@ export const WidgetDetailCard: React.FC<{
 
       <SectionDivider />
 
-      {/* Stats grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: SPACE.md,
-        padding: `0 ${SPACE.xl}px`,
-      }}>
-        {monoStat('24h MIN', formatNumber(series.min))}
-        {monoStat('24h MAX', formatNumber(series.max))}
-        {monoStat('24h AVG', formatNumber(series.avg))}
-        {monoStat('σ STDDEV', formatNumber(series.stddev))}
-      </div>
-
-      <SectionDivider />
+      {/* Stats grid — only meaningful when there's a real time-series
+          backing the widget. For 'none' (single-event facts, alerts,
+          weather snapshots) stats over a 24h window would be invented
+          numbers, so skip them entirely. */}
+      {widget.vizType !== 'none' && (
+        <>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: SPACE.md,
+            padding: `0 ${SPACE.xl}px`,
+          }}>
+            {monoStat('24h MIN', formatNumber(series.min))}
+            {monoStat('24h MAX', formatNumber(series.max))}
+            {monoStat('24h AVG', formatNumber(series.avg))}
+            {monoStat('σ STDDEV', formatNumber(series.stddev))}
+          </div>
+          <SectionDivider />
+        </>
+      )}
 
       {/* Detail / source rows */}
       {(widget.detail || widget.source) && (

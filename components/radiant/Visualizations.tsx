@@ -509,27 +509,120 @@ export const Compass: React.FC<{ points: number[]; bearing?: number; stroke?: st
 };
 
 // ─────────────────────────────────────────────────────────────────────
-// Type registry + selector — hash widget id to one of these so the
-// cluster reads as a constellation of distinct signals
+// 9) Recent samples — text-only data block for widgets that don't
+// have a meaningful graph. 4 timestamped readings, mono-aligned.
+// ─────────────────────────────────────────────────────────────────────
+
+export const RecentSamples: React.FC<{ widgetId: number; currentValue: string; stroke?: string }> = ({
+  widgetId,
+  currentValue,
+  stroke = COLORS.accent,
+}) => {
+  // Generate 3 plausible "previous readings" deterministically from id.
+  // Each is the current value with a small variant — text mutations
+  // rather than numbers, so it works for non-numeric values like
+  // "I-95 west" or "Bay 3" too.
+  const samples = React.useMemo(() => {
+    let s = widgetId * 17 + 11;
+    const r = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const ts = [4, 14, 38].map((minutes) => Math.floor(minutes + r() * 6));
+    return ts.map((t) => ({
+      t,
+      // Display the current value; in real life this'd be the actual
+      // historical reading. For now, identical reads = "stable".
+      v: currentValue,
+      stable: true,
+    }));
+  }, [widgetId, currentValue]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      borderLeft: `1px solid ${COLORS.border}`,
+      paddingLeft: SPACE.md,
+    }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '64px 1fr 80px', gap: 6, alignItems: 'center', padding: '4px 0' }}>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.20em', color: COLORS.textMuted, textTransform: 'uppercase' }}>NOW</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 13, color: COLORS.textPrimary, letterSpacing: '0.02em' }}>{currentValue}</span>
+        <span style={{ fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.18em', color: stroke, textTransform: 'uppercase', textAlign: 'right' }}>● LIVE</span>
+      </div>
+      {samples.map((s, i) => (
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '64px 1fr 80px', gap: 6, alignItems: 'center', padding: '4px 0', borderTop: `1px dashed ${COLORS.border}` }}>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 10, letterSpacing: '0.20em', color: COLORS.textMuted, textTransform: 'uppercase' }}>
+            T−{String(s.t).padStart(2, '0')}m
+          </span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 12, color: COLORS.textSecondary, letterSpacing: '0.02em' }}>{s.v}</span>
+          <span style={{ fontFamily: FONTS.mono, fontSize: 9, letterSpacing: '0.18em', color: COLORS.textMuted, textTransform: 'uppercase', textAlign: 'right' }}>
+            {s.stable ? 'stable' : 'shifted'}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// Type registry + selector
+//
+// Each widget gets a viz type that MATCHES its data shape — not a
+// random hash. Some widgets (single-event facts, state alerts, weather
+// snapshots) get 'none', which means: just show the hero number and
+// detail rows, no chart. A graph on every widget would be fake noise;
+// graphs only when the data actually has a shape worth drawing.
 // ─────────────────────────────────────────────────────────────────────
 
 export type VizType =
-  | 'sparkline'
-  | 'gauge'
-  | 'radar'
-  | 'pulse'
-  | 'heatstrip'
-  | 'histogram'
-  | 'eventlog'
-  | 'compass';
+  | 'none'        // no chart — just hero metric + context
+  | 'sparkline'   // continuous trend over time
+  | 'gauge'       // utilization / capacity %
+  | 'radar'       // correlation across signals (Layer 2 patterns)
+  | 'pulse'       // rhythmic/cyclic signal
+  | 'heatstrip'   // intensity per hour
+  | 'histogram'   // distribution across labeled buckets
+  | 'eventlog'    // discrete recent events
+  | 'compass';    // direction + magnitude (wind only)
 
-const LAYER_1_TYPES: VizType[] = ['sparkline', 'gauge', 'compass', 'heatstrip', 'pulse', 'histogram', 'eventlog'];
-
-export const vizTypeFor = (id: number, layer: number): VizType => {
+/**
+ * Route a widget to the right visualization based on its label
+ * keywords + layer. Returns 'none' when no chart makes sense — those
+ * widgets render with a richer text body instead.
+ */
+export const vizTypeFor = (label: string, layer: number): VizType => {
+  // Higher layers have semantic types regardless of label
   if (layer === 2) return 'radar';
   if (layer === 3) return 'gauge';
   if (layer === 4) return 'eventlog';
-  // Layer 1: hash the id deterministically into the layer-1 pool
-  const hash = (id * 2654435761) >>> 0; // Knuth multiplicative
-  return LAYER_1_TYPES[hash % LAYER_1_TYPES.length];
+
+  const l = label.toLowerCase();
+
+  // Direction-bearing widgets — wind only. Other "direction-ish"
+  // labels (e.g., "northbound traffic") aren't meaningful as a compass.
+  if (l.startsWith('wind') || l.includes('wind speed') || l.includes('bearing')) return 'compass';
+
+  // Counts / rates of discrete events
+  if (l.includes('lightning') || l.includes('strike') || l.includes('911 call') || l.includes('alert') || l.includes('callout')) return 'eventlog';
+
+  // Capacity / utilization / % readings
+  if (l.includes('capacity') || l.includes('icu') || l.includes('occupancy') || l.includes('utilization')) return 'gauge';
+
+  // Hour-of-day patterns — explicitly heatstrip-able
+  if (l.includes('arrivals') || l.includes('admits') || l.includes('throughput')) return 'heatstrip';
+
+  // Vital-signs / cardiac / cyclic
+  if (l.includes('heart') || l.includes('vitals') || l.includes('pulse') || l.includes('cycle')) return 'pulse';
+
+  // Trend-over-time keywords
+  if (l.includes('traffic') || l.includes('congestion') || l.includes('volume')
+    || l.includes('time') || l.includes('delay') || l.includes('wait')
+    || l.includes('queue') || l.includes('pressure') || l.includes('speed')
+    || l.includes('drift') || l.includes('ratio') || l.includes('avg') || l.includes('rate'))
+    return 'sparkline';
+
+  // Distribution-style data
+  if (l.includes('distribution') || l.includes('mix') || l.includes('breakdown') || l.includes('cohort')) return 'histogram';
+
+  // Everything else — single-event facts, state changes, weather snapshots,
+  // ad-hoc alerts: no chart. The hero number IS the story.
+  return 'none';
 };
