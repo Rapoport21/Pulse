@@ -40,6 +40,7 @@ import {
   type FutureKind,
   type FutureNode,
 } from './radiant/data';
+import { WidgetDetailCard, FutureDetailCard, type DetailWidget } from './radiant/DetailCards';
 
 // ──────────────────────────────────────────────────────────────────
 // Environment — single hook captures viewport + a11y intent. Read
@@ -428,6 +429,10 @@ interface WidgetCardProps {
   absorbing?: boolean;
   /** True when this widget is the cycle's "newly arrived" — green flash */
   fresh?: boolean;
+  /** True when another widget is focused; this one fades back. */
+  dimmed?: boolean;
+  /** Click — opens the detail overlay. */
+  onClick?: () => void;
   /** Reports hover state UP so the parent <Html> can lift its
    *  zIndexRange — fixes "some widgets don't expand on hover" caused
    *  by neighbors stacking on top in the DOM. */
@@ -441,6 +446,8 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
   patternHighlight,
   absorbing,
   fresh,
+  dimmed,
+  onClick,
   onHoverChange,
 }) => {
   const [hovered, setHovered] = useState(false);
@@ -473,6 +480,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
     <div
       onMouseEnter={() => { setHovered(true); onHoverChange?.(true); }}
       onMouseLeave={() => { setHovered(false); onHoverChange?.(false); }}
+      onClick={onClick}
       style={{
         position: 'relative',
         width: w,
@@ -483,12 +491,18 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
         fontFamily: FONTS.mono,
         boxShadow: shadow,
         userSelect: 'none',
-        pointerEvents: 'auto',
-        cursor: 'default',
+        pointerEvents: dimmed ? 'none' : 'auto',
+        cursor: onClick ? 'pointer' : 'default',
         transform: `scale(${scale})`,
         transformOrigin: 'center',
-        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 280ms cubic-bezier(0.23, 1, 0.32, 1)',
-        zIndex: hovered ? 90 : fresh ? 60 : 10,
+        opacity: dimmed ? 0.18 : 1,
+        filter: dimmed ? 'blur(0.4px)' : 'none',
+        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 280ms cubic-bezier(0.23, 1, 0.32, 1), opacity 280ms ease, filter 280ms ease',
+        // Fail-safe z-index — any DOM neighbor (drei <Html> placed
+        // by another widget at similar depth) can't outrank a hovered
+        // card. drei's zIndexRange handles the per-Html-wrapper layer,
+        // but inside that wrapper this bump pins the focus on top.
+        zIndex: hovered ? 9999 : fresh ? 60 : 10,
       }}
     >
       {/* "+ NEW DATA" badge during fresh-arrival pulse */}
@@ -1121,9 +1135,13 @@ const DriftWidget: React.FC<{
   absorbing: boolean;
   /** When true, this widget is the cycle's "newly arrived" — green flash */
   fresh?: boolean;
+  /** Another widget is focused — fade this one back. */
+  dimmed?: boolean;
+  /** Click bubbles up to Scene to open the detail card. */
+  onClick?: () => void;
   /** When true, freeze widget at homePosition (a11y: reduced motion) */
   paused?: boolean;
-}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, paused }) => {
+}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, onClick, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   const [hovered, setHovered] = useState(false);
@@ -1167,6 +1185,8 @@ const DriftWidget: React.FC<{
           patternHighlight={patternHighlight}
           absorbing={absorbing}
           fresh={fresh}
+          dimmed={dimmed}
+          onClick={onClick}
           onHoverChange={setHovered}
         />
       </Html>
@@ -1184,31 +1204,56 @@ const DriftWidget: React.FC<{
 // prediction stream later.
 // ──────────────────────────────────────────────────────────────────
 
-const FutureCard: React.FC<{ node: FutureNode }> = ({ node }) => {
+const FutureCard: React.FC<{
+  node: FutureNode;
+  dimmed?: boolean;
+  onClick?: () => void;
+  onHoverChange?: (hovered: boolean) => void;
+}> = ({ node, dimmed, onClick, onHoverChange }) => {
+  const [hovered, setHovered] = useState(false);
   const isDead = node.kind === 'dead';
   const isApex = node.kind === 'apex';
   const isPrimary = node.kind === 'primary';
   const accent = isApex ? COLORS.accentBright : isPrimary ? COLORS.accent : isDead ? COLORS.textMuted : COLORS.textSecondary;
   const bg = isDead ? 'rgba(8, 6, 8, 0.78)' : isApex ? 'rgba(28, 8, 16, 0.95)' : 'rgba(14, 8, 12, 0.92)';
   const borderColor = isApex ? COLORS.accentBright : isPrimary ? COLORS.accent : isDead ? COLORS.border : COLORS.borderStrong;
-  const opacity = isDead ? 0.55 : 1;
+  const baseOpacity = isDead ? 0.55 : 1;
+  const opacity = dimmed ? 0.16 : baseOpacity;
+  const scale = hovered ? 1.18 : 1.0;
 
   return (
     <div
       data-radiant-apex={isApex || undefined}
+      onMouseEnter={() => { setHovered(true); onHoverChange?.(true); }}
+      onMouseLeave={() => { setHovered(false); onHoverChange?.(false); }}
+      onClick={onClick}
       style={{
         width: node.size,
         padding: isApex ? `${SPACE.lg}px ${SPACE.xl}px` : `${SPACE.md}px ${SPACE.base}px`,
         background: bg,
-        border: `${isApex ? 2 : 1}px solid ${borderColor}`,
+        border: `${isApex ? 2 : 1}px solid ${hovered ? COLORS.accentBright : borderColor}`,
         borderRadius: RADIUS.sm,
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         opacity,
-        boxShadow: isApex ? `0 0 28px rgba(225, 29, 72, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04)` : isPrimary ? `0 0 14px rgba(225, 29, 72, 0.35)` : 'none',
+        filter: dimmed ? 'blur(0.4px)' : 'none',
+        boxShadow: hovered
+          ? `0 0 32px rgba(244, 63, 94, 0.6), 0 8px 28px rgba(0, 0, 0, 0.7)`
+          : isApex
+            ? `0 0 28px rgba(225, 29, 72, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.04)`
+            : isPrimary
+              ? `0 0 14px rgba(225, 29, 72, 0.35)`
+              : 'none',
         position: 'relative',
-        textDecoration: isDead ? 'line-through' : 'none',
-        animation: isApex ? 'apex-breath 4.2s ease-in-out infinite' : undefined,
+        textDecoration: isDead && !hovered ? 'line-through' : 'none',
+        animation: isApex && !hovered ? 'apex-breath 4.2s ease-in-out infinite' : undefined,
+        transform: `scale(${scale})`,
+        transformOrigin: 'center',
+        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms ease, box-shadow 280ms ease, opacity 280ms ease',
+        cursor: onClick ? 'pointer' : 'default',
+        pointerEvents: dimmed ? 'none' : 'auto',
+        userSelect: 'none',
+        zIndex: hovered ? 9999 : 10,
       }}
     >
       {/* Top meta row */}
@@ -1309,7 +1354,32 @@ const COLOR_ALT: [number, number, number] = [0.45, 0.14, 0.22];
 const COLOR_DEAD: [number, number, number] = [0.18, 0.10, 0.10];
 const COLOR_FLOW_HEAD: [number, number, number] = [1.0, 0.55, 0.65];
 
-const FutureTree: React.FC<{ cascadeNonce?: number }> = ({ cascadeNonce = 0 }) => {
+const FutureNodeRender: React.FC<{
+  node: FutureNode;
+  dimmed: boolean;
+  onClick: () => void;
+}> = ({ node, dimmed, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  const baseRange: [number, number] =
+    node.kind === 'apex' ? [70, 12] : node.kind === 'dead' ? [40, 4] : [55, 8];
+  const zRange: [number, number] = hovered ? [500, 320] : baseRange;
+  return (
+    <Html
+      position={node.pos}
+      center
+      distanceFactor={node.kind === 'apex' ? 60 : 46}
+      zIndexRange={zRange}
+    >
+      <FutureCard node={node} dimmed={dimmed} onClick={onClick} onHoverChange={setHovered} />
+    </Html>
+  );
+};
+
+const FutureTree: React.FC<{
+  cascadeNonce?: number;
+  focusedFutureId?: string | null;
+  onSelect?: (id: string) => void;
+}> = ({ cascadeNonce = 0, focusedFutureId, onSelect }) => {
   const linesRef = useRef<THREE.LineSegments>(null);
   const matRef = useRef<THREE.LineBasicMaterial>(null);
   const flowsRef = useRef<FlowEvent[]>([]);
@@ -1575,18 +1645,17 @@ const FutureTree: React.FC<{ cascadeNonce?: number }> = ({ cascadeNonce = 0 }) =
         </Html>
       )}
 
-      {/* All future nodes as Html cards */}
+      {/* All future nodes as Html cards. Wrapped in FutureNodeRender
+          so each node owns its own hover state — without this, the
+          Html wrapper had a static pointerEvents: none and no card
+          could be hovered or clicked. */}
       {FUTURE_NODES.map((n) => (
-        <Html
+        <FutureNodeRender
           key={n.id}
-          position={n.pos}
-          center
-          distanceFactor={n.kind === 'apex' ? 60 : 46}
-          style={{ pointerEvents: 'none' }}
-          zIndexRange={n.kind === 'apex' ? [70, 12] : n.kind === 'dead' ? [40, 4] : [55, 8]}
-        >
-          <FutureCard node={n} />
-        </Html>
+          node={n}
+          dimmed={focusedFutureId != null && focusedFutureId !== n.id}
+          onClick={() => onSelect?.(n.id)}
+        />
       ))}
     </group>
   );
@@ -1767,7 +1836,13 @@ const computeFitHome = (
 const CameraOrchestrator: React.FC<{
   paused: boolean;
   onIntroDone: () => void;
-}> = ({ paused, onIntroDone }) => {
+  /** When set, animate camera in close to this 3D position; clear to
+   *  return camera to the home (default) framing. */
+  focusedTarget?: THREE.Vector3 | null;
+  /** True after intro — once true, OrbitControls owns rotation but
+   *  this orchestrator still drives focused-mode dolly in/out. */
+  introDone: boolean;
+}> = ({ paused, onIntroDone, focusedTarget, introDone }) => {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   const startedRef = useRef<number>(0);
@@ -1776,9 +1851,6 @@ const CameraOrchestrator: React.FC<{
   // Cluster Y squashed to ±~48 around y=4 (priority-1 outer at 126
   // squashed by 0.38 = 48), apex at y=62. Target y=12 keeps the
   // visual mass (cluster) closer to the screen's vertical center.
-  // halfXZ tracks the widest priority-1 reach (126) so autofit aims
-  // to fit the wider cluster — capped at maxDist 175 in
-  // computeFitHome so portrait viewports don't lose readability.
   const targetY = 12;
   const halfY = 56;
   const halfXZ = 126;
@@ -1788,12 +1860,16 @@ const CameraOrchestrator: React.FC<{
     return computeFitHome(camera.fov, size.width, size.height, targetY, halfY, halfXZ);
   }, [camera, size.width, size.height]);
 
-  // Start point: shifted up + back along Y/Z only — NO horizontal
-  // offset so the intro lands the camera dead-centered horizontally.
   const start = useMemo(
     () => new THREE.Vector3(home.x, home.y + 26, home.z * 1.55),
     [home],
   );
+
+  // Snapshot of the camera position when focus engages, used as the
+  // "from" of the focus-out animation when focus dismisses.
+  const focusOriginRef = useRef<THREE.Vector3 | null>(null);
+  const focusStartedAtRef = useRef<number>(0);
+  const lastFocusTargetRef = useRef<THREE.Vector3 | null>(null);
 
   // One-time mount: snap camera to start, kick off intro timer
   useEffect(() => {
@@ -1804,18 +1880,56 @@ const CameraOrchestrator: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Track focusedTarget changes — record the camera origin so we can
+  // animate from current position to the new focus / back to home.
+  useEffect(() => {
+    if (!introDone) return;
+    focusOriginRef.current = camera.position.clone();
+    focusStartedAtRef.current = performance.now();
+    lastFocusTargetRef.current = focusedTarget ? focusedTarget.clone() : null;
+  }, [focusedTarget, introDone, camera]);
+
   useFrame(() => {
-    if (paused || completedRef.current) return;
-    const DURATION = 1700; // ms
-    const elapsed = performance.now() - startedRef.current;
-    const tt = Math.min(1, elapsed / DURATION);
+    // Intro phase
+    if (!completedRef.current) {
+      if (paused) return;
+      const DURATION = 1700;
+      const elapsed = performance.now() - startedRef.current;
+      const tt = Math.min(1, elapsed / DURATION);
+      const ease = 1 - Math.pow(1 - tt, 3);
+      const pos = start.clone().lerp(home, ease);
+      camera.position.copy(pos);
+      camera.lookAt(0, targetY, 0);
+      if (tt >= 1) {
+        completedRef.current = true;
+        onIntroDone();
+      }
+      return;
+    }
+
+    // Post-intro: handle focus dolly. If focusedTarget set, ease
+    // camera to a position near the target. If null, ease back to home.
+    if (focusOriginRef.current === null) return;
+    const FOCUS_DURATION = 720;
+    const elapsed = performance.now() - focusStartedAtRef.current;
+    const tt = Math.min(1, elapsed / FOCUS_DURATION);
+    if (tt >= 1) return;
     const ease = 1 - Math.pow(1 - tt, 3);
-    const pos = start.clone().lerp(home, ease);
-    camera.position.copy(pos);
-    camera.lookAt(0, targetY, 0);
-    if (tt >= 1) {
-      completedRef.current = true;
-      onIntroDone();
+
+    const target = lastFocusTargetRef.current;
+    if (target) {
+      // Approach a point ~55 units back from the widget along the
+      // current view direction, lifted slightly so we look down at it.
+      const dir = focusOriginRef.current.clone().sub(target).normalize();
+      const focusCamera = target.clone().add(dir.multiplyScalar(58)).add(new THREE.Vector3(0, 6, 0));
+      const pos = focusOriginRef.current.clone().lerp(focusCamera, ease);
+      camera.position.copy(pos);
+      camera.lookAt(target);
+    } else {
+      // Returning home — lerp back to home position, look at center
+      const pos = focusOriginRef.current.clone().lerp(home, ease);
+      camera.position.copy(pos);
+      camera.lookAt(0, targetY, 0);
     }
   });
 
@@ -1827,15 +1941,27 @@ const CameraOrchestrator: React.FC<{
 // Scene composition
 // ──────────────────────────────────────────────────────────────────
 
-const Scene: React.FC = () => {
-  const { widgets, edges, edgeIndexByPair } = useMemo(() => {
-    const cat = buildCatalog();
-    const positioned = layoutWidgets(cat);
-    const e = buildEdges(positioned);
+interface SceneProps {
+  widgets: PreparedWidget[];
+  focusedClusterId: number | null;
+  focusedFutureId: string | null;
+  onSelectCluster: (id: number) => void;
+  onSelectFuture: (id: string) => void;
+}
+
+const Scene: React.FC<SceneProps> = ({
+  widgets,
+  focusedClusterId,
+  focusedFutureId,
+  onSelectCluster,
+  onSelectFuture,
+}) => {
+  const { edges, edgeIndexByPair } = useMemo(() => {
+    const e = buildEdges(widgets);
     const map = new Map<string, number>();
     e.forEach((edge, i) => map.set(`${edge.from}-${edge.to}`, i));
-    return { widgets: positioned, edges: e, edgeIndexByPair: map };
-  }, []);
+    return { edges: e, edgeIndexByPair: map };
+  }, [widgets]);
 
   // CV tracker
   const [trackedId, setTrackedId] = useState<number>(0);
@@ -1907,6 +2033,23 @@ const Scene: React.FC = () => {
   // and screen-fitted on every aspect ratio.
   const [introDone, setIntroDone] = useState(false);
 
+  // 3D position of whatever is focused — fed to CameraOrchestrator so
+  // it can dolly in. Cluster widgets drift, so we use the homePosition
+  // (camera dolly is fine pointing at a slowly-moving target; we'd
+  // rather a stable look-at than chasing the drift).
+  const focusedTarget = useMemo<THREE.Vector3 | null>(() => {
+    if (focusedClusterId != null) {
+      const w = widgets.find((x) => x.id === focusedClusterId);
+      if (w) return w.homePosition.clone();
+    }
+    if (focusedFutureId != null) {
+      const n = FUTURE_NODES.find((x) => x.id === focusedFutureId);
+      if (n) return new THREE.Vector3(...n.pos);
+    }
+    return null;
+  }, [focusedClusterId, focusedFutureId, widgets]);
+  const isFocused = focusedTarget !== null;
+
   // Fresh-arrival cycle — every 2.6s, mark a random widget as "newly
   // arrived" for 1.4s. The widget gets a green border + scale pulse +
   // "+ NEW DATA" pip. Combined with IngestionLayer's incoming
@@ -1935,7 +2078,12 @@ const Scene: React.FC = () => {
     <>
       <color attach="background" args={[COLORS.bg]} />
 
-      <CameraOrchestrator paused={env.reducedMotion} onIntroDone={() => setIntroDone(true)} />
+      <CameraOrchestrator
+        paused={env.reducedMotion}
+        onIntroDone={() => setIntroDone(true)}
+        introDone={introDone}
+        focusedTarget={focusedTarget}
+      />
 
       {/* Everything 3D lives inside a slowly rotating group. HTML cards
           stay screen-locked (drei <Html> default), so labels remain
@@ -1950,7 +2098,11 @@ const Scene: React.FC = () => {
         <EdgeNetwork widgets={widgets} edges={edges} patternEdges={patternEdgeIds} />
         <CenterReticle />
         <IngestionLayer widgets={widgets} onAbsorb={handleAbsorb} onCascade={triggerCascade} />
-        <FutureTree cascadeNonce={cascadeNonce} />
+        <FutureTree
+          cascadeNonce={cascadeNonce}
+          focusedFutureId={focusedFutureId}
+          onSelect={onSelectFuture}
+        />
 
         {widgets.map((w) => (
           <DriftWidget
@@ -1961,6 +2113,8 @@ const Scene: React.FC = () => {
             patternHighlight={patternIds.has(w.id)}
             absorbing={absorbingIds.has(w.id)}
             fresh={freshId === w.id}
+            dimmed={isFocused && focusedClusterId !== w.id}
+            onClick={() => onSelectCluster(w.id)}
             paused={driftPaused}
           />
         ))}
@@ -1994,6 +2148,7 @@ const Scene: React.FC = () => {
           user picks up wherever the intro landed. */}
       {introDone && (
         <OrbitControls
+          enabled={!isFocused}
           enablePan={false}
           enableZoom={false}
           autoRotate={false}
@@ -2020,6 +2175,58 @@ const Scene: React.FC = () => {
 
 export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = '100%' }) => {
   const env = useRadiantEnv();
+
+  // Build cluster widget catalog ONCE, share with Scene + the detail
+  // overlay. Deterministic seed so positions are stable across renders.
+  const widgets = useMemo(() => layoutWidgets(buildCatalog()), []);
+
+  const [focusedClusterId, setFocusedClusterId] = useState<number | null>(null);
+  const [focusedFutureId, setFocusedFutureId] = useState<string | null>(null);
+
+  const focusedWidget = focusedClusterId != null ? widgets.find((w) => w.id === focusedClusterId) ?? null : null;
+  const focusedNode = focusedFutureId != null ? FUTURE_NODES.find((n) => n.id === focusedFutureId) ?? null : null;
+  const isFocused = focusedWidget !== null || focusedNode !== null;
+
+  // Selecting one clears the other so we never have both overlays at once.
+  const selectCluster = useCallback((id: number) => {
+    setFocusedFutureId(null);
+    setFocusedClusterId(id);
+  }, []);
+  const selectFuture = useCallback((id: string) => {
+    setFocusedClusterId(null);
+    setFocusedFutureId(id);
+  }, []);
+  const dismiss = useCallback(() => {
+    setFocusedClusterId(null);
+    setFocusedFutureId(null);
+  }, []);
+
+  // Escape dismisses focus
+  useEffect(() => {
+    if (!isFocused) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') dismiss();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFocused, dismiss]);
+
+  // Map a PreparedWidget to the DetailWidget shape expected by the card
+  const detailWidget: DetailWidget | null = focusedWidget
+    ? {
+        id: focusedWidget.id,
+        label: focusedWidget.label,
+        value: focusedWidget.value,
+        detail: focusedWidget.detail,
+        source: focusedWidget.source,
+        status: focusedWidget.status,
+        layer: focusedWidget.layer,
+        priority: focusedWidget.priority,
+        toneColor: toneColor(focusedWidget.tone),
+        isAccent: focusedWidget.tone === 'accent',
+      }
+    : null;
+
   return (
     <div style={{ width: '100%', height, background: COLORS.bg, position: 'relative' }}>
       {/* Floor glow */}
@@ -2067,6 +2274,14 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
           0%   { opacity: 0; transform: scale(0.7); }
           100% { opacity: 1; transform: scale(1); }
         }
+        @keyframes detail-backdrop {
+          0%   { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes detail-pop {
+          0%   { opacity: 0; transform: translateY(12px) scale(0.96); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
         @media (prefers-reduced-motion: reduce) {
           [data-radiant-apex] { animation: none !important; }
         }
@@ -2078,8 +2293,39 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         camera={{ position: [0, 12, 175], fov: 55, near: 0.1, far: 420 }}
         style={{ background: 'transparent', position: 'relative', zIndex: 1 }}
       >
-        <Scene />
+        <Scene
+          widgets={widgets}
+          focusedClusterId={focusedClusterId}
+          focusedFutureId={focusedFutureId}
+          onSelectCluster={selectCluster}
+          onSelectFuture={selectFuture}
+        />
       </Canvas>
+
+      {/* Detail overlay — appears center-screen when a widget is
+          focused. Click backdrop or press Escape to dismiss. */}
+      {isFocused && (
+        <div
+          role="presentation"
+          onClick={dismiss}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 5,
+            background: 'rgba(2, 2, 4, 0.55)',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: SPACE.lg,
+            animation: 'detail-backdrop 240ms ease-out backwards',
+          }}
+        >
+          {detailWidget && <WidgetDetailCard widget={detailWidget} onClose={dismiss} />}
+          {focusedNode && <FutureDetailCard node={focusedNode} onClose={dismiss} />}
+        </div>
+      )}
 
       <div style={{
         position: 'absolute', bottom: 14, left: '50%',
@@ -2091,8 +2337,8 @@ export const PulseRadiant: React.FC<{ height?: number | string }> = ({ height = 
         whiteSpace: 'nowrap',
       }}>
         {env.mobile
-          ? 'Drag to rotate · ψ-projection live'
-          : 'Hover a widget · drag to rotate · ψ-projection live'}
+          ? 'Tap a widget · drag to rotate · ψ-projection live'
+          : 'Click a widget for detail · drag to rotate · ψ-projection live'}
       </div>
     </div>
   );
