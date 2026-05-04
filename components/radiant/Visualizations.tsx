@@ -40,26 +40,25 @@ export { Sparkline } from './DetailCards';
 interface GaugeProps {
   /** 0..1 fill of the arc */
   value: number;
-  /** Center label (the big number) */
-  label: string;
-  /** Subtitle below the number */
-  unit?: string;
+  /** Optional small percentage readout inside the dial. Does NOT
+   *  duplicate the hero number above the chart — keep this short. */
+  percent?: number;
   stroke?: string;
 }
 
-export const HalfGauge: React.FC<GaugeProps> = ({ value, label, unit, stroke = COLORS.accent }) => {
+export const HalfGauge: React.FC<GaugeProps> = ({ value, percent, stroke = COLORS.accent }) => {
   const W = WIDTH;
   const H = 200;
   const cx = W / 2;
-  const cy = 168;
+  // Bring the pivot down so the dial fills the SVG without overlapping
+  // the hero metric block above it.
+  const cy = 178;
   const r = 130;
   const v = Math.max(0, Math.min(1, value));
-  // Arc from 180° (left) to 0° (right) through 90° (top)
   const angleStart = Math.PI;
   const angleEnd = 0;
   const angleAt = (t: number) => angleStart + (angleEnd - angleStart) * t;
 
-  // Foreground arc end angle
   const a = angleAt(v);
   const ax = cx + r * Math.cos(a);
   const ay = cy - r * Math.sin(a);
@@ -69,9 +68,7 @@ export const HalfGauge: React.FC<GaugeProps> = ({ value, label, unit, stroke = C
   const fgArc = `M ${startX} ${startY} A ${r} ${r} 0 ${v > 0.5 ? 1 : 0} 1 ${ax.toFixed(2)} ${ay.toFixed(2)}`;
   const bgArc = `M ${startX} ${startY} A ${r} ${r} 0 1 1 ${cx + r} ${cy}`;
 
-  // Tick marks every 10%
   const ticks = Array.from({ length: 11 }, (_, i) => i / 10);
-  // Needle
   const needleLen = r - 6;
   const nx = cx + needleLen * Math.cos(a);
   const ny = cy - needleLen * Math.sin(a);
@@ -94,20 +91,28 @@ export const HalfGauge: React.FC<GaugeProps> = ({ value, label, unit, stroke = C
         const y2 = cy - r2 * Math.sin(ang);
         return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={i % 5 === 0 ? COLORS.accent : COLORS.borderStrong} strokeWidth={i % 5 === 0 ? 2 : 1} />;
       })}
+      {/* 0 / 100 endpoints labelled */}
+      <text x={cx - r - 4} y={cy + 18} textAnchor="middle" fontSize={10} fill={COLORS.textMuted}
+        fontFamily={FONTS.mono} style={{ letterSpacing: '0.18em' }}>0</text>
+      <text x={cx + r + 4} y={cy + 18} textAnchor="middle" fontSize={10} fill={COLORS.textMuted}
+        fontFamily={FONTS.mono} style={{ letterSpacing: '0.18em' }}>100</text>
       {/* Needle */}
       <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={stroke} strokeWidth={3} strokeLinecap="round" />
       <circle cx={cx} cy={cy} r={6} fill={stroke} />
       <circle cx={cx} cy={cy} r={10} fill={stroke} fillOpacity={0.25} />
-      {/* Big label centered above pivot */}
-      <text x={cx} y={cy - 50} textAnchor="middle" fontSize={56} fontWeight={600} fill={stroke}
-        fontFamily={FONTS.mono} style={{ letterSpacing: '-0.02em' }}>
-        {label}
-      </text>
-      {unit && (
-        <text x={cx} y={cy - 24} textAnchor="middle" fontSize={11} fill={COLORS.textMuted}
-          fontFamily={FONTS.mono} style={{ letterSpacing: '0.20em' }}>
-          {unit.toUpperCase()}
-        </text>
+      {/* Optional small % readout above the pivot — short, doesn't
+          conflict with the hero number above the chart. */}
+      {percent != null && (
+        <>
+          <text x={cx} y={cy - 56} textAnchor="middle" fontSize={36} fontWeight={600} fill={stroke}
+            fontFamily={FONTS.mono} style={{ letterSpacing: '-0.02em' }}>
+            {percent.toFixed(0)}%
+          </text>
+          <text x={cx} y={cy - 38} textAnchor="middle" fontSize={9} fill={COLORS.textMuted}
+            fontFamily={FONTS.mono} style={{ letterSpacing: '0.22em' }}>
+            OF MAX
+          </text>
+        </>
       )}
     </svg>
   );
@@ -443,9 +448,12 @@ export const EventLog: React.FC<{ widgetId: number; stroke?: string }> = ({ widg
 
 export const Compass: React.FC<{ points: number[]; bearing?: number; stroke?: string }> = ({ points, bearing, stroke = COLORS.accent }) => {
   const W = WIDTH;
-  const H = 240;
+  const H = 260;
   const cx = W / 2;
-  const cy = H / 2;
+  // Drop the dial so the bearing readout above it sits inside the
+  // SVG bounds. Previously cy = H/2 + bearing label at cy - r - 28
+  // worked out to y = -8, which clipped above the viewBox.
+  const cy = 150;
   const r = 100;
 
   // Bearing — derive from points if not provided. Use last point modulo 360.
@@ -499,10 +507,14 @@ export const Compass: React.FC<{ points: number[]; bearing?: number; stroke?: st
       {/* Pivot */}
       <circle cx={cx} cy={cy} r={6} fill={stroke} />
       <circle cx={cx} cy={cy} r={10} fill={stroke} fillOpacity={0.25} />
-      {/* Bearing readout */}
-      <text x={cx} y={cy - r - 28} textAnchor="middle" fontSize={28} fontWeight={600} fill={stroke}
+      {/* Bearing readout — placed at top of SVG */}
+      <text x={cx} y={28} textAnchor="middle" fontSize={26} fontWeight={600} fill={stroke}
         fontFamily={FONTS.mono} style={{ letterSpacing: '0.04em' }}>
         {b.toFixed(0).padStart(3, '0')}°
+      </text>
+      <text x={cx} y={44} textAnchor="middle" fontSize={9} fill={COLORS.textMuted}
+        fontFamily={FONTS.mono} style={{ letterSpacing: '0.22em' }}>
+        BEARING
       </text>
     </svg>
   );

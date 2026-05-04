@@ -125,13 +125,16 @@ const renderViz = (widget: DetailWidget, series: WidgetSeries, accent: string): 
     case 'none':
       return <RecentSamples widgetId={widget.id} currentValue={widget.value ?? '—'} stroke={accent} />;
     case 'gauge': {
-      // Convert current value into a 0..1 gauge fill. If the widget's
-      // value parses as 0..100 we use it directly; otherwise we map
-      // the current value's position within the 24h min/max.
+      // Map the current value to a 0..1 gauge fill. If widget.value
+      // parses as 0..100 use it directly; otherwise position inside
+      // the 24h min/max range. The gauge dial alone is the viz —
+      // the hero block above already shows the canonical number, so
+      // we don't duplicate it inside the SVG. We do show a small
+      // "% of max" readout when the fill maps cleanly to 0..100.
       const numericVal = numericFromValue(widget.value);
       const inRange01 = numericVal >= 0 && numericVal <= 100 ? numericVal / 100 : null;
       const v = inRange01 ?? Math.max(0.05, Math.min(0.95, (series.current - series.min) / (series.max - series.min || 1)));
-      return <HalfGauge value={v} label={widget.value ?? formatNumber(series.current)} unit="of capacity" stroke={accent} />;
+      return <HalfGauge value={v} percent={inRange01 != null ? numericVal : v * 100} stroke={accent} />;
     }
     case 'radar':     return <RadarSweep points={series.points} stroke={accent} />;
     case 'pulse':     return <PulseWave points={series.points} stroke={accent} />;

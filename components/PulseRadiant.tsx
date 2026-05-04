@@ -440,7 +440,7 @@ interface WidgetCardProps {
   onHoverChange?: (hovered: boolean) => void;
 }
 
-const WidgetCard: React.FC<WidgetCardProps> = ({
+const WidgetCardImpl: React.FC<WidgetCardProps> = ({
   widget,
   tracked,
   trackedConf,
@@ -497,9 +497,11 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
         cursor: onClick ? 'pointer' : 'default',
         transform: `scale(${scale})`,
         transformOrigin: 'center',
-        opacity: dimmed ? 0.18 : 1,
-        filter: dimmed ? 'blur(0.4px)' : 'none',
-        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 280ms cubic-bezier(0.23, 1, 0.32, 1), opacity 280ms ease, filter 280ms ease',
+        opacity: dimmed ? 0.16 : 1,
+        // No filter blur on dim — running blur() on 118 sibling widgets
+        // simultaneously was the main source of lag during focus engage.
+        // Opacity drop alone is already cheap and visually clear.
+        transition: 'transform 280ms cubic-bezier(0.23, 1, 0.32, 1), border-color 280ms cubic-bezier(0.23, 1, 0.32, 1), box-shadow 280ms cubic-bezier(0.23, 1, 0.32, 1), opacity 220ms ease',
         // Fail-safe z-index — any DOM neighbor (drei <Html> placed
         // by another widget at similar depth) can't outrank a hovered
         // card. drei's zIndexRange handles the per-Html-wrapper layer,
@@ -682,6 +684,15 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
     </div>
   );
 };
+
+/**
+ * Memoized WidgetCard — focus engage flips `dimmed` for ~118 sibling
+ * widgets in one render cycle. Without this memo, every sibling
+ * re-renders even though only the boolean flipped. With memo, only
+ * widgets whose props actually changed re-render. Significantly less
+ * jank during the camera dolly.
+ */
+const WidgetCard = React.memo(WidgetCardImpl);
 
 // ──────────────────────────────────────────────────────────────────
 // Edge illumination — replaces the flying-sphere pulses
@@ -1129,7 +1140,7 @@ const IngestionLayer: React.FC<{
 // Drift widget wrapper
 // ──────────────────────────────────────────────────────────────────
 
-const DriftWidget: React.FC<{
+interface DriftWidgetProps {
   widget: PreparedWidget;
   tracked: boolean;
   trackedConf?: number;
@@ -1141,13 +1152,16 @@ const DriftWidget: React.FC<{
   dimmed?: boolean;
   /** This widget is the focused one — swap in the expanded detail card. */
   focused?: boolean;
-  /** Click bubbles up to Scene to open the detail card. */
-  onClick?: () => void;
+  /** Stable id-based selector — DriftWidget builds its own closure
+   *  so React.memo can skip re-renders when only sibling props change. */
+  onSelect?: (id: number) => void;
   /** Close the focused state — passed to the expanded card's X. */
   onDismiss?: () => void;
   /** When true, freeze widget at homePosition (a11y: reduced motion) */
   paused?: boolean;
-}> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, focused, onClick, onDismiss, paused }) => {
+}
+
+const DriftWidgetImpl: React.FC<DriftWidgetProps> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, focused, onSelect, onDismiss, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
   // Last drift offset — when paused engages, decay this toward zero
@@ -1156,6 +1170,14 @@ const DriftWidget: React.FC<{
   // when focus engages.
   const lastOffsetRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [hovered, setHovered] = useState(false);
+
+  // Stable click closure — depends only on onSelect (stable from
+  // PulseRadiant via useCallback) and widget.id (stable per widget).
+  // Without this, the WidgetCard's onClick prop would be a new closure
+  // every render and React.memo wouldn't help.
+  const handleClick = useCallback(() => {
+    onSelect?.(widget.id);
+  }, [onSelect, widget.id]);
 
   useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
@@ -1231,7 +1253,7 @@ const DriftWidget: React.FC<{
             absorbing={absorbing}
             fresh={fresh}
             dimmed={dimmed}
-            onClick={onClick}
+            onClick={handleClick}
             onHoverChange={setHovered}
           />
         )}
@@ -1239,6 +1261,14 @@ const DriftWidget: React.FC<{
     </group>
   );
 };
+
+/**
+ * Memoized — when focus engages on one widget, only the focused widget
+ * + the previously focused widget should re-render. Other 117 widgets
+ * see only `dimmed` flip, but if the prop is genuinely the same value
+ * across renders they skip via React.memo's default Object.is check.
+ */
+const DriftWidget = React.memo(DriftWidgetImpl);
 
 // ──────────────────────────────────────────────────────────────────
 // FutureTree — Y-axis branching tree of projected futures
@@ -1250,7 +1280,7 @@ const DriftWidget: React.FC<{
 // prediction stream later.
 // ──────────────────────────────────────────────────────────────────
 
-const FutureCard: React.FC<{
+const FutureCardImpl: React.FC<{
   node: FutureNode;
   dimmed?: boolean;
   onClick?: () => void;
@@ -1283,7 +1313,8 @@ const FutureCard: React.FC<{
         fontFamily: FONTS.sans,
         color: COLORS.textPrimary,
         opacity,
-        filter: dimmed ? 'blur(0.4px)' : 'none',
+        // No filter blur on dim — too expensive when multiple siblings
+        // dim at once during focus engage.
         boxShadow: hovered
           ? `0 0 32px rgba(244, 63, 94, 0.6), 0 8px 28px rgba(0, 0, 0, 0.7)`
           : isApex
@@ -1380,6 +1411,8 @@ const FutureCard: React.FC<{
   );
 };
 
+const FutureCard = React.memo(FutureCardImpl);
+
 interface CurveMeta {
   kind: FutureKind;
   /** Inclusive index of the curve's first line-segment (each segment = 6 floats in colors[]) */
@@ -1401,13 +1434,13 @@ const COLOR_ALT: [number, number, number] = [0.45, 0.14, 0.22];
 const COLOR_DEAD: [number, number, number] = [0.18, 0.10, 0.10];
 const COLOR_FLOW_HEAD: [number, number, number] = [1.0, 0.55, 0.65];
 
-const FutureNodeRender: React.FC<{
+const FutureNodeRenderImpl: React.FC<{
   node: FutureNode;
   dimmed: boolean;
   focused: boolean;
-  onClick: () => void;
+  onSelect: (id: string) => void;
   onDismiss: () => void;
-}> = ({ node, dimmed, focused, onClick, onDismiss }) => {
+}> = ({ node, dimmed, focused, onSelect, onDismiss }) => {
   const [hovered, setHovered] = useState(false);
   const baseRange: [number, number] =
     node.kind === 'apex' ? [70, 12] : node.kind === 'dead' ? [40, 4] : [55, 8];
@@ -1415,6 +1448,8 @@ const FutureNodeRender: React.FC<{
     ? [900, 700]
     : hovered ? [500, 320]
     : baseRange;
+  // Stable click closure so React.memo can skip re-renders.
+  const handleClick = useCallback(() => onSelect(node.id), [onSelect, node.id]);
   return (
     <Html
       position={node.pos}
@@ -1425,18 +1460,20 @@ const FutureNodeRender: React.FC<{
       {focused ? (
         <FutureDetailCard node={node} onClose={onDismiss} />
       ) : (
-        <FutureCard node={node} dimmed={dimmed} onClick={onClick} onHoverChange={setHovered} />
+        <FutureCard node={node} dimmed={dimmed} onClick={handleClick} onHoverChange={setHovered} />
       )}
     </Html>
   );
 };
 
+const FutureNodeRender = React.memo(FutureNodeRenderImpl);
+
 const FutureTree: React.FC<{
   cascadeNonce?: number;
   focusedClusterId?: number | null;
   focusedFutureId?: string | null;
-  onSelect?: (id: string) => void;
-  onDismiss?: () => void;
+  onSelect: (id: string) => void;
+  onDismiss: () => void;
 }> = ({ cascadeNonce = 0, focusedClusterId, focusedFutureId, onSelect, onDismiss }) => {
   const linesRef = useRef<THREE.LineSegments>(null);
   const matRef = useRef<THREE.LineBasicMaterial>(null);
@@ -1717,8 +1754,8 @@ const FutureTree: React.FC<{
             (focusedFutureId != null && focusedFutureId !== n.id)
           }
           focused={focusedFutureId === n.id}
-          onClick={() => onSelect?.(n.id)}
-          onDismiss={() => onDismiss?.()}
+          onSelect={onSelect}
+          onDismiss={onDismiss}
         />
       ))}
     </group>
@@ -2235,7 +2272,7 @@ const Scene: React.FC<SceneProps> = ({
             fresh={freshId === w.id}
             dimmed={isFocused && focusedClusterId !== w.id}
             focused={focusedClusterId === w.id}
-            onClick={() => onSelectCluster(w.id)}
+            onSelect={onSelectCluster}
             onDismiss={onDismiss}
             paused={driftPaused || isFocused}
           />
