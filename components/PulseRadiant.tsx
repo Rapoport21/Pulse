@@ -1150,17 +1150,27 @@ const DriftWidget: React.FC<{
 }> = ({ widget, tracked, trackedConf, patternHighlight, absorbing, fresh, dimmed, focused, onClick, onDismiss, paused }) => {
   const groupRef = useRef<THREE.Group>(null);
   const tmp = useMemo(() => new THREE.Vector3(), []);
+  // Last drift offset — when paused engages, decay this toward zero
+  // over a few frames so widgets glide to their home position rather
+  // than snapping to it. The snap was contributing to the choppy feel
+  // when focus engages.
+  const lastOffsetRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const [hovered, setHovered] = useState(false);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!groupRef.current) return;
     if (paused) {
-      groupRef.current.position.copy(widget.homePosition);
+      // Frame-rate independent decay — at 60fps multiplies by ~0.89
+      // each frame; offset asymptotes to zero in ~25 frames.
+      const decay = Math.pow(0.001, delta);
+      lastOffsetRef.current.multiplyScalar(decay);
+      groupRef.current.position.copy(widget.homePosition).add(lastOffsetRef.current);
       return;
     }
     const t = clock.getElapsedTime();
     driftPosition(tmp, widget.homePosition, t, widget.driftPhase, widget.driftSpeed, widget.driftAmp);
     groupRef.current.position.copy(tmp);
+    lastOffsetRef.current.copy(tmp).sub(widget.homePosition);
   });
 
   // Stagger initial spawn — each widget animates in from scale(0.6) +
@@ -1926,34 +1936,59 @@ const CameraOrchestrator: React.FC<{
     [home],
   );
 
-  // Snapshot of the camera position when focus engages, used as the
-  // "from" of the focus-out animation when focus dismisses.
-  const focusOriginRef = useRef<THREE.Vector3 | null>(null);
-  const focusStartedAtRef = useRef<number>(0);
-  const lastFocusTargetRef = useRef<THREE.Vector3 | null>(null);
+  // Focus destination — computed ONCE when focus engages by snapshotting
+  // the camera-to-target direction and pulling in close. After that
+  // the camera continuously lerps toward this fixed point.
+  const focusDestRef = useRef<THREE.Vector3 | null>(null);
+
+  // Smoothed lookAt vector — lerped each frame toward the desired
+  // lookAt target so camera rotation glides instead of snapping.
+  const lookAtRef = useRef<THREE.Vector3>(new THREE.Vector3(0, targetY, 0));
 
   // One-time mount: snap camera to start, kick off intro timer
   useEffect(() => {
     if (completedRef.current) return;
     camera.position.copy(start);
     camera.lookAt(0, targetY, 0);
+    lookAtRef.current.set(0, targetY, 0);
     startedRef.current = performance.now();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track focusedTarget changes — record the camera origin so we can
-  // animate from current position to the new focus / back to home.
+  // When focus changes, recompute the focus destination from the
+  // CURRENT camera position. Done once per focus engage; the destination
+  // doesn't move during the dolly.
   useEffect(() => {
-    if (!introDone) return;
-    focusOriginRef.current = camera.position.clone();
-    focusStartedAtRef.current = performance.now();
-    lastFocusTargetRef.current = focusedTarget ? focusedTarget.clone() : null;
+    if (!introDone) {
+      focusDestRef.current = null;
+      return;
+    }
+    if (!focusedTarget) {
+      focusDestRef.current = null;
+      return;
+    }
+    const dir = camera.position.clone().sub(focusedTarget).normalize();
+    // 22 units back from target — at distanceFactor 36 that's CSS
+    // scale ~1.6, so the 620px detail card fills most of the viewport.
+    focusDestRef.current = focusedTarget
+      .clone()
+      .add(dir.multiplyScalar(22))
+      .add(new THREE.Vector3(0, 3, 0));
   }, [focusedTarget, introDone, camera]);
 
-  useFrame(() => {
-    // Intro phase
+  useFrame((_, delta) => {
+    // Intro phase — fixed-duration cubic ease so the entry animation
+    // has a deliberate cinematic shape.
     if (!completedRef.current) {
-      if (paused) return;
+      if (paused) {
+        // Reduced motion — skip the intro entirely, snap to home.
+        camera.position.copy(home);
+        camera.lookAt(0, targetY, 0);
+        lookAtRef.current.set(0, targetY, 0);
+        completedRef.current = true;
+        onIntroDone();
+        return;
+      }
       const DURATION = 1700;
       const elapsed = performance.now() - startedRef.current;
       const tt = Math.min(1, elapsed / DURATION);
@@ -1961,6 +1996,7 @@ const CameraOrchestrator: React.FC<{
       const pos = start.clone().lerp(home, ease);
       camera.position.copy(pos);
       camera.lookAt(0, targetY, 0);
+      lookAtRef.current.set(0, targetY, 0);
       if (tt >= 1) {
         completedRef.current = true;
         onIntroDone();
@@ -1968,33 +2004,19 @@ const CameraOrchestrator: React.FC<{
       return;
     }
 
-    // Post-intro: handle focus dolly. If focusedTarget set, ease
-    // camera to a position near the target. If null, ease back to home.
-    if (focusOriginRef.current === null) return;
-    const FOCUS_DURATION = 720;
-    const elapsed = performance.now() - focusStartedAtRef.current;
-    const tt = Math.min(1, elapsed / FOCUS_DURATION);
-    if (tt >= 1) return;
-    const ease = 1 - Math.pow(1 - tt, 3);
+    // Post-intro — exponential damping toward current destination.
+    // No fixed duration; camera continuously eases. Frame-rate
+    // independent via Math.exp(-k * delta) so it feels smooth at
+    // 30/60/120 fps. SMOOTH = decay rate; higher = faster arrival.
+    const SMOOTH = 4.5;
+    const t = 1 - Math.exp(-SMOOTH * delta);
 
-    const target = lastFocusTargetRef.current;
-    if (target) {
-      // Approach a point ~55 units back from the widget along the
-      // current view direction, lifted slightly so we look down at it.
-      const dir = focusOriginRef.current.clone().sub(target).normalize();
-      // Pull in close — at distanceFactor 36 + camera 32 units back,
-      // the 620px card lands at ~700px on a 1200px viewport. Clearly
-      // the focal subject, not a tile floating in space.
-      const focusCamera = target.clone().add(dir.multiplyScalar(32)).add(new THREE.Vector3(0, 4, 0));
-      const pos = focusOriginRef.current.clone().lerp(focusCamera, ease);
-      camera.position.copy(pos);
-      camera.lookAt(target);
-    } else {
-      // Returning home — lerp back to home position, look at center
-      const pos = focusOriginRef.current.clone().lerp(home, ease);
-      camera.position.copy(pos);
-      camera.lookAt(0, targetY, 0);
-    }
+    const dest = focusedTarget && focusDestRef.current ? focusDestRef.current : home;
+    const lookTarget = focusedTarget ?? new THREE.Vector3(0, targetY, 0);
+
+    camera.position.lerp(dest, t);
+    lookAtRef.current.lerp(lookTarget, t);
+    camera.lookAt(lookAtRef.current);
   });
 
   return null;
