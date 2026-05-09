@@ -1931,6 +1931,15 @@ reason), moderate (warn), minor (info). Every override is
 audit-logged with the reason. This is a 2–3 week integration
 but it's the single biggest clinical-safety upgrade on the list.
 
+**Prototype status (2026-05-08).** Deferred. Not buildable in
+prototype scope — the engine is licensed (First Databank is paid +
+contract), or wrapped around NLM's free RxNav API which needs
+backend infrastructure PULSE doesn't have. Also depends on
+medication-ordering and allergy-entry surfaces that are themselves
+deferred (T1.7 allergies, T2.13 MAR, T2.14 orders panel). Worth
+mentioning in pitches as a category-defining feature PULSE will
+obviously ship — don't build it now.
+
 ### T4.11 · RTLS patient + staff location feed
 
 **Where.** Nowhere.
