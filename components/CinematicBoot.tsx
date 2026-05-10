@@ -98,6 +98,168 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
     return () => window.clearTimeout(t);
   }, []);
 
+  // ─────────────────────────────────────────────────────────────────
+  // MOBILE BOOT — clean iOS-style splash, NOT a squished desktop.
+  // Just the wordmark + rose underline + subtle "Loading" pip
+  // centered on dark, dot-grid texture + rose floor glow behind.
+  // Matches the iOS native LaunchScreen splash's mood; no terminal
+  // stream, no progress bar, no meta row. Boots run for the same
+  // 4.2s (parent unmounts; skip handler still attached above).
+  // ─────────────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          minHeight: '100vh',
+          height: '100lvh',
+          background: COLORS.bg,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: FONTS.sans,
+          color: COLORS.textPrimary,
+          zIndex: 9999,
+          // No safe-area padding on the OUTER container — we want the
+          // background (and the rose floor glow) to extend edge-to-
+          // edge. The inner content block is what's centered safely
+          // away from chrome.
+        }}
+      >
+        <style>{`
+          @keyframes cb-m-fade-in {
+            from { opacity: 0; transform: scale(0.96); }
+            to   { opacity: 1; transform: scale(1); }
+          }
+          @keyframes cb-m-underline {
+            from { transform: scaleX(0); }
+            to   { transform: scaleX(1); }
+          }
+          @keyframes cb-m-pulse {
+            0%, 100% { opacity: 0.45; }
+            50%      { opacity: 1; }
+          }
+        `}</style>
+
+        {/* Rose floor glow — edge-to-edge */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `radial-gradient(ellipse 80% 50% at 50% 100%, ${COLORS.accentDim}, transparent 60%)`,
+            pointerEvents: 'none',
+          }}
+        />
+        {/* Subtle dot grid */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+            backgroundSize: '24px 24px',
+            opacity: 0.18,
+            maskImage: 'radial-gradient(ellipse 75% 60% at center, black 25%, transparent 90%)',
+            WebkitMaskImage: 'radial-gradient(ellipse 75% 60% at center, black 25%, transparent 90%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Centered wordmark block */}
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: SPACE.md,
+            // Safe-area padding here so the wordmark stays clear of
+            // status bar / home indicator even on the smallest device.
+            paddingTop: `env(safe-area-inset-top)`,
+            paddingBottom: `env(safe-area-inset-bottom)`,
+            paddingLeft: SPACE.lg,
+            paddingRight: SPACE.lg,
+            animation: 'cb-m-fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1) backwards',
+            animationDelay: '0.15s',
+          }}
+        >
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: FONTS.sans,
+              fontSize: 64,
+              fontWeight: 600,
+              letterSpacing: '0.18em',
+              lineHeight: 1,
+              color: COLORS.textPrimary,
+              textShadow: `0 0 24px rgba(225, 29, 72, 0.22)`,
+            }}
+          >
+            PULSE
+          </h1>
+          <div
+            style={{
+              height: 2,
+              width: 140,
+              background: `linear-gradient(90deg, ${COLORS.accentBright}, ${COLORS.accent} 80%, transparent)`,
+              transformOrigin: 'left',
+              animation: 'cb-m-underline 800ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              animationDelay: '0.7s',
+              transform: 'scaleX(0)',
+              boxShadow: `0 0 12px ${COLORS.accentGlow}`,
+            }}
+          />
+          <div
+            style={{
+              marginTop: SPACE.sm,
+              fontFamily: FONTS.mono,
+              fontSize: 10,
+              letterSpacing: '0.28em',
+              color: COLORS.textMuted,
+              textTransform: 'uppercase',
+              animation: 'cb-m-pulse 1.6s ease-in-out infinite',
+              animationDelay: '1.4s',
+              opacity: 0,
+              animationFillMode: 'both',
+            }}
+          >
+            Loading
+          </div>
+        </div>
+
+        {/* Skip hint — bottom safe-area aware */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: `max(env(safe-area-inset-bottom), ${SPACE.base}px)`,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontFamily: FONTS.mono,
+            fontSize: 9,
+            letterSpacing: '0.22em',
+            color: COLORS.textMuted,
+            textTransform: 'uppercase',
+            opacity: hideSkipHint ? 0 : 1,
+            transition: 'opacity 400ms ease-out',
+            pointerEvents: 'none',
+            zIndex: 11,
+          }}
+        >
+          Tap to skip
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // DESKTOP BOOT — full cinematic sequence below.
+  // ─────────────────────────────────────────────────────────────────
   return (
     <div
       style={{

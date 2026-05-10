@@ -306,6 +306,14 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
       style={{
         position: 'fixed',
         inset: 0,
+        // 100lvh = LARGEST viewport (full physical screen, even when
+        // iOS Safari URL bar is visible). The dark login bg extends
+        // BEHIND the URL bar / home indicator, which overlay it.
+        // The inner HudStrips + content already pad with
+        // env(safe-area-inset-*) so tap targets stay visible.
+        minHeight: '100vh',
+        height: '100lvh',
+        width: '100%',
         background: COLORS.bg,
         color: COLORS.textPrimary,
         fontFamily: FONTS.sans,
