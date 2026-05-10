@@ -1655,6 +1655,53 @@ Full per-file checklist is duplicated in the `POOL_SIZE` comment of
 `lib/braceletPool.ts` — the canonical copy. Update it there if the
 steps change.
 
+### T3.12 · Pulse Radiant chunk audit (~284 KB gzip)
+
+**Where.** `dist/assets/PulseRadiant-*.js`. Lazy-loaded — only downloads
+when the user clicks the "Pulse Radiant" button. ~1.05 MB minified,
+**~284 KB gzip**. Roughly: `three` 170 KB · `@react-three/drei` 30–50 KB
+· `@react-three/postprocessing` + `postprocessing` 20–40 KB ·
+`@react-three/fiber` 15–20 KB · our scene code 30–50 KB.
+
+**Now.** Already lazy-loaded so initial app load is unaffected. But
+when the user does click the button, they wait while 284 KB downloads
++ parses + initializes. Fast wifi: 200–400ms (fine). 4G mobile: 1–3s
+(visible spinner). Slow 3G / congested hospital wifi: 5–10+s.
+There's already a "▮ Initializing radiant…" loading state, so the UX
+isn't broken — just slower than it could be.
+
+**Why it matters.** Specifically wondering: are we shipping the
+*whole* `@react-three/postprocessing` library when we only use
+`<EffectComposer>` + `<Bloom>`? Barrel exports sometimes leak
+unused exports through tree-shaking gaps. If tree-shaking is
+working, no win. If it's not, free 20–30 KB.
+
+**What to do.** 1–2 hour investigation, no guaranteed payoff:
+1. `npm i -D rollup-plugin-visualizer`, wire into `vite.config.ts`,
+   run `npm run build`, open the HTML report.
+2. Look for surprises in the Radiant chunk breakdown — does
+   `postprocessing` ship more than `Bloom`? Is `drei` pulling more
+   than `OrbitControls` + `Html`?
+3. If a leak is found: switch to a more direct import path (e.g.
+   import `Bloom` from the underlying `postprocessing` package
+   instead of the wrapper).
+4. Re-run build, re-measure.
+
+**Realistic outcome.** Best case ~220 KB (-65 KB, noticeable on 4G).
+Plausible case ~260 KB (-25 KB, imperceptible). Worst case: no
+change — Three.js itself is ~170 KB and you can't get below it
+without dropping 3D. **The floor is hard.**
+
+**Why T3 not T2.** Already lazy-loaded so no cold-start tax. Radiant
+is a power-user feature, not core ED workflow. Worst case "no
+improvement possible" still costs an hour. Do it when someone has a
+quiet afternoon, not because it's blocking anything.
+
+**Adjacent decision context.** `docs/decisions.md → "Pulse Radiant
+focus-engage perf"` covers the *runtime* perf work already shipped
+(memoization, dropping `filter: blur` on dim). This T3 entry is
+about download size only.
+
 ---
 
 ## T4 · Bets

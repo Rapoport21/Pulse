@@ -12,6 +12,70 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-05-10 · Pulse Radiant focus-engage perf: memoization + no `filter: blur` on dim
+
+**Context.** When the user clicks a widget in the radiant, ~118 sibling
+widgets get `dimmed=true` in one render. Early version of the
+expanded-card flow stuttered visibly during the camera dolly. Two root
+causes:
+
+1. **GPU.** Dimmed siblings animated `filter: blur(0.4px)` alongside
+   the opacity drop. Running `filter: blur(...)` simultaneously on
+   118 DOM elements was the dominant cost — CSS filter blur doesn't
+   batch and lives on the compositor.
+2. **Reconciliation.** All 118 siblings re-rendered their full
+   component tree (CV brackets, priority pips, badges) even though
+   only the boolean `dimmed` flipped. `onClick` callbacks were
+   freshly-constructed closures (`() => onSelect(w.id)`) so default
+   `React.memo` couldn't skip the re-render.
+
+**Decision.** Three locked-in choices in `components/PulseRadiant.tsx`:
+
+1. **`React.memo` wrappers** on `DriftWidgetImpl`, `WidgetCardImpl`,
+   `FutureCardImpl`, `FutureNodeRenderImpl`. The exported names
+   (`DriftWidget`, etc.) are the memoized versions. Don't remove the
+   `Impl` suffix split or the memo wrappers.
+2. **Stable callbacks.** `DriftWidget` receives `onSelect: (id) => void`
+   and builds its own click closure with `useCallback` inside.
+   Scene passes `onSelect={onSelectCluster}` directly without
+   wrapping in a fresh `() => ...` closure. Same pattern for
+   `FutureNodeRender`. `onSelectCluster` / `onSelectFuture` /
+   `onDismiss` in `PulseRadiant` outer are `useCallback`'d.
+3. **Dim = opacity only.** `WidgetCard` and `FutureCard` apply
+   `opacity: 0.16` when `dimmed=true`. **Do not re-add `filter:
+   blur`**, even at 0.2–0.4px. The `transition` list explicitly
+   excludes `filter` so it can't reappear by inheritance.
+
+Plus: `AmbientRotation` accepts a `paused` prop (via `forwardRef`)
+and pauses when focus engages. Camera target is computed in world
+space by applying the rotation snapshot to the local position —
+otherwise the rotating group keeps moving underneath the camera and
+the focused card drifts off-center.
+
+**Why.** Click-to-focus is the headline interaction of the Radiant.
+If the camera dolly stutters, the "wow" lands as "broken." The CSS
+filter-blur removal alone moved focus engage from ~30fps to a smooth
+60fps on iPhone 15 Pro; the memoization removed the lingering jitter
+on lower-end iPad.
+
+**What NOT to undo.**
+  - Don't swap `React.memo(...)` for plain `React.FC` exports.
+  - Don't inline `onClick={() => onSelect(w.id)}` at the call site —
+    DriftWidget's `useCallback` inside is load-bearing.
+  - Don't add any animated CSS `filter` to dimmed widgets. Animate
+    only `transform` + `opacity`. (`backdrop-filter` on the focused
+    card itself is fine — it's only one element.)
+  - Don't remove `paused` from `AmbientRotation` — without it, focus
+    target drifts because the world rotation keeps accumulating.
+
+**Open follow-ups (not blocking).**
+  - Measure actual FPS on a mid-range Android tablet — only validated
+    on Apple silicon and iPhone so far.
+  - Consider lazy-rendering the heavier viz components (RadarSweep
+    has infinite SVG `<animate>`s) only when the camera is at rest.
+
+---
+
 ## 2026-04-30 · Killed the 3D "Live Floor" drone view
 
 **Context.** Briefly shipped a 3D hospital floor-plan modal launched
