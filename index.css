@@ -34,6 +34,12 @@ html {
      island or home indicator. */
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
+  /* Paint the entire WebView canvas dark so any mismatch between
+     100vh/100dvh and the actual visible area — especially on iOS
+     standalone PWA where the home-indicator strip can briefly show
+     html background during launch — reads as "still PULSE", not
+     "white gap below the app." Matches body + COLORS.bg. */
+  background-color: #050505;
 }
 
 body {

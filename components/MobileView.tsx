@@ -5315,13 +5315,19 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
       </main>
 
-      {/* ── BOTTOM HUD TAB BAR ────────────────────────────────── */}
+      {/* ── BOTTOM HUD TAB BAR ──────────────────────────────────
+           Solid surface background (was a fade-to-bg gradient). The
+           gradient made the safe-area-inset-bottom strip — the portion
+           below the buttons that fills the home-indicator area in PWA
+           standalone mode — fade out to body bg, so it visually read
+           as "empty space" instead of "still the navbar." Solid color
+           keeps the safe-area portion looking like part of the nav. */}
       <nav
         style={{
           position: 'relative',
           flexShrink: 0,
           zIndex: 40,
-          background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
+          background: COLORS.surface,
           borderTop: `1px solid ${COLORS.borderStrong}`,
           // Horizontal padding keeps active-tab corner brackets from
           // clipping the screen edge on the outermost tabs.

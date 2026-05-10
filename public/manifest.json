@@ -6,7 +6,7 @@
   "scope": "/Pulse/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#000000",
+  "background_color": "#050505",
   "theme_color": "#e11d48",
   "icons": [
     {
