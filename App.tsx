@@ -1368,16 +1368,17 @@ function App() {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            // 100dvh = "dynamic viewport height" — adjusts when iOS
-            // Safari / Chrome mobile toolbars collapse. 100vh was the
-            // legacy unit and includes the collapsible URL bar in its
-            // calculation, which on iPad Safari (still ≥768px so still
-            // desktop shell) pushes the bottom of the page below the
-            // visible area — perceived as "lots of negative space at
-            // the bottom." minHeight: 100vh kept as a fallback for the
-            // rare browser without dvh support.
+            // 100lvh = LARGEST viewport height (full physical screen
+            // even when iOS Safari's bottom URL bar is showing). The
+            // page extends BEHIND the URL bar / home indicator,
+            // which overlay it. 100dvh (the previous fix) was wrong
+            // — it shrunk the page to fit ABOVE the URL bar, leaving
+            // the bar looking like an opaque white band instead of a
+            // translucent overlay over the dark UI. The header's
+            // own surface and the body bg fill behind the overlay.
+            // minHeight: 100vh as a fallback for ancient browsers.
             minHeight: '100vh',
-            height: '100dvh',
+            height: '100lvh',
             background: COLORS.bg,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,

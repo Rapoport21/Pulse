@@ -1471,11 +1471,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        // Dynamic viewport height — always equals the visible WebView
-        // even when iOS toolbars or the dynamic island change the
-        // available height. Supported on iOS Safari 15.4+ (Capacitor
-        // ships with WKWebView so we get the modern behaviour).
-        height: '100dvh',
+        // 100lvh = LARGEST viewport height (full physical screen height
+        // even when iOS Safari URL bar is showing). The page extends
+        // BEHIND the URL bar / home indicator, and they overlay it.
+        // 100dvh (which shrinks when URL bar is visible) was wrong here
+        // — it made the page end at the URL bar, leaving the bar
+        // looking like a "white band" rather than an overlay.
+        // The nav's paddingBottom: env(safe-area-inset-bottom) keeps
+        // the tap targets above the URL bar / home indicator.
+        // 100vh fallback for the rare browser without lvh support.
+        minHeight: '100vh',
+        height: '100lvh',
         width: '100%',
         background: COLORS.bg,
         color: COLORS.textPrimary,

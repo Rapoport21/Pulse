@@ -103,11 +103,14 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
       style={{
         position: 'fixed',
         inset: 0,
-        // 100dvh fills the actual visible WebView. On iOS PWA standalone
-        // the home-indicator area is reserved by the OS, so we add
-        // safe-area-inset padding so content doesn't slide under
-        // status bar / home indicator.
-        height: '100dvh',
+        // 100lvh = LARGEST viewport (full physical screen including
+        // the area under iOS Safari's URL bar / iOS PWA home indicator).
+        // Content (boot lines + brand) is padded with safe-area-insets
+        // so it stays in the visible region; the BACKGROUND fills the
+        // entire screen so the URL bar / home indicator overlay onto
+        // PULSE dark, not onto a "page-ends-here" white step.
+        minHeight: '100vh',
+        height: '100lvh',
         background: COLORS.bg,
         overflow: 'hidden',
         display: 'flex',
