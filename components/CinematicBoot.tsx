@@ -44,10 +44,32 @@ const LINE_STAGGER = 0.18;
 const TOTAL_DURATION_MS = 4200;
 
 // ──────────────────────────────────────────────────────────────────
+// Mobile detection — matches LoginScreenTactical's 640px breakpoint
+// so the boot → login transition is consistent. Boot screen collapses
+// the 2-column desktop grid to a single vertical stack below this width
+// and reduces the wordmark + padding to fit narrow viewports.
+// ──────────────────────────────────────────────────────────────────
+const useIsBootMobile = (): boolean => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 639px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return isMobile;
+};
+
+// ──────────────────────────────────────────────────────────────────
 // Component
 // ──────────────────────────────────────────────────────────────────
 export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
   const skipRef = useRef(false);
+  const isMobile = useIsBootMobile();
 
   // Skip handler — tap or any key fires the parent unmount early.
   useEffect(() => {
@@ -81,11 +103,18 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
       style={{
         position: 'fixed',
         inset: 0,
+        // 100dvh ensures the boot fills the actual visible WebView
+        // height on iOS Safari (where 100vh would extend below the
+        // collapsing URL bar, leaving empty space at the bottom).
+        height: '100dvh',
         background: COLORS.bg,
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        // Light horizontal padding on mobile so the inner block has
+        // visible edge margin even when the inner padding shrinks.
+        padding: isMobile ? `${SPACE.base}px` : 0,
         fontFamily: FONTS.mono,
         color: COLORS.textSecondary,
         zIndex: 9999,
@@ -138,7 +167,9 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
       />
 
       {/* ═════════════════════════════════════════════════════════════
-          MAIN BOOT FRAME — left log column, right brand stack
+          MAIN BOOT FRAME — left log column, right brand stack on
+          desktop; single vertical stack on mobile so nothing crops
+          and there's no centered "empty space" on narrow viewports.
           ═════════════════════════════════════════════════════════════ */}
       <div
         style={{
@@ -146,10 +177,10 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           zIndex: 10,
           width: '100%',
           maxWidth: 1080,
-          padding: SPACE['3xl'],
+          padding: isMobile ? SPACE.lg : SPACE['3xl'],
           display: 'grid',
-          gridTemplateColumns: '1fr 1.2fr',
-          gap: SPACE['3xl'],
+          gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr',
+          gap: isMobile ? SPACE.xl : SPACE['3xl'],
           alignItems: 'center',
         }}
       >
@@ -178,14 +209,27 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
                   style={{
                     color: COLORS.textMuted,
                     fontVariantNumeric: 'tabular-nums',
-                    minWidth: 32,
+                    minWidth: isMobile ? 22 : 32,
                     fontSize: 9,
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span style={{ color: COLORS.textDim, minWidth: 70 }}>[{l.tag}]</span>
-                <span style={{ color: COLORS.textSecondary, flex: 1 }}>{l.msg}</span>
+                <span style={{ color: COLORS.textDim, minWidth: isMobile ? 56 : 70 }}>
+                  [{l.tag}]
+                </span>
+                <span
+                  style={{
+                    color: COLORS.textSecondary,
+                    flex: 1,
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {l.msg}
+                </span>
                 <span
                   style={{
                     color: isGo ? COLORS.ok : COLORS.textMuted,
@@ -233,7 +277,10 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
               style={{
                 margin: 0,
                 fontFamily: FONTS.sans,
-                fontSize: 96,
+                // 64px on mobile — still loud, but won't overflow a
+                // 393px iPhone with the 0.18em letter-spacing applied.
+                // 96px stays for desktop.
+                fontSize: isMobile ? 64 : 96,
                 fontWeight: 600,
                 letterSpacing: '0.18em',
                 lineHeight: 0.92,
@@ -243,11 +290,13 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
             >
               PULSE
             </h1>
-            {/* Rose underline that draws on left→right */}
+            {/* Rose underline that draws on left→right — width
+                bounded by the wordmark on mobile so it never overhangs
+                or escapes the padded inner column. */}
             <div
               style={{
                 height: 3,
-                width: 320,
+                width: isMobile ? 200 : 320,
                 background: `linear-gradient(90deg, ${COLORS.accentBright}, ${COLORS.accent} 80%, transparent)`,
                 transformOrigin: 'left',
                 animation: 'cb-rose-underline 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -297,11 +346,13 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
             />
           </div>
 
-          {/* Footer row — system online pill */}
+          {/* Footer row — system online pill. Biometric note hidden
+              on mobile so the SYSTEM ONLINE pill keeps its full width
+              without colliding with the long mono string. */}
           <div
             style={{
               display: 'flex',
-              justifyContent: 'space-between',
+              justifyContent: isMobile ? 'flex-end' : 'space-between',
               alignItems: 'center',
               fontFamily: FONTS.mono,
               fontSize: 10,
@@ -310,7 +361,9 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
               textTransform: 'uppercase',
             }}
           >
-            <span>// Biometric auth · TLS 1.3 · session-bound</span>
+            {!isMobile && (
+              <span>// Biometric auth · TLS 1.3 · session-bound</span>
+            )}
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

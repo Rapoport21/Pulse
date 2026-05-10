@@ -1368,7 +1368,16 @@ function App() {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            height: '100vh',
+            // 100dvh = "dynamic viewport height" — adjusts when iOS
+            // Safari / Chrome mobile toolbars collapse. 100vh was the
+            // legacy unit and includes the collapsible URL bar in its
+            // calculation, which on iPad Safari (still ≥768px so still
+            // desktop shell) pushes the bottom of the page below the
+            // visible area — perceived as "lots of negative space at
+            // the bottom." minHeight: 100vh kept as a fallback for the
+            // rare browser without dvh support.
+            minHeight: '100vh',
+            height: '100dvh',
             background: COLORS.bg,
             color: COLORS.textPrimary,
             fontFamily: FONTS.sans,
