@@ -1613,6 +1613,8 @@ function App() {
                   onNavigateTab={(tab) => navigateToTab(tab as Tab)}
                   loginCount={loginCount}
                   activeScenario={activeScenario}
+                  onStartScenario={startScenario}
+                  onStopScenario={stopScenario}
                 />
               )}
               {activeTab === Tab.PATIENTS && (

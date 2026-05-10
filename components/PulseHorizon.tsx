@@ -53,9 +53,11 @@ import { Status, Tab, UserProfile, UserRole } from '../types';
 import { ROLE_METRICS, getRoleMetrics } from '../data/userProfiles';
 import {
   type ScenarioState,
+  type ScenarioSeverity,
   metricValue,
   useScenarioTick,
 } from '../lib/scenario';
+import { ScenarioCards } from './ScenarioCards';
 import { useEmsInbound } from '../lib/emsLive';
 import {
   BedBoard,
@@ -108,6 +110,12 @@ interface PulseHorizonProps {
   /** Active 3-minute simulation scenario. Drives metric overlays and
    *  forecast curve shifts when set. Null = baseline. */
   activeScenario?: ScenarioState | null;
+  /** Start a new scenario at given severity. Same callback the Settings
+   *  screen uses — wired into PulseHorizon's What-If Sim panel so the
+   *  operator can drive scenarios without leaving the forecast view. */
+  onStartScenario?: (severity: ScenarioSeverity) => void;
+  /** Stop the currently running scenario and revert to baseline. */
+  onStopScenario?: () => void;
 }
 
 type SelectedDriver = {
@@ -152,6 +160,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   onNavigateTab,
   loginCount = 1,
   activeScenario = null,
+  onStartScenario,
+  onStopScenario,
 }) => {
   // Scenario tick drives phase-aware re-renders. When the scenario's
   // phase changes (e.g. climb → peak), everything downstream — KPIs,
@@ -300,6 +310,12 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       baseLoad = { now: 32, plus30: 34, plus60: 35, plus90: 38 };
       prevLoad = 32;
     }
+    // Lever impacts — applied to the SIM line only (the solid `load`
+    // series). The dashed `loadBaseline` shows what the forecast would
+    // be WITHOUT the levers, so the user can see "before vs after"
+    // when they slide. Previous behavior rendered both Areas with the
+    // same dataKey, so the dashed line sat on top of the solid line
+    // and the simulation looked broken — the chart never moved.
     const staffImpact = simState.addedStaff * 2.5;
     const bedImpact = simState.openBeds * 1.5;
     const dischargeImpact = simState.expeditedDischarges * 3.0;
@@ -308,12 +324,16 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     const r60 = totalReduction * 0.7;
     const r90 = totalReduction * 1.0;
 
+    const manual = systemStatus === 'manual';
+    const baseAt = (raw: number) => (manual ? 85 : raw);
+    const simAt = (raw: number, r: number) => (manual ? 85 : Math.max(0, raw - r));
+
     return [
-      { time: '-30m', load: prevLoad, capacity: 100 },
-      { time: 'NOW', load: systemStatus === 'manual' ? 85 : baseLoad.now, capacity: 100 },
-      { time: '+30m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus30 - r30), capacity: 100 },
-      { time: '+60m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus60 - r60), capacity: 100 },
-      { time: '+90m', load: systemStatus === 'manual' ? 85 : Math.max(0, baseLoad.plus90 - r90), capacity: 100 },
+      { time: '-30m', load: prevLoad, loadBaseline: prevLoad, capacity: 100 },
+      { time: 'NOW', load: baseAt(baseLoad.now), loadBaseline: baseAt(baseLoad.now), capacity: 100 },
+      { time: '+30m', load: simAt(baseLoad.plus30, r30), loadBaseline: baseAt(baseLoad.plus30), capacity: 100 },
+      { time: '+60m', load: simAt(baseLoad.plus60, r60), loadBaseline: baseAt(baseLoad.plus60), capacity: 100 },
+      { time: '+90m', load: simAt(baseLoad.plus90, r90), loadBaseline: baseAt(baseLoad.plus90), capacity: 100 },
     ];
   }, [simState, isSurgeActive, systemStatus, loginCount, activeScenario, scenarioTick.phase]);
 
@@ -763,13 +783,19 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                     animationDuration={500}
                   />
                   {isSimulating && (
+                    // Dashed line = forecast WITHOUT the levers applied —
+                    // the "baseline" the operator is improving against.
+                    // The solid line above (dataKey="load") is the
+                    // simulated forecast WITH the levers. Slide a lever
+                    // and the solid drops below the dashed.
                     <Area
                       type="monotone"
-                      dataKey="load"
+                      dataKey="loadBaseline"
                       strokeDasharray="4 4"
-                      stroke={chartAccent}
+                      stroke={COLORS.textSecondary}
                       strokeWidth={1.5}
                       fill="url(#horizonFillSim)"
+                      fillOpacity={0}
                       isAnimationActive={false}
                     />
                   )}
@@ -823,7 +849,44 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           >
             {/* Simulator controls OR recommendation */}
             {isSimulating ? (
-              <TacticalCard padding="md" accentBar style={{ padding: SPACE.lg }}>
+              <TacticalCard
+                padding="md"
+                accentBar
+                style={{
+                  padding: SPACE.lg,
+                  maxHeight: 640,
+                  overflowY: 'auto',
+                }}
+              >
+                {/* ── Scenario selector — same component as Settings.
+                       Render only when start/stop handlers are wired. */}
+                {onStartScenario && onStopScenario && (
+                  <>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: SPACE.sm,
+                        marginBottom: SPACE.md,
+                      }}
+                    >
+                      <Mono tone="primary" size="sm">
+                        Scenarios
+                      </Mono>
+                      <Mono tone="muted" size="xs">
+                        · S1 / S2 / S3 · 3-minute trajectories
+                      </Mono>
+                    </div>
+                    <ScenarioCards
+                      activeScenario={activeScenario ?? null}
+                      tick={scenarioTick}
+                      onStart={onStartScenario}
+                      onStop={onStopScenario}
+                    />
+                    <Divider variant="dashed" style={{ marginTop: SPACE.lg, marginBottom: SPACE.lg }} />
+                  </>
+                )}
+
                 <div
                   style={{
                     display: 'flex',
