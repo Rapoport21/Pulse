@@ -119,14 +119,20 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center',
+          // Push the wordmark block toward the LOWER half of the screen.
+          // flex-end anchors content to the bottom; the paddingBottom
+          // floats it back up to roughly 60–65% from the top of the
+          // visible area (plus the safe-area-inset reservation so the
+          // wordmark doesn't slip under the home indicator).
+          justifyContent: 'flex-end',
+          paddingBottom: `calc(env(safe-area-inset-bottom) + 30vh)`,
           fontFamily: FONTS.sans,
           color: COLORS.textPrimary,
           zIndex: 9999,
-          // No safe-area padding on the OUTER container — we want the
-          // background (and the rose floor glow) to extend edge-to-
-          // edge. The inner content block is what's centered safely
-          // away from chrome.
+          // No safe-area padding on the OUTER container otherwise — we
+          // want the background (rose floor glow + dot grid) to extend
+          // edge-to-edge. The inner content block is the only thing
+          // positioned safely away from chrome.
         }}
       >
         <style>{`
@@ -169,7 +175,10 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           }}
         />
 
-        {/* Centered wordmark block */}
+        {/* Wordmark block — outer container's flex-end +
+            paddingBottom: env(safe-area-inset-bottom) + 30vh already
+            anchors this in the lower third. No need for safe-area
+            padding here; just horizontal breathing room. */}
         <div
           style={{
             position: 'relative',
@@ -178,10 +187,6 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
             flexDirection: 'column',
             alignItems: 'center',
             gap: SPACE.md,
-            // Safe-area padding here so the wordmark stays clear of
-            // status bar / home indicator even on the smallest device.
-            paddingTop: `env(safe-area-inset-top)`,
-            paddingBottom: `env(safe-area-inset-bottom)`,
             paddingLeft: SPACE.lg,
             paddingRight: SPACE.lg,
             animation: 'cb-m-fade-in 600ms cubic-bezier(0.16, 1, 0.3, 1) backwards',

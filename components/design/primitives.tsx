@@ -487,7 +487,15 @@ export const HudStrip: React.FC<{
         paddingRight: `max(${SPACE.base}px, env(safe-area-inset-right))`,
         borderTop: side === 'bottom' ? `1px solid ${COLORS.border}` : undefined,
         borderBottom: side === 'top' ? `1px solid ${COLORS.border}` : undefined,
-        background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bg} 100%)`,
+        // Solid surface (was a fade-to-bg gradient). When the strip is
+        // fixed to the viewport edge it grows to include the
+        // safe-area-inset region (status bar or home indicator). With
+        // the gradient ending at bg, that region used to fade into the
+        // body background and read as "empty space below the bar." Solid
+        // surface keeps the safe-area portion looking like part of the
+        // bar — iOS chrome (status bar text, home indicator pill)
+        // overlays a clear surface band instead of fading into a void.
+        background: COLORS.surface,
         zIndex: fixed ? 20 : undefined,
         gap: SPACE.base,
         fontFamily: FONTS.mono,
