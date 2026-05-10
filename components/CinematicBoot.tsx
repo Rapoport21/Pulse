@@ -112,6 +112,9 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
         style={{
           position: 'fixed',
           inset: 0,
+          // 100lvh = LARGEST viewport — background extends BEHIND iOS
+          // Safari's URL bar / PWA home indicator. Chrome overlays the
+          // dark canvas; UI doesn't get capped at the URL bar.
           minHeight: '100vh',
           height: '100lvh',
           background: COLORS.bg,
@@ -119,20 +122,12 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          // Push the wordmark block toward the LOWER half of the screen.
-          // flex-end anchors content to the bottom; the paddingBottom
-          // floats it back up to roughly 60–65% from the top of the
-          // visible area (plus the safe-area-inset reservation so the
-          // wordmark doesn't slip under the home indicator).
-          justifyContent: 'flex-end',
-          paddingBottom: `calc(env(safe-area-inset-bottom) + 30vh)`,
+          // Wordmark vertically CENTERED. The 100lvh height includes
+          // safe-area regions, so true center = visually center.
+          justifyContent: 'center',
           fontFamily: FONTS.sans,
           color: COLORS.textPrimary,
           zIndex: 9999,
-          // No safe-area padding on the OUTER container otherwise — we
-          // want the background (rose floor glow + dot grid) to extend
-          // edge-to-edge. The inner content block is the only thing
-          // positioned safely away from chrome.
         }}
       >
         <style>{`
