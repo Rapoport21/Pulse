@@ -258,34 +258,20 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // DESKTOP BOOT — full cinematic sequence below.
+  // DESKTOP BOOT — full cinematic sequence below. Restored to the
+  // pre-mobile-pass baseline; mobile now lives in its own early
+  // return above so this branch has no `isMobile ?` ternaries.
   // ─────────────────────────────────────────────────────────────────
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        // 100lvh = LARGEST viewport (full physical screen including
-        // the area under iOS Safari's URL bar / iOS PWA home indicator).
-        // Content (boot lines + brand) is padded with safe-area-insets
-        // so it stays in the visible region; the BACKGROUND fills the
-        // entire screen so the URL bar / home indicator overlay onto
-        // PULSE dark, not onto a "page-ends-here" white step.
-        minHeight: '100vh',
-        height: '100lvh',
         background: COLORS.bg,
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        // Horizontal edge padding on mobile so the inner block has
-        // visible edge margin. Vertical safe-area padding keeps the
-        // boot content within the visible region (status bar + home
-        // indicator can otherwise overlap content in PWA standalone).
-        paddingLeft: isMobile ? `${SPACE.base}px` : 0,
-        paddingRight: isMobile ? `${SPACE.base}px` : 0,
-        paddingTop: isMobile ? `max(env(safe-area-inset-top), ${SPACE.base}px)` : 0,
-        paddingBottom: isMobile ? `max(env(safe-area-inset-bottom), ${SPACE.base}px)` : 0,
         fontFamily: FONTS.mono,
         color: COLORS.textSecondary,
         zIndex: 9999,
@@ -338,12 +324,7 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
       />
 
       {/* ═════════════════════════════════════════════════════════════
-          MAIN BOOT FRAME — left log column, right brand stack on
-          desktop; single vertical stack on mobile so nothing crops
-          and there's no centered "empty space" on narrow viewports.
-          On mobile the meta row (BUILD/NODE timestamps) and tagline
-          are hidden, gaps + padding are tightened, so the whole stack
-          fits inside iPhone 15 Pro's ~759px usable height.
+          MAIN BOOT FRAME — left log column, right brand stack.
           ═════════════════════════════════════════════════════════════ */}
       <div
         style={{
@@ -351,15 +332,15 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
           zIndex: 10,
           width: '100%',
           maxWidth: 1080,
-          padding: isMobile ? SPACE.sm : SPACE['3xl'],
+          padding: SPACE['3xl'],
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr',
-          gap: isMobile ? SPACE.md : SPACE['3xl'],
+          gridTemplateColumns: '1fr 1.2fr',
+          gap: SPACE['3xl'],
           alignItems: 'center',
         }}
       >
         {/* ─── LEFT: terminal stream ─── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 2 : SPACE.sm }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
           {BOOT_LINES.map((l, i) => {
             const delay = LINE_BASE_DELAY + i * LINE_STAGGER;
             const isGo = l.status === 'GO';
@@ -383,27 +364,14 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
                   style={{
                     color: COLORS.textMuted,
                     fontVariantNumeric: 'tabular-nums',
-                    minWidth: isMobile ? 22 : 32,
+                    minWidth: 32,
                     fontSize: 9,
                   }}
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span style={{ color: COLORS.textDim, minWidth: isMobile ? 56 : 70 }}>
-                  [{l.tag}]
-                </span>
-                <span
-                  style={{
-                    color: COLORS.textSecondary,
-                    flex: 1,
-                    minWidth: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {l.msg}
-                </span>
+                <span style={{ color: COLORS.textDim, minWidth: 70 }}>[{l.tag}]</span>
+                <span style={{ color: COLORS.textSecondary, flex: 1 }}>{l.msg}</span>
                 <span
                   style={{
                     color: isGo ? COLORS.ok : COLORS.textMuted,
@@ -420,29 +388,25 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
         </div>
 
         {/* ─── RIGHT: brand block, progress, GO pill ─── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? SPACE.md : SPACE.xl }}>
-          {/* Top meta row — hidden on mobile to claw back vertical
-              space; the brand block + progress + GO pill already
-              identify the app, BUILD/NODE timestamps are bonus. */}
-          {!isMobile && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontFamily: FONTS.mono,
-                fontSize: 9,
-                letterSpacing: '0.18em',
-                color: COLORS.textDim,
-                textTransform: 'uppercase',
-              }}
-            >
-              <span>BUILD {dateStr}</span>
-              <span>NODE ER-01 · {timeStr}Z</span>
-            </motion.div>
-          )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.xl }}>
+          {/* Top meta row */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontFamily: FONTS.mono,
+              fontSize: 9,
+              letterSpacing: '0.18em',
+              color: COLORS.textDim,
+              textTransform: 'uppercase',
+            }}
+          >
+            <span>BUILD {dateStr}</span>
+            <span>NODE ER-01 · {timeStr}Z</span>
+          </motion.div>
 
           {/* Wordmark */}
           <motion.div
@@ -455,11 +419,7 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
               style={{
                 margin: 0,
                 fontFamily: FONTS.sans,
-                // 48px on mobile — loud enough to read as a wordmark
-                // but fits inside iPhone 15 Pro's vertical budget once
-                // safe-area-inset-top/bottom are accounted for + meta
-                // row and tagline are hidden. 96px stays for desktop.
-                fontSize: isMobile ? 48 : 96,
+                fontSize: 96,
                 fontWeight: 600,
                 letterSpacing: '0.18em',
                 lineHeight: 0.92,
@@ -469,13 +429,11 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
             >
               PULSE
             </h1>
-            {/* Rose underline that draws on left→right — width
-                bounded by the wordmark on mobile so it never overhangs
-                or escapes the padded inner column. */}
+            {/* Rose underline that draws on left→right */}
             <div
               style={{
                 height: 3,
-                width: isMobile ? 160 : 320,
+                width: 320,
                 background: `linear-gradient(90deg, ${COLORS.accentBright}, ${COLORS.accent} 80%, transparent)`,
                 transformOrigin: 'left',
                 animation: 'cb-rose-underline 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -484,26 +442,20 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
                 boxShadow: `0 0 16px ${COLORS.accentGlow}`,
               }}
             />
-            {/* Tagline — hidden on mobile to fit vertical budget.
-                The wordmark + the boot lines above already say enough,
-                and the LoginScreenTactical that follows has its own
-                tagline so nothing is lost. */}
-            {!isMobile && (
-              <motion.div
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2.7, duration: 0.4 }}
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: 11,
-                  letterSpacing: '0.24em',
-                  color: COLORS.textSecondary,
-                  textTransform: 'uppercase',
-                }}
-              >
-                Predictive Unified Logistics &amp; Surge Engine
-              </motion.div>
-            )}
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 2.7, duration: 0.4 }}
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: 11,
+                letterSpacing: '0.24em',
+                color: COLORS.textSecondary,
+                textTransform: 'uppercase',
+              }}
+            >
+              Predictive Unified Logistics &amp; Surge Engine
+            </motion.div>
           </motion.div>
 
           {/* Progress bar */}
@@ -531,13 +483,11 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
             />
           </div>
 
-          {/* Footer row — system online pill. Biometric note hidden
-              on mobile so the SYSTEM ONLINE pill keeps its full width
-              without colliding with the long mono string. */}
+          {/* Footer row — system online pill */}
           <div
             style={{
               display: 'flex',
-              justifyContent: isMobile ? 'flex-end' : 'space-between',
+              justifyContent: 'space-between',
               alignItems: 'center',
               fontFamily: FONTS.mono,
               fontSize: 10,
@@ -546,9 +496,7 @@ export const CinematicBoot: React.FC<{ onComplete?: () => void }> = ({ onComplet
               textTransform: 'uppercase',
             }}
           >
-            {!isMobile && (
-              <span>// Biometric auth · TLS 1.3 · session-bound</span>
-            )}
+            <span>// Biometric auth · TLS 1.3 · session-bound</span>
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
