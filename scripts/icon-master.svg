@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PULSE app icon master — rendered to PNG at multiple sizes by
+  scripts/generate-icons.sh. Matches the in-app brand:
+    - Near-black canvas (#050505) — same as COLORS.bg
+    - Single "P" letter in off-white (#FAFAFA), heavy weight,
+      Geist-style negative letter-spacing
+    - Rose-600 underline (#E11D48) — the brand's signature
+      element from the boot screen + login screen wordmark
+  Source-of-truth lives here so the icon can be regenerated without
+  going through a design tool.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Canvas — near-black, slightly warmer than #000 to match the in-app -->
+  <rect width="1024" height="1024" fill="#050505"/>
+
+  <!-- Rose floor glow — radial fade from bottom, same accentDim mood
+       as the boot screen. Subtle on small sizes, visible on 512+. -->
+  <defs>
+    <radialGradient id="floorGlow" cx="0.5" cy="1.1" r="0.55">
+      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.18"/>
+      <stop offset="60%"  stop-color="#E11D48" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#floorGlow)"/>
+
+  <!-- "P" letter — drawn as a vector path so it doesn't depend on
+       the rendering environment having Geist installed. Approximates
+       Geist 600-weight at 0.18em letter-spacing.
+       Outer profile:
+         · vertical stem on the left (x: 280..380)
+         · top bowl extends right to x=712 with a 144-radius arc
+       Inner hole:
+         · the "counter" — keeps the P recognizable rather than a blob
+  -->
+  <path
+    fill="#FAFAFA"
+    d="
+      M 280 224
+      L 568 224
+      A 184 184 0 0 1 568 592
+      L 380 592
+      L 380 800
+      L 280 800
+      Z
+      M 380 320
+      L 380 496
+      L 552 496
+      A 88 88 0 0 0 552 320
+      Z
+    "
+    fill-rule="evenodd"
+  />
+
+  <!-- Rose underline — the brand's signature accent, placed directly
+       below the P stem so it reads as "wordmark cropped to one letter."
+       Same 3px stroke ratio as the boot/login underlines (scaled). -->
+  <rect x="280" y="840" width="464" height="14" fill="#E11D48" rx="3"/>
+
+  <!-- Subtle rose glow under the underline — lifts it off the bg
+       so it doesn't read as a flat stripe at large sizes. -->
+  <rect x="280" y="840" width="464" height="14" fill="#E11D48" rx="3" opacity="0.45" filter="blur(6px)" style="filter: blur(6px);"/>
+</svg>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PULSE iOS LaunchScreen splash master — 2732×2732 canvas with the
+  icon centered. Renders the same brand mark (white "P" + rose
+  underline) at ~24% of canvas height so the launch image reads as
+  a native iOS splash, not a stretched icon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
+  <!-- Canvas — near-black -->
+  <rect width="2732" height="2732" fill="#050505"/>
+
+  <!-- Rose floor glow — radial, anchors the wordmark from below
+       like the boot screen's atmospheric layer. -->
+  <defs>
+    <radialGradient id="splashFloorGlow" cx="0.5" cy="0.95" r="0.45">
+      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.20"/>
+      <stop offset="55%"  stop-color="#E11D48" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="splashDotMask" cx="0.5" cy="0.5" r="0.55">
+      <stop offset="0%"   stop-color="white" stop-opacity="0.32"/>
+      <stop offset="60%"  stop-color="white" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dotGrid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <circle cx="24" cy="24" r="1.5" fill="#1C1C1C"/>
+    </pattern>
+    <mask id="splashGridMask">
+      <rect width="2732" height="2732" fill="url(#splashDotMask)"/>
+    </mask>
+  </defs>
+
+  <!-- Dot grid (subtle, masked to fade out at edges) -->
+  <rect width="2732" height="2732" fill="url(#dotGrid)" mask="url(#splashGridMask)"/>
+
+  <!-- Floor glow on top of the grid -->
+  <rect width="2732" height="2732" fill="url(#splashFloorGlow)"/>
+
+  <!-- Brand mark — same proportions as the icon, centered on canvas.
+       Icon master is on a 1024 grid with the P spanning x=280..712,
+       y=224..800. Center of that is (496, 512). Scale to 1.5x and
+       translate to center on 2732. -->
+  <g transform="translate(1366 1366) scale(1.5) translate(-512 -512)">
+    <!-- P letter -->
+    <path
+      fill="#FAFAFA"
+      d="
+        M 280 224
+        L 568 224
+        A 184 184 0 0 1 568 592
+        L 380 592
+        L 380 800
+        L 280 800
+        Z
+        M 380 320
+        L 380 496
+        L 552 496
+        A 88 88 0 0 0 552 320
+        Z
+      "
+      fill-rule="evenodd"
+    />
+    <!-- Rose underline -->
+    <rect x="280" y="840" width="464" height="14" fill="#E11D48" rx="3"/>
+  </g>
+</svg>
