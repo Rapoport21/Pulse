@@ -1,26 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PULSE app icon master — v4.
-  Refinement pass over v3:
-    · Miter join at stem/crossbar corner (sharp, HUD-feeling — not a soft letter)
-    · Stem stroke bumped 44 → 56 (legible at the 32px favicon, ~1.75px at that size)
-    · Bowl reshaped from perfect half-circle to a slightly taller ellipse
-      (rx=154, ry=140) so the P reads as a designed mark, not a default letterform
-    · Re-centered so visual center lands at exactly (512, 512) on the 1024 canvas
+  PULSE app icon master — v5.
+  GENERATED FILE. Do not hand-edit; regenerate via:
+      node scripts/build-icon-svg.cjs
+
+  Wordmark form: `[pulse]` rendered as outline paths from Geist Mono
+  Medium (weight 500). Geist Mono is the app's data/label typeface
+  (loaded in index.html via Google Fonts). Square brackets around the
+  word is a tactical-HUD convention used throughout the app.
 
   Color tokens:
     canvas: COLORS.bg            #050505
-    P:      COLORS.textPrimary   #FAFAFA
+    text:   COLORS.textPrimary   #FAFAFA
     glow:   COLORS.accent        #E11D48
+
+  Wordmark bbox at fontSize=240:
+    width  944.64
+    height 216.00
+  Centered on 1024×1024 canvas via translate(8.00, 584.00).
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!-- Canvas -->
   <rect width="1024" height="1024" fill="#050505"/>
 
-  <!-- Rose floor glow — radial, anchored to bottom center.
+  <!-- Rose floor glow — radial from bottom center.
        Same gradient pattern used in components/design/tokens.ts → SHADOW
-       and the boot screen's atmospheric layer. Inner stop nudged 0.55 → 0.62
-       so the glow reads at small thumbnails without washing the icon. -->
+       and the boot screen's atmospheric layer. -->
   <defs>
     <radialGradient id="floorGlow" cx="0.5" cy="1.0" r="0.78">
       <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.62"/>
@@ -30,25 +35,8 @@
   </defs>
   <rect width="1024" height="1024" fill="url(#floorGlow)"/>
 
-  <!-- Minimal outlined P — open path, single uniform stroke.
-       Visual span 354 × 596, centered on the 1024 canvas.
-       Coordinates (centerline of stroke):
-         · stem:         x=363,  y=242 .. 782   (540px tall)
-         · crossbar:     y=242,  x=363 .. 507
-         · bowl curve:   ellipse rx=154 ry=140, (507,242) → (507,522)
-         · bowl bottom:  y=522,  x=507 .. 363
-       Miter join → sharp top-left corner. Round caps on open stroke ends. -->
-  <path
-    d="M 363 782
-       L 363 242
-       L 507 242
-       A 154 140 0 0 1 507 522
-       L 363 522"
-    stroke="#FAFAFA"
-    stroke-width="56"
-    stroke-linecap="round"
-    stroke-linejoin="miter"
-    stroke-miterlimit="4"
-    fill="none"
-  />
+  <!-- [pulse] wordmark — Geist Mono Medium outline paths, centered. -->
+  <g transform="translate(8.00 584.00)">
+    <path d="M112.32 5.76L112.32 26.40L31.68 26.40L31.68-180L112.32-180L112.32-159.36L55.68-159.36L55.68 5.76L112.32 5.76M185.52 36L161.28 36L161.28-127.68L184.32-127.68L184.56-107.04Q190.32-118.56 200.28-124.56Q210.24-130.56 223.44-130.56Q241.92-130.56 253.68-121.32Q265.44-112.08 271.20-96.96Q276.96-81.84 276.96-63.84Q276.96-45.84 271.20-30.72Q265.44-15.60 253.68-6.36Q241.92 2.88 223.44 2.88Q210.72 2.88 200.76-2.40Q190.80-7.68 185.52-17.04L185.52 36M218.88-19.44Q234.24-19.44 242.88-30.96Q251.52-42.48 251.52-63.84Q251.52-85.20 242.88-96.72Q234.24-108.24 218.88-108.24Q203.76-108.24 194.64-97.08Q185.52-85.92 185.52-63.84Q185.52-41.76 194.52-30.60Q203.52-19.44 218.88-19.44M348.96 2.88Q330.48 2.88 319.44-9.60Q308.40-22.08 308.40-45.12L308.40-127.68L332.64-127.68L332.64-51.36Q332.64-34.08 338.64-26.16Q344.64-18.24 356.88-18.24Q370.32-18.24 378.24-27.12Q386.16-36 386.16-52.32L386.16-127.68L410.40-127.68L410.40 0L387.60 0L387.60-21.36Q377.04 2.88 348.96 2.88M562.56 0L445.44 0L445.44-20.40L495.36-20.40L495.36-134.16Q495.36-141.60 491.28-145.80Q487.20-150 479.52-150L450.24-150L450.24-170.40L482.16-170.40Q519.60-170.40 519.60-132.96L519.60-20.40L562.56-20.40L562.56 0M649.92 2.88Q632.88 2.88 620.64-2.88Q608.40-8.64 601.68-18.36Q594.96-28.08 594-40.08L618.72-41.52Q620.64-30.96 628.32-24.96Q636-18.96 650.16-18.96Q663.12-18.96 670.20-22.56Q677.28-26.16 677.28-33.84Q677.28-38.64 674.88-41.88Q672.48-45.12 665.88-47.40Q659.28-49.68 646.56-52.08Q627.60-55.44 616.80-60.60Q606-65.76 601.56-73.20Q597.12-80.64 597.12-91.44Q597.12-108.24 609.72-119.40Q622.32-130.56 646.80-130.56Q663.84-130.56 675-124.80Q686.16-119.04 692.28-109.56Q698.40-100.08 700.08-89.04L675.36-87.60Q673.44-96.96 666.12-102.84Q658.80-108.72 646.80-108.72Q633.84-108.72 627.96-103.68Q622.08-98.64 622.08-91.44Q622.08-82.80 628.80-78.96Q635.52-75.12 652.80-72Q672.24-68.64 682.92-63.84Q693.60-59.04 697.80-51.84Q702-44.64 702-34.08Q702-16.80 687.60-6.96Q673.20 2.88 649.92 2.88M793.20 2.88Q775.20 2.88 761.88-5.40Q748.56-13.68 741.24-28.68Q733.92-43.68 733.92-63.84Q733.92-84 741.12-99Q748.32-114 761.52-122.28Q774.72-130.56 792.48-130.56Q809.28-130.56 822.36-122.64Q835.44-114.72 842.76-99.60Q850.08-84.48 850.08-63.36L850.08-56.64L759.12-56.64Q760.32-38.16 769.32-28.80Q778.32-19.44 793.44-19.44Q804.72-19.44 812.16-24.72Q819.60-30 822.48-38.88L847.68-37.20Q842.16-18.96 828-8.04Q813.84 2.88 793.20 2.88M759.36-76.08L823.68-76.08Q822.48-92.40 813.84-100.32Q805.20-108.24 792.24-108.24Q778.80-108.24 770.16-100.08Q761.52-91.92 759.36-76.08M976.32 26.40L895.68 26.40L895.68 5.76L952.32 5.76L952.32-159.36L895.68-159.36L895.68-180L976.32-180" fill="#FAFAFA"/>
+  </g>
 </svg>
