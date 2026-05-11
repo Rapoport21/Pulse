@@ -1741,6 +1741,15 @@ larger-scope items.
    `aria-labelledby` / `aria-describedby` (QRScannerModal,
    TestQRModal). Mobile nav lacks `aria-current="page"`.
 
+5a. **Touch target HIG compliance — per-surface, not global.**
+   Audit-pass attempt to bump TacticalButton sm/md 28/36 → 36/44
+   cascaded into BedBoard cells, Horizon Command Actions grid, and
+   the chart header strip and broke layout. Reverted (2026-05-10).
+   The actual fix is per-surface: either a `responsive` prop that
+   bumps to 44 only on touch-coarse pointers, or larger hit-box via
+   padding without changing visual height (negative margin on a
+   transparent expand-zone). Don't ship as a one-line global change.
+
 6. **BedBoard rect throttling.** `clinical/BedBoard.tsx:1245` calls
    `getBoundingClientRect()` on every tap unthrottled.
 

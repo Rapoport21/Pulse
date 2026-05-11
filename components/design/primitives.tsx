@@ -718,14 +718,17 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
     ref,
   ) => {
     const [hovered, setHovered] = React.useState(false);
-    // Bumped from 28/36 → 36/44 in the 2026-05-10 audit pass.
-    // md=44 hits iOS HIG minimum touch target (44pt); sm=36 stays
-    // tactical-dense for desktop power-user surfaces but is still
-    // usable by thumb. The tactical brand is content-density, not
-    // microscopic controls.
-    const height = size === 'sm' ? 36 : 44;
-    const padX = size === 'sm' ? 14 : 18;
-    const fontSize = size === 'sm' ? 12 : 13;
+    // Restored to 28/36 after the 2026-05-10 audit-pass bump (to 36/44)
+    // cascaded into BedBoard cells + Horizon's Command Actions grid +
+    // chart header strip and broke layout. Touch-target HIG compliance
+    // is real but can't be a global TacticalButton change — every
+    // tight-grid surface relies on the smaller footprint. Filed in
+    // T3.13 as a per-surface adjustment (e.g. `responsive` prop, or a
+    // CSS pointer:coarse media query, or larger hit-box via padding
+    // without changing visual height).
+    const height = size === 'sm' ? 28 : 36;
+    const padX = size === 'sm' ? 12 : 16;
+    const fontSize = size === 'sm' ? 11 : 12;
 
     const palette = (() => {
       switch (variant) {
