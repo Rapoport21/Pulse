@@ -24,6 +24,7 @@ import {
   TacticalButton,
   CornerBracket,
 } from './design';
+import { MOBILE_NAV_OVERLAY_INSET_BOTTOM, Z } from './design/tokens';
 
 interface PlaybookActivationProps {
   onClose: () => void;
@@ -117,9 +118,15 @@ export const PlaybookActivation: React.FC<PlaybookActivationProps> = ({
         transition={{ duration: MOTION.fast, ease: MOTION.ease }}
         onClick={onClose}
         style={{
+          // Mobile-navbar clearance: overlay stops above the bottom
+          // tab bar so the user's primary nav stays reachable.
+          // Per CLAUDE.md #5 + components/design/tokens.ts.
           position: 'fixed',
-          inset: 0,
-          zIndex: 50,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+          zIndex: Z.modal,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

@@ -22,6 +22,7 @@ import {
   CornerBracket,
   StatusPill,
 } from './design';
+import { Z } from './design/tokens';
 
 interface ShiftHandoffModalProps {
   type: 'in' | 'out';
@@ -71,7 +72,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
           // actionable in the navbar until the user dismisses this.
           position: 'fixed',
           inset: 0,
-          zIndex: 100,
+          zIndex: Z.toast,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

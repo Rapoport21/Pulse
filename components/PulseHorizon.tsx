@@ -1653,7 +1653,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
               { label: 'Divert EMS', icon: <Ambulance size={16} />, color: COLORS.warn, onClick: () => showToast?.('Ambulance diversion toggled', 'info') },
               { label: 'Lock Unit', icon: <Building2 size={16} />, color: '#F97316', onClick: () => showToast?.('Select unit to lock/unlock', 'info') },
               { label: 'Page On-Call', icon: <Bell size={16} />, color: COLORS.info, onClick: () => showToast?.('Paging on-call team', 'info') },
-              { label: 'Request Float', icon: <Users size={16} />, color: 'rgba(139,92,246,0.9)', onClick: () => onNavigateTab?.(Tab.STAFFING) },
+              // Was rgba(139,92,246,0.9) (violet leak) — staffing actions
+              // get the rose-deep tone (matches the AlertsCenter staffing tab
+              // + WorkforceCoverage LPN role); brand-aligned, no purple.
+              { label: 'Request Float', icon: <Users size={16} />, color: COLORS.accentDeep, onClick: () => onNavigateTab?.(Tab.STAFFING) },
               { label: 'EVS Stat', icon: <Wind size={16} />, color: COLORS.ok, onClick: () => showToast?.('EVS stat request sent', 'success') },
               { label: 'Capacity Alert', icon: <AlertTriangle size={16} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.ALERTS) },
               { label: 'Open Overflow', icon: <MapPin size={16} />, color: COLORS.warn, onClick: () => showToast?.('Overflow unit activation requires surge mode', 'info') },

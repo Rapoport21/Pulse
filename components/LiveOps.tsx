@@ -39,6 +39,7 @@ import {
   Divider,
   type StatusTone,
 } from './design';
+import { MOBILE_NAV_OVERLAY_INSET_BOTTOM, Z } from './design/tokens';
 
 interface LiveOpsProps {
   currentUser?: UserProfile | null;
@@ -63,12 +64,16 @@ interface Patient {
   admittedAt: string;
 }
 
+// Mock patient list. Names were generic "John/Jane Doe / Robert
+// Johnson / Emily Davis / Michael Wilson" — the most clichéd test
+// names in UI work. Swapped to plausible, varied placeholders that
+// at least feel like a real ED census.
 const mockPatients: Patient[] = [
-  { id: 'MRN-10293', name: 'John Doe', dob: '1980-05-12', location: 'Waiting Room', status: 'Waiting', acuity: 'Level 3', admittedAt: '14:30' },
-  { id: 'MRN-84721', name: 'Jane Smith', dob: '1992-11-23', location: 'Acute Care Pods', status: 'In Treatment', acuity: 'Level 2', admittedAt: '12:15' },
-  { id: 'MRN-55392', name: 'Robert Johnson', dob: '1955-02-08', location: 'Trauma Bay', status: 'Critical', acuity: 'Level 1', admittedAt: '16:45' },
-  { id: 'MRN-99210', name: 'Emily Davis', dob: '2001-08-30', location: 'Triage / Intake', status: 'Triaging', acuity: 'Pending', admittedAt: '17:10' },
-  { id: 'MRN-11029', name: 'Michael Wilson', dob: '1975-04-17', location: '3A: Gen Med', status: 'Admitted', acuity: 'Level 3', admittedAt: 'Yesterday' },
+  { id: 'MRN-10293', name: 'Marcus Okafor',     dob: '1980-05-12', location: 'Waiting Room',     status: 'Waiting',      acuity: 'Level 3', admittedAt: '14:30' },
+  { id: 'MRN-84721', name: 'Lena Petrosian',    dob: '1992-11-23', location: 'Acute Care Pods',  status: 'In Treatment', acuity: 'Level 2', admittedAt: '12:15' },
+  { id: 'MRN-55392', name: 'Hassan Al-Rashid',  dob: '1955-02-08', location: 'Trauma Bay',       status: 'Critical',     acuity: 'Level 1', admittedAt: '16:45' },
+  { id: 'MRN-99210', name: 'Priya Venkatesh',   dob: '2001-08-30', location: 'Triage / Intake',  status: 'Triaging',     acuity: 'Pending', admittedAt: '17:10' },
+  { id: 'MRN-11029', name: 'Connor Sullivan',   dob: '1975-04-17', location: '3A: Gen Med',      status: 'Admitted',     acuity: 'Level 3', admittedAt: 'Yesterday' },
 ];
 
 const mockZones: ExtendedZoneStatus[] = [
@@ -693,9 +698,13 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: MOTION.fast }}
             style={{
+              // Stop above the mobile nav so the tab bar stays reachable.
               position: 'fixed',
-              inset: 0,
-              zIndex: 50,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: MOBILE_NAV_OVERLAY_INSET_BOTTOM,
+              zIndex: Z.modal,
               background: 'rgba(0, 0, 0, 0.72)',
               backdropFilter: 'blur(6px)',
               display: 'flex',

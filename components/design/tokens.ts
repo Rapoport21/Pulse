@@ -17,10 +17,13 @@
 // whole app pick up the override on refresh without touching every usage.
 // ─────────────────────────────────────────────────────────────────────────
 const HEX_RE = /^#[0-9A-Fa-f]{6}$/;
-// WCAG AA on the #050505 canvas — 5.0:1 contrast. Picked after the
-// Settings → Display → Contrast check review. Previous value #2E2E2E
-// was at ~1.5:1 (FAIL). See docs/improvement-ideas.md T3.4.
-const TEXT_DIM_DEFAULT = '#5A5A5A';
+// WCAG AA across all dark surfaces. Previous #5A5A5A was 5.0:1 on
+// COLORS.bg (#050505) but dipped to 4.4:1 on COLORS.surfaceHover
+// (#141414) — failed AA. #6A6A6A is 6.2:1 on bg and 5.5:1 on
+// surfaceHover, comfortably AA everywhere textDim is used. The
+// older #2E2E2E (1.5:1) was the original FAIL; see decisions.md
+// 2026-04-17 textDim entry + docs/improvement-ideas.md T3.4.
+const TEXT_DIM_DEFAULT = '#6A6A6A';
 const readTextDimOverride = (): string | null => {
   if (typeof window === 'undefined') return null;
   try {

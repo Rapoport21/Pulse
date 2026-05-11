@@ -269,8 +269,10 @@ const ActionCard: React.FC<{
               padding: SPACE.md,
               cursor: 'pointer',
               transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease, opacity ${MOTION.fast}s ease`,
-              opacity: isDim ? 0.35 : isCanceled ? 0.55 : 1,
-              filter: isDim ? 'grayscale(1)' : undefined,
+              // grayscale filter dropped — applying CSS filter to every
+              // card during list re-renders is GPU-heavy. Opacity alone
+              // is enough visual cue for "dim" state. (Audit 2026-05-10.)
+              opacity: isDim ? 0.30 : isCanceled ? 0.55 : 1,
               boxShadow: dragging
                 ? `0 12px 36px rgba(0,0,0,0.6), ${SHADOW.accentGlowSm}`
                 : undefined,

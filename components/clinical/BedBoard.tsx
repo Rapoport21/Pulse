@@ -50,7 +50,7 @@ const STATE_COLOR: Record<BedState, string> = {
   dirty: COLORS.warn,
   not_staffed: '#F97316',   // orange-500
   blocked: COLORS.crit,
-  reserved: '#A855F7',      // purple-500
+  reserved: COLORS.accentDeep,      // purple-500
 };
 
 const STATE_BG: Record<BedState, string> = {
@@ -282,7 +282,7 @@ const BedPopover: React.FC<{
     CONTACT: '#F97316',
     DROPLET: COLORS.warn,
     AIRBORNE: COLORS.crit,
-    PROTECTIVE: '#A855F7',
+    PROTECTIVE: COLORS.accentDeep,
   };
 
   // Position dropdown below or above anchor depending on available space
@@ -908,7 +908,7 @@ const FullMode: React.FC<{
   const SOURCE_COLOR: Record<string, string> = {
     ED: COLORS.crit,
     OR: COLORS.info,
-    Transfer: '#A855F7',
+    Transfer: COLORS.accentDeep,
     Direct: COLORS.ok,
   };
 

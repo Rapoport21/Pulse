@@ -1702,6 +1702,63 @@ focus-engage perf"` covers the *runtime* perf work already shipped
 (memoization, dropping `filter: blur` on dim). This T3 entry is
 about download size only.
 
+### T3.13 · Audit follow-ups (deferred from 2026-05-10 audit pass)
+
+**Where.** Identified in the 2026-05-10 full-app audit, scoped for
+later passes because they need their own focused refactors. Quick-win
+fixes from the same audit shipped on 2026-05-10; these are the
+larger-scope items.
+
+**Now.** Audit-flagged but deferred:
+
+1. **Recharts lazy-loading.** `components/PulseHorizon.tsx` and
+   `components/MobileView.tsx` import `recharts` directly. ~120 KB
+   gzipped in the main bundle. Lazy-loading would require extracting
+   the forecast chart to its own component and wrapping in
+   `<Suspense>`. Risks: spinner flash on Horizon's primary chart.
+
+2. **MobileView.tsx split (T2.1).** 5,300-line monolith with 31
+   `useState` hooks. Already in backlog as T2.1; not a new finding.
+   The audit confirmed the cost of leaving it monolithic — list
+   closures (lines 2705, 2814, 2958, 3477) build fresh `() => ...`
+   closures on every render which defeats downstream memo.
+
+3. **Hex / rgba literal sweep.** 42 inline hex colors + 37 inline
+   `rgba()` literals across the codebase that should reference
+   `COLORS.*` and `COLORS.*Dim / *Glow`. Highest-density offenders:
+   `ChatAssistant.tsx`, `Replay.tsx`, `LoadingScreen.tsx`. The
+   2026-05-10 quick-win pass fixed the off-brand violet/cyan leaks
+   only — full token compliance is still owed.
+
+4. **Hard-coded font sizes / paddings / transitions.** 20+ each.
+   Should use `TYPE` / `SPACE` / `cssTransition()` helpers.
+   Examples: `Replay.tsx:578,688`, `LiveOps.tsx:1478`,
+   `QRScannerModal.tsx:927`.
+
+5. **Form labels + modal ARIA.** Unlabeled inputs in
+   `SettingsScreen.tsx:1299`, `MobileAdmitFlow.tsx:344`,
+   `ChatAssistant.tsx:1591`. Modal dialogs missing
+   `aria-labelledby` / `aria-describedby` (QRScannerModal,
+   TestQRModal). Mobile nav lacks `aria-current="page"`.
+
+6. **BedBoard rect throttling.** `clinical/BedBoard.tsx:1245` calls
+   `getBoundingClientRect()` on every tap unthrottled.
+
+7. **react-markdown lazy-load.** Only used by ChatAssistant; could
+   load on chat focus instead of bundle time.
+
+8. **3-column operations grid.** `PulseHorizon.tsx:1638` is the
+   generic AI feature-row layout. Comment justifies it but a layout
+   pass should revisit.
+
+**Why T3.** None of these block a demo. Audit health score moved
+11/20 → ~14/20 after the quick-win pass; these would push toward
+17–18.
+
+**What to do.** Pick them up one at a time when you have a quiet
+hour. T2.1 (MobileView split) is the unlock for #1 and #2 — do that
+first or it'll keep contaminating other work.
+
 ---
 
 ## T4 · Bets

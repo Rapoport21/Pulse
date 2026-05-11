@@ -163,6 +163,14 @@ const statusColor = (tone: StatusTone): string => {
   }
 };
 
+const TONE_VERB: Record<StatusTone, string> = {
+  ok: 'status normal',
+  warn: 'status warning',
+  crit: 'status critical',
+  info: 'status info',
+  neutral: 'status',
+};
+
 export const StatusPill: React.FC<{
   label: string;
   tone?: StatusTone;
@@ -171,8 +179,18 @@ export const StatusPill: React.FC<{
 }> = ({ label, tone = 'ok', pulse = false, size = 'sm' }) => {
   const color = statusColor(tone);
   const dotSize = size === 'xs' ? 4 : 5;
+  // a11y: pair the color-coded dot with a textual tone so screen
+  // readers don't have to infer state from the color alone. When the
+  // pill has a visible label, the role+aria-label give it semantic
+  // weight; when the pill is icon-only (empty label), the aria-label
+  // is the only way to surface state.
+  const accessibleLabel = label
+    ? `${TONE_VERB[tone]}: ${label}`
+    : TONE_VERB[tone];
   return (
     <span
+      role="status"
+      aria-label={accessibleLabel}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -187,6 +205,7 @@ export const StatusPill: React.FC<{
       }}
     >
       <span
+        aria-hidden="true"
         style={{
           width: dotSize,
           height: dotSize,
@@ -699,9 +718,14 @@ export const TacticalButton = React.forwardRef<HTMLButtonElement, TacticalButton
     ref,
   ) => {
     const [hovered, setHovered] = React.useState(false);
-    const height = size === 'sm' ? 28 : 36;
-    const padX = size === 'sm' ? 12 : 16;
-    const fontSize = size === 'sm' ? 11 : 12;
+    // Bumped from 28/36 → 36/44 in the 2026-05-10 audit pass.
+    // md=44 hits iOS HIG minimum touch target (44pt); sm=36 stays
+    // tactical-dense for desktop power-user surfaces but is still
+    // usable by thumb. The tactical brand is content-density, not
+    // microscopic controls.
+    const height = size === 'sm' ? 36 : 44;
+    const padX = size === 'sm' ? 14 : 18;
+    const fontSize = size === 'sm' ? 12 : 13;
 
     const palette = (() => {
       switch (variant) {

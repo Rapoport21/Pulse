@@ -754,10 +754,12 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
           >
             {(['all', 'clinical', 'operational', 'system'] as const).map(tab => {
               const isActive = deskFilter === tab;
+              // System tab was rgba(139,92,246,0.9) (violet leak);
+              // → COLORS.accentDeep (rose-deep) keeps it brand-aligned.
               const tabColor =
                 tab === 'clinical' ? COLORS.info
                 : tab === 'operational' ? COLORS.warn
-                : tab === 'system' ? 'rgba(139,92,246,0.9)'
+                : tab === 'system' ? COLORS.accentDeep
                 : COLORS.textSecondary;
               return (
                 <button
@@ -1151,11 +1153,13 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
             >
               {(['all', 'critical', 'clinical', 'system', 'staffing'] as FilterTab[]).map((tab) => {
                 const isActive = filter === tab;
+                // Staffing tab was rgba(139,92,246,0.9) (violet leak)
+                // → COLORS.accentDeep, brand-aligned.
                 const tColor =
                   tab === 'critical' ? COLORS.crit
                   : tab === 'clinical' ? COLORS.info
                   : tab === 'system' ? COLORS.warn
-                  : tab === 'staffing' ? 'rgba(139,92,246,0.9)'
+                  : tab === 'staffing' ? COLORS.accentDeep
                   : COLORS.textSecondary;
                 return (
                   <button

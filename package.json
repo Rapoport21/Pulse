@@ -22,7 +22,6 @@
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
     "@supabase/supabase-js": "^2.103.0",
-    "@tailwindcss/typography": "^0.5.19",
     "lucide-react": "^0.562.0",
     "motion": "^12.35.2",
     "qr-scanner": "^1.4.2",

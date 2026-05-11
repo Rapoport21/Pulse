@@ -1051,10 +1051,10 @@ const SnapReticle: React.FC<SnapReticleProps> = ({ lockedBox, color, payload }) 
       }}
       exit={{ scale: 0.7, opacity: 0 }}
       transition={{
-        x: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
-        y: { type: 'spring' as const, stiffness: 340, damping: 28, mass: 0.8 },
-        width: { type: 'spring' as const, stiffness: 340, damping: 28 },
-        height: { type: 'spring' as const, stiffness: 340, damping: 28 },
+        x: { type: 'spring' as const, stiffness: 220, damping: 32, mass: 0.8 },
+        y: { type: 'spring' as const, stiffness: 220, damping: 32, mass: 0.8 },
+        width: { type: 'spring' as const, stiffness: 220, damping: 32 },
+        height: { type: 'spring' as const, stiffness: 220, damping: 32 },
         scale: { duration: 0.42, ease: MOTION.ease, times: [0, 0.55, 1] },
         opacity: { duration: 0.18 },
       }}
@@ -1201,7 +1201,7 @@ interface MaskOverlayProps {
 
 const MaskOverlay: React.FC<MaskOverlayProps> = ({ target, viewport }) => {
   const dim = 'rgba(0,0,0,0.55)';
-  const tween = { type: 'spring' as const, stiffness: 340, damping: 28 };
+  const tween = { type: 'spring' as const, stiffness: 220, damping: 32 };
   const base: React.CSSProperties = {
     position: 'absolute',
     background: dim,

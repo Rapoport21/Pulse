@@ -123,14 +123,17 @@ interface ChangeLogEntry {
 // Role colors — kept in a single place so cards, slots and dots line up.
 // ─────────────────────────────────────────────────────────────────────────
 
+// Role colors — derived from COLORS tokens so the palette stays
+// PULSE-brand (no off-brand violet / cyan). Audit 2026-05-10 swapped
+// the previous #8B5CF6 (LPN) and #06B6D4 (RT) tints.
 const ROLE_COLORS: Record<StaffRole, string> = {
-  RN: '#3B82F6',
-  LPN: '#8B5CF6',
-  CNA: '#10B981',
-  MD: '#E11D48',
-  PA: '#F59E0B',
-  RT: '#06B6D4',
-  TECH: '#6B7280',
+  RN:   COLORS.info,          // #3B82F6 — primary clinical
+  LPN:  COLORS.accentDeep,    // was #8B5CF6 (violet leak) → rose-deep
+  CNA:  COLORS.ok,            // #10B981 — support staff
+  MD:   COLORS.accent,        // #E11D48 — physician (brand-aligned)
+  PA:   COLORS.warn,          // #F59E0B — physician assistant
+  RT:   COLORS.textSecondary, // was #06B6D4 (cyan leak) → neutral tactical
+  TECH: COLORS.textMuted,     // gray-tactical
 };
 
 const ROLE_LABEL: Record<StaffRole, string> = {

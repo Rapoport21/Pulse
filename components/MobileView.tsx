@@ -3040,9 +3040,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 gap: SPACE.md,
                 width: '100%',
                 padding: `${SPACE.md}px ${SPACE.base}px`,
-                background: `linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(139,92,246,0.02) 100%)`,
-                border: '1px solid rgba(139,92,246,0.5)',
-                borderLeft: '3px solid rgba(139,92,246,0.7)',
+                // WORKFORCE block — was tinted rgba(139,92,246,*) (violet
+                // leak). Now uses COLORS.accentDeep (rose-deep) which is
+                // the same staffing tone used in AlertsCenter staffing
+                // tab, WorkforceCoverage LPN role, and PulseHorizon's
+                // Request Float button. Brand-aligned, no purple.
+                background: `linear-gradient(90deg, ${COLORS.accentDeep}14 0%, ${COLORS.accentDeep}05 100%)`,
+                border: `1px solid ${COLORS.accentDeep}80`,
+                borderLeft: `3px solid ${COLORS.accentDeep}B3`,
                 borderRadius: RADIUS.sm,
                 color: COLORS.textPrimary,
                 fontFamily: FONTS.sans,
@@ -3052,8 +3057,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 minHeight: 48,
               }}
             >
-              <CornerBracket position="tl" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color="rgba(139,92,246,0.7)" size={6} thickness={1} inset={-1} />
+              <CornerBracket position="tl" color={`${COLORS.accentDeep}B3`} size={6} thickness={1} inset={-1} />
+              <CornerBracket position="br" color={`${COLORS.accentDeep}B3`} size={6} thickness={1} inset={-1} />
               <div
                 style={{
                   width: 32,
@@ -3062,16 +3067,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'rgba(139,92,246,0.18)',
-                  border: '1px solid rgba(139,92,246,0.5)',
+                  background: `${COLORS.accentDeep}2E`,
+                  border: `1px solid ${COLORS.accentDeep}80`,
                   borderRadius: RADIUS.sm,
-                  color: 'rgba(139,92,246,0.9)',
+                  color: COLORS.accentDeep,
                 }}
               >
                 <Users size={18} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <BracketLabel size="xs" style={{ color: 'rgba(139,92,246,0.9)' }}>WORKFORCE</BracketLabel>
+                <BracketLabel size="xs" style={{ color: COLORS.accentDeep }}>WORKFORCE</BracketLabel>
                 <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
                   Staff coverage · 47 on shift · 1:4.2 ratio
                 </div>

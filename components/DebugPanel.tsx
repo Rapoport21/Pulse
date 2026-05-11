@@ -250,7 +250,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ currentUser }) => {
                   </span>{' '}
                   <span style={{ color: COLORS.textSecondary }}>{entry.type}</span>
                   {entry.key && (
-                    <span style={{ color: '#C084FC' }}> [{entry.key}]</span>
+                    <span style={{ color: COLORS.accentDeep }}> [{entry.key}]</span>
                   )}
                   {entry.payloadPreview && (
                     <span style={{ color: COLORS.textMuted }}>

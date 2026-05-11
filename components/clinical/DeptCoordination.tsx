@@ -49,12 +49,16 @@ interface CoordMessage { id: string; from: string; to: string; message: string; 
 const DEPARTMENTS: Department[] = [
   { id: 'ed', name: 'Emergency Dept', shortName: 'ED', census: 32, capacity: 40, status: 'STRAINED', activeTransfers: 3, color: COLORS.accent, type: 'clinical' },
   { id: 'icu', name: 'Intensive Care', shortName: 'ICU', census: 12, capacity: 14, status: 'CRITICAL', activeTransfers: 2, color: COLORS.crit, type: 'clinical' },
-  { id: 'or', name: 'Operating Room', shortName: 'OR', census: 4, capacity: 6, status: 'STRAINED', activeTransfers: 1, color: '#A855F7', type: 'clinical' },
+  // OR uses accentBright (rose-bright) instead of the previous #A855F7
+  // purple leak — keeps the operating-room tint inside the PULSE palette.
+  { id: 'or', name: 'Operating Room', shortName: 'OR', census: 4, capacity: 6, status: 'STRAINED', activeTransfers: 1, color: COLORS.accentBright, type: 'clinical' },
   { id: 'stepdown', name: 'Stepdown Unit', shortName: 'SDU', census: 8, capacity: 12, status: 'NORMAL', activeTransfers: 1, color: COLORS.info, type: 'clinical' },
   { id: 'medsurg', name: 'Med-Surg', shortName: 'M/S', census: 44, capacity: 54, status: 'NORMAL', activeTransfers: 0, color: COLORS.ok, type: 'clinical' },
   { id: 'lab', name: 'Laboratory', shortName: 'LAB', census: 18, capacity: 30, status: 'STRAINED', activeTransfers: 0, color: COLORS.warn, type: 'utility' },
-  { id: 'radiology', name: 'Radiology', shortName: 'RAD', census: 6, capacity: 8, status: 'NORMAL', activeTransfers: 0, color: '#06B6D4', type: 'utility' },
-  { id: 'pharmacy', name: 'Pharmacy', shortName: 'RX', census: 42, capacity: 60, status: 'NORMAL', activeTransfers: 0, color: '#8B5CF6', type: 'utility' },
+  // Was #06B6D4 (cyan leak) → textSecondary (neutral tactical)
+  { id: 'radiology', name: 'Radiology', shortName: 'RAD', census: 6, capacity: 8, status: 'NORMAL', activeTransfers: 0, color: COLORS.textSecondary, type: 'utility' },
+  // Was #8B5CF6 (violet leak) → accentDeep (rose-deep, muted brand)
+  { id: 'pharmacy', name: 'Pharmacy', shortName: 'RX', census: 42, capacity: 60, status: 'NORMAL', activeTransfers: 0, color: COLORS.accentDeep, type: 'utility' },
 ];
 
 const ACTIVE_TRANSFERS: ActiveTransfer[] = [
@@ -82,7 +86,8 @@ const COORD_MESSAGES: CoordMessage[] = [
   { id: 'm2', from: 'OR', to: 'ED', message: 'Room 2 ready for trauma case, send when stable', time: '14:28', fromColor: '#A855F7' },
   { id: 'm3', from: 'LAB', to: 'ED', message: 'STAT troponin result available for P002', time: '14:25', fromColor: COLORS.warn },
   { id: 'm4', from: 'ICU', to: 'SDU', message: 'P008 extubated, ready for step-down in 30min', time: '14:18', fromColor: COLORS.crit },
-  { id: 'm5', from: 'RX', to: 'ICU', message: 'Vasopressin drip prepared for bed 7, runner dispatched', time: '14:12', fromColor: '#8B5CF6' },
+  // Was #8B5CF6 (violet leak) → matches the pharmacy dept color above.
+  { id: 'm5', from: 'RX', to: 'ICU', message: 'Vasopressin drip prepared for bed 7, runner dispatched', time: '14:12', fromColor: COLORS.accentDeep },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────
