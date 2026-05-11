@@ -1,38 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PULSE iOS LaunchScreen splash master — v3, matches the v3 icon.
-  Same minimal outlined P + rose floor glow, scaled and centered on
-  the 2732 canvas. No corner brackets, no grid — pure minimal, just
-  the icon mark with a bigger glow underneath it.
+  PULSE iOS LaunchScreen splash master — v4, matches the v4 icon.
+  Same refined P geometry + rose floor glow, scaled 1.4× and centered on
+  the 2732 canvas. No corner brackets, no grid — pure minimal mark.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
   <!-- Canvas -->
   <rect width="2732" height="2732" fill="#050505"/>
 
-  <!-- Rose floor glow — bigger reach than the icon's because the
-       splash has more vertical real estate. -->
+  <!-- Rose floor glow — bigger reach than the icon's because the splash
+       has more vertical real estate. -->
   <defs>
     <radialGradient id="splashFloorGlow" cx="0.5" cy="1.0" r="0.7">
-      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.50"/>
-      <stop offset="35%"  stop-color="#E11D48" stop-opacity="0.20"/>
+      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.55"/>
+      <stop offset="35%"  stop-color="#E11D48" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="2732" height="2732" fill="url(#splashFloorGlow)"/>
 
-  <!-- Minimal outlined P — same geometry as the icon, scaled 1.4×
-       and centered on the 2732 canvas. -->
+  <!-- Refined P — v4 geometry, scaled 1.4× and centered on 2732 canvas. -->
   <g transform="translate(1366 1366) scale(1.4) translate(-512 -512)">
     <path
-      d="M 382 760
-         L 382 296
-         L 524 296
-         A 132 132 0 0 1 524 560
-         L 382 560"
+      d="M 363 782
+         L 363 242
+         L 507 242
+         A 154 140 0 0 1 507 522
+         L 363 522"
       stroke="#FAFAFA"
-      stroke-width="44"
+      stroke-width="56"
       stroke-linecap="round"
-      stroke-linejoin="round"
+      stroke-linejoin="miter"
+      stroke-miterlimit="4"
       fill="none"
     />
   </g>
