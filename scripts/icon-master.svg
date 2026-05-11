@@ -1,46 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PULSE app icon master — v2.
-  Pulse waveform (ECG-style spike) in rose accent on near-black.
-  Literal interpretation of the app name, abstract enough to read as
-  a modern brand mark. No letter — modern app-icon convention is
-  geometric/abstract, not type-led.
+  PULSE app icon master — v3.
+  Minimal outlined P (clean stroke, no fill) on near-black canvas, with
+  a pronounced rose floor glow rising from the bottom. Same atmospheric
+  rose glow used throughout the in-app design — boot screen, login,
+  Pulse Radiant.
 
-  Color: COLORS.accent (#E11D48)
-  Background: COLORS.bg (#050505)
-  Stroke width 64 / 1024 = 6.25% → readable at 32px (2px stroke).
+  Color tokens:
+    canvas: COLORS.bg     #050505
+    P:      COLORS.textPrimary #FAFAFA
+    glow:   COLORS.accent #E11D48
+
+  Stroke width 44 on 1024 canvas = 4.3% → 1.4px at the 32px favicon
+  (still legible). At 180px+ the outline reads cleanly.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <!-- Canvas -->
   <rect width="1024" height="1024" fill="#050505"/>
 
-  <!-- Subtle radial glow centered on the spike, anchors the mark -->
+  <!-- Rose floor glow — radial, anchored to bottom center.
+       Same gradient pattern as components/design/tokens.ts → SHADOW
+       and the boot screen's atmospheric layer. Strong enough to read
+       at small sizes; fades fully before reaching the top of the canvas. -->
   <defs>
-    <radialGradient id="centerGlow" cx="0.5" cy="0.5" r="0.45">
-      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.12"/>
-      <stop offset="55%"  stop-color="#E11D48" stop-opacity="0.04"/>
+    <radialGradient id="floorGlow" cx="0.5" cy="1.0" r="0.78">
+      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.55"/>
+      <stop offset="35%"  stop-color="#E11D48" stop-opacity="0.22"/>
       <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#centerGlow)"/>
+  <rect width="1024" height="1024" fill="url(#floorGlow)"/>
 
-  <!-- The pulse waveform.
-       Left flat baseline (x 120..380), Q-S-R-T spike cluster, right
-       flat baseline (x 590..904). Centered vertically at y=512.
-       Spike geometry: small Q dip (down), big R peak (up — sharp),
-       sharp S dip (down — sharper), T return up to baseline.
+  <!-- Minimal P — open outline path, single uniform stroke.
+       Stem on left, half-circle bowl on top-right, gap at bottom-right.
+       Built as one continuous path so stroke joins are clean.
+       Coordinates:
+         · stem:         vertical line x=382, y=296..760
+         · top of bowl:  horizontal line y=296, x=382..524
+         · right curve:  half-circle radius 132, from (524,296) to (524,560)
+         · bottom bowl:  horizontal line y=560, x=524..382
   -->
   <path
-    d="M 120 512
-       L 380 512
-       L 415 545
-       L 450 230
-       L 502 800
-       L 552 430
-       L 590 512
-       L 904 512"
-    stroke="#E11D48"
-    stroke-width="64"
+    d="M 382 760
+       L 382 296
+       L 524 296
+       A 132 132 0 0 1 524 560
+       L 382 560"
+    stroke="#FAFAFA"
+    stroke-width="44"
     stroke-linecap="round"
     stroke-linejoin="round"
     fill="none"

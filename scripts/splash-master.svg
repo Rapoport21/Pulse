@@ -1,111 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  PULSE iOS LaunchScreen splash master — v2.
-  Pulse waveform centered on dark canvas + faint baseline grid + corner
-  brackets (HUD chrome) + small "PULSE" wordmark below. The splash has
-  more room than the icon, so it can carry the brand name as text in
-  addition to the abstract waveform mark.
+  PULSE iOS LaunchScreen splash master — v3, matches the v3 icon.
+  Same minimal outlined P + rose floor glow, scaled and centered on
+  the 2732 canvas. No corner brackets, no grid — pure minimal, just
+  the icon mark with a bigger glow underneath it.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2732 2732" width="2732" height="2732">
   <!-- Canvas -->
   <rect width="2732" height="2732" fill="#050505"/>
 
+  <!-- Rose floor glow — bigger reach than the icon's because the
+       splash has more vertical real estate. -->
   <defs>
-    <!-- Floor glow — rose accent fades from bottom upward -->
-    <radialGradient id="floorGlow" cx="0.5" cy="0.95" r="0.5">
-      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.18"/>
-      <stop offset="60%"  stop-color="#E11D48" stop-opacity="0.04"/>
+    <radialGradient id="splashFloorGlow" cx="0.5" cy="1.0" r="0.7">
+      <stop offset="0%"   stop-color="#E11D48" stop-opacity="0.50"/>
+      <stop offset="35%"  stop-color="#E11D48" stop-opacity="0.20"/>
       <stop offset="100%" stop-color="#E11D48" stop-opacity="0"/>
     </radialGradient>
-    <!-- Dot grid pattern -->
-    <pattern id="dotGrid" width="48" height="48" patternUnits="userSpaceOnUse">
-      <circle cx="24" cy="24" r="1.6" fill="#1C1C1C"/>
-    </pattern>
-    <!-- Mask that fades the dot grid out toward the edges -->
-    <radialGradient id="dotMask" cx="0.5" cy="0.5" r="0.55">
-      <stop offset="0%"   stop-color="white" stop-opacity="0.40"/>
-      <stop offset="60%"  stop-color="white" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="white" stop-opacity="0"/>
-    </radialGradient>
-    <mask id="gridFade">
-      <rect width="2732" height="2732" fill="url(#dotMask)"/>
-    </mask>
   </defs>
+  <rect width="2732" height="2732" fill="url(#splashFloorGlow)"/>
 
-  <!-- Dot grid texture -->
-  <rect width="2732" height="2732" fill="url(#dotGrid)" mask="url(#gridFade)"/>
-
-  <!-- Floor glow on top -->
-  <rect width="2732" height="2732" fill="url(#floorGlow)"/>
-
-  <!-- Faint baseline grid lines (only 3, very dim) — clinical readout feel -->
-  <g stroke="#1A1A1A" stroke-width="2" opacity="0.7">
-    <line x1="700" y1="1200" x2="2032" y2="1200"/>
-    <line x1="700" y1="1366" x2="2032" y2="1366"/>
-    <line x1="700" y1="1532" x2="2032" y2="1532"/>
-  </g>
-
-  <!-- Corner brackets — tactical HUD chrome.
-       Each bracket is ~80×80 in a muted gray.
-       Positioned ~120px in from each corner. -->
-  <g stroke="#2A2A2A" stroke-width="8" fill="none" stroke-linecap="square">
-    <!-- TL -->
-    <path d="M 200 280 L 200 200 L 280 200"/>
-    <!-- TR -->
-    <path d="M 2532 280 L 2532 200 L 2452 200"/>
-    <!-- BL -->
-    <path d="M 200 2452 L 200 2532 L 280 2532"/>
-    <!-- BR -->
-    <path d="M 2532 2452 L 2532 2532 L 2452 2532"/>
-  </g>
-
-  <!-- Pulse waveform — scaled 2.4× from the 1024 icon master,
-       centered on canvas. Same geometry as the icon. -->
-  <g transform="translate(1366 1366) scale(1.6) translate(-512 -512)">
+  <!-- Minimal outlined P — same geometry as the icon, scaled 1.4×
+       and centered on the 2732 canvas. -->
+  <g transform="translate(1366 1366) scale(1.4) translate(-512 -512)">
     <path
-      d="M 120 512
-         L 380 512
-         L 415 545
-         L 450 230
-         L 502 800
-         L 552 430
-         L 590 512
-         L 904 512"
-      stroke="#E11D48"
-      stroke-width="48"
+      d="M 382 760
+         L 382 296
+         L 524 296
+         A 132 132 0 0 1 524 560
+         L 382 560"
+      stroke="#FAFAFA"
+      stroke-width="44"
       stroke-linecap="round"
       stroke-linejoin="round"
       fill="none"
     />
   </g>
-
-  <!-- "PULSE" wordmark below the waveform — mono uppercase, tracked.
-       Drawn as paths so the splash renders without Geist installed.
-       Each letter is built from rectangles + arcs to approximate
-       Geist's clean tactical proportions.
-       Total wordmark width ≈ 760 (5 letters @ ~120 each + 4 gaps).
-       Centered at x=1366, y=2050. -->
-  <g fill="#FAFAFA" transform="translate(986 2030)">
-    <!-- P -->
-    <path d="M 0 0 L 0 200 L 28 200 L 28 130 L 70 130 A 65 65 0 0 0 70 0 Z M 28 24 L 28 106 L 70 106 A 41 41 0 0 0 70 24 Z" fill-rule="evenodd"/>
-    <!-- U  (translated +180) -->
-    <g transform="translate(180 0)">
-      <path d="M 0 0 L 0 130 A 65 65 0 0 0 130 130 L 130 0 L 102 0 L 102 130 A 37 37 0 0 1 28 130 L 28 0 Z"/>
-    </g>
-    <!-- L  (translated +360) -->
-    <g transform="translate(360 0)">
-      <path d="M 0 0 L 0 200 L 110 200 L 110 176 L 28 176 L 28 0 Z"/>
-    </g>
-    <!-- S  (translated +500) -->
-    <g transform="translate(500 0)">
-      <path d="M 0 60 A 60 60 0 0 1 60 0 L 110 0 L 110 24 L 60 24 A 36 36 0 0 0 60 96 L 70 96 A 60 60 0 0 1 70 200 L 0 200 L 0 176 L 70 176 A 36 36 0 0 0 70 120 L 60 120 A 60 60 0 0 1 0 60 Z"/>
-    </g>
-    <!-- E  (translated +640) -->
-    <g transform="translate(640 0)">
-      <path d="M 0 0 L 0 200 L 110 200 L 110 176 L 28 176 L 28 112 L 92 112 L 92 88 L 28 88 L 28 24 L 110 24 L 110 0 Z"/>
-    </g>
-  </g>
-
-  <!-- Rose underline beneath wordmark — anchored to the wordmark. -->
-  <rect x="986" y="2270" width="760" height="10" rx="2" fill="#E11D48"/>
 </svg>
