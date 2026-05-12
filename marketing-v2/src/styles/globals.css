@@ -1,0 +1,483 @@
+/* PULSE marketing v2 — base styles + aesthetic theme system.
+ *
+ * The site uses CSS custom properties scoped to a theme attribute on
+ * `<html>`. Themes are swapped at runtime via `data-theme="..."`.
+ * Components only ever reference `var(--name)` tokens — never hard-coded
+ * values — so swapping a theme reskins the entire page without rerendering.
+ *
+ * Themes shipping:
+ *   - tactical   → Tactical · Restraint (default)  [near-black HUD]
+ *   - editorial  → Editorial · Clinical            [warm white, serif]
+ *   - brutalist  → Brutalist · Mechanical          [pure b/w, all mono, flat]
+ *
+ * Documentary (theme="documentary") is wired but stubbed — switching to
+ * it shows a "needs media" notice, since the documentary aesthetic
+ * depends on real video assets we don't have.
+ */
+
+/* ─────────────────────────────────────────────────────────────────
+ * THEME · TACTICAL (default)
+ * Near-black canvas, Geist + Geist Mono, rose-600 accent, sharp 2px.
+ * ───────────────────────────────────────────────────────────────── */
+:root,
+[data-theme='tactical'] {
+  --bg: oklch(8% 0.004 14);
+  --bg-deep: oklch(5% 0.003 14);
+  --surface: oklch(11% 0.005 14);
+  --surface-elev: oklch(13% 0.006 14);
+  --surface-hover: oklch(15% 0.007 14);
+
+  --border: oklch(18% 0.006 14);
+  --border-strong: oklch(24% 0.008 14);
+  --border-hover: oklch(30% 0.009 14);
+
+  --text: oklch(98% 0.003 14);
+  --text-2: oklch(70% 0.004 14);
+  --text-3: oklch(50% 0.005 14);
+  --text-dim: oklch(38% 0.006 14);
+  --text-faint: oklch(22% 0.005 14);
+
+  --accent: oklch(58% 0.222 14.6);
+  --accent-bright: oklch(66% 0.227 14);
+  --accent-deep: oklch(45% 0.18 14);
+  --accent-glow: oklch(58% 0.222 14.6 / 0.35);
+
+  --ok: oklch(72% 0.16 165);
+  --info: oklch(64% 0.18 240);
+
+  --font-display: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --display-tracking: -0.05em;
+  --display-weight: 600;
+  --display-line-height: 0.9;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-pill: 999px;
+  --radius-full: 999px;
+
+  --button-bg: var(--text);
+  --button-fg: var(--bg);
+
+  color-scheme: dark;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * THEME · EDITORIAL — warm white, serif display, evidence-led calm.
+ * NEJM × Linear. Light theme. Accent restrained to a single moment.
+ * ───────────────────────────────────────────────────────────────── */
+[data-theme='editorial'] {
+  --bg: oklch(97% 0.006 80);          /* warm off-white */
+  --bg-deep: oklch(94% 0.008 80);
+  --surface: oklch(99% 0.004 80);
+  --surface-elev: oklch(100% 0 0);
+  --surface-hover: oklch(96% 0.008 80);
+
+  --border: oklch(86% 0.012 80);
+  --border-strong: oklch(72% 0.015 80);
+  --border-hover: oklch(58% 0.018 80);
+
+  --text: oklch(18% 0.015 80);        /* near-black, slightly warm */
+  --text-2: oklch(38% 0.012 80);
+  --text-3: oklch(54% 0.01 80);
+  --text-dim: oklch(64% 0.01 80);
+  --text-faint: oklch(80% 0.012 80);
+
+  --accent: oklch(45% 0.16 30);       /* deeper, warmer red — editorial */
+  --accent-bright: oklch(52% 0.18 30);
+  --accent-deep: oklch(35% 0.14 30);
+  --accent-glow: oklch(45% 0.16 30 / 0.18);
+
+  --ok: oklch(50% 0.14 165);
+  --info: oklch(45% 0.16 240);
+
+  --font-display: 'Spectral', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Geist', -apple-system, sans-serif;
+  --font-body: 'Geist', -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --display-tracking: -0.025em;       /* serif wants tighter tracking */
+  --display-weight: 500;              /* serif at 500 reads heavier than sans 600 */
+  --display-line-height: 1.02;        /* a touch more line height for serif */
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-pill: 999px;
+  --radius-full: 999px;
+
+  --button-bg: var(--text);
+  --button-fg: var(--bg);
+
+  color-scheme: light;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * THEME · BRUTALIST — pure b/w, all monospace, flat slabs, no glow.
+ * Terminal print × declassified blueprint. Maximum density.
+ * ───────────────────────────────────────────────────────────────── */
+[data-theme='brutalist'] {
+  --bg: #000000;
+  --bg-deep: #000000;
+  --surface: #0a0a0a;
+  --surface-elev: #141414;
+  --surface-hover: #1a1a1a;
+
+  --border: #2a2a2a;
+  --border-strong: #ffffff;
+  --border-hover: #ffffff;
+
+  --text: #ffffff;
+  --text-2: #b4b4b4;
+  --text-3: #888888;
+  --text-dim: #5e5e5e;
+  --text-faint: #2a2a2a;
+
+  --accent: #ff003c;                  /* full saturation red */
+  --accent-bright: #ff4060;
+  --accent-deep: #cc0030;
+  --accent-glow: transparent;         /* no glow allowed */
+
+  --ok: #00ff66;
+  --info: #00aaff;
+
+  --font-display: 'Geist Mono', ui-monospace, monospace;
+  --font-sans: 'Geist Mono', ui-monospace, monospace;
+  --font-body: 'Geist Mono', ui-monospace, monospace;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --display-tracking: -0.02em;
+  --display-weight: 500;
+  --display-line-height: 1;
+
+  --radius-sm: 0px;                   /* sharp corners only */
+  --radius-md: 0px;
+  --radius-pill: 0px;
+  --radius-full: 0px;
+
+  --button-bg: var(--text);
+  --button-fg: var(--bg);
+
+  color-scheme: dark;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * THEME · DOCUMENTARY · cinematic · "shot on grade"
+ * Tungsten-warm near-black, atmospheric procedural backgrounds,
+ * film grain + vignette overlay, timecode chrome. Built as a
+ * "treatment" — no real video needed; the cinematography lives
+ * in CSS animations + SVG atmospheric scenes.
+ * ───────────────────────────────────────────────────────────────── */
+[data-theme='documentary'] {
+  /* Tungsten-warmed near-black — feels lit by a 3am hospital corridor */
+  --bg: oklch(7% 0.012 60);             /* warm shadow */
+  --bg-deep: oklch(4% 0.008 60);
+  --surface: oklch(10% 0.014 60);
+  --surface-elev: oklch(12% 0.016 60);
+  --surface-hover: oklch(14% 0.018 60);
+
+  --border: oklch(16% 0.014 60);
+  --border-strong: oklch(22% 0.016 60);
+  --border-hover: oklch(28% 0.018 60);
+
+  --text: oklch(94% 0.018 75);          /* warm cream highlights */
+  --text-2: oklch(68% 0.018 60);
+  --text-3: oklch(48% 0.018 60);
+  --text-dim: oklch(36% 0.016 60);
+  --text-faint: oklch(20% 0.014 60);
+
+  /* Accent: warmer amber-red, like a recording-light LED */
+  --accent: oklch(60% 0.20 28);
+  --accent-bright: oklch(68% 0.22 28);
+  --accent-deep: oklch(48% 0.17 28);
+  --accent-glow: oklch(60% 0.20 28 / 0.4);
+
+  --ok: oklch(72% 0.16 165);
+  --info: oklch(64% 0.18 240);
+
+  --font-display: 'Geist', -apple-system, sans-serif;
+  --font-sans: 'Geist', -apple-system, sans-serif;
+  --font-body: 'Geist', -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --display-tracking: -0.04em;
+  --display-weight: 500;                 /* slightly lighter — film title vibe */
+  --display-line-height: 0.95;
+
+  --radius-sm: 0px;                      /* film frame — flat slabs */
+  --radius-md: 0px;
+  --radius-pill: 0px;
+  --radius-full: 999px;
+
+  --button-bg: var(--text);
+  --button-fg: var(--bg);
+
+  color-scheme: dark;
+}
+
+/* — Documentary treatment: global film grain + vignette overlays — */
+[data-theme='documentary'] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+  /* SVG-based monochrome film grain, scaled aggressively for visible texture.
+   * The browser caches the data URL — no per-frame cost. */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' opacity='0.5'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  animation: doc-grain 0.18s steps(2) infinite;
+}
+
+@keyframes doc-grain {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(-2%, 1%); }
+  100% { transform: translate(1%, -2%); }
+}
+
+[data-theme='documentary'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 199;
+  /* Cinematic vignette — darkens the edges, draws focus to the center */
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+/* Soft pulsing "REC" indicator on the documentary theme */
+@keyframes doc-rec-pulse {
+  0%, 60% { opacity: 1; }
+  61%, 100% { opacity: 0.25; }
+}
+
+/* Subtle atmospheric breathing on hero/scene backgrounds */
+@keyframes doc-breathe {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.04) translate(-1%, 0.5%); }
+}
+
+/* — Atmospheric backdrop for documentary — applied as a stack of body
+ * background layers so it renders BEHIND all page content without
+ * z-index gymnastics. */
+[data-theme='documentary'] body {
+  background:
+    /* warm tungsten pool of light center-back */
+    radial-gradient(
+      ellipse 60% 80% at 50% 38%,
+      oklch(16% 0.04 60 / 0.9) 0%,
+      transparent 70%
+    ),
+    /* floor receding band — darkens lower portion */
+    linear-gradient(
+      180deg,
+      transparent 0%,
+      transparent 55%,
+      oklch(3% 0.006 60 / 0.7) 100%
+    ),
+    /* side-wall shading — slight darkening at left/right edges */
+    linear-gradient(
+      90deg,
+      oklch(3% 0.006 60 / 0.55) 0%,
+      transparent 25%,
+      transparent 75%,
+      oklch(3% 0.006 60 / 0.55) 100%
+    ),
+    /* base canvas color */
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * COMMON — easing, base reset, type scale (units stay across themes)
+ * ───────────────────────────────────────────────────────────────── */
+:root {
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --type-display-xl: clamp(56px, 9vw, 144px);
+  --type-display: clamp(40px, 6.4vw, 88px);
+  --type-display-sm: clamp(28px, 4.4vw, 56px);
+  --type-h1: clamp(24px, 3vw, 40px);
+  --type-h2: clamp(20px, 2.4vw, 28px);
+  --type-body: 16px;
+  --type-body-lg: 18px;
+  --type-mono-sm: 11px;
+  --type-mono-xs: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  overflow-x: clip;
+  transition: background 0.4s var(--ease-out), color 0.4s var(--ease-out);
+}
+
+body {
+  min-height: 100vh;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--bg);
+}
+
+html.lenis {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* — Type utility classes — */
+.mono {
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--type-mono-xs);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: clamp(20px, 4vw, 48px);
+}
+
+/* — Theme-conditional UI tweaks — */
+
+/* Editorial: serif headlines look better with slightly tighter line-height
+ * scaling and a touch more weight than a sans equivalent. */
+[data-theme='editorial'] h1,
+[data-theme='editorial'] h2,
+[data-theme='editorial'] h3 {
+  font-family: var(--font-display);
+}
+
+/* Brutalist: kill all backdrop-filter and box-shadow */
+[data-theme='brutalist'] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+/* — Hero entry animations — plain CSS, fires on element mount.
+ * Switched away from motion/react's `animate` because StrictMode's
+ * double-mount + Lenis init order caused the animation to lock at the
+ * initial state (opacity:0). CSS @keyframes always run. */
+@keyframes hero-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes hero-rise-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-fade-in { animation: hero-fade-in 0.7s var(--ease-out) 0.4s both; }
+.hero-rise-in { animation: hero-rise-in 1s var(--ease-out) 0.6s both; }
+.hero-rise-in-late { animation: hero-rise-in 0.9s var(--ease-out) 0.95s both; }
+.hero-rise-in-later { animation: hero-rise-in 0.9s var(--ease-out) 1.15s both; }
+
+/* Brutalist: outline links on hover instead of fading */
+[data-theme='brutalist'] a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+ * DOCUMENTARY · transparency overlay
+ *
+ * In documentary mode the cinematic <video> backdrop sits at z-index 1.
+ * For the visitor to actually SEE the video, the page chrome (main +
+ * sections + their direct background divs) needs to be transparent.
+ * Cards inside sections — HudPanel, glassmorphic CTAs, terminal frames —
+ * retain their own surface backgrounds so text stays readable.
+ *
+ * The `!important` is necessary because section/inner backgrounds are
+ * set via inline styles on the JSX elements (var(--bg-deep)). Inline
+ * styles only lose to !important rules.
+ * ───────────────────────────────────────────────────────────────── */
+[data-theme='documentary'] main {
+  background: transparent !important;
+  position: relative;
+  z-index: 2;
+}
+
+[data-theme='documentary'] section,
+[data-theme='documentary'] section > div {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Extra readability scrim behind the long-text scenes (Compliance, BriefMe
+ * terminal wrap) so text doesn't fight the moving video. Targeted via
+ * the section's class hint, not a blanket rule. */
+[data-theme='documentary'] section:has(.brief-me-frame),
+[data-theme='documentary'] section:has(.compliance-grid) {
+  background: rgba(7, 6, 5, 0.55) !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
