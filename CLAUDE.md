@@ -25,6 +25,8 @@ Persistent instructions for any Claude session on this repo. Read this first.
 
 7. **Stay on track.** If Nick flags a side issue mid-task, note it and defer unless he says otherwise.
 
+8. **OFF-LIMITS DIRECTORIES — `marketing/` and `marketing-v2/`.** These are **standalone web marketing sites** (Vite + React + TS), versioned independently. They are NOT part of the main PULSE app, NOT part of the iOS bundle, NOT compiled by `npm run build` at the repo root, and NOT synced by `npx cap sync ios`. When working on the **main PULSE app** (mobile, desktop, iOS, Capacitor, EHR tab, MobileView, components/, lib/, ios/), **do not read, modify, or import from `marketing/` or `marketing-v2/`**. Likewise, code in those directories must never import from the main PULSE app. They are siblings, not children. Each has its own `CLAUDE.md` — those apply only when the task is explicitly about the web marketing site. The Standard ship loop in this file (`cap sync`, Xcode reporting) does NOT apply to marketing changes; those are separate Vite apps with their own `npm run build` and their own deploys.
+
 ## Project shape
 
 - React 19 + TypeScript + Vite 6 + Capacitor 8 (iOS shell)
