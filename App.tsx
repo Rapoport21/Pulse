@@ -1738,19 +1738,37 @@ function App() {
               const codes = Math.round(metricValue('activeCodes', activeScenario));
               const nedocsTone: 'ok' | 'warn' | 'crit' =
                 nedocs >= 160 ? 'crit' : nedocs >= 120 ? 'warn' : 'ok';
-              const nedocsLabel = `NEDOCS ${nedocs} · ${
-                nedocs >= 160 ? 'Dangerous' : nedocs >= 120 ? 'Severe' : nedocs >= 100 ? 'Busy' : 'Normal'
-              }`;
+              // Lead with plain-language descriptor (ED LOAD + qualifier) so
+              // the pill stays readable even when the strip is tight and the
+              // right side gets clipped. The numeric score follows. The bare
+              // "NEDOCS 185 · Dangerous" prior version clipped from the left
+              // and surfaced as "5 · DANGEROUS" — meaningless to a cold
+              // viewer (Matt Taylor 2026-05-12 feedback).
+              const nedocsQualifier =
+                nedocs >= 160 ? 'Dangerous' : nedocs >= 120 ? 'Severe' : nedocs >= 100 ? 'Busy' : 'Normal';
+              const nedocsLabel = `ED LOAD · ${nedocsQualifier} · ${nedocs}`;
+              const nedocsTitle = `NEDOCS standardized ED-overcrowding score: ${nedocs} (${nedocsQualifier}). Scale: ≥160 Dangerous, 120-159 Severe, 100-119 Busy, <100 Normal.`;
+              // Alerts count promoted from plain Mono text to a tone-colored
+              // StatusPill alongside NEDOCS so the active-alerts count is
+              // always visible in the persistent HUD strip. Previously the
+              // alerts column on Horizon dropped below the fold on shorter
+              // viewports and visitors took a while to notice it existed
+              // (Matt Taylor 2026-05-12 feedback).
+              const alertsTone: 'ok' | 'warn' | 'crit' =
+                alerts >= 6 ? 'crit' : alerts >= 3 ? 'warn' : 'ok';
+              const alertsLabel = `${alerts} ALERTS${codes > 0 ? ` · ${codes} CODES` : ''}`;
+              const alertsTitle = `${alerts} active alert${alerts === 1 ? '' : 's'} across the ED. ${codes > 0 ? `${codes} active code${codes === 1 ? '' : 's'}. ` : ''}Click ALERTS tab for the full feed.`;
               return (
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
-                    <StatusPill label={nedocsLabel} tone={nedocsTone} pulse={nedocsTone === 'crit'} />
+                    <span title={nedocsTitle} style={{ cursor: 'help' }}>
+                      <StatusPill label={nedocsLabel} tone={nedocsTone} pulse={nedocsTone === 'crit'} />
+                    </span>
+                    <span title={alertsTitle} style={{ cursor: 'help' }}>
+                      <StatusPill label={alertsLabel} tone={alertsTone} pulse={alertsTone !== 'ok'} />
+                    </span>
                     <span style={{ color: COLORS.textDim }}>│</span>
                     <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
-                    <span style={{ color: COLORS.textDim }}>│</span>
-                    <Mono tone="secondary">
-                      Alerts · {alerts}{codes > 0 ? ` · Codes · ${codes}` : ''}
-                    </Mono>
                     {isSurgeActive && (
                       <>
                         <span style={{ color: COLORS.textDim }}>│</span>

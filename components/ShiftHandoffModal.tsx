@@ -53,6 +53,33 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
   const HeaderIcon = isIn ? ClipboardList : LogOut;
   const surgeStable = loginCount > 1;
 
+  // Array-back the briefing payload so the section headers can show
+  // accurate counts and the body scales cleanly to N items. Body
+  // already has `overflowY: auto` and the footer is a flex sibling,
+  // so a 50+ item briefing scrolls inside the modal without pushing
+  // the Acknowledge button off-screen (Matt Taylor 2026-05-12).
+  type CriticalUpdate = { tone: 'ok' | 'crit'; message: string };
+  const criticalUpdates: CriticalUpdate[] = surgeStable
+    ? [
+        {
+          tone: 'ok',
+          message:
+            'Surge protocol successfully de-escalated. Capacity is stable. Monitor fast-track throughput.',
+        },
+      ]
+    : [
+        {
+          tone: 'crit',
+          message:
+            'ER is currently holding 4 admitted patients. ICU capacity is at 95%. Expedite step-down transfers.',
+        },
+      ];
+
+  const inheritedActions: string[] = [
+    'Review 3 pending discharge summaries.',
+    'Follow up on Blood Bank inventory.',
+  ];
+
   return (
     <AnimatePresence>
       <motion.div
@@ -240,7 +267,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                     }}
                   >
                     <BracketLabel tone="muted" size="xs">
-                      CRITICAL UPDATES
+                      CRITICAL UPDATES · {criticalUpdates.length}
                     </BracketLabel>
                     <StatusPill
                       label={surgeStable ? 'Stable' : 'Action Required'}
@@ -250,51 +277,60 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                   </div>
                   <div
                     style={{
-                      position: 'relative',
                       display: 'flex',
-                      gap: SPACE.sm,
-                      padding: `${SPACE.base}px ${SPACE.md}px`,
-                      background: COLORS.bgDeep,
-                      border: `1px solid ${surgeStable ? COLORS.ok : COLORS.crit}`,
-                      borderLeft: `3px solid ${surgeStable ? COLORS.ok : COLORS.crit}`,
-                      borderRadius: RADIUS.sm,
+                      flexDirection: 'column',
+                      gap: SPACE.xs,
                     }}
                   >
-                    {surgeStable ? (
-                      <CheckCircle
-                        size={16}
-                        strokeWidth={2}
-                        color={COLORS.ok}
-                        style={{ flexShrink: 0, marginTop: 1 }}
-                      />
-                    ) : (
-                      <AlertOctagon
-                        size={16}
-                        strokeWidth={2}
-                        color={COLORS.crit}
-                        style={{ flexShrink: 0, marginTop: 1 }}
-                      />
-                    )}
-                    <p
-                      style={{
-                        fontFamily: FONTS.sans,
-                        fontSize: 13,
-                        color: COLORS.textPrimary,
-                        lineHeight: 1.5,
-                        margin: 0,
-                      }}
-                    >
-                      {surgeStable
-                        ? 'Surge protocol successfully de-escalated. Capacity is stable. Monitor fast-track throughput.'
-                        : 'ER is currently holding 4 admitted patients. ICU capacity is at 95%. Expedite step-down transfers.'}
-                    </p>
+                    {criticalUpdates.map((update, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: 'relative',
+                          display: 'flex',
+                          gap: SPACE.sm,
+                          padding: `${SPACE.base}px ${SPACE.md}px`,
+                          background: COLORS.bgDeep,
+                          border: `1px solid ${update.tone === 'ok' ? COLORS.ok : COLORS.crit}`,
+                          borderLeft: `3px solid ${update.tone === 'ok' ? COLORS.ok : COLORS.crit}`,
+                          borderRadius: RADIUS.sm,
+                        }}
+                      >
+                        {update.tone === 'ok' ? (
+                          <CheckCircle
+                            size={16}
+                            strokeWidth={2}
+                            color={COLORS.ok}
+                            style={{ flexShrink: 0, marginTop: 1 }}
+                          />
+                        ) : (
+                          <AlertOctagon
+                            size={16}
+                            strokeWidth={2}
+                            color={COLORS.crit}
+                            style={{ flexShrink: 0, marginTop: 1 }}
+                          />
+                        )}
+                        <p
+                          style={{
+                            fontFamily: FONTS.sans,
+                            fontSize: 13,
+                            color: COLORS.textPrimary,
+                            lineHeight: 1.5,
+                            margin: 0,
+                          }}
+                        >
+                          {update.message}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 {/* Inherited actions */}
                 <div>
                   <BracketLabel tone="muted" size="xs">
-                    INHERITED ACTIONS
+                    INHERITED ACTIONS · {inheritedActions.length}
                   </BracketLabel>
                   <div
                     style={{
@@ -304,10 +340,7 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
                       gap: SPACE.xs,
                     }}
                   >
-                    {[
-                      'Review 3 pending discharge summaries.',
-                      'Follow up on Blood Bank inventory.',
-                    ].map((action, i) => (
+                    {inheritedActions.map((action, i) => (
                       <div
                         key={i}
                         style={{

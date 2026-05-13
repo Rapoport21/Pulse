@@ -140,8 +140,13 @@ const CommandRow: React.FC<{
         alignItems: 'center',
         gap: SPACE.sm,
         padding: `${SPACE.sm}px ${SPACE.md}px`,
-        background: hovered ? COLORS.surfaceElev : 'transparent',
-        borderLeft: `2px solid ${hovered ? COLORS.borderStrong : 'transparent'}`,
+        // At rest: faint icon-colored bg + visible left rail in the icon
+        // tone (40% alpha) — signals "this is interactive" without needing
+        // hover. On hover: bg brightens, left rail goes full opacity.
+        // From Matt Taylor 2026-05-12 feedback: clickable vs read-only
+        // affordance was ambiguous across the command sidebar.
+        background: hovered ? `${iconColor}1a` : `${iconColor}08`,
+        borderLeft: `2px solid ${hovered ? iconColor : `${iconColor}55`}`,
         cursor: 'pointer',
         transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
         outline: 'none',
@@ -224,9 +229,12 @@ const FeedEntry: React.FC<{
       style={{
         position: 'relative',
         padding: `${SPACE.sm}px ${SPACE.md}px`,
-        background: critical ? `${COLORS.accent}0f` : COLORS.surface,
-        border: `1px solid ${critical ? COLORS.accent : COLORS.border}`,
-        borderRadius: RADIUS.sm,
+        background: critical ? `${COLORS.accent}0f` : 'transparent',
+        // Read-only telemetry: left-edge accent stripe only (3px in the
+        // source tone). No surrounding border, no card affordance — these
+        // are live data wires, not buttons. From Matt Taylor 2026-05-12:
+        // surrounding border made FeedEntry read as a clickable card.
+        borderLeft: `3px solid ${critical ? COLORS.accent : sourceColor}`,
         overflow: 'hidden',
       }}
     >

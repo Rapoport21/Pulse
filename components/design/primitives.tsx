@@ -347,12 +347,21 @@ export const TacticalCard = React.forwardRef<HTMLDivElement, TacticalCardProps>(
         }}
         {...rest}
       >
-        {/* Accent bar on the left */}
-        {(accentBar || (interactive && hovered)) && (
+        {/* Accent bar on the left — explicit opt-in only.
+         * Previously this also fired on hover for any `interactive` card,
+         * which added a 3px overlay to the left edge while keeping the
+         * other three sides at 1px — visibly asymmetric stroke
+         * (Matt Taylor 2026-05-12 feedback on the role-selection card).
+         * Hover signaling now lives in border-color, surface lift,
+         * corner brackets, and the scanline sweep — all four sides
+         * uniform at 1px. Cards that want a permanent left bar still
+         * pass `accentBar={true}` explicitly.
+         */}
+        {accentBar && (
           <motion.span
             aria-hidden
             initial={{ width: 0 }}
-            animate={{ width: accentBar ? 3 : hovered ? 3 : 0 }}
+            animate={{ width: 3 }}
             transition={{ duration: MOTION.base, ease: MOTION.ease }}
             style={{
               position: 'absolute',
