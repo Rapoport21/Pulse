@@ -140,13 +140,8 @@ const CommandRow: React.FC<{
         alignItems: 'center',
         gap: SPACE.sm,
         padding: `${SPACE.sm}px ${SPACE.md}px`,
-        // At rest: faint icon-colored bg + visible left rail in the icon
-        // tone (40% alpha) — signals "this is interactive" without needing
-        // hover. On hover: bg brightens, left rail goes full opacity.
-        // From Matt Taylor 2026-05-12 feedback: clickable vs read-only
-        // affordance was ambiguous across the command sidebar.
-        background: hovered ? `${iconColor}1a` : `${iconColor}08`,
-        borderLeft: `2px solid ${hovered ? iconColor : `${iconColor}55`}`,
+        background: hovered ? COLORS.surfaceElev : 'transparent',
+        borderLeft: `2px solid ${hovered ? COLORS.borderStrong : 'transparent'}`,
         cursor: 'pointer',
         transition: `background ${MOTION.fast}s ease, border-color ${MOTION.fast}s ease`,
         outline: 'none',

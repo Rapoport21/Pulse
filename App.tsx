@@ -1738,16 +1738,13 @@ function App() {
               const codes = Math.round(metricValue('activeCodes', activeScenario));
               const nedocsTone: 'ok' | 'warn' | 'crit' =
                 nedocs >= 160 ? 'crit' : nedocs >= 120 ? 'warn' : 'ok';
-              // Lead with plain-language descriptor (ED LOAD + qualifier) so
-              // the pill stays readable even when the strip is tight and the
-              // right side gets clipped. The numeric score follows. The bare
-              // "NEDOCS 185 · Dangerous" prior version clipped from the left
-              // and surfaced as "5 · DANGEROUS" — meaningless to a cold
-              // viewer (Matt Taylor 2026-05-12 feedback).
+              // Keep the clinical term visible — NEDOCS is real ED operations
+              // language; clinicians use it every shift. The tooltip below
+              // serves non-clinical reviewers who land on the demo.
               const nedocsQualifier =
                 nedocs >= 160 ? 'Dangerous' : nedocs >= 120 ? 'Severe' : nedocs >= 100 ? 'Busy' : 'Normal';
-              const nedocsLabel = `ED LOAD · ${nedocsQualifier} · ${nedocs}`;
-              const nedocsTitle = `NEDOCS standardized ED-overcrowding score: ${nedocs} (${nedocsQualifier}). Scale: ≥160 Dangerous, 120-159 Severe, 100-119 Busy, <100 Normal.`;
+              const nedocsLabel = `NEDOCS ${nedocs} · ${nedocsQualifier}`;
+              const nedocsTitle = `NEDOCS standardized ED-overcrowding score. ${nedocs} = ${nedocsQualifier}. Scale: ≥160 Dangerous, 120-159 Severe, 100-119 Busy, <100 Normal.`;
               // Alerts count promoted from plain Mono text to a tone-colored
               // StatusPill alongside NEDOCS so the active-alerts count is
               // always visible in the persistent HUD strip. Previously the
