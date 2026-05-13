@@ -24,6 +24,7 @@ export enum Tab {
   ACTIONS = 'Actions',
   ALERTS = 'Alerts',
   STAFFING = 'Staffing',
+  COMMS = 'Comms',
   BRIEF_ME = 'Brief Me',
   REPLAY = 'Replay',
   ROSTER = 'Roster',

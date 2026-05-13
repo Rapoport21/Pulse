@@ -25,6 +25,7 @@ import {
   TrendingUp,
   TrendingDown,
   SlidersHorizontal,
+  PhoneCall,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile, type Allergy } from './types';
 import { USERS } from './data/userProfiles';
@@ -39,6 +40,9 @@ import { Roster } from './components/Roster';
 import { ChatAssistant } from './components/ChatAssistant';
 import { LoginScreen } from './components/LoginScreen';
 import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
+import { CallProvider } from './lib/callState';
+import { CallDrawer } from './components/CallDrawer';
+import { CommsScreen } from './components/CommsScreen';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
@@ -713,6 +717,7 @@ function App() {
     { id: Tab.LIVE_OPS, icon: Radio, label: 'Live Ops', code: 'L' },
     { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
     { id: Tab.ACTIONS, icon: Layout, label: 'Actions', code: 'A' },
+    { id: Tab.COMMS, icon: PhoneCall, label: 'Comms', code: 'C' },
     { id: Tab.ROSTER, icon: Users, label: 'Roster', code: 'R' },
     { id: Tab.BRIEF_ME, icon: Archive, label: 'Brief Me', code: 'B' },
     { id: Tab.REPLAY, icon: PlayCircle, label: 'Replay', code: 'Y' },
@@ -1176,6 +1181,7 @@ function App() {
   const liveStatusLabel = systemStatus === 'normal' ? 'Live' : systemStatus === 'stale' ? 'Stale' : 'Manual';
 
   return (
+    <CallProvider>
     <>
       <ConnectionIndicator />
       {/* Auto-brief overlay: when an inbound EMS run hits ETA 2:00, a
@@ -1184,6 +1190,11 @@ function App() {
           run's real fields (age, sex, vitals, treatment, bay) plus
           scenario context — see components/EmsAutoBrief.tsx. */}
       <EmsAutoBrief activeScenario={activeScenario} />
+
+      {/* CallDrawer — right-side slide-in surface for the active call.
+          Mounts here at top level so it overlays whatever tab the user
+          is on. Driven by CallProvider state (lib/callState.tsx). */}
+      <CallDrawer onExpand={navigateToTab} />
       {debugMode && <DebugPanel currentUser={currentUser} />}
 
       {showShiftBriefing && (
@@ -1708,6 +1719,7 @@ function App() {
                   isSurgeActive={isSurgeActive}
                 />
               )}
+              {activeTab === Tab.COMMS && <CommsScreen />}
               {activeTab === Tab.ROSTER && <Roster currentUser={currentUser} showToast={showToast} />}
               {activeTab === Tab.BRIEF_ME && (
                 <BriefMe isSurgeActive={isSurgeActive} currentUser={currentUser} showToast={showToast} />
@@ -1802,6 +1814,7 @@ function App() {
         </div>
       )}
     </>
+    </CallProvider>
   );
 }
 

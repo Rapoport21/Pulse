@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Radio,
   ShieldAlert,
   PhoneCall,
-  PhoneOff,
-  Bot,
-  Activity,
-  User,
   CheckCircle2,
   Clock,
   Siren,
@@ -36,16 +32,7 @@ import {
   ScanningLine,
   Divider,
 } from './design';
-
-interface TranscriptLine {
-  speaker: 'me' | 'them' | 'ai';
-  text: string;
-}
-
-interface ActionTask {
-  task: string;
-  assignee: string;
-}
+import { useCall } from '../lib/callState';
 
 export interface SimControlAction {
   id: string;
@@ -287,67 +274,6 @@ const FeedEntry: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────────────────────────────────
-// Transcript line — tactical data packet styling
-// ─────────────────────────────────────────────────────────────────────────
-const TranscriptPacket: React.FC<{
-  line: TranscriptLine;
-  index: number;
-}> = ({ line, index }) => {
-  const isMe = line.speaker === 'me';
-  const isAi = line.speaker === 'ai';
-
-  const speakerLabel = isMe ? 'OPERATOR' : isAi ? 'PULSE.AI' : 'REMOTE';
-  const speakerColor = isMe ? COLORS.info : isAi ? COLORS.info : COLORS.ok;
-  const borderColor = isAi ? COLORS.borderStrong : COLORS.border;
-  const bg = isAi ? COLORS.surfaceElev : COLORS.surface;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: MOTION.fast, ease: MOTION.ease }}
-      style={{
-        position: 'relative',
-        padding: `${SPACE.sm}px ${SPACE.md}px`,
-        background: bg,
-        border: `1px solid ${borderColor}`,
-        borderRadius: RADIUS.sm,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 4,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.xs }}>
-          <Mono tone="dim" size="xs">
-            #{String(index).padStart(3, '0')}
-          </Mono>
-          {isAi && <Bot size={10} color={speakerColor} strokeWidth={2} />}
-          <Mono size="xs" style={{ color: speakerColor }}>
-            {speakerLabel}
-          </Mono>
-        </div>
-      </div>
-      <div
-        style={{
-          fontFamily: FONTS.sans,
-          fontSize: 12,
-          color: COLORS.textPrimary,
-          lineHeight: 1.45,
-          letterSpacing: '-0.003em',
-        }}
-      >
-        {line.text}
-      </div>
-    </motion.div>
-  );
-};
-
 export const CommandSidebar = ({
   isSurgeActive,
   surgeActivatedAt,
@@ -358,160 +284,14 @@ export const CommandSidebar = ({
 }: CommandSidebarProps) => {
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [simPanelOpen, setSimPanelOpen] = useState(false);
-  const [activeCall, setActiveCall] = useState<'nurse' | 'blood_bank' | null>(null);
-  const [callState, setCallState] = useState<
-    'calling' | 'connected' | 'ai_speaking' | 'ended'
-  >('ended');
-  const [callDuration, setCallDuration] = useState(0);
-  const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
-  const [actionTasks, setActionTasks] = useState<ActionTask[]>([]);
-  const transcriptRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (callState === 'connected' || callState === 'ai_speaking') {
-      interval = setInterval(() => setCallDuration((d) => d + 1), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [callState]);
-
-  // Auto-scroll transcript
-  useEffect(() => {
-    if (transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-    }
-  }, [transcript]);
-
-  // Mock call simulation
-  useEffect(() => {
-    if (callState === 'connected') {
-      let sequence: {
-        t: number;
-        speaker: 'me' | 'them' | 'ai';
-        text: string;
-        task?: { task: string; assignee: string };
-      }[] = [];
-
-      if (activeCall === 'nurse') {
-        sequence = [
-          { t: 1000, speaker: 'them', text: 'ER Charge Nurse, go ahead.' },
-          {
-            t: 3000,
-            speaker: 'me',
-            text: 'We have 4 criticals inbound. Need 2 beds in Med/Surg immediately.',
-          },
-          {
-            t: 6000,
-            speaker: 'them',
-            text: 'Understood. I will expedite discharges for room 204 and 206.',
-          },
-          {
-            t: 9000,
-            speaker: 'ai',
-            text: '[AI Note] Action identified: Expedite discharges for rooms 204, 206.',
-            task: {
-              task: 'Expedite discharges (204, 206)',
-              assignee: 'ER Charge Nurse',
-            },
-          },
-          {
-            t: 12000,
-            speaker: 'me',
-            text: 'Also need respiratory therapy down here.',
-          },
-          { t: 15000, speaker: 'them', text: 'Paging RT now.' },
-          {
-            t: 17000,
-            speaker: 'ai',
-            text: '[AI Note] Action identified: Page Respiratory Therapy to ER.',
-            task: { task: 'Page RT to ER', assignee: 'ER Charge Nurse' },
-          },
-        ];
-      } else if (activeCall === 'blood_bank') {
-        sequence = [
-          { t: 1000, speaker: 'them', text: 'Blood Bank, this is Sarah.' },
-          {
-            t: 3000,
-            speaker: 'me',
-            text: 'Sarah, we have a massive transfusion protocol initiating in Trauma 1.',
-          },
-          {
-            t: 6000,
-            speaker: 'them',
-            text: 'Copy that. MTP for Trauma 1. Preparing first cooler now.',
-          },
-          {
-            t: 9000,
-            speaker: 'ai',
-            text: '[AI Note] Action identified: Prepare MTP cooler for Trauma 1.',
-            task: {
-              task: 'Prepare MTP cooler (Trauma 1)',
-              assignee: 'Blood Bank',
-            },
-          },
-          {
-            t: 12000,
-            speaker: 'me',
-            text: 'We also need 4 units of O-negative sent down immediately.',
-          },
-          {
-            t: 15000,
-            speaker: 'them',
-            text: 'Sending 4 units O-negative via pneumatic tube.',
-          },
-          {
-            t: 17000,
-            speaker: 'ai',
-            text: '[AI Note] Action identified: Send 4 units O-negative via tube.',
-            task: { task: 'Send 4 units O-negative', assignee: 'Blood Bank' },
-          },
-        ];
-      }
-
-      const timeouts = sequence.map((step) =>
-        setTimeout(() => {
-          setTranscript((prev) => [...prev, { speaker: step.speaker, text: step.text }]);
-          if (step.task) {
-            setActionTasks((prev) => [...prev, step.task!]);
-          }
-        }, step.t),
-      );
-
-      return () => timeouts.forEach(clearTimeout);
-    }
-  }, [callState, activeCall]);
-
-  const endCall = () => {
-    setCallState('ended');
-    setTimeout(() => setActiveCall(null), 500);
-  };
-
-  // Auto-end call when AI takes over
-  useEffect(() => {
-    if (callState === 'ai_speaking') {
-      const timeout = setTimeout(() => {
-        endCall();
-      }, 5000);
-      return () => clearTimeout(timeout);
-    }
-  }, [callState]);
-
-  const handleCall = (type: 'nurse' | 'blood_bank') => {
-    setActiveCall(type);
-    setCallState('calling');
-    setCallDuration(0);
-    setTranscript([]);
-    setActionTasks([]);
-    setTimeout(() => {
-      setCallState((cs) => (cs === 'calling' ? 'connected' : cs));
-    }, 2000);
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  // Call mechanics live in CallProvider (lib/callState.tsx). The sidebar
+  // is a launcher — clicking a Quick Paging row fires startCall and the
+  // CallDrawer (mounted at App level) slides in with the live transcript
+  // and action extraction. Comms tab renders the same call via shared
+  // CallPanel.
+  const { startCall } = useCall();
+  const handleCall = (type: 'nurse' | 'blood_bank') => startCall(type);
 
   const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
@@ -576,16 +356,15 @@ export const CommandSidebar = ({
           flexDirection: 'column',
         }}
       >
-        {!activeCall && (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              padding: SPACE.md,
-              gap: SPACE.md,
-            }}
-          >
-            {/* ═══ Surge activation trigger ═══ */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            padding: SPACE.md,
+            gap: SPACE.md,
+          }}
+        >
+          {/* ═══ Surge activation trigger ═══ */}
             {!isSurgeActive ? (
               <TacticalCard
                 interactive
@@ -1167,297 +946,11 @@ export const CommandSidebar = ({
               </div>
             )}
           </div>
-        )}
 
-        {/* ═══ Inline call UI ═══ */}
-        <AnimatePresence>
-          {activeCall && (
-            <motion.div
-              key="call"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: MOTION.base, ease: MOTION.ease }}
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                flex: 1,
-                minHeight: 0,
-                borderTop: `1px solid ${COLORS.border}`,
-                background: COLORS.bgDeep,
-              }}
-            >
-              {/* Call header */}
-              <div
-                style={{
-                  padding: `${SPACE.md}px ${SPACE.md}px`,
-                  borderBottom: `1px solid ${COLORS.border}`,
-                  background: COLORS.surface,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE.sm,
-                  flexShrink: 0,
-                }}
-              >
-                <div
-                  style={{
-                    position: 'relative',
-                    width: 36,
-                    height: 36,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background:
-                      callState === 'ai_speaking'
-                        ? `${COLORS.warn}14`
-                        : callState === 'calling'
-                        ? `${COLORS.info}14`
-                        : `${COLORS.ok}14`,
-                    border: `1px solid ${
-                      callState === 'ai_speaking'
-                        ? COLORS.warn
-                        : callState === 'calling'
-                        ? COLORS.info
-                        : COLORS.ok
-                    }`,
-                    borderRadius: RADIUS.sm,
-                    flexShrink: 0,
-                  }}
-                >
-                  {callState === 'ai_speaking' ? (
-                    <Bot size={16} color={COLORS.warn} strokeWidth={2} />
-                  ) : (
-                    <PhoneCall
-                      size={16}
-                      color={callState === 'calling' ? COLORS.info : COLORS.ok}
-                      strokeWidth={2}
-                    />
-                  )}
-                  <CornerBracket
-                    position="tl"
-                    color={
-                      callState === 'ai_speaking'
-                        ? COLORS.warn
-                        : callState === 'calling'
-                        ? COLORS.info
-                        : COLORS.ok
-                    }
-                    size={4}
-                    thickness={1}
-                  />
-                  <CornerBracket
-                    position="br"
-                    color={
-                      callState === 'ai_speaking'
-                        ? COLORS.warn
-                        : callState === 'calling'
-                        ? COLORS.info
-                        : COLORS.ok
-                    }
-                    size={4}
-                    thickness={1}
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Mono tone="dim" size="xs">
-                    // LINK.{activeCall === 'nurse' ? 'NURSE' : 'BLOOD_BANK'}
-                  </Mono>
-                  <div
-                    style={{
-                      fontFamily: FONTS.sans,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: COLORS.textPrimary,
-                      letterSpacing: '-0.01em',
-                      marginTop: 2,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {activeCall === 'nurse' ? 'Charge Nurse · ER' : 'Blood Bank'}
-                  </div>
-                </div>
-                {callState === 'calling' && (
-                  <StatusPill label="Connecting" tone="info" pulse size="xs" />
-                )}
-                {callState === 'connected' && (
-                  <Mono tone="ok" size="xs">
-                    {formatTime(callDuration)}
-                  </Mono>
-                )}
-                {callState === 'ai_speaking' && (
-                  <Mono tone="warn" size="xs">
-                    AI · {formatTime(callDuration)}
-                  </Mono>
-                )}
-              </div>
-
-              {/* Transcript */}
-              {(callState === 'connected' || callState === 'ai_speaking') && (
-                <div
-                  ref={transcriptRef}
-                  style={{
-                    flex: 1,
-                    padding: SPACE.md,
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: SPACE.sm,
-                    minHeight: 0,
-                  }}
-                >
-                  {transcript.map((line, i) => (
-                    <TranscriptPacket key={i} line={line} index={i + 1} />
-                  ))}
-                  {callState === 'ai_speaking' && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: [0.6, 1, 0.6] }}
-                      transition={{ duration: 1.8, repeat: Infinity }}
-                      style={{
-                        padding: `${SPACE.sm}px ${SPACE.md}px`,
-                        background: `${COLORS.warn}14`,
-                        border: `1px solid ${COLORS.warn}`,
-                        borderRadius: RADIUS.sm,
-                        display: 'flex',
-                        gap: SPACE.sm,
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <Bot
-                        size={14}
-                        color={COLORS.warn}
-                        strokeWidth={2}
-                        style={{ marginTop: 2, flexShrink: 0 }}
-                      />
-                      <div
-                        style={{
-                          fontFamily: FONTS.sans,
-                          fontSize: 11,
-                          color: COLORS.textPrimary,
-                          lineHeight: 1.45,
-                          letterSpacing: '-0.003em',
-                        }}
-                      >
-                        AI is taking over. "I have logged the requested actions.
-                        You may disconnect. Thank you."
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-              )}
-
-              {/* Extracted tasks */}
-              {actionTasks.length > 0 && (
-                <div
-                  style={{
-                    padding: SPACE.md,
-                    background: COLORS.surface,
-                    borderTop: `1px solid ${COLORS.border}`,
-                    flexShrink: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: SPACE.xs,
-                      marginBottom: SPACE.sm,
-                    }}
-                  >
-                    <Activity size={10} strokeWidth={2} color={COLORS.textSecondary} />
-                    <BracketLabel tone="secondary" size="xs">
-                      EXTRACTED
-                    </BracketLabel>
-                    <Mono tone="dim" size="xs">
-                      {actionTasks.length} task{actionTasks.length === 1 ? '' : 's'}
-                    </Mono>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: SPACE.xs,
-                    }}
-                  >
-                    {actionTasks.map((task, i) => (
-                      <div
-                        key={i}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 2,
-                          padding: `${SPACE.xs}px ${SPACE.sm}px`,
-                          background: COLORS.bgDeep,
-                          border: `1px solid ${COLORS.border}`,
-                          borderRadius: RADIUS.sm,
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: FONTS.sans,
-                            fontSize: 11,
-                            fontWeight: 500,
-                            color: COLORS.textPrimary,
-                            letterSpacing: '-0.003em',
-                          }}
-                        >
-                          {task.task}
-                        </span>
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                        >
-                          <User size={9} strokeWidth={2} color={COLORS.textMuted} />
-                          <Mono tone="muted" size="xs">
-                            @{task.assignee}
-                          </Mono>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Call controls */}
-              <div
-                style={{
-                  padding: SPACE.md,
-                  borderTop: `1px solid ${COLORS.border}`,
-                  background: COLORS.surface,
-                  display: 'flex',
-                  gap: SPACE.sm,
-                  flexShrink: 0,
-                }}
-              >
-                {callState === 'connected' && (
-                  <TacticalButton
-                    variant="primary"
-                    size="sm"
-                    fullWidth
-                    icon={<Bot size={12} strokeWidth={2} />}
-                    onClick={() => setCallState('ai_speaking')}
-                  >
-                    Hand to AI
-                  </TacticalButton>
-                )}
-                <TacticalButton
-                  variant="danger"
-                  size="sm"
-                  fullWidth
-                  icon={<PhoneOff size={12} strokeWidth={2} />}
-                  onClick={endCall}
-                >
-                  End Call
-                </TacticalButton>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Inline call UI moved out — call mechanics live in
+            CallProvider (lib/callState.tsx) and render in CallDrawer
+            (right-side slide-in) + Comms tab (full-screen surface).
+            The sidebar Quick Paging buttons fire startCall via context. */}
       </div>
     </aside>
   );
