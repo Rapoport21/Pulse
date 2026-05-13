@@ -611,10 +611,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             <div
               style={{
                 width: '100%',
-                maxWidth: isMobile ? '100%' : 720,
+                // Desktop: spread sections across the full screen as a
+                // 2-column grid instead of a 720px column hugging the
+                // middle. Mobile: stays single-column flex (one section
+                // per row, full width).
+                maxWidth: isMobile ? '100%' : 1400,
                 margin: '0 auto',
-                display: 'flex',
-                flexDirection: 'column',
+                display: isMobile ? 'flex' : 'grid',
+                flexDirection: isMobile ? 'column' : undefined,
+                gridTemplateColumns: isMobile
+                  ? undefined
+                  : 'repeat(2, minmax(0, 1fr))',
+                // alignItems:start so sections do NOT stretch to match
+                // their row-mate's height — each section sits at its
+                // natural height, top-aligned.
+                alignItems: isMobile ? undefined : 'start',
                 gap: SPACE.xl,
               }}
             >
