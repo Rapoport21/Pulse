@@ -18,6 +18,7 @@ import {
   GlowBg,
   TacticalCard,
 } from './design';
+import { useConnectionStatus } from '../lib/realtime';
 
 interface LoginScreenProps {
   onLogin: (role: UserRole) => void;
@@ -278,6 +279,23 @@ const RoleCard: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────
 export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const isMobile = useIsMobile();
+  const connectionStatus = useConnectionStatus();
+  const connectionLabel =
+    connectionStatus === 'connected'
+      ? 'Connected'
+      : connectionStatus === 'connecting'
+      ? 'Connecting'
+      : connectionStatus === 'disconnected'
+      ? 'Disconnected'
+      : 'Local Only';
+  const connectionTone: 'ok' | 'warn' | 'crit' | 'neutral' =
+    connectionStatus === 'connected'
+      ? 'ok'
+      : connectionStatus === 'connecting'
+      ? 'warn'
+      : connectionStatus === 'disconnected'
+      ? 'crit'
+      : 'neutral';
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -498,8 +516,17 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
         </div>
       </div>
 
-      {/* ── BOTTOM HUD ──────────────────────────────────────── */}
+      {/* ── BOTTOM HUD ──────────────────────────────────────────
+          Login screen is the cold entry point: a visitor seeing
+          NEDOCS / Weather / Active Surge Playbooks here has no
+          context for what those mean yet. Strip down to just the
+          live connectivity status — that one signal answers "is
+          this thing working?" which is the only question worth
+          asking before signing in. The rest lights up on the
+          dashboards once a role is selected.
+          ──────────────────────────────────────────────────────── */}
       <HudStrip side="bottom" fixed height={36}>
+        <div style={{ flex: 1 }} />
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -507,37 +534,16 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 16,
-            flex: 1,
-            flexWrap: 'nowrap',
-            overflow: 'hidden',
-            minWidth: 0,
-          }}
-        >
-          <StatusPill
-            label={isMobile ? 'NEDOCS 185' : 'NEDOCS 185 · Dangerous'}
-            tone="crit"
-          />
-          {!isMobile && (
-            <>
-              <span style={{ color: COLORS.textDim }}>│</span>
-              <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
-              <span style={{ color: COLORS.textDim }}>│</span>
-              <Mono tone="secondary">Active Surge Playbooks · 3</Mono>
-            </>
-          )}
-        </motion.div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
             gap: 12,
             flexShrink: 0,
           }}
         >
-          {!isMobile && <Mono tone="muted">Network</Mono>}
-          <StatusPill label="Stable" tone="ok" />
-        </div>
+          <StatusPill
+            label={connectionLabel}
+            tone={connectionTone}
+            pulse={connectionStatus === 'connected'}
+          />
+        </motion.div>
       </HudStrip>
     </div>
   );
