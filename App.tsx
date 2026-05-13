@@ -41,7 +41,6 @@ import { ChatAssistant } from './components/ChatAssistant';
 import { LoginScreen } from './components/LoginScreen';
 import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
 import { CallProvider } from './lib/callState';
-import { CallDrawer } from './components/CallDrawer';
 import { CommsScreen } from './components/CommsScreen';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { MobileView } from './components/MobileView';
@@ -1190,11 +1189,6 @@ function App() {
           run's real fields (age, sex, vitals, treatment, bay) plus
           scenario context — see components/EmsAutoBrief.tsx. */}
       <EmsAutoBrief activeScenario={activeScenario} />
-
-      {/* CallDrawer — right-side slide-in surface for the active call.
-          Mounts here at top level so it overlays whatever tab the user
-          is on. Driven by CallProvider state (lib/callState.tsx). */}
-      <CallDrawer onExpand={navigateToTab} />
       {debugMode && <DebugPanel currentUser={currentUser} />}
 
       {showShiftBriefing && (
@@ -1734,6 +1728,7 @@ function App() {
               onActivateSurge={activateSurge}
               onDeactivateSurge={deactivateSurge}
               simControls={simControls}
+              onNavigateToComms={() => navigateToTab(Tab.COMMS)}
             />
           </div>
 

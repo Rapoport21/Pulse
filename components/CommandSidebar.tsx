@@ -50,6 +50,9 @@ interface CommandSidebarProps {
   onActivateSurge: () => void;
   onDeactivateSurge: () => void;
   simControls?: SimControlAction[];
+  /** App-supplied navigator — Quick Paging takes the visitor to the
+   *  Comms tab where the live CallPanel renders the active call. */
+  onNavigateToComms?: () => void;
 }
 
 const formatActivatedTime = (ts: number | null) => {
@@ -281,17 +284,19 @@ export const CommandSidebar = ({
   onActivateSurge,
   onDeactivateSurge,
   simControls = [],
+  onNavigateToComms,
 }: CommandSidebarProps) => {
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [simPanelOpen, setSimPanelOpen] = useState(false);
 
-  // Call mechanics live in CallProvider (lib/callState.tsx). The sidebar
-  // is a launcher — clicking a Quick Paging row fires startCall and the
-  // CallDrawer (mounted at App level) slides in with the live transcript
-  // and action extraction. Comms tab renders the same call via shared
-  // CallPanel.
+  // Sidebar Quick Paging starts the call and immediately navigates the
+  // visitor to the Comms tab where the live CallPanel renders. No
+  // overlay, no drawer — calls happen on their dedicated surface.
   const { startCall } = useCall();
-  const handleCall = (type: 'nurse' | 'blood_bank') => startCall(type);
+  const handleCall = (type: 'nurse' | 'blood_bank') => {
+    startCall(type);
+    onNavigateToComms?.();
+  };
 
   const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
