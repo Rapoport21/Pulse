@@ -33,6 +33,7 @@ import {
   Divider,
 } from './design';
 import { useCall } from '../lib/callState';
+import { CallPanel } from './CallPanel';
 
 export interface SimControlAction {
   id: string;
@@ -289,14 +290,13 @@ export const CommandSidebar = ({
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [simPanelOpen, setSimPanelOpen] = useState(false);
 
-  // Sidebar Quick Paging starts the call and immediately navigates the
-  // visitor to the Comms tab where the live CallPanel renders. No
-  // overlay, no drawer — calls happen on their dedicated surface.
-  const { startCall } = useCall();
-  const handleCall = (type: 'nurse' | 'blood_bank') => {
-    startCall(type);
-    onNavigateToComms?.();
-  };
+  // Calls live in two surfaces simultaneously:
+  //   - Sidebar inline (this component, narrow view) for context-
+  //     awareness while the operator is on other tabs
+  //   - Comms tab (full-screen view) for focused interaction
+  // Same call state powers both — useCall() context (lib/callState.tsx).
+  const { startCall, activeCall } = useCall();
+  const handleCall = (type: 'nurse' | 'blood_bank') => startCall(type);
 
   const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
@@ -361,6 +361,14 @@ export const CommandSidebar = ({
           flexDirection: 'column',
         }}
       >
+        {/* When a call is active, the sidebar body transforms into the
+            inline CallPanel (header + transcript + extracted tasks +
+            controls + Expand-to-Comms button). When no call, the
+            regular sidebar content (surge button, urgent tasks, quick
+            paging, live feed, sim controls) renders instead. */}
+        {activeCall ? (
+          <CallPanel onExpand={onNavigateToComms} />
+        ) : (
         <div
           style={{
             display: 'flex',
@@ -951,11 +959,7 @@ export const CommandSidebar = ({
               </div>
             )}
           </div>
-
-        {/* Inline call UI moved out — call mechanics live in
-            CallProvider (lib/callState.tsx) and render in CallDrawer
-            (right-side slide-in) + Comms tab (full-screen surface).
-            The sidebar Quick Paging buttons fire startCall via context. */}
+        )}
       </div>
     </aside>
   );

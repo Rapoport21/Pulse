@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { Bot, PhoneCall, PhoneOff, User, Activity } from 'lucide-react';
+import { Bot, PhoneCall, PhoneOff, User, Activity, Maximize2 } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -33,7 +33,13 @@ import { useCall, CALL_TARGET_LABEL, type TranscriptLine } from '../lib/callStat
  *   │ controls (Hand to AI · End)  │  fixed
  *   └──────────────────────────────┘
  */
-export const CallPanel: React.FC = () => {
+interface CallPanelProps {
+  /** When supplied, an expand-icon button appears in the header.
+   *  Used by the sidebar inline view to jump to the Comms tab. */
+  onExpand?: () => void;
+}
+
+export const CallPanel: React.FC<CallPanelProps> = ({ onExpand }) => {
   const { activeCall, callState, callDuration, transcript, actionTasks, endCall, handToAI } =
     useCall();
   const transcriptRef = useRef<HTMLDivElement>(null);
@@ -139,6 +145,29 @@ export const CallPanel: React.FC = () => {
           <Mono tone="warn" size="xs">
             AI · {formatTime(callDuration)}
           </Mono>
+        )}
+        {onExpand && (
+          <button
+            type="button"
+            onClick={onExpand}
+            title="Open in Comms tab"
+            aria-label="Open in Comms tab"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 26,
+              height: 26,
+              background: 'transparent',
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: RADIUS.sm,
+              cursor: 'pointer',
+              marginLeft: SPACE.xs,
+              flexShrink: 0,
+            }}
+          >
+            <Maximize2 size={12} strokeWidth={2} color={COLORS.textSecondary} />
+          </button>
         )}
       </div>
 
