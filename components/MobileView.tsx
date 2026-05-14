@@ -100,6 +100,11 @@ import type { UrgentTask } from '../lib/surgeTaskTemplates';
 import { MobileLiveOps } from './MobileLiveOps';
 import { MobileCoordination } from './MobileCoordination';
 import { MobileScreenHeader } from './MobileScreenHeader';
+// Call feature — universal mini-player + full Comms sheet + tasks drawer.
+import { CallMiniPlayer } from './CallMiniPlayer';
+import { CommsScreen } from './CommsScreen';
+import { TasksDrawer } from './TasksDrawer';
+import { useCall } from '../lib/callState';
 import { BedSingle } from 'lucide-react';
 import {
   COLORS,
@@ -989,6 +994,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
    */
   const [myPatientsSort, setMyPatientsSort] = useState<'alpha' | 'acuity'>('acuity');
   const [expandedMyPatientId, setExpandedMyPatientId] = useState<string | null>(null);
+
+  // Comms surface — mobile has no "Comms" tab, so the full Comms view
+  // is reached by tapping the CallMiniPlayer or via "More contacts" in
+  // the sidebar. Renders as a full-screen sheet so the rest of the
+  // shell stays alive underneath.
+  const [showComms, setShowComms] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const { activeCall, openTaskCount, pendingReviewCount } = useCall();
 
   /** Admit / Discharge fullscreen flow wizards. */
   const [showAdmitFlow, setShowAdmitFlow] = useState(false);
@@ -5298,6 +5311,11 @@ export const MobileView: React.FC<MobileViewProps> = ({
         )}
       </main>
 
+      {/* ── CALL MINI-PLAYER ─────────────────────────────────────
+           Universal pill that mounts only when a call is active.
+           Sits above the bottom tab bar. Tap → opens full Comms. */}
+      <CallMiniPlayer onExpand={() => setShowComms(true)} variant="mobile" />
+
       {/* ── BOTTOM HUD TAB BAR ──────────────────────────────────
            Solid surface background (was a fade-to-bg gradient). The
            gradient made the safe-area-inset-bottom strip — the portion
@@ -5451,6 +5469,87 @@ export const MobileView: React.FC<MobileViewProps> = ({
           })}
         </div>
       </nav>
+
+      {/* ── COMMS · TASKS · LAUNCHERS ───────────────────────────
+           Mobile has no Comms tab — these floating buttons are the
+           way in. They sit top-right respecting safe-area-inset-top,
+           always reachable. Tasks button shows the pending-review
+           count as a badge when AI has proposed something. */}
+      <CommsTasksLaunchers
+        activeCall={!!activeCall}
+        pendingReview={pendingReviewCount}
+        openCount={openTaskCount}
+        onOpenComms={() => setShowComms(true)}
+        onOpenTasks={() => setShowTasks(true)}
+      />
+
+      {/* ── COMMS · FULL SHEET ──────────────────────────────────
+           Slides up from the bottom over the entire mobile shell.
+           Closes back to whatever tab the user was on. */}
+      <AnimatePresence>
+        {showComms && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ duration: MOTION.base, ease: MOTION.easeSmooth }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 60,
+              background: COLORS.bg,
+              display: 'flex',
+              flexDirection: 'column',
+              paddingTop: 'env(safe-area-inset-top)',
+            }}
+          >
+            <div
+              style={{
+                padding: `${SPACE.sm}px ${SPACE.md}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surface,
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.sm,
+                flexShrink: 0,
+              }}
+            >
+              <BracketLabel tone="accent" size="xs">
+                COMMS
+              </BracketLabel>
+              <div style={{ flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => setShowComms(false)}
+                aria-label="Close Comms"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${COLORS.border}`,
+                  borderRadius: RADIUS.sm,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: COLORS.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex' }}>
+              {/* Mobile flips the desktop 2-col into stacked sections. */}
+              <CommsScreen />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── TASKS · GLOBAL DRAWER ───────────────────────────────
+           Same component used on desktop; renders as a right-side
+           drawer on either platform. */}
+      <TasksDrawer open={showTasks} onClose={() => setShowTasks(false)} />
 
       {/* Patient Detail Overlay — mobile-native version */}
       {selectedPatient && selectedPatient.clinical && (
@@ -5693,3 +5792,132 @@ export const MobileView: React.FC<MobileViewProps> = ({
     </div>
   );
 };
+
+// ═══════════════════════════════════════════════════════════════
+// CommsTasksLaunchers — top-right floating entry to Comms + Tasks.
+//
+// Mobile shell has no dedicated Comms tab. These two icon buttons sit
+// fixed top-right (respecting safe-area-inset-top) so the user can
+// open Comms or the Tasks drawer from any screen.
+//
+// The Tasks button shows a small rose badge when the AI has proposed
+// tasks awaiting review — pattern from notification-count badges
+// (research note: drives attention to urgent items without sound).
+// ═══════════════════════════════════════════════════════════════
+
+const CommsTasksLaunchers: React.FC<{
+  activeCall: boolean;
+  pendingReview: number;
+  openCount: number;
+  onOpenComms: () => void;
+  onOpenTasks: () => void;
+}> = ({ activeCall, pendingReview, openCount, onOpenComms, onOpenTasks }) => (
+  <div
+    style={{
+      position: 'fixed',
+      top: 'calc(env(safe-area-inset-top) + 8px)',
+      right: 8,
+      display: 'flex',
+      gap: 6,
+      zIndex: 55,
+      pointerEvents: 'none',
+    }}
+  >
+    <LauncherButton
+      label="Open Tasks"
+      onClick={onOpenTasks}
+      icon={
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+        </svg>
+      }
+      badge={pendingReview > 0 ? pendingReview : openCount > 0 ? openCount : 0}
+      badgeTone={pendingReview > 0 ? COLORS.accent : COLORS.textSecondary}
+    />
+    <LauncherButton
+      label="Open Comms"
+      onClick={onOpenComms}
+      icon={
+        <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+        </svg>
+      }
+      pulse={activeCall}
+      badgeTone={activeCall ? COLORS.accent : COLORS.textSecondary}
+    />
+  </div>
+);
+
+const LauncherButton: React.FC<{
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  badge?: number;
+  badgeTone?: string;
+  pulse?: boolean;
+}> = ({ label, icon, onClick, badge, badgeTone, pulse }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={label}
+    title={label}
+    style={{
+      pointerEvents: 'auto',
+      position: 'relative',
+      width: 36,
+      height: 36,
+      borderRadius: RADIUS.sm,
+      background: `${COLORS.surface}E6`,
+      backdropFilter: 'blur(10px)',
+      WebkitBackdropFilter: 'blur(10px)',
+      border: `1px solid ${COLORS.borderStrong}`,
+      color: COLORS.textPrimary,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    {icon}
+    {pulse && (
+      <motion.span
+        aria-hidden
+        animate={{ opacity: [0.4, 1, 0.4] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          position: 'absolute',
+          inset: -2,
+          border: `1px solid ${badgeTone ?? COLORS.accent}`,
+          borderRadius: RADIUS.sm,
+          pointerEvents: 'none',
+        }}
+      />
+    )}
+    {badge !== undefined && badge > 0 && (
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: -6,
+          right: -6,
+          minWidth: 16,
+          height: 16,
+          padding: '0 4px',
+          background: badgeTone ?? COLORS.accent,
+          color: COLORS.bg,
+          borderRadius: RADIUS.full,
+          fontFamily: FONTS.mono,
+          fontSize: 9,
+          fontWeight: 700,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          letterSpacing: 0,
+        }}
+      >
+        {badge > 99 ? '99+' : badge}
+      </span>
+    )}
+  </button>
+);

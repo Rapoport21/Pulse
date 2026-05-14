@@ -33,7 +33,7 @@ import {
   Divider,
 } from './design';
 import { useCall } from '../lib/callState';
-import { CallPanel } from './CallPanel';
+import { CallMiniPlayer } from './CallMiniPlayer';
 
 export interface SimControlAction {
   id: string;
@@ -290,13 +290,15 @@ export const CommandSidebar = ({
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [simPanelOpen, setSimPanelOpen] = useState(false);
 
-  // Calls live in two surfaces simultaneously:
-  //   - Sidebar inline (this component, narrow view) for context-
-  //     awareness while the operator is on other tabs
-  //   - Comms tab (full-screen view) for focused interaction
+  // Calls live in two surfaces:
+  //   - CallMiniPlayer pinned to the bottom of this sidebar — universal
+  //     reactive pill that appears whenever any call is active. Tap →
+  //     opens Comms.
+  //   - Comms tab — the full-screen call console (active + held +
+  //     directory + recent calls).
   // Same call state powers both — useCall() context (lib/callState.tsx).
-  const { startCall, activeCall } = useCall();
-  const handleCall = (type: 'nurse' | 'blood_bank') => startCall(type);
+  const { startCall } = useCall();
+  const handleCall = (type: 'charge_nurse' | 'blood_bank') => startCall(type);
 
   const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
@@ -361,14 +363,12 @@ export const CommandSidebar = ({
           flexDirection: 'column',
         }}
       >
-        {/* When a call is active, the sidebar body transforms into the
-            inline CallPanel (header + transcript + extracted tasks +
-            controls + Expand-to-Comms button). When no call, the
-            regular sidebar content (surge button, urgent tasks, quick
-            paging, live feed, sim controls) renders instead. */}
-        {activeCall ? (
-          <CallPanel onExpand={onNavigateToComms} />
-        ) : (
+        {/* Sidebar body always renders its regular content (surge
+            trigger, urgent tasks, quick paging, live feed, sim
+            controls). When a call is active, the CallMiniPlayer mounts
+            at the BOTTOM of the sidebar (sticky, separate from this
+            scroll container) so context is never lost — the sidebar
+            no longer "takes over" for the call. */}
         <div
           style={{
             display: 'flex',
@@ -759,7 +759,7 @@ export const CommandSidebar = ({
                   label="Page Charge Nurse"
                   code="CMD.PAGE.NURSE"
                   hint="G+N"
-                  onClick={() => handleCall('nurse')}
+                  onClick={() => handleCall('charge_nurse')}
                 />
                 <Divider color={COLORS.border} />
                 <CommandRow
@@ -769,6 +769,15 @@ export const CommandSidebar = ({
                   code="CMD.PAGE.BLOOD"
                   hint="G+B"
                   onClick={() => handleCall('blood_bank')}
+                />
+                <Divider color={COLORS.border} />
+                <CommandRow
+                  icon={<PhoneCall size={11} strokeWidth={2} />}
+                  iconColor={COLORS.textSecondary}
+                  label="More contacts…"
+                  code="CMD.COMMS"
+                  hint="G+C"
+                  onClick={onNavigateToComms}
                 />
               </div>
             </div>
@@ -959,8 +968,11 @@ export const CommandSidebar = ({
               </div>
             )}
           </div>
-        )}
       </div>
+
+      {/* Sticky mini-player — always renders when a call is active.
+          Universal pattern: tap pill → opens Comms (full surface). */}
+      <CallMiniPlayer onExpand={onNavigateToComms} variant="sidebar" />
     </aside>
   );
 };
