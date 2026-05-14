@@ -777,6 +777,8 @@ const StateHero: React.FC<{
               gap: SPACE.sm,
             }}
           >
+            {/* Status dot — the state word below answers "what state?"
+                so the SHIFT STATUS eyebrow was redundant. /distill D4. */}
             <span
               aria-hidden
               style={{
@@ -791,9 +793,6 @@ const StateHero: React.FC<{
                     : undefined,
               }}
             />
-            <Mono tone="muted" size="xs">
-              SHIFT STATUS
-            </Mono>
           </div>
           {timerText && (
             <Mono
@@ -1610,8 +1609,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               color: COLORS.textPrimary,
             }}
           >
-            <CornerBracket position="tl" color={COLORS.borderStrong} size={5} thickness={1} />
-            <CornerBracket position="br" color={COLORS.borderStrong} size={5} thickness={1} />
+            {/* /distill D3: dropped corner brackets on the avatar.
+                Brackets at this scale read as decoration; the 1px
+                borderStrong frame + the connection-status pulse dot
+                in the corner already carry the brand. */}
             {currentUser.avatarInitials}
             {/* Network status dot — replaces the floating ConnectionIndicator
                 that used to overlap the bottom tab bar. */}
@@ -1646,7 +1647,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
             />
           </div>
 
-          {/* Identity */}
+          {/* Identity — distilled per /distill D1+D2:
+              dropped the role/time line + tiny duplicate connection
+              dot + LINK/SYNC/OFFL text label. The avatar's pulsing
+              corner dot is the sole connection signal; role is
+              encoded in nav labels (role-aware); time lives in the
+              iOS status bar above. */}
           <div
             style={{
               display: 'flex',
@@ -1670,40 +1676,6 @@ export const MobileView: React.FC<MobileViewProps> = ({
               }}
             >
               {currentUser.name}
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: SPACE.xs,
-                minWidth: 0,
-              }}
-            >
-              <Mono tone="muted" size="xs">
-                {currentUser.role.replace('_', ' ')} · {timeStr}
-              </Mono>
-              <span
-                aria-hidden
-                style={{
-                  display: 'inline-block',
-                  width: 4,
-                  height: 4,
-                  borderRadius: RADIUS.full,
-                  background: connectionColor,
-                  boxShadow: `0 0 4px ${connectionColor}`,
-                }}
-              />
-              <Mono
-                tone="dim"
-                size="xs"
-                style={{ fontSize: 11, letterSpacing: '0.12em' }}
-              >
-                {connectionStatus === 'connected'
-                  ? 'LINK'
-                  : connectionStatus === 'connecting'
-                    ? 'SYNC'
-                    : 'OFFL'}
-              </Mono>
             </div>
           </div>
         </div>
@@ -3064,24 +3036,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 minHeight: 48,
               }}
             >
-              <CornerBracket position="tl" color={`${COLORS.accentDeep}B3`} size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color={`${COLORS.accentDeep}B3`} size={6} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: `${COLORS.accentDeep}2E`,
-                  border: `1px solid ${COLORS.accentDeep}80`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.accentDeep,
-                }}
-              >
-                <Users size={18} strokeWidth={2} />
-              </div>
+              {/* /distill D3+D5: dropped 2 corner brackets + 32×32
+                  icon frame. The left-edge 3px tone bar + the title
+                  already carry the launcher's identity. */}
+              <Users size={20} strokeWidth={2} color={COLORS.accentDeep} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel size="xs" style={{ color: COLORS.accentDeep }}>WORKFORCE</BracketLabel>
                 <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
@@ -3704,13 +3662,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 <UserPlus size={20} strokeWidth={2} />
               </div>
               <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={{
-                  fontFamily: FONTS.mono, fontSize: 11, fontWeight: 600,
-                  letterSpacing: '0.12em', textTransform: 'uppercase' as const,
-                  color: COLORS.accent, opacity: 0.8, marginBottom: 2,
-                }}>
-                  NEW ADMISSION
-                </div>
+                {/* /distill D6: dropped the NEW ADMISSION eyebrow.
+                    UserPlus icon + rose accent + the title already
+                    say everything the eyebrow restated. */}
                 <div style={{
                   fontFamily: FONTS.sans, fontSize: 18, fontWeight: 700,
                   color: COLORS.textPrimary, letterSpacing: '-0.01em',
@@ -3730,17 +3684,21 @@ export const MobileView: React.FC<MobileViewProps> = ({
               padding: 3,
               gap: 3,
             }}>
+              {/* /distill D7: dropped per-segment icons + the active
+                  glow. For a 2-segment control with short labels the
+                  icons are redundant; the glow was AI-design aesthetic
+                  more than tactical HUD. The bg-accent + brighter
+                  text on the active segment is enough. */}
               {(['list', 'bedboard'] as const).map((seg) => {
                 const active = patientsSubTab === seg;
                 const label = seg === 'list' ? 'Patient List' : 'Bed Board';
-                const Icon = seg === 'list' ? Users : BedSingle;
                 return (
                   <button
                     key={seg}
                     onClick={() => { triggerHaptic('light'); setPatientsSubTab(seg); }}
                     style={{
                       flex: 1, minHeight: 44,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: active ? COLORS.accent : 'transparent',
                       border: 'none', borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono, fontSize: 12, fontWeight: 600,
@@ -3748,10 +3706,8 @@ export const MobileView: React.FC<MobileViewProps> = ({
                       color: active ? COLORS.textPrimary : COLORS.textSecondary,
                       cursor: 'pointer',
                       transition: `background ${MOTION.fast}s ease, color ${MOTION.fast}s ease`,
-                      boxShadow: active ? `0 0 12px ${COLORS.accentGlow}` : 'none',
                     }}
                   >
-                    <Icon size={14} strokeWidth={2} />
                     {label}
                   </button>
                 );
@@ -3790,24 +3746,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 minHeight: 56,
               }}
             >
-              <CornerBracket position="tl" color={COLORS.info} size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color={COLORS.info} size={6} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: `${COLORS.info}2e`,
-                  border: `1px solid ${COLORS.info}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.info,
-                }}
-              >
-                <Radio size={18} strokeWidth={2} />
-              </div>
+              {/* /distill D3+D5: dropped corner brackets + 36×36
+                  icon frame. The left-edge tone bar + BracketLabel
+                  carry the launcher identity. */}
+              <Radio size={22} strokeWidth={2} color={COLORS.info} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel tone="info" size="xs">
                   EMS · INBOUND
@@ -3884,13 +3826,17 @@ export const MobileView: React.FC<MobileViewProps> = ({
               display: 'flex', gap: SPACE.xs, overflowX: 'auto',
               WebkitOverflowScrolling: 'touch', paddingBottom: 2,
             }}>
+              {/* /distill D8: hide zero-count chips (except "All" which
+                  is always shown as the reset). A "Critical 0" pill is
+                  noise — the user can't act on it. Chip reappears when
+                  count > 0. */}
               {([
                 { id: 'all', label: 'All', count: allAdaptedPatients.length },
                 { id: 'critical', label: 'Critical', count: allAdaptedPatients.filter(p => p.status === 'critical').length },
                 { id: 'warning', label: 'Warning', count: allAdaptedPatients.filter(p => p.status === 'warning').length },
                 { id: 'ed', label: 'ED', count: allAdaptedPatients.filter(p => p.clinical.currentEncounter?.class === 'EMERGENCY').length },
                 { id: 'inpatient', label: 'Inpatient', count: allAdaptedPatients.filter(p => p.clinical.currentEncounter?.class !== 'EMERGENCY').length },
-              ] as const).map((f) => {
+              ] as const).filter(f => f.id === 'all' || f.count > 0).map((f) => {
                 const active = patientFilter === f.id;
                 const tone = f.id === 'critical' ? COLORS.crit
                   : f.id === 'warning' ? COLORS.warn
@@ -4636,24 +4582,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 width: '100%',
               }}
             >
-              <CornerBracket position="tl" color={COLORS.crit} size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color={COLORS.crit} size={6} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: `${COLORS.crit}18`,
-                  border: `1px solid ${COLORS.crit}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.crit,
-                }}
-              >
-                <Bell size={18} strokeWidth={2} />
-              </div>
+              {/* /distill D3+D5: dropped corner brackets + 32×32
+                  icon frame. */}
+              <Bell size={20} strokeWidth={2} color={COLORS.crit} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel tone="crit" size="xs">ALERTS CENTER</BracketLabel>
                 <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
@@ -4689,7 +4620,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                     onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Open alerts (${alert.label})`}
+                    aria-label={`Open alerts (${alert.title})`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
@@ -4876,24 +4807,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 width: '100%',
               }}
             >
-              <CornerBracket position="tl" color={COLORS.info} size={6} thickness={1} inset={-1} />
-              <CornerBracket position="br" color={COLORS.info} size={6} thickness={1} inset={-1} />
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: `${COLORS.info}18`,
-                  border: `1px solid ${COLORS.info}`,
-                  borderRadius: RADIUS.sm,
-                  color: COLORS.info,
-                }}
-              >
-                <MessageSquare size={18} strokeWidth={2} />
-              </div>
+              {/* /distill D3+D5: dropped corner brackets + 32×32
+                  icon frame. */}
+              <MessageSquare size={20} strokeWidth={2} color={COLORS.info} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <BracketLabel tone="info" size="xs">SECURE MESSAGING</BracketLabel>
                 <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
