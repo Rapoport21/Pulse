@@ -1,32 +1,29 @@
 /**
- * callState — research-informed call + task feature state.
+ * callState — call + task feature state.
  *
- * What changed (vs the prior 2-target / single-call / 5-sec-AI-fade state):
- *
- *   • Multi-call queue       1 active + N held (1 held max in UI for MVP)
- *   • Real directory         9 realistic ED contacts (was 2)
- *   • Task store             unified extracted-action store with priority
- *                             (STAT / Routine / FYI) and lifecycle
- *                             (proposed → approved/edited/rejected →
- *                             in_progress → done)
- *   • AI handoff = HITL      "AI proposes → countdown → human approves /
- *                             edits / rejects → AI executes" instead of
- *                             "AI takes the line, call ends in 5s"
- *   • Call history           records with task-summary counts
+ * Model (this revision):
+ *   • Call states: calling → connected → ended (3 only, no handoff machine)
+ *   • Tasks are extracted LIVE during the connected state — alongside
+ *     transcript lines, on a scripted timeline.
+ *   • Each task has executionMode = 'auto' | 'manual':
+ *       - auto: AI runs it itself. Task flips proposed → approved →
+ *         in_progress → done with realistic delays. The user sees the
+ *         AI doing the work, no input required.
+ *       - manual: AI is uncertain or the action requires clinical
+ *         judgment. Task stays in 'proposed' until the user approves /
+ *         edits / rejects. Lives in the global task store; reachable
+ *         from the Tasks drawer or the Tasks tab in Comms even after
+ *         the call ends.
+ *   • Multi-call queue: 1 active + N held. The original Comms-screen
+ *     held-queue UI still works.
  *
  * Research that drove the design:
- *   • LiveKit Handoff Pattern + Human-in-the-Loop Pattern for voice AI
- *     (https://livekit.com/blog/handoff-pattern-voice-agents,
- *      https://livekit.com/blog/human-in-the-loop-voice-agents)
- *   • Plivo HITL Patterns
- *     (https://www.plivo.com/blog/human-in-the-loop-patterns-for-ai-customer-service-in-production/)
- *   • TigerConnect + Voalté priority messaging + auto-escalation patterns
- *   • Medplum Task model (priority codes from acute care)
- *
- * Mock playback sequences are inlined here so call surfaces stay
- * presentation-only. When a real audio + LLM pipeline lands, this is
- * the single file to swap out — the consumer API (useCall hook +
- * action methods + state shape) stays.
+ *   • LiveKit HITL Pattern — keep the human in the loop for the small
+ *     set of actions that need clinical judgment; auto-execute the rest
+ *     (https://livekit.com/blog/human-in-the-loop-voice-agents)
+ *   • Plivo HITL in production — auto-execute is the default; only
+ *     escalate the uncertain cases
+ *   • Medplum Task model — priority + lifecycle from acute-care codes
  */
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
@@ -49,17 +46,10 @@ export type CallTargetId =
 export interface CallTargetInfo {
   id: CallTargetId;
   label: string;
-  /** Short uppercase code used for LINK.* badges. */
   code: string;
-  /** Human-readable category for grouping in the directory. */
   category: 'unit' | 'service' | 'physician' | 'support';
-  /** Free-form description used in the directory. */
   detail: string;
-  /** Hint for tasks extracted from this contact — most calls to RT
-   *  produce routine tasks; most calls to Blood Bank are STAT. */
   defaultPriority: TaskPriority;
-  /** Whether this target has a scripted mock sequence (others fall
-   *  back to a "no answer · leave message" stub). */
   hasMockSequence: boolean;
 }
 
@@ -115,35 +105,29 @@ export const TARGET_INFO: Record<CallTargetId, CallTargetInfo> = Object.fromEntr
   CALL_DIRECTORY.map((t) => [t.id, t]),
 ) as Record<CallTargetId, CallTargetInfo>;
 
-/** Top 3 most-frequent targets — pinned in the directory. */
 export const FAVORITE_TARGETS: CallTargetId[] = ['charge_nurse', 'oncall_md', 'pharmacy'];
 
 // ════════════════════════════════════════════════════════════════
 // Call + Task types
 // ════════════════════════════════════════════════════════════════
 
-export type CallState =
-  | 'calling'        // ringing
-  | 'connected'      // human on the line
-  | 'ai_handoff'     // AI is summarizing + proposing tasks (HITL gate)
-  | 'ai_executing'   // user approved; AI is performing actions
-  | 'ai_done'        // AI finished; awaiting end
-  | 'ended';         // call complete
+export type CallState = 'calling' | 'connected' | 'ended';
 
 export interface TranscriptLine {
   speaker: 'me' | 'them' | 'ai';
   text: string;
-  ts: number;        // ms since call started
+  ts: number;
 }
 
 export type TaskPriority = 'stat' | 'routine' | 'fyi';
+export type TaskExecutionMode = 'auto' | 'manual';
 export type TaskStatus =
-  | 'proposed'   // AI proposed; awaiting human decision
-  | 'approved'   // user approved as-is
-  | 'edited'    // user approved with edits
-  | 'rejected'   // user rejected
-  | 'in_progress' // AI is executing
-  | 'done';      // AI completed (or marked done by user)
+  | 'proposed'
+  | 'approved'
+  | 'edited'
+  | 'rejected'
+  | 'in_progress'
+  | 'done';
 
 export type AiConfidence = 'high' | 'med' | 'low';
 
@@ -154,8 +138,8 @@ export interface ExtractedTask {
   assignee: string;
   priority: TaskPriority;
   status: TaskStatus;
+  executionMode: TaskExecutionMode;
   aiConfidence: AiConfidence;
-  /** One-line justification surfaced in the HITL panel. */
   aiReasoning: string;
   proposedAt: number;
   decidedAt?: number;
@@ -169,12 +153,8 @@ export interface Call {
   startedAt: number;
   connectedAt?: number;
   endedAt?: number;
-  /** Live duration in seconds. Ticks while state ∈ connected / handoff /
-   *  executing / done. Frozen when ended. */
   duration: number;
   transcript: TranscriptLine[];
-  /** IDs of tasks proposed from this call. Tasks themselves live in the
-   *  global task store so they survive after the call ends. */
   proposedTaskIds: string[];
 }
 
@@ -186,20 +166,23 @@ export interface CallRecord {
   durationSec: number;
   transcript: TranscriptLine[];
   taskIds: string[];
-  /** Pre-computed counts for the recent-calls list. */
   taskSummary: { stat: number; routine: number; fyi: number; pendingReview: number };
 }
 
 // ════════════════════════════════════════════════════════════════
-// Mock playback sequences — scripted per target
+// Mock playback — transcript + scheduled task proposals
 // ════════════════════════════════════════════════════════════════
 
 interface MockProposal {
+  /** ms after `connected` to push this proposal. */
+  t: number;
   text: string;
   assignee: string;
   priority: TaskPriority;
   confidence: AiConfidence;
   reasoning: string;
+  /** auto = AI runs it itself; manual = needs human approval. */
+  mode: TaskExecutionMode;
 }
 
 interface MockStep {
@@ -210,7 +193,6 @@ interface MockStep {
 
 interface MockSequence {
   steps: MockStep[];
-  /** Proposals shown by the AI in the HITL panel after the call. */
   proposals: MockProposal[];
 }
 
@@ -224,18 +206,26 @@ const SEQ_CHARGE_NURSE: MockSequence = {
   ],
   proposals: [
     {
+      // Workflow change · charge nurse committed but the AI flags this
+      // for the operator to confirm (discharge orchestration involves
+      // patient-facing decisions).
+      t: 8000,
       text: 'Expedite discharges for rooms 204, 206',
       assignee: 'ER Charge Nurse',
       priority: 'stat',
-      confidence: 'high',
-      reasoning: 'Explicit commitment in the call · timeframe = immediate',
+      confidence: 'med',
+      reasoning: 'Multi-patient discharge orchestration · needs op confirmation',
+      mode: 'manual',
     },
     {
+      // Direct paging action · already confirmed in the call.
+      t: 14000,
       text: 'Page Respiratory Therapy to ER',
-      assignee: 'ER Charge Nurse',
+      assignee: 'Charge desk',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'Explicit "paging RT now" confirmation',
+      reasoning: 'Explicit "paging RT now" · auto-dispatched',
+      mode: 'auto',
     },
   ],
 };
@@ -250,18 +240,22 @@ const SEQ_BLOOD_BANK: MockSequence = {
   ],
   proposals: [
     {
-      text: 'Prepare MTP cooler for Trauma 1',
+      t: 7500,
+      text: 'Log MTP activation for Trauma 1',
       assignee: 'Blood Bank',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'MTP activation · standard cooler protocol',
+      reasoning: 'Standard MTP audit trail · auto-logged',
+      mode: 'auto',
     },
     {
-      text: 'Send 4 units O-negative via tube',
+      t: 14500,
+      text: 'Track 4 units O-negative via tube · Trauma 1',
       assignee: 'Blood Bank',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'Explicit volume + delivery method specified',
+      reasoning: 'Tube dispatch confirmed · auto-tracking',
+      mode: 'auto',
     },
   ],
 };
@@ -276,11 +270,23 @@ const SEQ_RT: MockSequence = {
   ],
   proposals: [
     {
+      t: 7000,
       text: 'Set up ARDS-protocol vent · bay 12',
       assignee: 'Respiratory Therapy',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'Vent + settings + location confirmed by RT',
+      reasoning: 'RT en route · auto-logged for room',
+      mode: 'auto',
+    },
+    {
+      // Clinical judgment: documentation of patient status change.
+      t: 13500,
+      text: 'Document acute hypoxia · sats 86 on bag · pre-vent',
+      assignee: 'Bedside team',
+      priority: 'routine',
+      confidence: 'med',
+      reasoning: 'Patient-state documentation · needs operator review',
+      mode: 'manual',
     },
   ],
 };
@@ -295,18 +301,24 @@ const SEQ_PHARMACY: MockSequence = {
   ],
   proposals: [
     {
+      t: 7000,
       text: 'Move vanco trough draw · bed 7 · next round',
       assignee: 'Pharmacy',
       priority: 'routine',
       confidence: 'high',
-      reasoning: 'Lab draw rescheduling, no immediate clinical risk',
+      reasoning: 'Lab-draw timing change · auto-logged',
+      mode: 'auto',
     },
     {
-      text: 'Dispense ceftriaxone 1g IV · bed 9',
-      assignee: 'Pharmacy',
+      // Med order · pharmacist confirmed, but pharmacy dispensing
+      // needs operator approval per protocol (controlled change).
+      t: 14500,
+      text: 'Approve ceftriaxone 1g IV order · bed 9',
+      assignee: 'Operator',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'Time-bound antibiotic order · 20 min window',
+      reasoning: 'Med order confirmation · operator co-sign required',
+      mode: 'manual',
     },
   ],
 };
@@ -321,18 +333,23 @@ const SEQ_ONCALL_MD: MockSequence = {
   ],
   proposals: [
     {
-      text: 'Cardiologist en route to bed 4 · ETA 5 min',
-      assignee: 'Bedside team',
+      t: 8500,
+      text: 'Cardiologist en route · bed 4 · ETA 5 min',
+      assignee: 'ER team',
       priority: 'stat',
       confidence: 'high',
-      reasoning: 'STEMI · physician en route confirmation',
+      reasoning: 'ETA broadcast · auto-posted to team feed',
+      mode: 'auto',
     },
     {
-      text: 'Page Dr. Tanaka if bed 4 rhythm changes',
+      // Conditional trigger · the AI is uncertain how to monitor.
+      t: 15500,
+      text: 'Watch bed 4 rhythm · page Dr. Tanaka on change',
       assignee: 'ER Charge Nurse',
       priority: 'routine',
       confidence: 'med',
-      reasoning: 'Conditional task · trigger-based',
+      reasoning: 'Conditional task · trigger semantics need confirmation',
+      mode: 'manual',
     },
   ],
 };
@@ -350,33 +367,25 @@ const MOCK_SEQUENCES: Partial<Record<CallTargetId, MockSequence>> = {
 // ════════════════════════════════════════════════════════════════
 
 interface CallContextValue {
-  // Active state
   activeCall: Call | null;
   heldCalls: Call[];
 
-  // Task store (cross-call)
   tasks: ExtractedTask[];
   pendingReviewCount: number;
   openTaskCount: number;
 
-  // Call history
   history: CallRecord[];
 
-  // Call actions
   startCall: (target: CallTargetId) => string | null;
   endCall: (callId?: string) => void;
   holdActiveCall: () => void;
   resumeCall: (callId: string) => void;
 
-  // AI handoff (HITL)
-  handToAI: () => void;
+  // Per-task actions (used during + after the call by both the inline
+  // task panel and the global TasksDrawer).
   approveTask: (taskId: string) => void;
   rejectTask: (taskId: string) => void;
   editTask: (taskId: string, patch: Partial<Pick<ExtractedTask, 'text' | 'priority' | 'assignee'>>) => void;
-  /** User approves all pending; AI executes whatever was approved. */
-  executeApprovedAndEnd: () => void;
-
-  // Task management (independent of calls)
   completeTask: (taskId: string) => void;
   reassignTask: (taskId: string, assignee: string) => void;
 }
@@ -421,20 +430,16 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [tasks, setTasks] = useState<ExtractedTask[]>([]);
   const [history, setHistory] = useState<CallRecord[]>([]);
 
-  // ── Duration ticker ────────────────────────────────────────
-  // Ticks during connected / ai_handoff / ai_executing / ai_done
-  // (anything past 'calling' and before 'ended').
+  // ── Duration ticker ───────────────────────────────────────
   useEffect(() => {
-    if (!activeCall) return;
-    const liveStates: CallState[] = ['connected', 'ai_handoff', 'ai_executing', 'ai_done'];
-    if (!liveStates.includes(activeCall.state)) return;
+    if (!activeCall || activeCall.state !== 'connected') return;
     const id = setInterval(() => {
       setActiveCall((c) => (c ? { ...c, duration: c.duration + 1 } : c));
     }, 1000);
     return () => clearInterval(id);
   }, [activeCall?.id, activeCall?.state]);
 
-  // ── Mock transcript playback ───────────────────────────────
+  // ── Mock playback (transcript + scheduled proposals) ──────
   const playbackTimers = useRef<number[]>([]);
   useEffect(() => {
     if (!activeCall || activeCall.state !== 'connected') return;
@@ -442,6 +447,8 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!seq) return;
     playbackTimers.current.forEach((t) => clearTimeout(t));
     playbackTimers.current = [];
+
+    // Transcript pushes
     seq.steps.forEach((step) => {
       const id = window.setTimeout(() => {
         setActiveCall((c) => {
@@ -454,18 +461,71 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, step.t);
       playbackTimers.current.push(id);
     });
+
+    // Task proposals — fire at scheduled times. AUTO tasks self-execute;
+    // MANUAL tasks wait for operator decision.
+    seq.proposals.forEach((p) => {
+      const callIdAtSchedule = activeCall.id;
+      const id = window.setTimeout(() => {
+        const now = Date.now();
+        const taskId = newTaskId();
+        const initialStatus: TaskStatus = p.mode === 'auto' ? 'approved' : 'proposed';
+        const newTask: ExtractedTask = {
+          id: taskId,
+          callId: callIdAtSchedule,
+          text: p.text,
+          assignee: p.assignee,
+          priority: p.priority,
+          status: initialStatus,
+          executionMode: p.mode,
+          aiConfidence: p.confidence,
+          aiReasoning: p.reasoning,
+          proposedAt: now,
+          decidedAt: p.mode === 'auto' ? now : undefined,
+        };
+        setTasks((prev) => [newTask, ...prev]);
+        setActiveCall((c) => {
+          if (!c || c.id !== callIdAtSchedule) return c;
+          return { ...c, proposedTaskIds: [...c.proposedTaskIds, taskId] };
+        });
+
+        // Auto-task execution timeline: approved → in_progress → done
+        if (p.mode === 'auto') {
+          const t1 = window.setTimeout(() => {
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId && t.status === 'approved'
+                  ? { ...t, status: 'in_progress' }
+                  : t,
+              ),
+            );
+          }, 800);
+          const t2 = window.setTimeout(() => {
+            setTasks((prev) =>
+              prev.map((t) =>
+                t.id === taskId && t.status === 'in_progress'
+                  ? { ...t, status: 'done', completedAt: Date.now() }
+                  : t,
+              ),
+            );
+          }, 2200);
+          playbackTimers.current.push(t1, t2);
+        }
+      }, p.t);
+      playbackTimers.current.push(id);
+    });
+
     return () => {
       playbackTimers.current.forEach((t) => clearTimeout(t));
       playbackTimers.current = [];
     };
   }, [activeCall?.id, activeCall?.state, activeCall?.target]);
 
-  // ── Actions ────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────
 
   const startCall = (target: CallTargetId): string | null => {
     if (activeCall) {
-      // Hold the current active call before placing a new one
-      setHeldCalls((h) => [...h, { ...activeCall, state: 'connected' }]);
+      setHeldCalls((h) => [...h, activeCall]);
     }
     const info = TARGET_INFO[target];
     const id = newCallId();
@@ -480,11 +540,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       proposedTaskIds: [],
     };
     setActiveCall(call);
-    // Simulate connection
     setTimeout(() => {
       setActiveCall((c) => {
         if (!c || c.id !== id || c.state !== 'calling') return c;
-        // If there's no mock sequence, surface a friendly stub.
         if (!info.hasMockSequence) {
           return {
             ...c,
@@ -501,7 +559,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return id;
   };
 
-  const archiveActiveCallToHistory = (call: Call, proposed: ExtractedTask[]) => {
+  const archiveCallToHistory = (call: Call, callTasks: ExtractedTask[]) => {
     const record: CallRecord = {
       id: call.id,
       target: call.target,
@@ -509,24 +567,24 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       endedAt: Date.now(),
       durationSec: call.duration,
       transcript: call.transcript,
-      taskIds: proposed.map((t) => t.id),
-      taskSummary: summarize(proposed),
+      taskIds: callTasks.map((t) => t.id),
+      taskSummary: summarize(callTasks),
     };
     setHistory((h) => [record, ...h].slice(0, 50));
   };
 
   const endCall = (callId?: string) => {
     if (activeCall && (!callId || callId === activeCall.id)) {
-      const tasksFromThisCall = tasks.filter((t) => activeCall.proposedTaskIds.includes(t.id));
-      archiveActiveCallToHistory(activeCall, tasksFromThisCall);
+      const callTasks = tasks.filter((t) => activeCall.proposedTaskIds.includes(t.id));
+      archiveCallToHistory(activeCall, callTasks);
       setActiveCall(null);
       return;
     }
     if (callId) {
       const held = heldCalls.find((c) => c.id === callId);
       if (held) {
-        const tasksFromThisCall = tasks.filter((t) => held.proposedTaskIds.includes(t.id));
-        archiveActiveCallToHistory(held, tasksFromThisCall);
+        const callTasks = tasks.filter((t) => held.proposedTaskIds.includes(t.id));
+        archiveCallToHistory(held, callTasks);
         setHeldCalls((h) => h.filter((c) => c.id !== callId));
       }
     }
@@ -549,29 +607,7 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveCall(held);
   };
 
-  // ── AI handoff (HITL) ──────────────────────────────────────
-  const handToAI = () => {
-    if (!activeCall || activeCall.state !== 'connected') return;
-    const seq = MOCK_SEQUENCES[activeCall.target];
-    const proposals = seq?.proposals ?? [];
-    const now = Date.now();
-    const newTasks: ExtractedTask[] = proposals.map((p) => ({
-      id: newTaskId(),
-      callId: activeCall.id,
-      text: p.text,
-      assignee: p.assignee,
-      priority: p.priority,
-      status: 'proposed',
-      aiConfidence: p.confidence,
-      aiReasoning: p.reasoning,
-      proposedAt: now,
-    }));
-    setTasks((prev) => [...newTasks, ...prev]);
-    setActiveCall((c) =>
-      c ? { ...c, state: 'ai_handoff', proposedTaskIds: newTasks.map((t) => t.id) } : c,
-    );
-  };
-
+  // ── Per-task actions ──────────────────────────────────────
   const approveTask = (taskId: string) => {
     setTasks((prev) =>
       prev.map((t) =>
@@ -580,6 +616,25 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : t,
       ),
     );
+    // Then run it: in_progress → done
+    setTimeout(() => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId && t.status === 'approved'
+            ? { ...t, status: 'in_progress' }
+            : t,
+        ),
+      );
+    }, 400);
+    setTimeout(() => {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId && t.status === 'in_progress'
+            ? { ...t, status: 'done', completedAt: Date.now() }
+            : t,
+        ),
+      );
+    }, 1600);
   };
 
   const rejectTask = (taskId: string) => {
@@ -605,64 +660,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
-  /**
-   * The big HITL action. Approves any still-proposed tasks (auto-OK for
-   * the unchecked), moves the call to 'ai_executing', then 'ai_done',
-   * then 'ended' — with realistic delays so the user can see the AI
-   * working.
-   */
-  const executeApprovedAndEnd = () => {
-    if (!activeCall || activeCall.state !== 'ai_handoff') return;
-    const ids = activeCall.proposedTaskIds;
-    // Auto-approve anything still in 'proposed' state.
-    setTasks((prev) =>
-      prev.map((t) =>
-        ids.includes(t.id) && t.status === 'proposed'
-          ? { ...t, status: 'approved', decidedAt: Date.now() }
-          : t,
-      ),
-    );
-    setActiveCall((c) => (c ? { ...c, state: 'ai_executing' } : c));
-
-    // Step through execution: each approved/edited task flips to in_progress
-    // → done with a small delay so the UI feels like the AI is working.
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          ids.includes(t.id) && (t.status === 'approved' || t.status === 'edited')
-            ? { ...t, status: 'in_progress' }
-            : t,
-        ),
-      );
-    }, 600);
-    setTimeout(() => {
-      setTasks((prev) =>
-        prev.map((t) =>
-          ids.includes(t.id) && t.status === 'in_progress'
-            ? { ...t, status: 'done', completedAt: Date.now() }
-            : t,
-        ),
-      );
-      setActiveCall((c) => (c ? { ...c, state: 'ai_done' } : c));
-    }, 2400);
-    setTimeout(() => {
-      setActiveCall((c) => {
-        if (!c) return c;
-        // capture proposed tasks from this call before clearing
-        const taskList = tasks.filter((t) => c.proposedTaskIds.includes(t.id));
-        archiveActiveCallToHistory(c, taskList);
-        return null;
-      });
-    }, 3800);
-  };
-
-  // ── Task management (post-call) ────────────────────────────
   const completeTask = (taskId: string) => {
     setTasks((prev) =>
       prev.map((t) =>
-        t.id === taskId
-          ? { ...t, status: 'done', completedAt: Date.now() }
-          : t,
+        t.id === taskId ? { ...t, status: 'done', completedAt: Date.now() } : t,
       ),
     );
   };
@@ -690,11 +691,9 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
         endCall,
         holdActiveCall,
         resumeCall,
-        handToAI,
         approveTask,
         rejectTask,
         editTask,
-        executeApprovedAndEnd,
         completeTask,
         reassignTask,
       }}
@@ -704,17 +703,12 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// ────────────────────────────────────────────────────────────
-// Back-compat shims for existing imports
-// ────────────────────────────────────────────────────────────
-
-/** Old `CallTarget` type — kept so legacy imports compile while we
- *  migrate. Maps to the new CallTargetId, nullable. */
+// ─────────────────────────────────────────────────────────
+// Back-compat shims
+// ─────────────────────────────────────────────────────────
 export type CallTarget = CallTargetId | null;
 export type CallStateType = CallState;
 export type ActionTask = { task: string; assignee: string };
-
-/** Old label map kept for components still reaching for it. */
 export const CALL_TARGET_LABEL: Record<CallTargetId, string> = Object.fromEntries(
   CALL_DIRECTORY.map((t) => [t.id, t.label]),
 ) as Record<CallTargetId, string>;

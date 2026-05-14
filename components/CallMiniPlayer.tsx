@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Bot, PhoneCall, PhoneOff, Maximize2 } from 'lucide-react';
+import { PhoneCall, Maximize2 } from 'lucide-react';
 import { COLORS, FONTS, SPACE, RADIUS, MOTION, Mono } from './design';
 import { useCall, TARGET_INFO, type CallState } from '../lib/callState';
 
@@ -26,11 +26,8 @@ interface CallMiniPlayerProps {
 }
 
 const stateTone = (state: CallState): { color: string; label: string } => {
-  if (state === 'calling')      return { color: COLORS.info, label: 'CONNECTING' };
-  if (state === 'connected')    return { color: COLORS.ok,   label: 'LIVE' };
-  if (state === 'ai_handoff')   return { color: COLORS.warn, label: 'HITL' };
-  if (state === 'ai_executing') return { color: COLORS.warn, label: 'AI RUN' };
-  if (state === 'ai_done')      return { color: COLORS.ok,   label: 'DONE' };
+  if (state === 'calling')   return { color: COLORS.info, label: 'CONNECTING' };
+  if (state === 'connected') return { color: COLORS.ok,   label: 'LIVE' };
   return { color: COLORS.textMuted, label: 'IDLE' };
 };
 
@@ -49,7 +46,6 @@ export const CallMiniPlayer: React.FC<CallMiniPlayerProps> = ({
   const info = TARGET_INFO[activeCall.target];
   const tone = stateTone(activeCall.state);
   const hasHeld = heldCalls.length > 0;
-  const aiState = activeCall.state.startsWith('ai_');
 
   return (
     <motion.div
@@ -66,7 +62,7 @@ export const CallMiniPlayer: React.FC<CallMiniPlayerProps> = ({
             : `1px solid ${COLORS.border}`,
         borderBottom: variant === 'mobile' ? `1px solid ${tone.color}` : undefined,
         boxShadow:
-          activeCall.state === 'connected' || aiState
+          activeCall.state === 'connected'
             ? `0 -4px 18px -8px ${tone.color}66`
             : 'none',
         flexShrink: 0,
@@ -122,12 +118,8 @@ export const CallMiniPlayer: React.FC<CallMiniPlayerProps> = ({
             flexShrink: 0,
           }}
         >
-          {aiState ? (
-            <Bot size={12} strokeWidth={2} color={tone.color} />
-          ) : (
-            <PhoneCall size={12} strokeWidth={2} color={tone.color} />
-          )}
-          {(activeCall.state === 'calling' || aiState) && (
+          <PhoneCall size={12} strokeWidth={2} color={tone.color} />
+          {activeCall.state === 'calling' && (
             <motion.span
               aria-hidden
               animate={{ opacity: [0.3, 1, 0.3] }}

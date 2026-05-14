@@ -1735,6 +1735,7 @@ function App() {
               onDeactivateSurge={deactivateSurge}
               simControls={simControls}
               onNavigateToComms={() => navigateToTab(Tab.COMMS)}
+              isCommsOpen={activeTab === Tab.COMMS}
             />
           </div>
 
