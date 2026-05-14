@@ -46,6 +46,7 @@ import { CallProvider } from './lib/callState';
 import { CommsScreen } from './components/CommsScreen';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
 import { DivertSheet, type DivertActivation } from './components/DivertSheet';
+import { PulseAiProvider } from './lib/pulseAI';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ScenarioHudBadge } from './components/ScenarioHudBadge';
@@ -1251,6 +1252,7 @@ function App() {
      * useReducedMotion() opt-ins. WCAG 2.3.3. */
     <MotionConfig reducedMotion="user">
     <CallProvider>
+    <PulseAiProvider>
     <>
       <ConnectionIndicator />
       {/* Auto-brief overlay: when an inbound EMS run hits ETA 2:00, a
@@ -1762,6 +1764,7 @@ function App() {
         </div>
       )}
     </>
+    </PulseAiProvider>
     </CallProvider>
     </MotionConfig>
   );

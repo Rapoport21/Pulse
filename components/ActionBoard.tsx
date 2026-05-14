@@ -39,6 +39,7 @@ import {
   CornerBracket,
   BracketFrame,
 } from './design';
+import { AiActivityPanel } from './PulseAi';
 
 interface ActionBoardProps {
   currentUser: UserProfile;
@@ -1051,6 +1052,11 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
         overflow: 'hidden',
       }}
     >
+      {/* PULSE.AI tasks activity — what the AI auto-resolved, what
+          it proposed, what it's monitoring. Sprint 2026-05-14
+          item 18: surface AI heavily on Actions. */}
+      <AiActivityPanel surface="tasks" title="AI · TASK ACTIVITY" limit={4} />
+
       {/* ─── Section header ─── */}
       <SectionTitle
         id="ACT.BOARD"

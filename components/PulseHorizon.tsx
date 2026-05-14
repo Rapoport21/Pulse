@@ -59,6 +59,7 @@ import {
 } from '../lib/scenario';
 import { ScenarioCards } from './ScenarioCards';
 import { useCall } from '../lib/callState';
+import { AiActivityStrip } from './PulseAi';
 import { useEmsInbound } from '../lib/emsLive';
 import {
   BedBoard,
@@ -513,6 +514,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       >
         {/* ══════════════════════════════ LEFT COLUMN ══════════════════════════════ */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md, minWidth: 0 }}>
+          {/* PULSE.AI proactive-activity strip — shows what the AI is
+              doing autonomously, what's escalated for review, and what
+              it's watching. Sprint 2026-05-14 item 14. */}
+          <AiActivityStrip />
           {/* Stale Data Banner */}
           <AnimatePresence>
             {systemStatus === 'stale' && (

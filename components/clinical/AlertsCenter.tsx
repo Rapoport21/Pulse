@@ -51,6 +51,7 @@ import {
   ScanningLine,
   Divider,
 } from '../design';
+import { AiActivityPanel } from '../PulseAi';
 import { UserRole } from '../../types';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -647,6 +648,12 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
             WebkitOverflowScrolling: 'touch',
           }}
         >
+          {/* PULSE.AI alerts activity — surfaces what the AI is doing
+              about alerts: silenced false alarms, escalations, items
+              awaiting review. Sprint 2026-05-14 item 13. */}
+          <div style={{ padding: `${SPACE.lg}px ${SPACE.xl}px 0` }}>
+            <AiActivityPanel surface="alerts" title="AI · ALERTS ACTIVITY" limit={5} />
+          </div>
           {/* ── Summary bar: 4 status boxes (clickable filters) ── */}
           <div
             style={{
