@@ -162,25 +162,23 @@ function App() {
   const [isBooting, setIsBooting] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // First-launch pre-login explainer. Persisted in localStorage so
-  // returning users skip straight to login. "Skip → Sign in" inside
-  // the welcome screen also sets this flag.
-  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
+  // Pre-login welcome / explainer. Resets on every page load so the
+  // landing surface is always the first thing a visitor sees before
+  // the login form. Once "Enter PULSE" is tapped, this becomes true
+  // for the rest of this session only (no localStorage persistence).
+  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean>(false);
+  const markWelcomeSeen = () => setHasSeenWelcome(true);
+
+  // One-time cleanup: any previously-persisted 'pulse-welcome-seen'
+  // flag from the prior build is no longer used. Remove it so it
+  // doesn't sit forever in localStorage.
+  useEffect(() => {
     try {
-      return window.localStorage.getItem('pulse-welcome-seen') === '1';
+      window.localStorage.removeItem('pulse-welcome-seen');
     } catch {
-      return true;
+      /* ignore */
     }
-  });
-  const markWelcomeSeen = () => {
-    try {
-      window.localStorage.setItem('pulse-welcome-seen', '1');
-    } catch {
-      /* localStorage blocked — accept session-only memory */
-    }
-    setHasSeenWelcome(true);
-  };
+  }, []);
 
   // Toast System
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);

@@ -12,9 +12,10 @@
  *   4. ROLES      Manager · Charge Nurse · ER Personnel · Trauma
  *   5. CTA        Enter PULSE button
  *
- * Persisted by App.tsx: once the user clicks Enter, localStorage
- * remembers it so returning users go straight to login. "Skip to
- * sign in" pinned top-right always works.
+ * Session-only: every fresh page load starts here. Clicking the
+ * Enter button flips session state and the LoginScreen mounts. The
+ * surface is intentionally not localStorage-persisted: it IS the
+ * landing surface, not a one-shot onboarding flow.
  *
  * Mobile-aware: ≤640px goes single column, scaled type, condensed
  * paddings. Respects prefers-reduced-motion globally.
