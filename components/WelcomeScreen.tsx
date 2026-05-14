@@ -59,9 +59,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
         WebkitOverflowScrolling: 'touch',
       }}
     >
-      {/* Skip-to-sign-in — pinned top-right, always visible */}
-      <SkipToSignIn onSkip={onEnter} />
-
       <HeroSection onScrollHint={() => {
         const next = document.getElementById('welcome-gap');
         next?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
@@ -81,47 +78,6 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
 // ════════════════════════════════════════════════════════════════
 // Shared visual primitives
 // ════════════════════════════════════════════════════════════════
-
-const SkipToSignIn: React.FC<{ onSkip: () => void }> = ({ onSkip }) => (
-  <button
-    type="button"
-    onClick={onSkip}
-    style={{
-      position: 'fixed',
-      top: 'calc(env(safe-area-inset-top) + 16px)',
-      right: 16,
-      zIndex: 60,
-      padding: '8px 12px',
-      background: `${COLORS.surface}DD`,
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)',
-      border: `1px solid ${COLORS.borderStrong}`,
-      borderRadius: RADIUS.sm,
-      color: COLORS.textSecondary,
-      cursor: 'pointer',
-      fontFamily: FONTS.mono,
-      fontSize: 11,
-      letterSpacing: '0.14em',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      transition: `color ${MOTION.fast}s ${MOTION.cssEase}, border-color ${MOTION.fast}s ${MOTION.cssEase}`,
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.color = COLORS.textPrimary;
-      e.currentTarget.style.borderColor = COLORS.borderHover;
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.color = COLORS.textSecondary;
-      e.currentTarget.style.borderColor = COLORS.borderStrong;
-    }}
-  >
-    Sign in
-    <ArrowRight size={11} strokeWidth={2.25} />
-  </button>
-);
 
 // Reveal helper — wraps content with a scroll-triggered fade-up
 const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
@@ -174,20 +130,27 @@ const Section: React.FC<{
 const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) => {
   const reduce = useReducedMotion();
   return (
-    <Section
-      topPad={false}
-      minH="100lvh"
-    >
+    <Section topPad={false} minH="100lvh">
       <div
         style={{
+          // box-sizing: border-box ensures padding stays INSIDE the
+          // 100lvh box (instead of stacking on top of it). Without
+          // this the absolutely-positioned scroll hint slid below
+          // the visible viewport on iPhone.
+          boxSizing: 'border-box',
           minHeight: '100lvh',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'center',
+          // space-between distributes: pre-headline at top, content
+          // block centered (via flex:1 spacer), scroll hint at bottom.
+          // Guarantees the scroll hint is always in the visible area
+          // when the page is at the top.
+          justifyContent: 'space-between',
           alignItems: 'flex-start',
-          paddingTop: 'clamp(96px, 14vh, 160px)',
-          paddingBottom: 'clamp(72px, 10vh, 120px)',
+          paddingTop: 'clamp(72px, 11vh, 132px)',
+          paddingBottom: 'calc(max(env(safe-area-inset-bottom), 20px) + 24px)',
           position: 'relative',
+          gap: 'clamp(20px, 4vh, 48px)',
         }}
       >
         {/* Ambient scanline */}
@@ -206,126 +169,148 @@ const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) =
         />
         <ScanningLine color={COLORS.accent} duration={18} />
 
-        {/* Pre-headline */}
+        {/* TOP — pre-headline */}
         <motion.div
           initial={reduce ? undefined : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: MOTION.easeSmooth, delay: 0.1 }}
-          style={{
-            marginBottom: 28,
-          }}
+          style={{ position: 'relative', zIndex: 1 }}
         >
           <Mono tone="dim" size="xs" style={{ letterSpacing: '0.22em' }}>
             // 2026 · OPERATIONAL INTELLIGENCE · EMERGENCY DEPARTMENT
           </Mono>
         </motion.div>
 
-        {/* Bracketed wordmark */}
-        <motion.div
-          initial={reduce ? undefined : { opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.0, ease: MOTION.easeSmooth, delay: 0.25 }}
+        {/* MIDDLE — wordmark + tagline + sub. flex:1 makes it absorb
+            any spare vertical space, keeping itself optically
+            centered and pushing the scroll hint to the bottom. */}
+        <div
           style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            gap: 'clamp(20px, 3vh, 32px)',
+            width: '100%',
             position: 'relative',
-            padding: '8px 22px',
-            marginBottom: 32,
-            border: `1px solid ${COLORS.accent}`,
-            background: `${COLORS.accent}0a`,
+            zIndex: 1,
+            minHeight: 0,
           }}
         >
-          <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={2} />
-          <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={2} />
-          <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={2} />
-          <CornerBracket position="br" color={COLORS.accent} size={10} thickness={2} />
-          <span
+          {/* Bracketed wordmark */}
+          <motion.div
+            initial={reduce ? undefined : { opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.0, ease: MOTION.easeSmooth, delay: 0.25 }}
             style={{
-              fontFamily: FONTS.mono,
-              fontSize: 'clamp(64px, 12vw, 128px)',
-              fontWeight: 700,
-              letterSpacing: '-0.04em',
-              color: COLORS.textPrimary,
-              lineHeight: 0.95,
-              display: 'inline-block',
+              position: 'relative',
+              padding: '8px 22px',
+              border: `1px solid ${COLORS.accent}`,
+              background: `${COLORS.accent}0a`,
             }}
           >
-            PULSE
-          </span>
-        </motion.div>
+            <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={2} />
+            <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={2} />
+            <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={2} />
+            <CornerBracket position="br" color={COLORS.accent} size={10} thickness={2} />
+            <span
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: 'clamp(56px, 11vw, 120px)',
+                fontWeight: 700,
+                letterSpacing: '-0.04em',
+                color: COLORS.textPrimary,
+                lineHeight: 0.95,
+                display: 'inline-block',
+              }}
+            >
+              PULSE
+            </span>
+          </motion.div>
 
-        {/* Tagline */}
-        <motion.h1
-          initial={reduce ? undefined : { opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: MOTION.easeSmooth, delay: 0.45 }}
-          style={{
-            fontFamily: FONTS.sans,
-            fontSize: 'clamp(34px, 5.4vw, 68px)',
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.02,
-            color: COLORS.textPrimary,
-            margin: 0,
-            maxWidth: 880,
-          }}
-        >
-          See risk clearly. Act together.
-        </motion.h1>
+          {/* Tagline */}
+          <motion.h1
+            initial={reduce ? undefined : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: MOTION.easeSmooth, delay: 0.45 }}
+            style={{
+              fontFamily: FONTS.sans,
+              fontSize: 'clamp(30px, 5vw, 64px)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.04,
+              color: COLORS.textPrimary,
+              margin: 0,
+              maxWidth: 880,
+            }}
+          >
+            See risk clearly. Act together.
+          </motion.h1>
 
-        {/* Sub-explainer */}
-        <motion.p
-          initial={reduce ? undefined : { opacity: 0, y: 14 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: MOTION.easeSmooth, delay: 0.6 }}
-          style={{
-            fontFamily: FONTS.sans,
-            fontSize: 'clamp(15px, 1.4vw, 18px)',
-            color: COLORS.textSecondary,
-            margin: '28px 0 0 0',
-            maxWidth: 640,
-            lineHeight: 1.55,
-            letterSpacing: '-0.005em',
-          }}
-        >
-          PULSE is the operational intelligence layer for emergency
-          departments. One view of every system, every patient, every
-          shift — built for clinicians, by clinicians.
-        </motion.p>
+          {/* Sub-explainer */}
+          <motion.p
+            initial={reduce ? undefined : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: MOTION.easeSmooth, delay: 0.6 }}
+            style={{
+              fontFamily: FONTS.sans,
+              fontSize: 'clamp(14px, 1.4vw, 18px)',
+              color: COLORS.textSecondary,
+              margin: 0,
+              maxWidth: 640,
+              lineHeight: 1.55,
+              letterSpacing: '-0.005em',
+            }}
+          >
+            PULSE is the operational intelligence layer for emergency
+            departments. One view of every system, every patient, every
+            shift — built for clinicians, by clinicians.
+          </motion.p>
+        </div>
 
-        {/* Scroll hint */}
+        {/* BOTTOM — scroll hint. In-flow (not absolute) so it always
+            sits at the visible bottom of the viewport on first
+            paint. Rose-tinted + label so it's unambiguous. */}
         <motion.button
           type="button"
           onClick={onScrollHint}
-          aria-label="Scroll to next section"
-          initial={reduce ? undefined : { opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
+          aria-label="Scroll to learn more"
+          initial={reduce ? undefined : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9, duration: 0.6, ease: MOTION.easeSmooth }}
           style={{
-            position: 'absolute',
-            bottom: 36,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            alignSelf: 'center',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            color: COLORS.textMuted,
             padding: 12,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 6,
+            gap: 8,
             fontFamily: FONTS.mono,
-            fontSize: 10,
-            letterSpacing: '0.16em',
+            fontSize: 11,
+            letterSpacing: '0.18em',
+            color: COLORS.accent,
+            position: 'relative',
+            zIndex: 1,
           }}
         >
-          <span>SCROLL</span>
+          <span style={{ fontWeight: 600 }}>SCROLL TO LEARN MORE</span>
           <motion.span
             aria-hidden
-            animate={reduce ? undefined : { y: [0, 4, 0] }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ display: 'inline-flex' }}
+            animate={reduce ? undefined : { y: [0, 5, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              display: 'inline-flex',
+              padding: 4,
+              border: `1px solid ${COLORS.accent}`,
+              borderRadius: RADIUS.full,
+              background: `${COLORS.accent}14`,
+            }}
           >
-            <ChevronDown size={14} strokeWidth={2} />
+            <ChevronDown size={14} strokeWidth={2.25} color={COLORS.accent} />
           </motion.span>
         </motion.button>
       </div>
