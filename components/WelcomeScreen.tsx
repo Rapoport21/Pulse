@@ -177,7 +177,7 @@ const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) =
           style={{ position: 'relative', zIndex: 1 }}
         >
           <Mono tone="dim" size="xs" style={{ letterSpacing: '0.22em' }}>
-            // 2026 · OPERATIONAL INTELLIGENCE · EMERGENCY DEPARTMENT
+            // 2026 · OPERATIONAL INTELLIGENCE · HOSPITAL OPERATIONS
           </Mono>
         </motion.div>
 
@@ -263,9 +263,9 @@ const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) =
               letterSpacing: '-0.005em',
             }}
           >
-            PULSE is the operational intelligence layer for emergency
-            departments. One view of every system, every patient, every
-            shift — built for clinicians, by clinicians.
+            PULSE is the operational intelligence layer for the whole
+            hospital. One view of every system, every patient, every
+            shift. Built by clinicians, for clinicians.
           </motion.p>
         </div>
 
@@ -342,7 +342,7 @@ const GapSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => (
           maxWidth: 880,
         }}
       >
-        ED teams run inside a dozen disconnected systems.
+        Hospital teams run inside a dozen disconnected systems.
       </h2>
     </Reveal>
     <Reveal delay={0.2}>
@@ -356,8 +356,8 @@ const GapSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => (
           lineHeight: 1.6,
         }}
       >
-        EHR, lab, pharmacy, paging, bed board, EVS, vitals monitor —
-        each with its own ping. Critical signal gets lost in the noise.
+        EHR, lab, pharmacy, paging, bed board, EVS, vitals monitor.
+        Each with its own ping. Critical signal gets lost in the noise.
         Handoffs get interrupted. Decisions get delayed.
       </p>
     </Reveal>
@@ -541,7 +541,7 @@ const PillarsSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) =
           icon={<Activity size={16} strokeWidth={1.75} />}
           label="SEE"
           title="Situational awareness"
-          body="Capacity, NEDOCS, alerts, surge state — the whole department in one glance. The signal stays above the noise."
+          body="Capacity, NEDOCS, alerts, surge state. The whole hospital in one glance. The signal stays above the noise."
           demo={<CapacityDemo reduceMotion={reduceMotion} />}
         />
       </Reveal>
@@ -559,7 +559,7 @@ const PillarsSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) =
           icon={<Smartphone size={16} strokeWidth={1.75} />}
           label="GO"
           title="On the ground"
-          body="Mobile companion built for one-handed use. Your shift, your patients, your inbox — always within reach."
+          body="Mobile companion built for one-handed use. Your shift, your patients, your inbox. Always within reach."
           demo={<TranscriptDemo reduceMotion={reduceMotion} />}
         />
       </Reveal>
@@ -1107,7 +1107,7 @@ const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
             maxWidth: 680,
           }}
         >
-          The ED never stops. Neither does PULSE.
+          The hospital never stops. Neither does PULSE.
         </h2>
         <p
           style={{
@@ -1135,7 +1135,7 @@ const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
       }}
     >
       <Mono tone="dim" size="xs" style={{ letterSpacing: '0.18em' }}>
-        // PULSE · 2026 · OPERATIONAL INTELLIGENCE FOR EMERGENCY DEPARTMENTS
+        // PULSE · 2026 · OPERATIONAL INTELLIGENCE FOR HOSPITALS
       </Mono>
     </div>
   </Section>
