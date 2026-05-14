@@ -159,15 +159,25 @@ function App() {
   const [systemStatus, setSystemStatus] = useState<'normal' | 'stale' | 'manual'>('normal');
   const [actionFilter, setActionFilter] = useState<string>('');
   const [loginCount, setLoginCount] = useState(0);
-  const [isBooting, setIsBooting] = useState(true);
+  // Order of pre-app surfaces:
+  //   1. WelcomeScreen   (always first; explains what PULSE is)
+  //   2. CinematicBoot   (starts ONLY after the user taps Enter PULSE)
+  //   3. LoginScreen     (after boot completes)
+  // isBooting therefore starts FALSE — boot is triggered by the user,
+  // not by app mount. Reload at any time resets to step 1.
+  const [isBooting, setIsBooting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   // Pre-login welcome / explainer. Resets on every page load so the
-  // landing surface is always the first thing a visitor sees before
-  // the login form. Once "Enter PULSE" is tapped, this becomes true
-  // for the rest of this session only (no localStorage persistence).
+  // landing surface is always the first thing a visitor sees.
   const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean>(false);
-  const markWelcomeSeen = () => setHasSeenWelcome(true);
+  const markWelcomeSeen = () => {
+    setHasSeenWelcome(true);
+    // Kick off the boot animation as the transition between welcome
+    // and login. CinematicBoot drives its own completion timing and
+    // calls onComplete (which flips isBooting back to false).
+    setIsBooting(true);
+  };
 
   // One-time cleanup: any previously-persisted 'pulse-welcome-seen'
   // flag from the prior build is no longer used. Remove it so it
@@ -704,9 +714,16 @@ function App() {
   );
   const isCompactNav = windowWidth < 1280;
 
+  // Backup auto-end for the boot animation. Fires once isBooting flips
+  // to true (i.e. after the user taps Enter PULSE). CinematicBoot also
+  // calls onComplete on its own timer; whichever fires first wins.
   useEffect(() => {
+    if (!isBooting) return;
     const timer = setTimeout(() => setIsBooting(false), BOOT_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [isBooting]);
 
+  useEffect(() => {
     const handleResize = () => {
       const w = window.innerWidth;
       setWindowWidth(w);
@@ -714,11 +731,7 @@ function App() {
     };
     handleResize();
     window.addEventListener('resize', handleResize);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-    };
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
@@ -1173,18 +1186,20 @@ function App() {
   };
 
   // ══════════════════════════════════════════════════════════════════════
-  // BOOT SCREEN — Tactical system-init sequence
-  // ══════════════════════════════════════════════════════════════════════
-  if (isBooting) {
-    return <CinematicBoot onComplete={() => setIsBooting(false)} />;
-  }
-
-  // ══════════════════════════════════════════════════════════════════════
-  // WELCOME — First-launch pre-login explainer
-  // (localStorage persisted; returning users skip straight to login)
+  // WELCOME — Pre-login explainer. Always first.
+  // Tapping "Enter PULSE" sets hasSeenWelcome=true AND isBooting=true,
+  // which transitions us into the boot animation below.
   // ══════════════════════════════════════════════════════════════════════
   if (!currentUser && !hasSeenWelcome) {
     return <WelcomeScreen onEnter={markWelcomeSeen} />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // BOOT SCREEN — Tactical system-init sequence
+  // Runs after the welcome, before the login surface.
+  // ══════════════════════════════════════════════════════════════════════
+  if (isBooting) {
+    return <CinematicBoot onComplete={() => setIsBooting(false)} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════
