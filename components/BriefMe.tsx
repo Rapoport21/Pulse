@@ -110,9 +110,29 @@ export const BriefMe: React.FC<BriefMeProps> = ({
           }
           style={{ marginBottom: SPACE.sm }}
         />
-        <Mono tone="muted" size="xs" style={{ display: 'block', marginBottom: SPACE['2xl'] }}>
+        <Mono tone="muted" size="xs" style={{ display: 'block', marginBottom: SPACE.lg }}>
           {`// Condensed summary for ${currentUser.role} · real-time telemetry snapshot`}
         </Mono>
+
+        {/* Shift-performance metrics strip — research-informed ED
+            performance KPIs (door-to-disposition, LWBS, ratio
+            adherence, AI-resolved tasks, handoff-prep time, alerts).
+            Sprint 2026-05-14 item 21. */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: SPACE.sm,
+            marginBottom: SPACE.xl,
+          }}
+        >
+          <ShiftMetric label="Door-to-Disp" value="3h 24m" delta="−18m" tone="ok" />
+          <ShiftMetric label="LWBS rate" value="1.2%" delta="target <2%" tone="ok" />
+          <ShiftMetric label="RN:Pt ratio" value="1:4.6" delta="vs 1:4 target" tone="warn" />
+          <ShiftMetric label="AI auto-resolved" value="14" delta="+2 this hour" tone="info" />
+          <ShiftMetric label="Handoff prep" value="48s" delta="median draft" tone="ok" />
+          <ShiftMetric label="Active alerts" value="3" delta="0 escalated" tone="ok" />
+        </div>
 
         {/* Brief card */}
         <TacticalCard
@@ -343,6 +363,57 @@ export const BriefMe: React.FC<BriefMeProps> = ({
       <style>
         {`@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }`}
       </style>
+    </div>
+  );
+};
+
+// ShiftMetric — compact KPI card used by the BriefMe top strip.
+// Research-informed (Optum / AHRQ / Crosschq) ED + nursing KPIs:
+// door-to-disposition, LWBS, RN:patient ratio, alert volume,
+// handoff-prep duration, AI auto-resolved tasks.
+const ShiftMetric: React.FC<{
+  label: string;
+  value: string;
+  delta: string;
+  tone: 'ok' | 'warn' | 'crit' | 'info';
+}> = ({ label, value, delta, tone }) => {
+  const color =
+    tone === 'crit' ? COLORS.crit
+    : tone === 'warn' ? COLORS.warn
+    : tone === 'info' ? COLORS.info
+    : COLORS.ok;
+  return (
+    <div
+      style={{
+        padding: `${SPACE.md}px ${SPACE.md}px`,
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderLeft: `2px solid ${color}`,
+        borderRadius: RADIUS.sm,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+      }}
+    >
+      <Mono tone="muted" size="xs" style={{ letterSpacing: '0.12em' }}>
+        {label.toUpperCase()}
+      </Mono>
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 22,
+          fontWeight: 700,
+          color: COLORS.textPrimary,
+          letterSpacing: '-0.02em',
+          fontVariantNumeric: 'tabular-nums',
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </span>
+      <Mono size="xs" style={{ color, letterSpacing: '0.04em' }}>
+        {delta}
+      </Mono>
     </div>
   );
 };
