@@ -39,6 +39,7 @@ import { Playbooks } from './components/Playbooks';
 import { Roster } from './components/Roster';
 import { ChatAssistant } from './components/ChatAssistant';
 import { LoginScreen } from './components/LoginScreen';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
 import { CallProvider } from './lib/callState';
 import { CommsScreen } from './components/CommsScreen';
@@ -160,6 +161,26 @@ function App() {
   const [loginCount, setLoginCount] = useState(0);
   const [isBooting, setIsBooting] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  // First-launch pre-login explainer. Persisted in localStorage so
+  // returning users skip straight to login. "Skip → Sign in" inside
+  // the welcome screen also sets this flag.
+  const [hasSeenWelcome, setHasSeenWelcome] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem('pulse-welcome-seen') === '1';
+    } catch {
+      return true;
+    }
+  });
+  const markWelcomeSeen = () => {
+    try {
+      window.localStorage.setItem('pulse-welcome-seen', '1');
+    } catch {
+      /* localStorage blocked — accept session-only memory */
+    }
+    setHasSeenWelcome(true);
+  };
 
   // Toast System
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -1158,6 +1179,14 @@ function App() {
   // ══════════════════════════════════════════════════════════════════════
   if (isBooting) {
     return <CinematicBoot onComplete={() => setIsBooting(false)} />;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // WELCOME — First-launch pre-login explainer
+  // (localStorage persisted; returning users skip straight to login)
+  // ══════════════════════════════════════════════════════════════════════
+  if (!currentUser && !hasSeenWelcome) {
+    return <WelcomeScreen onEnter={markWelcomeSeen} />;
   }
 
   // ══════════════════════════════════════════════════════════════════════
