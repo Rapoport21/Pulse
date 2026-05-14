@@ -303,14 +303,27 @@ const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) =
             animate={reduce ? undefined : { y: [0, 5, 0] }}
             transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
             style={{
+              // Fixed square box + flex centering keeps the chevron
+              // dead-centered. The -1px translateY corrects for the
+              // chevron's bottom-weighted visual mass (the V points
+              // down, so optical centering wants the icon a hair higher
+              // than geometric centering).
+              width: 26,
+              height: 26,
               display: 'inline-flex',
-              padding: 4,
+              alignItems: 'center',
+              justifyContent: 'center',
               border: `1px solid ${COLORS.accent}`,
               borderRadius: RADIUS.full,
               background: `${COLORS.accent}14`,
             }}
           >
-            <ChevronDown size={14} strokeWidth={2.25} color={COLORS.accent} />
+            <ChevronDown
+              size={14}
+              strokeWidth={2.25}
+              color={COLORS.accent}
+              style={{ transform: 'translateY(-1px)' }}
+            />
           </motion.span>
         </motion.button>
       </div>

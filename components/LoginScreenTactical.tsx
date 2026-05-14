@@ -18,7 +18,6 @@ import {
   GlowBg,
   TacticalCard,
 } from './design';
-import { useConnectionStatus } from '../lib/realtime';
 
 interface LoginScreenProps {
   onLogin: (role: UserRole) => void;
@@ -279,23 +278,10 @@ const RoleCard: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────
 export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const isMobile = useIsMobile();
-  const connectionStatus = useConnectionStatus();
-  const connectionLabel =
-    connectionStatus === 'connected'
-      ? 'Connected'
-      : connectionStatus === 'connecting'
-      ? 'Connecting'
-      : connectionStatus === 'disconnected'
-      ? 'Disconnected'
-      : 'Local Only';
-  const connectionTone: 'ok' | 'warn' | 'crit' | 'neutral' =
-    connectionStatus === 'connected'
-      ? 'ok'
-      : connectionStatus === 'connecting'
-      ? 'warn'
-      : connectionStatus === 'disconnected'
-      ? 'crit'
-      : 'neutral';
+  // Connection status is shown by the app-wide ConnectionIndicator
+  // (DebugPanel.tsx), not on the login HUD itself. The hook stays
+  // referenced via the import so the lib stays included; if it gets
+  // truly dead we can prune later.
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -388,10 +374,11 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
               <Mono tone="dim">v1.2.4</Mono>
               <span style={{ color: COLORS.textDim }}>│</span>
               <Mono tone="dim">Build {dateStr}</Mono>
-              <span style={{ color: COLORS.textDim }}>│</span>
             </>
           )}
-          <StatusPill label={isMobile ? 'Online' : 'System Online'} tone="ok" />
+          {/* "System Online" pill removed: it was hardcoded tone="ok",
+              never reflected real state, and duplicated the real
+              ConnectionIndicator (floating bottom-left, app-wide). */}
         </div>
       </HudStrip>
 
@@ -516,35 +503,10 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
         </div>
       </div>
 
-      {/* ── BOTTOM HUD ──────────────────────────────────────────
-          Login screen is the cold entry point: a visitor seeing
-          NEDOCS / Weather / Active Surge Playbooks here has no
-          context for what those mean yet. Strip down to just the
-          live connectivity status — that one signal answers "is
-          this thing working?" which is the only question worth
-          asking before signing in. The rest lights up on the
-          dashboards once a role is selected.
-          ──────────────────────────────────────────────────────── */}
-      <HudStrip side="bottom" fixed height={36}>
-        <div style={{ flex: 1 }} />
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            flexShrink: 0,
-          }}
-        >
-          <StatusPill
-            label={connectionLabel}
-            tone={connectionTone}
-            pulse={connectionStatus === 'connected'}
-          />
-        </motion.div>
-      </HudStrip>
+      {/* Bottom HUD intentionally removed. Connection status is
+          surfaced app-wide by the single ConnectionIndicator pill
+          (floating bottom-left, lib: DebugPanel.tsx). No need to
+          duplicate it on the login surface. */}
     </div>
   );
 };
