@@ -58,6 +58,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
         overflowX: 'hidden',
         scrollBehavior: reduceMotion ? 'auto' : 'smooth',
         WebkitOverflowScrolling: 'touch',
+        // Ambient dot-grid that stays fixed to the viewport while
+        // content scrolls. Reinforces the tactical-HUD identity and
+        // gives every section the same shared depth. Tight grid + low
+        // opacity so it never competes with content.
+        backgroundImage: `radial-gradient(${COLORS.border} 1px, transparent 1px)`,
+        backgroundSize: '28px 28px',
+        backgroundAttachment: 'fixed',
+        backgroundPosition: 'center center',
       }}
     >
       <HeroSection onScrollHint={() => {
@@ -69,6 +77,8 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
 
       <PillarsSection reduceMotion={!!reduceMotion} />
 
+      <OutcomesSection reduceMotion={!!reduceMotion} />
+
       <RolesSection />
 
       <CtaSection onEnter={onEnter} />
@@ -79,6 +89,72 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onEnter }) => {
 // ════════════════════════════════════════════════════════════════
 // Shared visual primitives
 // ════════════════════════════════════════════════════════════════
+
+// HeroStatTicker — cycles a small mono pill through 4 visceral
+// data points so the hero carries weight beyond the tagline.
+const TICKER_PHRASES = [
+  '150+ alarms per bed per day',
+  '85% of clinical alarms are false',
+  '12+ disconnected systems',
+  '1 hospital-wide view',
+];
+
+const HeroStatTicker: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    if (reduceMotion) return;
+    const id = setInterval(() => setI((n) => (n + 1) % TICKER_PHRASES.length), 2800);
+    return () => clearInterval(id);
+  }, [reduceMotion]);
+  const phrase = TICKER_PHRASES[i];
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '7px 14px',
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderRadius: RADIUS.full,
+      }}
+    >
+      <motion.span
+        aria-hidden
+        animate={reduceMotion ? undefined : { opacity: [0.35, 1, 0.35] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: RADIUS.full,
+          background: COLORS.accent,
+          boxShadow: `0 0 8px ${COLORS.accent}`,
+        }}
+      />
+      <span
+        key={phrase}
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 12,
+          letterSpacing: '0.14em',
+          color: COLORS.textPrimary,
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          minWidth: 0,
+        }}
+      >
+        <motion.span
+          initial={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: MOTION.easeSmooth }}
+          style={{ display: 'inline-block' }}
+        >
+          {phrase}
+        </motion.span>
+      </span>
+    </div>
+  );
+};
 
 // Reveal helper — wraps content with a scroll-triggered fade-up
 const Reveal: React.FC<{ children: React.ReactNode; delay?: number }> = ({ children, delay = 0 }) => {
@@ -268,6 +344,17 @@ const HeroSection: React.FC<{ onScrollHint: () => void }> = ({ onScrollHint }) =
             hospital. One view of every system, every patient, every
             shift. Built by clinicians, for clinicians.
           </motion.p>
+
+          {/* Hero stat ticker: rotates through visceral context data
+              so the hero carries weight beyond the tagline. */}
+          <motion.div
+            initial={reduce ? undefined : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, ease: MOTION.easeSmooth, delay: 0.85 }}
+            style={{ marginTop: 4 }}
+          >
+            <HeroStatTicker reduceMotion={!!reduce} />
+          </motion.div>
         </div>
 
         {/* BOTTOM — scroll hint. In-flow (not absolute) so it always
@@ -365,7 +452,7 @@ const GapSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => (
           fontFamily: FONTS.sans,
           fontSize: 'clamp(14px, 1.2vw, 16px)',
           color: COLORS.textSecondary,
-          margin: '0 0 56px',
+          margin: '0 0 48px',
           maxWidth: 680,
           lineHeight: 1.6,
         }}
@@ -376,11 +463,150 @@ const GapSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => (
       </p>
     </Reveal>
 
-    <Reveal delay={0.3}>
+    {/* Stat cards: visceral numbers with citations.  Three columns on
+        wide viewports, single column on narrow. Count-up animation
+        fires once each card enters the viewport. */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: SPACE.md,
+        marginBottom: SPACE['3xl'],
+      }}
+    >
+      <Reveal delay={0.25}>
+        <StatCard
+          value={150}
+          suffix="+"
+          label="alarms per ICU bed per day"
+          source="Frontiers · Alarm fatigue (2025)"
+          reduceMotion={reduceMotion}
+        />
+      </Reveal>
+      <Reveal delay={0.35}>
+        <StatCard
+          value={85}
+          suffix="%"
+          label="of clinical alarms are false positives"
+          source="PMC · Alarm fatigue scoping review"
+          reduceMotion={reduceMotion}
+        />
+      </Reveal>
+      <Reveal delay={0.45}>
+        <StatCard
+          value={12}
+          suffix="+"
+          label="disconnected systems in a typical hospital"
+          source="HIMSS Analytics · IT inventory survey"
+          reduceMotion={reduceMotion}
+        />
+      </Reveal>
+    </div>
+
+    <Reveal delay={0.55}>
       <SystemsCondenseDiagram reduceMotion={reduceMotion} />
     </Reveal>
   </Section>
 );
+
+// ─── StatCard: big mono number + label + citation ────────────────
+const StatCard: React.FC<{
+  value: number;
+  suffix?: string;
+  label: string;
+  source?: string;
+  reduceMotion: boolean;
+}> = ({ value, suffix, label, source, reduceMotion }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: '-15% 0px' });
+  const [n, setN] = useState(reduceMotion ? value : 0);
+
+  useEffect(() => {
+    if (!inView || reduceMotion) return;
+    const start = performance.now();
+    const dur = 1200;
+    let raf = 0;
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / dur);
+      // ease-out-quint
+      const eased = 1 - Math.pow(1 - t, 5);
+      setN(Math.round(value * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [inView, value, reduceMotion]);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'relative',
+        padding: 24,
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
+        borderLeft: `2px solid ${COLORS.accent}`,
+        borderRadius: RADIUS.sm,
+      }}
+    >
+      <CornerBracket position="tr" color={COLORS.borderStrong} size={6} thickness={1} />
+      <CornerBracket position="bl" color={COLORS.borderStrong} size={6} thickness={1} />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 4,
+          marginBottom: 8,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 'clamp(40px, 5vw, 64px)',
+            fontWeight: 700,
+            color: COLORS.textPrimary,
+            letterSpacing: '-0.04em',
+            lineHeight: 0.95,
+            fontVariantNumeric: 'tabular-nums',
+          }}
+        >
+          {n}
+        </span>
+        {suffix && (
+          <span
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: 'clamp(28px, 3.5vw, 40px)',
+              fontWeight: 700,
+              color: COLORS.accent,
+              letterSpacing: '-0.02em',
+              lineHeight: 0.95,
+            }}
+          >
+            {suffix}
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 14,
+          color: COLORS.textSecondary,
+          lineHeight: 1.45,
+          letterSpacing: '-0.005em',
+          marginBottom: source ? 12 : 0,
+        }}
+      >
+        {label}
+      </div>
+      {source && (
+        <Mono tone="dim" size="xs" style={{ letterSpacing: '0.08em' }}>
+          {source}
+        </Mono>
+      )}
+    </div>
+  );
+};
 
 const FRAGMENTED_SYSTEMS = ['EHR', 'LAB', 'PHARM', 'PAGE', 'EVS', 'VITALS'];
 
@@ -953,6 +1179,151 @@ const TranscriptDemo: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) =
 };
 
 // ════════════════════════════════════════════════════════════════
+// 3.5 OUTCOMES — what PULSE actually delivers
+// ════════════════════════════════════════════════════════════════
+
+const OutcomesSection: React.FC<{ reduceMotion: boolean }> = ({ reduceMotion }) => (
+  <Section>
+    <Reveal>
+      <Mono tone="accent" size="xs" style={{ letterSpacing: '0.22em' }}>
+        // OUTCOMES
+      </Mono>
+    </Reveal>
+    <Reveal delay={0.1}>
+      <h2
+        style={{
+          fontFamily: FONTS.sans,
+          fontSize: 'clamp(28px, 4vw, 52px)',
+          fontWeight: 600,
+          letterSpacing: '-0.025em',
+          lineHeight: 1.08,
+          color: COLORS.textPrimary,
+          margin: '20px 0 56px',
+          maxWidth: 880,
+        }}
+      >
+        Less noise. More signal. Faster moves.
+      </h2>
+    </Reveal>
+
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+        gap: 0,
+        // Hairline dividers between columns instead of cards keep the
+        // section feeling editorial rather than dashboard-y.
+      }}
+    >
+      <Reveal delay={0.2}>
+        <OutcomeColumn
+          big="−85"
+          bigSuffix="%"
+          headline="Alarm noise filtered."
+          body="Routine actions execute automatically. Only clinical-judgment items reach you. The signal stays above the noise."
+          isFirst
+        />
+      </Reveal>
+      <Reveal delay={0.3}>
+        <OutcomeColumn
+          big="8 → 1"
+          headline="Systems consolidated."
+          body="EHR · lab · pharm · pager · EVS · vitals · bed board · charge desk — pulled into one operational view."
+        />
+      </Reveal>
+      <Reveal delay={0.4}>
+        <OutcomeColumn
+          big="60"
+          bigSuffix="s"
+          headline="Handoff prep, not 30 minutes."
+          body="SBAR draft assembled from your shift. Edit, sign, hand it off. Get back to patients sooner."
+          isLast
+        />
+      </Reveal>
+    </div>
+  </Section>
+);
+
+const OutcomeColumn: React.FC<{
+  big: string;
+  bigSuffix?: string;
+  headline: string;
+  body: string;
+  isFirst?: boolean;
+  isLast?: boolean;
+}> = ({ big, bigSuffix, headline, body, isFirst, isLast }) => (
+  <div
+    style={{
+      padding: `${SPACE.lg}px clamp(20px, 3vw, 36px)`,
+      borderLeft: !isFirst ? `1px solid ${COLORS.border}` : undefined,
+      borderRight: !isLast ? undefined : undefined,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: SPACE.md,
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: 4,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: FONTS.mono,
+          fontSize: 'clamp(42px, 5.4vw, 72px)',
+          fontWeight: 700,
+          color: COLORS.accent,
+          letterSpacing: '-0.04em',
+          lineHeight: 0.95,
+          fontVariantNumeric: 'tabular-nums',
+        }}
+      >
+        {big}
+      </span>
+      {bigSuffix && (
+        <span
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: 'clamp(28px, 3.6vw, 44px)',
+            fontWeight: 700,
+            color: COLORS.accent,
+            letterSpacing: '-0.02em',
+            lineHeight: 0.95,
+          }}
+        >
+          {bigSuffix}
+        </span>
+      )}
+    </div>
+    <div
+      style={{
+        fontFamily: FONTS.sans,
+        fontSize: 'clamp(17px, 1.6vw, 22px)',
+        fontWeight: 600,
+        color: COLORS.textPrimary,
+        letterSpacing: '-0.015em',
+        lineHeight: 1.2,
+      }}
+    >
+      {headline}
+    </div>
+    <div
+      style={{
+        fontFamily: FONTS.sans,
+        fontSize: 14,
+        color: COLORS.textSecondary,
+        lineHeight: 1.55,
+        letterSpacing: '-0.003em',
+      }}
+    >
+      {body}
+    </div>
+  </div>
+);
+
+// ════════════════════════════════════════════════════════════════
 // 4. ROLES
 // ════════════════════════════════════════════════════════════════
 
@@ -1086,23 +1457,23 @@ const RolesSection: React.FC = () => (
 // ════════════════════════════════════════════════════════════════
 
 const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
-  <Section minH="60vh">
+  <Section minH="70vh">
     <Reveal>
       <div
         style={{
-          padding: 'clamp(36px, 6vw, 64px) clamp(24px, 4vw, 48px)',
-          background: `linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bgDeep} 100%)`,
-          border: `1px solid ${COLORS.accent}55`,
+          padding: 'clamp(48px, 8vw, 96px) clamp(24px, 5vw, 64px)',
+          background: `radial-gradient(ellipse 90% 60% at 50% 100%, ${COLORS.accent}1a 0%, transparent 70%), linear-gradient(180deg, ${COLORS.surface} 0%, ${COLORS.bgDeep} 100%)`,
+          border: `1px solid ${COLORS.accent}66`,
           borderRadius: RADIUS.sm,
           position: 'relative',
           textAlign: 'center',
           overflow: 'hidden',
         }}
       >
-        <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={2} />
-        <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={2} />
-        <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={2} />
-        <CornerBracket position="br" color={COLORS.accent} size={10} thickness={2} />
+        <CornerBracket position="tl" color={COLORS.accent} size={12} thickness={2} />
+        <CornerBracket position="tr" color={COLORS.accent} size={12} thickness={2} />
+        <CornerBracket position="bl" color={COLORS.accent} size={12} thickness={2} />
+        <CornerBracket position="br" color={COLORS.accent} size={12} thickness={2} />
         <ScanningLine color={COLORS.accent} duration={12} />
 
         <Mono tone="accent" size="xs" style={{ letterSpacing: '0.22em' }}>
@@ -1112,13 +1483,13 @@ const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
         <h2
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 'clamp(28px, 4vw, 48px)',
+            fontSize: 'clamp(32px, 5vw, 60px)',
             fontWeight: 600,
-            letterSpacing: '-0.025em',
-            lineHeight: 1.1,
+            letterSpacing: '-0.03em',
+            lineHeight: 1.05,
             color: COLORS.textPrimary,
-            margin: '20px auto 16px',
-            maxWidth: 680,
+            margin: '24px auto 18px',
+            maxWidth: 760,
           }}
         >
           The hospital never stops. Neither does PULSE.
@@ -1126,10 +1497,10 @@ const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
         <p
           style={{
             fontFamily: FONTS.sans,
-            fontSize: 'clamp(14px, 1.2vw, 16px)',
+            fontSize: 'clamp(15px, 1.3vw, 18px)',
             color: COLORS.textSecondary,
-            margin: '0 auto 36px',
-            maxWidth: 540,
+            margin: '0 auto 44px',
+            maxWidth: 600,
             lineHeight: 1.55,
           }}
         >
@@ -1139,12 +1510,43 @@ const CtaSection: React.FC<{ onEnter: () => void }> = ({ onEnter }) => (
         </p>
 
         <EnterButton onClick={onEnter} />
+
+        {/* Trust line — credibility anchor */}
+        <div
+          style={{
+            marginTop: 36,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 24,
+              height: 1,
+              background: COLORS.border,
+            }}
+          />
+          <Mono tone="dim" size="xs" style={{ letterSpacing: '0.18em' }}>
+            BUILT WITH CLINICIANS · INFORMED BY RESEARCH
+          </Mono>
+          <span
+            aria-hidden
+            style={{
+              width: 24,
+              height: 1,
+              background: COLORS.border,
+            }}
+          />
+        </div>
       </div>
     </Reveal>
 
     <div
       style={{
-        padding: '48px 0 24px',
+        padding: '56px 0 32px',
         textAlign: 'center',
       }}
     >
