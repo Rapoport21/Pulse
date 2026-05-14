@@ -478,7 +478,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
     return stamp.replace(/-/g, '.');
   })();
 
-  const timeStr = now.toUTCString().slice(17, 25);
+  const timeStr = now.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
   return (
     <AnimatePresence>
@@ -580,7 +585,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               }}
             >
               <Mono tone="dim" size="xs">
-                {timeStr} UTC
+                {timeStr}
               </Mono>
               <StatusPill
                 label={statusLabel}

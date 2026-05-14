@@ -987,66 +987,18 @@ const FullMode: React.FC<{
           overflow: 'hidden',
           paddingTop: 52,
         }}>
-          {/* ── Summary Bar: 6 stat boxes ── */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(6, 1fr)',
-            gap: SPACE.sm,
-            padding: `${SPACE.base}px ${SPACE.lg}px`,
-            background: COLORS.bgDeep,
-            borderBottom: `1px solid ${COLORS.border}`,
-            flexShrink: 0,
-          }}>
-            {[
-              { label: 'TOTAL BEDS', value: summary.total, color: COLORS.textPrimary },
-              { label: 'OCCUPIED', value: summary.occupied, color: COLORS.textSecondary },
-              { label: 'AVAILABLE', value: summary.ready, color: COLORS.ok },
-              { label: 'DIRTY', value: summary.dirty, color: COLORS.warn },
-              { label: 'NOT STAFFED', value: summary.notStaffed, color: '#F97316' },
-              { label: 'BLOCKED', value: summary.blocked, color: COLORS.crit },
-            ].map((stat) => (
-              <div
-                key={stat.label}
-                style={{
-                  background: COLORS.surface,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: RADIUS.sm,
-                  padding: `${SPACE.md}px ${SPACE.base}px`,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{
-                  fontFamily: FONTS.sans,
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: stat.color,
-                  lineHeight: 1.1,
-                }}>
-                  {stat.value}
-                </span>
-                <span style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: 10,
-                  fontWeight: 500,
-                  letterSpacing: '0.14em',
-                  color: COLORS.textMuted,
-                  marginTop: 4,
-                  textTransform: 'uppercase',
-                }}>
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Filter Row ── */}
+          {/* ── Filter Row (enlarged) ────────────────────────────
+              The 6-tile summary row (TOTAL BEDS / OCCUPIED / AVAILABLE
+              / DIRTY / NOT STAFFED / BLOCKED) used to live above this.
+              It duplicated the count baked into each filter chip, so
+              the chips now carry both the label AND the count at a
+              bigger size. The result: one row, one job. */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: SPACE.xs,
-            padding: `${SPACE.sm}px ${SPACE.lg}px`,
+            gap: SPACE.sm,
+            padding: `${SPACE.base}px ${SPACE.lg}px`,
+            background: COLORS.bgDeep,
             borderBottom: `1px solid ${COLORS.border}`,
             flexShrink: 0,
             flexWrap: 'wrap',
@@ -1059,40 +1011,44 @@ const FullMode: React.FC<{
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   style={{
-                    padding: `5px ${SPACE.md}px`,
-                    background: isActive ? `${chipColor}20` : 'transparent',
+                    padding: `${SPACE.sm}px ${SPACE.base}px`,
+                    background: isActive ? `${chipColor}24` : COLORS.surface,
                     border: `1px solid ${isActive ? chipColor : COLORS.border}`,
                     borderRadius: RADIUS.full,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 6,
+                    gap: SPACE.sm,
+                    minHeight: 44,
                     transition: cssTransition(),
                   }}
                 >
                   {f.key !== 'all' && (
                     <div style={{
-                      width: 6,
-                      height: 6,
+                      width: 8,
+                      height: 8,
                       borderRadius: RADIUS.full,
                       background: chipColor,
+                      boxShadow: isActive ? `0 0 8px ${chipColor}` : 'none',
                     }} />
                   )}
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 11,
-                    fontWeight: 500,
-                    letterSpacing: '0.1em',
-                    color: isActive ? chipColor : COLORS.textMuted,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    letterSpacing: '0.12em',
+                    color: isActive ? chipColor : COLORS.textSecondary,
                     textTransform: 'uppercase',
                   }}>
                     {f.label}
                   </span>
                   <span style={{
                     fontFamily: FONTS.mono,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: isActive ? chipColor : COLORS.textDim,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: isActive ? chipColor : COLORS.textPrimary,
+                    fontVariantNumeric: 'tabular-nums',
+                    letterSpacing: '-0.01em',
                   }}>
                     {f.count}
                   </span>
@@ -1210,7 +1166,7 @@ const FullMode: React.FC<{
                         {/* Table header */}
                         <div style={{
                           display: 'grid',
-                          gridTemplateColumns: '28px 64px 1fr 72px 110px 110px 72px 40px 80px',
+                          gridTemplateColumns: '28px 112px 1fr 72px 110px 110px 72px 40px 80px',
                           gap: 0,
                           padding: `${SPACE.xs}px ${SPACE.base}px`,
                           background: COLORS.bgDeep,
@@ -1247,7 +1203,7 @@ const FullMode: React.FC<{
                               }}
                               style={{
                                 display: 'grid',
-                                gridTemplateColumns: '28px 64px 1fr 72px 110px 110px 72px 40px 80px',
+                                gridTemplateColumns: '28px 112px 1fr 72px 110px 110px 72px 40px 80px',
                                 gap: 0,
                                 padding: `0 ${SPACE.base}px`,
                                 height: 44,
@@ -1270,7 +1226,9 @@ const FullMode: React.FC<{
                                   boxShadow: `0 0 4px ${dotColor}60`,
                                 }} />
                               </div>
-                              {/* Bed label */}
+                              {/* Bed label — single-line guard so the
+                                  unit + number (e.g. "ED-Trauma 1")
+                                  never wraps onto two rows. */}
                               <span style={{
                                 fontFamily: FONTS.mono,
                                 fontSize: 14,
@@ -1278,6 +1236,9 @@ const FullMode: React.FC<{
                                 letterSpacing: '0.04em',
                                 color: COLORS.textPrimary,
                                 padding: '0 4px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
                               }}>
                                 {bed.label}
                               </span>

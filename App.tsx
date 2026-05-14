@@ -619,13 +619,20 @@ function App() {
     }
   };
 
-  // Live clock for the header — ticks every second in HH:MM:SS UTC
+  // Live clock for the header — ticks every second in LOCAL time
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-  const clockStr = now.toUTCString().slice(17, 25);
+  // Local time so it matches what the user sees on their device clock.
+  // The previous UTC format was confusing on shift-handoff screens.
+  const clockStr = now.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
   // Fire surge ping (one-shot fire-and-forget). On the receiving side we hook
   // into it via useEffect below to fire the browser notification.
@@ -1097,7 +1104,11 @@ function App() {
     }
     setCurrentUser(user);
     setLoginCount((prev) => prev + 1);
-    setShowShiftBriefing(true);
+    // Shift "acknowledge to start" modal removed (sprint 2026-05-14
+    // item 25). The user is already through a deliberate role pick on
+    // the login screen — a follow-up acknowledge dialog was friction
+    // without value. End-of-shift handoff modal still fires from the
+    // sidebar End Shift trigger.
     showToast(`Logged in as ${user.name}`, 'info');
   };
 
@@ -1257,100 +1268,11 @@ function App() {
         />
       )}
 
-      {/* ── TACTICAL TOAST ───────────────────────────────────── */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            key={toast.message}
-            initial={{ opacity: 0, y: -16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{
-              type: 'spring',
-              stiffness: 520,
-              damping: 34,
-              mass: 0.7,
-            }}
-            style={{
-              position: 'fixed',
-              top: CHROME.headerHeight + 16,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 100,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 16px',
-              background: COLORS.surface,
-              border: `1px solid ${
-                toast.type === 'success'
-                  ? COLORS.ok
-                  : toast.type === 'error'
-                  ? COLORS.crit
-                  : COLORS.info
-              }`,
-              borderRadius: RADIUS.sm,
-              boxShadow: SHADOW.panel,
-              fontFamily: FONTS.mono,
-            }}
-          >
-            <CornerBracket
-              position="tl"
-              color={
-                toast.type === 'success'
-                  ? COLORS.ok
-                  : toast.type === 'error'
-                  ? COLORS.crit
-                  : COLORS.info
-              }
-            />
-            <CornerBracket
-              position="tr"
-              color={
-                toast.type === 'success'
-                  ? COLORS.ok
-                  : toast.type === 'error'
-                  ? COLORS.crit
-                  : COLORS.info
-              }
-            />
-            <CornerBracket
-              position="bl"
-              color={
-                toast.type === 'success'
-                  ? COLORS.ok
-                  : toast.type === 'error'
-                  ? COLORS.crit
-                  : COLORS.info
-              }
-            />
-            <CornerBracket
-              position="br"
-              color={
-                toast.type === 'success'
-                  ? COLORS.ok
-                  : toast.type === 'error'
-                  ? COLORS.crit
-                  : COLORS.info
-              }
-            />
-            {toast.type === 'success' ? (
-              <CheckCircle2 size={14} color={COLORS.ok} />
-            ) : toast.type === 'error' ? (
-              <AlertOctagon size={14} color={COLORS.crit} />
-            ) : (
-              <Activity size={14} color={COLORS.info} />
-            )}
-            <Mono
-              tone={toast.type === 'success' ? 'ok' : toast.type === 'error' ? 'crit' : 'secondary'}
-              size="base"
-              style={{ color: toast.type === 'success' ? COLORS.ok : toast.type === 'error' ? COLORS.crit : COLORS.info }}
-            >
-              {toast.message}
-            </Mono>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Pop-up toast intentionally removed (sprint 2026-05-14 item
+          15). The showToast(...) API stays so callers keep compiling;
+          messages are silently swallowed for now. Inline confirmation
+          (status pills next to the affected element) is the future
+          home for the most important of these events. */}
 
       <ChatAssistant
         currentUser={currentUser}
@@ -1514,7 +1436,17 @@ function App() {
                       title={isCompactNav ? item.label : undefined}
                     >
                       <Icon size={16} strokeWidth={2} />
-                      {!isCompactNav && <span style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</span>}
+                      {!isCompactNav && (
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {item.label}
+                        </span>
+                      )}
                     </NavButton>
                   );
                 })}
@@ -1524,7 +1456,7 @@ function App() {
             {/* ── Right cluster: clock + chat + notifications + user + end shift ── */}
             <div style={{ display: 'flex', alignItems: 'center', gap: isCompactNav ? SPACE.sm : SPACE.md, flexShrink: 0 }}>
               <Mono tone="secondary" size={isCompactNav ? 'sm' : 'base'}>
-                {clockStr}{isCompactNav ? '' : ' UTC'}
+                {clockStr}
               </Mono>
               <span style={{ color: COLORS.textDim }}>│</span>
 
@@ -1784,68 +1716,28 @@ function App() {
           {/* ═══════════════════════════════════════════════════════
               BOTTOM HUD STRIP — system ticker
               ═══════════════════════════════════════════════════════ */}
+          {/* Bottom HUD: minimal · only state that's truly global
+              (surge / sim) lives here. NEDOCS, alerts, weather and
+              "Network: Stable" were ambient noise that didn't add
+              value — those numbers belong on the surfaces that own
+              them (Horizon · Alerts) and the live network indicator
+              is the single bottom-left ConnectionIndicator. */}
           <HudStrip side="bottom">
-            {(() => {
-              // NEDOCS + alert pills track the scenario so the ambient
-              // bottom strip moves when a sim is running. Baseline
-              // otherwise (keeps the demo's "dangerous" vibe).
-              const nedocs = Math.round(metricValue('nedocsScore', activeScenario));
-              const alerts = Math.round(metricValue('activeAlerts', activeScenario));
-              const codes = Math.round(metricValue('activeCodes', activeScenario));
-              const nedocsTone: 'ok' | 'warn' | 'crit' =
-                nedocs >= 160 ? 'crit' : nedocs >= 120 ? 'warn' : 'ok';
-              // Keep the clinical term visible — NEDOCS is real ED operations
-              // language; clinicians use it every shift. The tooltip below
-              // serves non-clinical reviewers who land on the demo.
-              const nedocsQualifier =
-                nedocs >= 160 ? 'Dangerous' : nedocs >= 120 ? 'Severe' : nedocs >= 100 ? 'Busy' : 'Normal';
-              const nedocsLabel = `NEDOCS ${nedocs} · ${nedocsQualifier}`;
-              const nedocsTitle = `NEDOCS standardized ED-overcrowding score. ${nedocs} = ${nedocsQualifier}. Scale: ≥160 Dangerous, 120-159 Severe, 100-119 Busy, <100 Normal.`;
-              // Alerts count promoted from plain Mono text to a tone-colored
-              // StatusPill alongside NEDOCS so the active-alerts count is
-              // always visible in the persistent HUD strip. Previously the
-              // alerts column on Horizon dropped below the fold on shorter
-              // viewports and visitors took a while to notice it existed
-              // (Matt Taylor 2026-05-12 feedback).
-              const alertsTone: 'ok' | 'warn' | 'crit' =
-                alerts >= 6 ? 'crit' : alerts >= 3 ? 'warn' : 'ok';
-              const alertsLabel = `${alerts} ALERTS${codes > 0 ? ` · ${codes} CODES` : ''}`;
-              const alertsTitle = `${alerts} active alert${alerts === 1 ? '' : 's'} across the ED. ${codes > 0 ? `${codes} active code${codes === 1 ? '' : 's'}. ` : ''}Click ALERTS tab for the full feed.`;
-              return (
+            <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
+              {isSurgeActive && (
+                <StatusPill label="SURGE MODE · ACTIVE" tone="crit" pulse />
+              )}
+              {activeScenario && (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.base, flex: 1, minWidth: 0 }}>
-                    <span title={nedocsTitle} style={{ cursor: 'help' }}>
-                      <StatusPill label={nedocsLabel} tone={nedocsTone} pulse={nedocsTone === 'crit'} />
-                    </span>
-                    <span title={alertsTitle} style={{ cursor: 'help' }}>
-                      <StatusPill label={alertsLabel} tone={alertsTone} pulse={alertsTone !== 'ok'} />
-                    </span>
-                    <span style={{ color: COLORS.textDim }}>│</span>
-                    <Mono tone="secondary">Weather · Heavy Rain 16:00</Mono>
-                    {isSurgeActive && (
-                      <>
-                        <span style={{ color: COLORS.textDim }}>│</span>
-                        <StatusPill label="SURGE MODE · ACTIVE" tone="crit" pulse />
-                      </>
-                    )}
-                    {activeScenario && (
-                      <>
-                        <span style={{ color: COLORS.textDim }}>│</span>
-                        <StatusPill
-                          label={`SIM · S${activeScenario.severity} · ${formatScenarioRemaining(scenarioTick.remainingMs)}`}
-                          tone={activeScenario.severity === 3 ? 'crit' : activeScenario.severity === 2 ? 'warn' : 'ok'}
-                          pulse={activeScenario.severity === 3}
-                        />
-                      </>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flexShrink: 0 }}>
-                    <Mono tone="muted">Network</Mono>
-                    <StatusPill label="Stable" tone="ok" />
-                  </div>
+                  {isSurgeActive && <span style={{ color: COLORS.textDim }}>│</span>}
+                  <StatusPill
+                    label={`SIM · S${activeScenario.severity} · ${formatScenarioRemaining(scenarioTick.remainingMs)}`}
+                    tone={activeScenario.severity === 3 ? 'crit' : activeScenario.severity === 2 ? 'warn' : 'ok'}
+                    pulse={activeScenario.severity === 3}
+                  />
                 </>
-              );
-            })()}
+              )}
+            </div>
           </HudStrip>
 
           {/* Modals */}

@@ -289,7 +289,13 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
     return () => clearInterval(id);
   }, []);
 
-  const timeStr = now.toUTCString().slice(17, 25); // HH:MM:SS
+  // Local time — matches what the user sees on their device clock.
+  const timeStr = now.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
   const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '.'); // YYYY.MM.DD
 
   const handleSelect = (role: UserRole) => {
@@ -455,7 +461,7 @@ export const LoginScreenTactical: React.FC<LoginScreenProps> = ({ onLogin }) => 
                   background: `linear-gradient(90deg, ${COLORS.accent}, transparent)`,
                 }}
               />
-              <Mono tone="accent">{timeStr} UTC</Mono>
+              <Mono tone="accent">{timeStr}</Mono>
             </div>
             <Mono tone="secondary">// Secure access · Select operator to proceed</Mono>
           </motion.div>

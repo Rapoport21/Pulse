@@ -441,13 +441,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       >
         <div style={{ minWidth: 0 }}>
           <SectionTitle
-            id="HORIZON.4H"
+            id="HORIZON"
             label="Predictive Capacity Horizon"
             divider={false}
             style={{ marginBottom: 4 }}
           />
           <Mono tone="muted" size="xs">
-            // 4-hour forecast · Role view: {currentUser.role.replace('_', ' ')} ·{' '}
+            // Role view: {currentUser.role.replace('_', ' ')} ·{' '}
             {isSimulating ? 'SIMULATION MODE' : 'Live telemetry'}
           </Mono>
         </div>

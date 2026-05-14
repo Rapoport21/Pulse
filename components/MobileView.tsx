@@ -1469,7 +1469,13 @@ export const MobileView: React.FC<MobileViewProps> = ({
     ];
   }, [currentUser.role]);
 
-  const timeStr = time.toUTCString().slice(17, 25); // HH:MM:SS
+  // Local time — matches the device clock the user sees.
+  const timeStr = time.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
   // Chrome constants — compact for mobile thumb-zones
   const HEADER_HEIGHT = 52;
