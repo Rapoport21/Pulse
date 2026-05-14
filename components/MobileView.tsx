@@ -1514,6 +1514,12 @@ export const MobileView: React.FC<MobileViewProps> = ({
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: MOTION.base, ease: MOTION.ease }}
+          // role=status + aria-live=polite so screen readers announce
+          // "Surge protocol active" the moment surge engages, without
+          // interrupting whatever the user is currently being read.
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           style={{
             position: 'relative',
             height: SURGE_BANNER_HEIGHT,
@@ -1808,9 +1814,10 @@ export const MobileView: React.FC<MobileViewProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              background: `${COLORS.bg}F2`,
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
+              // Was blur(20px) — measurable GPU repaint cost on older
+              // iPhones during scroll. The opaque-ish surface gives the
+              // same readability without the per-frame filter pass.
+              background: `${COLORS.bg}FA`,
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
@@ -3771,8 +3778,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 alignItems: 'center',
                 gap: SPACE.md,
                 padding: `${SPACE.md}px ${SPACE.base}px`,
-                background:
-                  'linear-gradient(90deg, rgba(59,130,246,0.10) 0%, rgba(59,130,246,0.02) 100%)',
+                background: `linear-gradient(90deg, ${COLORS.info}1a 0%, ${COLORS.info}05 100%)`,
                 border: `1px solid ${COLORS.info}`,
                 borderLeft: `3px solid ${COLORS.info}`,
                 borderRadius: RADIUS.sm,
@@ -3794,7 +3800,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'rgba(59,130,246,0.18)',
+                  background: `${COLORS.info}2e`,
                   border: `1px solid ${COLORS.info}`,
                   borderRadius: RADIUS.sm,
                   color: COLORS.info,
@@ -4681,6 +4687,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   <motion.div
                     key={alert.id}
                     onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open alerts (${alert.label})`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        triggerHaptic('light');
+                        setShowAlerts(true);
+                      }
+                    }}
                     initial={{ opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     whileTap={{ scale: 0.99 }}
@@ -4786,6 +4802,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
               {/* View all footer */}
               <motion.div
                 onClick={() => { triggerHaptic('light'); setShowAlerts(true); }}
+                role="button"
+                tabIndex={0}
+                aria-label="View all alerts"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    triggerHaptic('light');
+                    setShowAlerts(true);
+                  }
+                }}
                 whileTap={{ scale: 0.98 }}
                 style={{
                   padding: `${SPACE.sm}px ${SPACE.base}px`,
@@ -4929,6 +4955,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   <motion.div
                     key={dm.id}
                     onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open message thread with ${dm.name}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        triggerHaptic('light');
+                        setShowMessaging(true);
+                      }
+                    }}
                     whileTap={{ scale: 0.99 }}
                     initial={{ opacity: 0, x: -4 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -5107,6 +5143,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   <motion.div
                     key={ch.id}
                     onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open channel #${ch.name}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        triggerHaptic('light');
+                        setShowMessaging(true);
+                      }
+                    }}
                     whileTap={{ scale: 0.99 }}
                     initial={{ opacity: 0, x: -4 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -5234,6 +5280,16 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 {/* View all channels footer */}
                 <motion.div
                   onClick={() => { triggerHaptic('light'); setShowMessaging(true); }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="View all channels"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      triggerHaptic('light');
+                      setShowMessaging(true);
+                    }
+                  }}
                   whileTap={{ scale: 0.98 }}
                   style={{
                     padding: `${SPACE.sm}px ${SPACE.base}px`,
@@ -5370,7 +5426,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   setActiveTab(item.id);
                 }}
                 aria-label={item.label}
-                aria-pressed={active}
+                aria-current={active ? 'page' : undefined}
                 whileTap={{ scale: 0.97 }}
                 transition={{ duration: MOTION.fast, ease: MOTION.ease }}
                 style={{

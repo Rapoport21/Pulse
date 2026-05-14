@@ -1597,6 +1597,7 @@ ${urgentTasks
                   onBlur={() => setInputFocused(false)}
                   placeholder={ai ? 'Query PULSE Assistant…' : 'ASSISTANT OFFLINE'}
                   disabled={!ai}
+                  aria-label="Message PULSE Assistant"
                   style={{
                     width: '100%',
                     padding: `${SPACE.sm + 2}px ${SPACE.md}px`,

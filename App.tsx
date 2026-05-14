@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, MotionConfig } from 'motion/react';
 import {
   Activity,
   BookOpen,
@@ -1180,6 +1180,12 @@ function App() {
   const liveStatusLabel = systemStatus === 'normal' ? 'Live' : systemStatus === 'stale' ? 'Stale' : 'Manual';
 
   return (
+    /* MotionConfig wraps the whole authenticated shell so every
+     * motion.* component (80+ across MobileView, dozens more across
+     * the desktop shell) automatically respects the user's OS-level
+     * Reduce Motion preference. One line replaces per-component
+     * useReducedMotion() opt-ins. WCAG 2.3.3. */
+    <MotionConfig reducedMotion="user">
     <CallProvider>
     <>
       <ConnectionIndicator />
@@ -1810,6 +1816,7 @@ function App() {
       )}
     </>
     </CallProvider>
+    </MotionConfig>
   );
 }
 

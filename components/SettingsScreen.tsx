@@ -1319,6 +1319,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         }}
                         maxLength={24}
                         placeholder="Device name"
+                        aria-label="This device's display name"
                         style={{
                           width: '100%',
                           padding: `6px ${SPACE.sm}px`,
