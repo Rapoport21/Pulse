@@ -262,10 +262,15 @@ interface DropdownAnchor {
 
 const BedPopover: React.FC<{
   bed: Bed;
-  anchor: DropdownAnchor;
+  anchor?: DropdownAnchor;
   onClose: () => void;
   onNavigateToPatient?: (patientId: string) => void;
-}> = ({ bed, anchor, onClose, onNavigateToPatient }) => {
+  /** When true, render in-flow (used by the desktop bed-board so the
+   *  detail expands inline and pushes content below). When false (the
+   *  default), render as a position:fixed popover anchored to the
+   *  clicked row. */
+  inline?: boolean;
+}> = ({ bed, anchor, onClose, onNavigateToPatient, inline = false }) => {
   const color = STATE_COLOR[bed.state];
   const isOccupied = bed.state === 'occupied';
 
@@ -285,50 +290,65 @@ const BedPopover: React.FC<{
     PROTECTIVE: COLORS.accentDeep,
   };
 
-  // Position dropdown below or above anchor depending on available space
-  const dropdownWidth = Math.min(480, anchor.width);
-  const spaceBelow = window.innerHeight - anchor.bottom;
-  const spaceAbove = anchor.top;
-  const maxH = 420;
-  const openBelow = spaceBelow >= maxH || spaceBelow >= spaceAbove;
-  const topPos = openBelow ? anchor.bottom + 4 : undefined;
-  const bottomPos = openBelow ? undefined : (window.innerHeight - anchor.top + 4);
-  // Horizontally align to the row's left edge, clamp to viewport
-  const leftPos = Math.max(8, Math.min(anchor.left, window.innerWidth - dropdownWidth - 8));
+  // Layout switches between INLINE (in-flow, pushes content below) and
+  // POPOVER (position:fixed, anchored to a clicked row).
+  const dropdownWidth = inline ? undefined : Math.min(480, anchor?.width ?? 480);
+  const maxH = inline ? undefined : 420;
+  const openBelow = inline
+    ? true
+    : ((window.innerHeight - (anchor?.bottom ?? 0)) >= 420) ||
+      ((window.innerHeight - (anchor?.bottom ?? 0)) >= (anchor?.top ?? 0));
+  const topPos = inline ? undefined : (openBelow ? (anchor!.bottom + 4) : undefined);
+  const bottomPos = inline ? undefined : (openBelow ? undefined : (window.innerHeight - anchor!.top + 4));
+  const leftPos = inline ? undefined : Math.max(8, Math.min(anchor!.left, window.innerWidth - (dropdownWidth ?? 480) - 8));
+
+  const panelStyle: React.CSSProperties = inline
+    ? {
+        position: 'relative',
+        width: '100%',
+        background: COLORS.surface,
+        borderTop: `1px solid ${color}40`,
+        borderBottom: `1px solid ${color}40`,
+        borderLeft: `2px solid ${color}`,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
+      }
+    : {
+        position: 'fixed',
+        top: topPos,
+        bottom: bottomPos,
+        left: leftPos,
+        width: dropdownWidth,
+        maxHeight: maxH,
+        overflowY: 'auto',
+        background: COLORS.surface,
+        border: `1px solid ${color}40`,
+        borderRadius: RADIUS.md,
+        padding: 0,
+        zIndex: Z.toast + 1,
+        boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.border}`,
+      };
 
   return (
     <>
-      {/* Transparent click-catcher */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: Z.toast,
-        }}
-      />
-      {/* Dropdown panel */}
+      {/* Click-catcher only when popover mode. Inline mode relies on a
+          close button or re-tap of the row. */}
+      {!inline && (
+        <div
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: Z.toast,
+          }}
+        />
+      )}
       <motion.div
-        initial={{ opacity: 0, y: openBelow ? -6 : 6, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: openBelow ? -4 : 4, scale: 0.98 }}
+        initial={inline ? { opacity: 0, height: 0 } : { opacity: 0, y: openBelow ? -6 : 6, scale: 0.98 }}
+        animate={inline ? { opacity: 1, height: 'auto' } : { opacity: 1, y: 0, scale: 1 }}
+        exit={inline ? { opacity: 0, height: 0 } : { opacity: 0, y: openBelow ? -4 : 4, scale: 0.98 }}
         transition={{ duration: MOTION.fast }}
         onClick={(e) => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          top: topPos,
-          bottom: bottomPos,
-          left: leftPos,
-          width: dropdownWidth,
-          maxHeight: maxH,
-          overflowY: 'auto',
-          background: COLORS.surface,
-          border: `1px solid ${color}40`,
-          borderRadius: RADIUS.md,
-          padding: 0,
-          zIndex: Z.toast + 1,
-          boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${COLORS.border}`,
-        }}
+        style={panelStyle}
       >
         {isOccupied ? (
           /* ── Occupied bed: patient-centric view ── */
@@ -821,8 +841,16 @@ const FullMode: React.FC<{
   role?: UserRole;
   embedded?: boolean;
   onNavigateToPatient?: (patientId: string) => void;
-}> = ({ units, surgeActive, onClose, role, embedded, onNavigateToPatient }) => {
+  onOpenAdmitFlow?: (admitId: string) => void;
+}> = ({ units, surgeActive, onClose, role, embedded, onNavigateToPatient, onOpenAdmitFlow }) => {
+  // Two selection models live side by side:
+  //   - `selectedBed` (popover): legacy code paths still use it for
+  //     mobile / non-embedded mode. Anchor-positioned overlay.
+  //   - `selectedInlineBedId`: NEW (sprint 2026-05-14 item 9). When
+  //     a row is clicked in the embedded desktop bed-board the row
+  //     itself expands and pushes content below. No overlay.
   const [selectedBed, setSelectedBed] = useState<{ bed: Bed; anchor: DropdownAnchor } | null>(null);
+  const [selectedInlineBedId, setSelectedInlineBedId] = useState<string | null>(null);
   // Role-aware default filter:
   //  - ER: default to showing occupied beds (ED focus on active patients)
   //  - Manager: show all beds (full capacity overview)
@@ -1194,12 +1222,15 @@ const FullMode: React.FC<{
                           const showStatusText = !isOccupied;
                           const iso = bed.isolation && bed.isolation !== 'NONE' ? ISOLATION_LABEL[bed.isolation] : null;
                           const milestones = bed.dischargeMilestones;
+                          const isInlineSelected = selectedInlineBedId === bed.id;
                           return (
+                            <React.Fragment key={bed.id}>
                             <div
-                              key={bed.id}
-                              onClick={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setSelectedBed({ bed, anchor: { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right, width: rect.width } });
+                              onClick={() => {
+                                // Embedded desktop mode: toggle inline
+                                // expansion. The popover overlay is now
+                                // reserved for mobile/non-embedded use.
+                                setSelectedInlineBedId(isInlineSelected ? null : bed.id);
                               }}
                               style={{
                                 display: 'grid',
@@ -1386,6 +1417,21 @@ const FullMode: React.FC<{
                                 ) : null}
                               </div>
                             </div>
+                            {/* Inline expansion (sprint item 9) —
+                                renders the bed detail in-flow so the
+                                rest of the bed list shifts down. */}
+                            <AnimatePresence initial={false}>
+                              {isInlineSelected && (
+                                <BedPopover
+                                  key={`inline-${bed.id}`}
+                                  bed={bed}
+                                  inline
+                                  onClose={() => setSelectedInlineBedId(null)}
+                                  onNavigateToPatient={onNavigateToPatient}
+                                />
+                              )}
+                            </AnimatePresence>
+                            </React.Fragment>
                           );
                         })}
                       </div>
@@ -1455,15 +1501,30 @@ const FullMode: React.FC<{
                 {sortedPending.map((admit) => {
                   const waitColor = admit.waitingMinutes > 60 ? COLORS.crit : admit.waitingMinutes > 30 ? COLORS.warn : COLORS.ok;
                   const srcColor = SOURCE_COLOR[admit.source] || COLORS.textMuted;
+                  const clickable = !!onOpenAdmitFlow;
                   return (
                     <div
                       key={admit.id}
+                      role={clickable ? 'button' : undefined}
+                      tabIndex={clickable ? 0 : undefined}
+                      onClick={() => clickable && onOpenAdmitFlow!(admit.id)}
+                      onKeyDown={(e) => {
+                        if (!clickable) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onOpenAdmitFlow!(admit.id);
+                        }
+                      }}
                       style={{
                         padding: `${SPACE.sm}px ${SPACE.base}px`,
                         borderBottom: `1px solid ${COLORS.border}`,
                         display: 'flex',
                         gap: SPACE.sm,
+                        cursor: clickable ? 'pointer' : 'default',
+                        transition: 'background 0.15s ease',
                       }}
+                      onMouseEnter={(e) => { if (clickable) e.currentTarget.style.background = COLORS.surfaceHover; }}
+                      onMouseLeave={(e) => { if (clickable) e.currentTarget.style.background = 'transparent'; }}
                     >
                       {/* Drag handle */}
                       <div style={{
@@ -1768,6 +1829,9 @@ export interface BedBoardProps {
   embedded?: boolean;
   /** Callback when user clicks an occupied bed to navigate to a patient chart. */
   onNavigateToPatient?: (patientId: string) => void;
+  /** Callback when user clicks a pending-admit card to open the
+   *  Admissions page pre-filled with that admit. */
+  onOpenAdmitFlow?: (admitId: string) => void;
 }
 
 export const BedBoard: React.FC<BedBoardProps> = ({
@@ -1780,6 +1844,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
   role,
   embedded,
   onNavigateToPatient,
+  onOpenAdmitFlow,
 }) => {
   if (display === 'card') {
     return (
@@ -1802,6 +1867,7 @@ export const BedBoard: React.FC<BedBoardProps> = ({
           role={role}
           embedded={embedded}
           onNavigateToPatient={onNavigateToPatient}
+          onOpenAdmitFlow={onOpenAdmitFlow}
         />
       )}
     </AnimatePresence>

@@ -58,6 +58,7 @@ import {
   useScenarioTick,
 } from '../lib/scenario';
 import { ScenarioCards } from './ScenarioCards';
+import { useCall } from '../lib/callState';
 import { useEmsInbound } from '../lib/emsLive';
 import {
   BedBoard,
@@ -116,6 +117,11 @@ interface PulseHorizonProps {
   onStartScenario?: (severity: ScenarioSeverity) => void;
   /** Stop the currently running scenario and revert to baseline. */
   onStopScenario?: () => void;
+  /** Surge activation callback — wires the Command Actions Activate
+   *  Surge tile to the same handler used elsewhere. */
+  onActivateSurge?: () => void;
+  /** Open the ambulance-diversion overlay sheet. */
+  onOpenDivert?: () => void;
 }
 
 type SelectedDriver = {
@@ -162,7 +168,11 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
   activeScenario = null,
   onStartScenario,
   onStopScenario,
+  onActivateSurge,
+  onOpenDivert,
 }) => {
+  const { startCall } = useCall();
+
   // Scenario tick drives phase-aware re-renders. When the scenario's
   // phase changes (e.g. climb → peak), everything downstream — KPIs,
   // situation copy, forecast curve — picks up the new metrics without
@@ -1649,17 +1659,22 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gridAutoRows: 'min-content', gap: SPACE.sm, flex: 1, alignContent: 'start' }}>
             {[
-              { label: 'Activate Surge', icon: <ShieldAlert size={16} />, color: COLORS.crit, onClick: () => showToast?.('Surge activation requires confirmation', 'info') },
-              { label: 'Divert EMS', icon: <Ambulance size={16} />, color: COLORS.warn, onClick: () => showToast?.('Ambulance diversion toggled', 'info') },
-              { label: 'Lock Unit', icon: <Building2 size={16} />, color: '#F97316', onClick: () => showToast?.('Select unit to lock/unlock', 'info') },
-              { label: 'Page On-Call', icon: <Bell size={16} />, color: COLORS.info, onClick: () => showToast?.('Paging on-call team', 'info') },
-              // Was rgba(139,92,246,0.9) (violet leak) — staffing actions
-              // get the rose-deep tone (matches the AlertsCenter staffing tab
-              // + WorkforceCoverage LPN role); brand-aligned, no purple.
+              // Surge: routes to the existing surge-activation handler
+              // (kept in App.tsx). If the prop isn't supplied, surface
+              // a hint so the user knows where to look.
+              { label: 'Activate Surge', icon: <ShieldAlert size={16} />, color: COLORS.crit, onClick: () => onActivateSurge ? onActivateSurge() : showToast?.('Surge activation lives on the Command sidebar', 'info') },
+              // Divert: opens the new DivertSheet (sprint item 5).
+              { label: 'Divert EMS', icon: <Ambulance size={16} />, color: COLORS.warn, onClick: () => onOpenDivert ? onOpenDivert() : showToast?.('Divert overlay unavailable', 'info') },
+              // Lock Unit: routes to Bed Board so the operator picks the
+              // unit interactively (no inline modal yet).
+              { label: 'Lock Unit', icon: <Building2 size={16} />, color: '#F97316', onClick: () => onNavigateTab?.(Tab.BED_BOARD) },
+              // Page On-Call: starts a real call to the on-call MD.
+              { label: 'Page On-Call', icon: <Bell size={16} />, color: COLORS.info, onClick: () => { startCall('oncall_md'); onNavigateTab?.(Tab.COMMS); } },
               { label: 'Request Float', icon: <Users size={16} />, color: COLORS.accentDeep, onClick: () => onNavigateTab?.(Tab.STAFFING) },
-              { label: 'EVS Stat', icon: <Wind size={16} />, color: COLORS.ok, onClick: () => showToast?.('EVS stat request sent', 'success') },
+              // EVS Stat: starts a real call to EVS.
+              { label: 'EVS Stat', icon: <Wind size={16} />, color: COLORS.ok, onClick: () => { startCall('evs'); onNavigateTab?.(Tab.COMMS); } },
               { label: 'Capacity Alert', icon: <AlertTriangle size={16} />, color: COLORS.crit, onClick: () => onNavigateTab?.(Tab.ALERTS) },
-              { label: 'Open Overflow', icon: <MapPin size={16} />, color: COLORS.warn, onClick: () => showToast?.('Overflow unit activation requires surge mode', 'info') },
+              { label: 'Open Overflow', icon: <MapPin size={16} />, color: COLORS.warn, onClick: () => onNavigateTab?.(Tab.BED_BOARD) },
             ].map((action) => (
               <div
                 key={action.label}

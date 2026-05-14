@@ -64,9 +64,27 @@ export const Sparkline: React.FC<SparklineProps> = ({
   const xAt = (i: number) => padX + (i / (points.length - 1)) * innerW;
   const yAt = (v: number) => padY + (1 - (v - min) / range) * innerH;
 
-  const linePath = points
-    .map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(2)} ${yAt(v).toFixed(2)}`)
-    .join(' ');
+  // Smooth path via Catmull-Rom -> Cubic Bezier conversion (sprint
+  // 2026-05-14 item 4). Each segment uses the previous and next
+  // points as tangent anchors so the curve flows continuously without
+  // overshoot. Tension = 0.5 (standard Catmull-Rom).
+  const pts = points.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
+  const linePath = (() => {
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] ?? pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] ?? p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+    }
+    return d;
+  })();
 
   const fillPath = `${linePath} L ${xAt(points.length - 1).toFixed(2)} ${height - padY} L ${xAt(0).toFixed(2)} ${height - padY} Z`;
 

@@ -1518,19 +1518,29 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 </div>
               </div>
 
-              {/* ═══ Submit ═══ */}
-              <div style={{ paddingTop: SPACE.sm, paddingBottom: SPACE.lg }}>
+              {/* ═══ Submit ═══
+                  Constrained width (was fullWidth which made the
+                  giant rose CTA overflow the form column). Right-
+                  aligned end-of-form so it sits where the eye expects
+                  a "submit" affordance. After submit the new patient
+                  opens automatically. */}
+              <div style={{
+                paddingTop: SPACE.sm,
+                paddingBottom: SPACE.lg,
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}>
                 <TacticalButton
                   variant="primary"
-                  fullWidth
                   onClick={() => {
                     if (onSubmitAdmission && formData.firstName && formData.lastName && formData.complaint) {
                       const fullName = `${formData.firstName} ${formData.lastName}`;
                       const filledAllergies = formData.allergies.filter(a => a.substance.trim());
                       const filledProblems = formData.problems.filter(p => p.display.trim());
+                      const generatedMrn = formData.mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`;
                       onSubmitAdmission({
                         name: fullName,
-                        mrn: formData.mrn || `MRN-${Math.floor(1000 + Math.random() * 9000)}`,
+                        mrn: generatedMrn,
                         source: (formData.arrivalMode === 'transfer' ? 'Transfer' : formData.arrivalMode === 'ems' ? 'ED' : 'Direct') as AdmissionSource,
                         acuity: formData.esi,
                         complaint: formData.complaint,
@@ -1583,13 +1593,19 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         ],
                         requestedUnit: '', specialReqs: '', priority: 'routine',
                       });
+                      // Open the patient chart immediately so the
+                      // clinician can continue with vitals, orders,
+                      // documentation. The MRN is the navigation key.
+                      if (onNavigateToPatient) {
+                        onNavigateToPatient(generatedMrn);
+                      }
                     } else {
                       showToast('Please fill in first name, last name, and chief complaint');
                     }
                   }}
                   icon={<Plus size={14} />}
                 >
-                  Submit Admission Request
+                  Submit & Open Chart
                 </TacticalButton>
               </div>
             </div>

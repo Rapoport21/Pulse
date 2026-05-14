@@ -149,38 +149,80 @@ export const CommsScreen: React.FC = () => {
           )}
         </TacticalCard>
 
-        {/* RIGHT — Tabbed card */}
-        <TacticalCard padding="none">
-          <RightTabs
-            active={tab}
-            onChange={setTab}
-            taskCount={openTaskCount}
-            pendingCount={pendingReviewCount}
-            recentCount={history.length}
-          />
-          <div style={{ padding: SPACE.md }}>
-            <AnimatePresence mode="wait">
-              {tab === 'directory' && (
-                <TabPanel key="directory">
-                  <DirectoryTab
-                    activeCallId={activeCall?.id}
-                    onCall={(id) => startCall(id)}
-                  />
-                </TabPanel>
+        {/* RIGHT — Tasks tile (always visible) + Directory/Recent
+            tabs below. Sprint 2026-05-14 item 19. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.lg, minWidth: 0 }}>
+          {/* Tasks tile — always rendered, never tabbed away. */}
+          <TacticalCard padding="none">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: SPACE.xs,
+                padding: `${SPACE.sm + 2}px ${SPACE.md}px`,
+                borderBottom: `1px solid ${COLORS.border}`,
+                background: COLORS.surface,
+                minHeight: 44,
+              }}
+            >
+              <ListChecks size={12} strokeWidth={2} color={COLORS.textSecondary} />
+              <Mono
+                size="xs"
+                style={{ color: COLORS.textPrimary, fontWeight: 700, letterSpacing: '0.14em' }}
+              >
+                TASKS
+              </Mono>
+              {pendingReviewCount > 0 && (
+                <span
+                  style={{
+                    padding: '2px 6px',
+                    background: COLORS.accent,
+                    color: COLORS.textPrimary,
+                    borderRadius: RADIUS.full,
+                    fontFamily: FONTS.mono,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                  }}
+                >
+                  {pendingReviewCount} REVIEW
+                </span>
               )}
-              {tab === 'tasks' && (
-                <TabPanel key="tasks">
-                  <TasksTab tasks={tasks} />
-                </TabPanel>
-              )}
-              {tab === 'recent' && (
-                <TabPanel key="recent">
-                  <RecentTab history={history} />
-                </TabPanel>
-              )}
-            </AnimatePresence>
-          </div>
-        </TacticalCard>
+              <Mono tone="muted" size="xs" style={{ marginLeft: 'auto' }}>
+                {openTaskCount} open
+              </Mono>
+            </div>
+            <div style={{ padding: SPACE.md, maxHeight: 360, overflowY: 'auto' }}>
+              <TasksTab tasks={tasks} />
+            </div>
+          </TacticalCard>
+
+          {/* Directory / Recent — tabbed (Tasks is now its own card). */}
+          <TacticalCard padding="none">
+            <DirRecentTabs
+              active={tab === 'tasks' ? 'directory' : tab}
+              onChange={setTab as (t: 'directory' | 'recent') => void}
+              recentCount={history.length}
+            />
+            <div style={{ padding: SPACE.md }}>
+              <AnimatePresence mode="wait">
+                {tab !== 'recent' && (
+                  <TabPanel key="directory">
+                    <DirectoryTab
+                      activeCallId={activeCall?.id}
+                      onCall={(id) => startCall(id)}
+                    />
+                  </TabPanel>
+                )}
+                {tab === 'recent' && (
+                  <TabPanel key="recent">
+                    <RecentTab history={history} />
+                  </TabPanel>
+                )}
+              </AnimatePresence>
+            </div>
+          </TacticalCard>
+        </div>
       </div>
     </div>
   );
@@ -189,6 +231,37 @@ export const CommsScreen: React.FC = () => {
 // ════════════════════════════════════════════════════════════════
 // Tabs
 // ════════════════════════════════════════════════════════════════
+
+// Slim Directory/Recent tab strip — used after splitting Tasks into
+// its own always-visible tile (sprint 2026-05-14 item 19).
+const DirRecentTabs: React.FC<{
+  active: 'directory' | 'recent';
+  onChange: (t: 'directory' | 'recent') => void;
+  recentCount: number;
+}> = ({ active, onChange, recentCount }) => (
+  <div
+    style={{
+      display: 'flex',
+      borderBottom: `1px solid ${COLORS.border}`,
+      background: COLORS.surface,
+    }}
+  >
+    <TabButton
+      label="Directory"
+      icon={<Users size={12} strokeWidth={2} />}
+      active={active === 'directory'}
+      onClick={() => onChange('directory')}
+      count={CALL_DIRECTORY.length}
+    />
+    <TabButton
+      label="Recent"
+      icon={<History size={12} strokeWidth={2} />}
+      active={active === 'recent'}
+      onClick={() => onChange('recent')}
+      count={recentCount}
+    />
+  </div>
+);
 
 const RightTabs: React.FC<{
   active: RightTab;

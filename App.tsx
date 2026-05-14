@@ -26,6 +26,7 @@ import {
   TrendingDown,
   SlidersHorizontal,
   PhoneCall,
+  MoreHorizontal,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile, type Allergy } from './types';
 import { USERS } from './data/userProfiles';
@@ -44,6 +45,7 @@ import { CommandSidebar, type SimControlAction } from './components/CommandSideb
 import { CallProvider } from './lib/callState';
 import { CommsScreen } from './components/CommsScreen';
 import { ShiftHandoffModal } from './components/ShiftHandoffModal';
+import { DivertSheet, type DivertActivation } from './components/DivertSheet';
 import { MobileView } from './components/MobileView';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ScenarioHudBadge } from './components/ScenarioHudBadge';
@@ -196,6 +198,10 @@ function App() {
   // Handover System
   const [showHandoverModal, setShowHandoverModal] = useState(false);
   const [showShiftBriefing, setShowShiftBriefing] = useState(false);
+  // Ambient divert state — when active, the top HUD shows a countdown
+  // banner. Activation comes from Command Actions or the Surge flow.
+  const [showDivertSheet, setShowDivertSheet] = useState(false);
+  const [divertActivation, setDivertActivation] = useState<DivertActivation | null>(null);
   const [globalHandoverNotes, setGlobalHandoverNotes] = useState<{
     author: string;
     notes: string;
@@ -745,6 +751,7 @@ function App() {
     setToast({ message, type });
   };
 
+  // Primary nav: the 9 surfaces an operator hits during a shift.
   const navItems = [
     { id: Tab.HORIZON, icon: Activity, label: 'Horizon', code: 'H' },
     { id: Tab.PATIENTS, icon: Stethoscope, label: 'Patients', code: 'N' },
@@ -753,11 +760,15 @@ function App() {
     { id: Tab.ALERTS, icon: ShieldAlertIcon, label: 'Alerts', code: 'T' },
     { id: Tab.STAFFING, icon: UsersRound, label: 'Staffing', code: 'S' },
     { id: Tab.LIVE_OPS, icon: Radio, label: 'Live Ops', code: 'L' },
-    { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
     { id: Tab.ACTIONS, icon: Layout, label: 'Actions', code: 'A' },
     { id: Tab.COMMS, icon: PhoneCall, label: 'Comms', code: 'C' },
-    { id: Tab.ROSTER, icon: Users, label: 'Roster', code: 'R' },
     { id: Tab.BRIEF_ME, icon: Archive, label: 'Brief Me', code: 'B' },
+  ];
+  // Secondary nav: lower-traffic surfaces live under a "More" dropdown
+  // (sprint 2026-05-14 item 17). Keeps the top nav lean.
+  const moreItems = [
+    { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
+    { id: Tab.ROSTER, icon: Users, label: 'Roster', code: 'R' },
     { id: Tab.REPLAY, icon: PlayCircle, label: 'Replay', code: 'Y' },
   ];
 
@@ -1450,6 +1461,13 @@ function App() {
                     </NavButton>
                   );
                 })}
+                {/* More dropdown (Playbooks · Roster · Replay) */}
+                <MoreNavDropdown
+                  items={moreItems}
+                  activeTab={activeTab}
+                  compact={isCompactNav}
+                  onNavigate={(id) => navigateToTab(id)}
+                />
               </nav>
             </div>
 
@@ -1472,37 +1490,11 @@ function App() {
                 <MessageSquare size={16} strokeWidth={2} />
               </IconButton>
 
-              {/* Notifications */}
-              <div style={{ position: 'relative' }}>
-                <IconButton
-                  active={showNotifications}
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    if (showChat) setShowChat(false);
-                  }}
-                  label="Alerts"
-                  badge
-                >
-                  <Bell size={16} strokeWidth={2} />
-                </IconButton>
-
-                <AnimatePresence>
-                  {showNotifications && (
-                    <NotificationsDropdown
-                      notifications={notifications}
-                      onClose={() => setShowNotifications(false)}
-                      onHandoverClick={(message) => {
-                        setChatQuery(
-                          `I am taking over the shift. Here are the handover notes from the previous shift: "${message}". What should I prioritize first based on these notes and current system vitals?`,
-                        );
-                        setShowNotifications(false);
-                        setShowChat(true);
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
-
+              {/* Bell + dropdown removed (sprint 2026-05-14 item 22).
+                  Notifications live on the dedicated Alerts tab, tasks
+                  on the Comms Tasks tab + TasksDrawer, and proactive
+                  AI activity gets its own surface. The top-right
+                  notification dropdown duplicated all three. */}
               <span style={{ color: COLORS.textDim }}>│</span>
 
               {/* User info */}
@@ -1610,6 +1602,8 @@ function App() {
                   activeScenario={activeScenario}
                   onStartScenario={startScenario}
                   onStopScenario={stopScenario}
+                  onActivateSurge={activateSurge}
+                  onOpenDivert={() => setShowDivertSheet(true)}
                 />
               )}
               {activeTab === Tab.PATIENTS && (
@@ -1647,6 +1641,7 @@ function App() {
                     setInitialPatientId(patientId);
                     navigateToTab(Tab.PATIENTS);
                   }}
+                  onOpenAdmitFlow={() => navigateToTab(Tab.ADMISSIONS)}
                 />
               )}
               {activeTab === Tab.ADMISSIONS && (
@@ -1747,6 +1742,23 @@ function App() {
               onConfirm={handleConfirmPlaybook}
             />
           )}
+
+          {/* Ambulance Diversion overlay (sprint 2026-05-14 item 5).
+              On confirm we keep the activation in app state — a
+              follow-up commit will surface the running banner across
+              the top HUD with an auto-clear countdown. */}
+          <DivertSheet
+            open={showDivertSheet}
+            onClose={() => setShowDivertSheet(false)}
+            onConfirm={(activation) => {
+              setDivertActivation(activation);
+              setShowDivertSheet(false);
+              showToast(
+                `Diversion activated · ${activation.tier === 'bypass' ? 'Critical-care bypass' : 'Redirect'} · ${Math.floor(activation.durationMin / 60)}h ${activation.durationMin % 60}m`,
+                'info',
+              );
+            }}
+          />
         </div>
       )}
     </>
@@ -1985,6 +1997,109 @@ const TacticalBootScreen: React.FC = () => {
 // ═══════════════════════════════════════════════════════════════════════
 // Small shell primitives — defined locally because they're shell-specific
 // ═══════════════════════════════════════════════════════════════════════
+
+/** Top-nav "More" dropdown — secondary surfaces (Playbooks, Roster,
+ *  Replay) live here so the primary nav stays lean. */
+const MoreNavDropdown: React.FC<{
+  items: Array<{ id: Tab; icon: React.ComponentType<{ size?: number; strokeWidth?: number }>; label: string; code: string }>;
+  activeTab: Tab;
+  compact: boolean;
+  onNavigate: (id: Tab) => void;
+}> = ({ items, activeTab, compact, onNavigate }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const anyActive = items.some((i) => i.id === activeTab);
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <NavButton
+        active={anyActive || open}
+        onClick={() => setOpen((o) => !o)}
+        compact={compact}
+        title={compact ? 'More' : undefined}
+      >
+        <MoreHorizontal size={16} strokeWidth={2} />
+        {!compact && (
+          <span style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>
+            More
+          </span>
+        )}
+      </NavButton>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.15, ease: MOTION.easeSmooth }}
+            style={{
+              position: 'absolute',
+              top: '100%',
+              right: 0,
+              marginTop: 6,
+              minWidth: 200,
+              background: COLORS.surface,
+              border: `1px solid ${COLORS.borderStrong}`,
+              borderRadius: RADIUS.sm,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              zIndex: 50,
+              overflow: 'hidden',
+            }}
+          >
+            {items.map((it) => {
+              const Icon = it.icon;
+              const isActive = activeTab === it.id;
+              return (
+                <button
+                  key={it.id}
+                  type="button"
+                  onClick={() => {
+                    onNavigate(it.id);
+                    setOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: `${SPACE.sm}px ${SPACE.md}px`,
+                    background: isActive ? COLORS.surfaceHover : 'transparent',
+                    border: 'none',
+                    borderLeft: isActive ? `2px solid ${COLORS.accent}` : '2px solid transparent',
+                    color: isActive ? COLORS.textPrimary : COLORS.textSecondary,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: SPACE.sm,
+                    fontFamily: FONTS.sans,
+                    fontSize: 13,
+                    fontWeight: isActive ? 600 : 500,
+                    textAlign: 'left',
+                    letterSpacing: '-0.005em',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) e.currentTarget.style.background = COLORS.surfaceHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <Icon size={14} strokeWidth={2} />
+                  <span>{it.label}</span>
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 /** Top-nav button — tactical hover + active states */
 const NavButton: React.FC<{
