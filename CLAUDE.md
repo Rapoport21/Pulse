@@ -41,6 +41,11 @@ Persistent instructions for any Claude session on this repo. Read this first.
 - `MobileView.tsx` is the main mobile surface. Large file, split candidate (see `docs/improvement-ideas.md` T2.1)
 - Decision log: `docs/decisions.md` (append new ADRs to the top)
 - Backlog: `docs/improvement-ideas.md` (tiered T1/T2/T3/T4)
+- **`docs/next-session.md` — START HERE next session.** Nick's
+  prioritised to-do (11 items: AI billing/memory, Rehoboam AI
+  redesign + dedicated page, dead-button audit, colour-hierarchy
+  fix, default-scenario, etc.) with preliminary findings already
+  baked in. Read it before planning new work.
 
 ## Standard ship loop
 
