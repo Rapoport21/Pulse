@@ -13,6 +13,15 @@ Categories: `INVESTIGATE` · `QUICK FIX` · `BUILD` · `DESIGN+RESEARCH` ·
 
 ## 1. Is AI usage free or paid? `INVESTIGATE` (gates 2 / 2.5 / 2.6)
 
+> **✅ RESOLVED 2026-05-17.** Paid (Postpay) but trivial. Whole Google
+> Cloud spend all year = $3.99, of which $3.52 was a now-deleted "TEST
+> Gemini Project" (not PULSE). PULSE's own project = $0.47 lifetime, now
+> ~$0.03/mo on `gemini-3-flash-preview`, server-proxied. Nothing owed
+> (3c running tab, auto-pays ~June 1, no action needed). Cleanup done:
+> 5 junk projects deleted, only `Pulse` (`gen-lang-client-0199807208`)
+> active, its key restricted to Gemini API only, $10 Cloud budget alert
+> created ("Pulse $10 monthly cap", emails at $5/$9/$10).
+
 **Asked:** Check if AI activity is actually free or I pay for usage. If
 paid → do #2.
 
@@ -33,6 +42,12 @@ enabled on the underlying Google Cloud project tied to the key.
   server-proxied. Both already cost-minimising.
 
 ## 2. Background AI usage drain? `INVESTIGATE`
+
+> **◑ Corroborated 2026-05-17 (not yet formally grepped).** Google Cloud
+> shows only ~21 Gemini requests/day, all user-initiated, none on a
+> timer. Strongly consistent with the preliminary finding (no background
+> drain). Still worth the explicit `createGeminiClient` / `/api/gemini`
+> grep next session to close it formally.
 
 **Asked:** Check if there's background AI activity draining usage (e.g.
 the AI recommendations in the Alerts tab).
@@ -57,7 +72,15 @@ in a `setInterval`/`useEffect`-on-mount that auto-fires. Then report
 
 ## 2.5 Where is AI data stored? `INVESTIGATE` / document
 
-**Preliminary answer:** Nowhere persistent today.
+> **✅ ANSWERED + CHANGED 2026-05-17.** Was: nowhere persistent. Now (via
+> #2.6): the AI transcript persists to `localStorage['pulse-ai-memory-v1']`
+> (last 40 messages, on-device only) and demo/app state to
+> `localStorage['pulse-state-v1']`. Nothing AI is written to Supabase or
+> disk; no server-side storage. Gemini still reads live ops fresh per
+> message via `getRealtimeStateSnapshot`. Wipe: Settings "Reset & Wipe
+> Memory" clears both keys.
+
+**Preliminary answer (pre-2.6, historical):** Nowhere persistent today.
 - Chat conversation = React `useState` in `ChatAssistant` — wiped when
   the chat is closed / app reloads.
 - The "live ops" the AI reads = pulled fresh each message from
@@ -71,6 +94,16 @@ in a `setInterval`/`useEffect`-on-mount that auto-fires. Then report
 Document this clearly for Nick next session, then → 2.6.
 
 ## 2.6 Cross-session memory + wipe control `DESIGN+RESEARCH` → `BUILD`
+
+> **✅ DONE 2026-05-17 (commit 63e0a2e).** Built `lib/persistence.ts`
+> (guarded/debounced localStorage, `beforeunload` flush). `lib/realtime.ts`
+> hydrates `store.cache` + Lamport versions at module init so
+> `useRealtimeState` restores with zero component changes. ChatAssistant
+> rehydrates the transcript (full history already goes to Gemini so model
+> memory is restored for free). Settings reset is now a full memory wipe,
+> relabelled "Reset & Wipe Memory". Supabase-table version intentionally
+> deferred (see `docs/decisions.md` 2026-05-17). Both memory concepts
+> (app-state + AI) shipped.
 
 **Asked:** Can we create memory so changes are saved across sessions?
 Best way to do it? With an option to restart / wipe the memory.

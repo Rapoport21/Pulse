@@ -12,6 +12,38 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-05-17 · Cross-session memory: localStorage hydrate-at-init, not a Supabase table
+
+**Context.** App state (`useRealtimeState`) and the AI transcript were
+in-memory only. A single-device reload wiped the whole demo: the
+realtime layer keeps state in `store.cache` and only recovers it if a
+peer answers a `state-request` within 500ms. No peer (the common
+single-screen pitch case) meant total loss. The next-session backlog
+(#2.6) asked for durable memory plus a visible wipe.
+
+**Decision.** Added `lib/persistence.ts`: a guarded, debounced
+localStorage layer with two stores (`pulse-state-v1`,
+`pulse-ai-memory-v1`) and a `beforeunload`/`pagehide`/visibility flush.
+`lib/realtime.ts` hydrates `store.cache` + Lamport versions at *module
+init*, before React mounts, so `useRealtimeState`'s lazy initializer
+restores transparently with zero component rewiring. ChatAssistant
+rehydrates the transcript (full history is already sent to Gemini, so
+model memory is restored for free). The existing Settings reset is now
+a full memory wipe, relabelled "Reset & Wipe Memory" so the control is
+visible.
+
+**Considered and rejected.**
+- *Supabase `pulse_state` table / JSON row.* True cross-device durable
+  memory, but adds schema, RLS, migration, and write-amplification for
+  what is a single-operator pitch demo. Deferred as a future upgrade;
+  the hydrate-at-init seam makes swapping the backing store a
+  one-function change later.
+- *IndexedDB.* Overkill for a few small JSON blobs; localStorage is
+  synchronous, which is exactly what module-init hydration needs.
+- *Persisting via a React effect in App.tsx.* Would race the first
+  paint and require threading through every `useRealtimeState` call.
+  Hydrating the shared cache once at import is simpler and lossless.
+
 ## 2026-05-10 · Pulse Radiant focus-engage perf: memoization + no `filter: blur` on dim
 
 **Context.** When the user clicks a widget in the radiant, ~118 sibling
