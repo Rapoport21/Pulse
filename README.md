@@ -81,15 +81,22 @@ npm run lint             # ESLint pass
 
 ## Deploy
 
-### Web (GitHub Pages)
+### Web (Vercel)
 
-Pushing to `main` triggers `.github/workflows/deploy.yml` which builds
-the bundle with `VITE_BASE=/Pulse/` and publishes it to GitHub Pages.
-The live site is at:
+Vercel is the sole automatic deploy pipeline. Every push to `main`
+auto-builds (`vercel.json`: Vite preset, `VITE_BASE=/`, SPA rewrites
+that exclude `/api`) and ships to production. The serverless Gemini
+proxy (`api/gemini.ts`) ships with it. Live site:
 
-**https://rapoport21.github.io/Pulse/**
+**https://pulse-psi-fawn.vercel.app**
 
-The deploy runs ~60s after each push to `main`.
+The deploy completes ~45-60s after each push to `main`.
+
+> The legacy GitHub Pages workflow (`.github/workflows/deploy.yml`)
+> is now `workflow_dispatch`-only — a manual emergency fallback. It
+> does **not** auto-deploy and AI does not work there (no serverless
+> proxy on a static host). Do not use the `rapoport21.github.io/Pulse/`
+> URL as the canonical site.
 
 ### iOS
 

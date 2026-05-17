@@ -1,8 +1,13 @@
-name: Deploy PULSE to GitHub Pages
+name: Deploy PULSE to GitHub Pages (manual fallback only)
 
+# Vercel is the sole automatic deploy pipeline (auto-builds + ships
+# every push to main → https://pulse-psi-fawn.vercel.app). The
+# push-trigger here was removed on 2026-05-17: GitHub Pages can't run
+# the /api/gemini serverless proxy, so AI is dead there — auto-mirror
+# deploying it just produced a redundant, AI-broken second URL and
+# wasted Actions minutes. Kept as workflow_dispatch so a static build
+# can still be hand-triggered if Vercel ever has an outage.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
