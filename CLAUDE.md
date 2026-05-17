@@ -6,9 +6,11 @@ Persistent instructions for any Claude session on this repo. Read this first.
 
 1. **All actions pre-approved.** Never ask for permission to run builds, installs, commits, pushes, cap syncs, file edits, or agent launches. Just do the work.
 
-2. **After every change that ships code, always report:**
+2. **Auto-deploy after every change. No asking.** Every code change follows the Standard ship loop end to end without waiting for Nick to request a deploy: `npm run build` → `npx cap sync ios` → commit → `git push origin main` → rebuild + install on the iPhone. Pushing to `main` is itself the web deploy — Vercel's GitHub integration auto-builds and ships every push to production (verified: pushes auto-create deployments with no manual trigger). This is the default operating mode, exactly like the old GitHub-Pages flow.
+
+   **After every change that ships code, always report:**
    - **GitHub link.** Direct URL to the pushed commit or compare view on `https://github.com/Rapoport21/Pulse`. Prefer the compare URL (`/compare/<old>...<new>`) when multiple commits are pushed, otherwise the single-commit URL (`/commit/<sha>`).
-   - **Web link.** GitHub Pages auto-deploys `main` to `https://rapoport21.github.io/Pulse/` (workflow at `.github/workflows/deploy.yml`). The deploy completes ~60s after push. Mention it whenever a visible change ships.
+   - **Web link (PRIMARY = Vercel).** Vercel auto-deploys `main` to production at `https://pulse-psi-fawn.vercel.app` (project `pulse`, team `rapoportn21-5009s-projects`). Build completes ~45-60s after push; it inlines `VITE_*` env vars and runs the `api/gemini` serverless proxy. This is the canonical live URL — report it on every visible change. GitHub Pages still mirror-deploys to `https://rapoport21.github.io/Pulse/` but it is a STATIC fallback only: the AI proxy (`/api/gemini`) does not exist there, so AI is dead on GH Pages. Never present the GH Pages URL as primary.
    - **Xcode click path.** Exactly what to press in the open workspace to see the change on device/simulator. Default path:
      1. Make sure scheme selector (top bar) reads **App**.
      2. Pick destination from the dropdown next to it (simulator like *iPhone 15 Pro*, or a connected device).
@@ -42,13 +44,24 @@ Persistent instructions for any Claude session on this repo. Read this first.
 
 ## Standard ship loop
 
+Runs automatically after every code change (directive #2 — no asking):
+
 ```
 npm run build          # must be clean, no TS errors
 npx cap sync ios       # copies dist into ios/App/App/public, updates plugins
 git add <files>
 git commit -m "..."    # follow existing commit style
-git push origin main
-npx cap open ios       # only if Xcode isn't already open
+git push origin main   # <- THIS is the web deploy. Vercel auto-builds
+                        #    + ships main to https://pulse-psi-fawn.vercel.app
+                        #    (~45-60s). No further web step needed.
+# iPhone (device 3416D2C5-8BC0-5121-A1AE-D7747DE114FA):
+xcrun devicectl device uninstall app --device <id> com.rapoport.pulse
+xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+  -destination "id=<id>" -derivedDataPath <ddpath> build
+xcrun devicectl device install app --device <id> <App.app path>
+xcrun devicectl device process launch --device <id> com.rapoport.pulse
 ```
 
-Then report GitHub link + web link + Xcode click path per directive #2.
+Then report GitHub link + Vercel web link + Xcode click path per directive
+#2. (`npx cap open ios` only if Xcode isn't already open and a manual run
+is preferred over devicectl.)
