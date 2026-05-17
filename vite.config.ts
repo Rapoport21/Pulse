@@ -1,12 +1,12 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
+export default defineConfig(() => {
     // Default to relative so the bundle works for Capacitor (WKWebView) and
     // any static host. GH Pages CI explicitly sets VITE_BASE=/Pulse/ to keep
-    // deployment absolute at https://rapoport21.github.io/Pulse/.
+    // deployment absolute at https://rapoport21.github.io/Pulse/. Vercel
+    // sets VITE_BASE=/ (see vercel.json) so assets resolve from root.
     const base = process.env.VITE_BASE ?? './';
     return {
       base,
@@ -15,16 +15,11 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-      define: {
-        // Legacy fallbacks — kept for any third-party code still reading process.env.
-        // App code should prefer import.meta.env.VITE_GEMINI_API_KEY.
-        'process.env.API_KEY': JSON.stringify(
-          env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || ''
-        ),
-        'process.env.GEMINI_API_KEY': JSON.stringify(
-          env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || ''
-        ),
-      },
+      // NOTE: the previous define() block that inlined the Gemini API
+      // key into the client bundle has been removed. The key is now
+      // server-only (api/gemini.ts reads process.env.GEMINI_API_KEY at
+      // runtime on Vercel). Nothing Gemini-related is shipped to the
+      // browser anymore — see lib/gemini.ts.
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),

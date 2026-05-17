@@ -44,17 +44,32 @@ npm run dev              # vite dev server (default http://localhost:5173)
 
 ### Environment
 
-Some features rely on third-party services. Create a `.env.local`
-file at the repo root and set the keys you need:
+Some features rely on third-party services.
+
+**Gemini (AI assistant) — server-side only.** The Gemini key is NOT a
+client variable. It's read at runtime by the `/api/gemini` Vercel
+serverless function (`api/gemini.ts`), never inlined into the browser
+bundle. Set it as a **server** env var on the host:
+
+```
+GEMINI_API_KEY=<your Gemini API key>     # NO VITE_ prefix — server only
+```
+
+For local dev with the proxy you'd run `vercel dev` (or set
+`GEMINI_API_KEY` in the shell). The browser talks to `/api/gemini`;
+the SDK no longer ships to the client at all.
+
+**Supabase (realtime sync) — client-side, safe to expose.** The anon
+key is designed for browser use and is protected by row-level
+security. These stay `VITE_`-prefixed in `.env.local`:
 
 ```env
-VITE_GEMINI_API_KEY=<your Gemini API key>      # Chat assistant + AI helpers
-VITE_SUPABASE_URL=<your Supabase project URL>  # Realtime sync (optional)
+VITE_SUPABASE_URL=<your Supabase project URL>
 VITE_SUPABASE_ANON_KEY=<your Supabase anon key>
 ```
 
-The app degrades gracefully without these keys; AI / realtime
-features simply won't activate.
+The app degrades gracefully without any of these; AI / realtime
+features simply stay dormant.
 
 ## Build
 

@@ -1,47 +1,86 @@
-import { GoogleGenAI } from '@google/genai';
-
 /**
- * Reads the Gemini key from Vite's import.meta.env, with legacy fallbacks.
- * Returns an empty string when nothing is configured — callers must guard.
+ * lib/gemini.ts — client-side Gemini access via the server proxy.
+ *
+ * The Gemini API key NO LONGER touches the browser. This module used
+ * to construct a `GoogleGenAI` client with an inlined key; now it
+ * returns a thin shim whose `models.generateContent(...)` POSTs to
+ * `/api/gemini` (see api/gemini.ts), which runs the real call
+ * server-side with the server-only GEMINI_API_KEY.
+ *
+ * The shim deliberately mirrors the exact shape consumers already use
+ * (`ai.models.generateContent({ model, contents, config })` returning
+ * `{ text, functionCalls, candidates }`) so ChatAssistant and
+ * StaffManagementModal need zero changes.
  */
+
+// Kept for backward-compat with any importer; the key is no longer
+// available (or needed) client-side. Always returns ''.
 export function getGeminiApiKey(): string {
-  // Vite injects import.meta.env at build time. Use bracket access to keep
-  // TS happy without a vite/client reference.
-  const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env || {};
-  return (
-    env.VITE_GEMINI_API_KEY ||
-    env.GEMINI_API_KEY ||
-    // Legacy define() fallback from vite.config.ts
-    (typeof process !== 'undefined' ? (process as { env?: Record<string, string | undefined> }).env?.API_KEY || '' : '') ||
-    ''
-  );
+  return '';
+}
+
+interface GenerateContentRequest {
+  model: string;
+  contents: unknown;
+  config?: unknown;
+}
+
+interface GenerateContentResponse {
+  text: string;
+  functionCalls: Array<{
+    id?: string;
+    name?: string;
+    args?: Record<string, unknown>;
+  }>;
+  candidates: Array<{ content?: { parts?: unknown[] } }>;
+}
+
+/** Minimal client surface — same shape consumers were using. */
+export interface GeminiProxyClient {
+  models: {
+    generateContent: (
+      req: GenerateContentRequest,
+    ) => Promise<GenerateContentResponse>;
+  };
 }
 
 export interface GeminiClientResult {
-  client: GoogleGenAI | null;
+  client: GeminiProxyClient | null;
   error: string | null;
 }
 
+const proxyClient: GeminiProxyClient = {
+  models: {
+    async generateContent(req: GenerateContentRequest) {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(req),
+      });
+
+      if (!res.ok) {
+        let detail = `Gemini proxy returned ${res.status}`;
+        try {
+          const body = await res.json();
+          if (body?.error) detail = body.error;
+        } catch {
+          /* non-JSON error body — keep the status-code message */
+        }
+        throw new Error(detail);
+      }
+
+      return (await res.json()) as GenerateContentResponse;
+    },
+  },
+};
+
 /**
- * Constructs a Gemini client safely. If the key is missing or the SDK throws
- * during construction, returns { client: null, error } so the UI can degrade
- * to a disabled state instead of crashing.
+ * Returns the proxy-backed client. We can't know from the browser
+ * whether the server has GEMINI_API_KEY set, so the client is always
+ * non-null; if the server is unconfigured, the first call rejects
+ * with a 503 message and the calling UI's existing error handling
+ * surfaces it. This keeps the consumer contract unchanged.
  */
 export function createGeminiClient(): GeminiClientResult {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    return {
-      client: null,
-      error: 'Gemini API key is not configured (VITE_GEMINI_API_KEY).',
-    };
-  }
-  try {
-    const client = new GoogleGenAI({ apiKey });
-    return { client, error: null };
-  } catch (err) {
-    return {
-      client: null,
-      error: err instanceof Error ? err.message : 'Failed to initialize Gemini client.',
-    };
-  }
+  return { client: proxyClient, error: null };
 }

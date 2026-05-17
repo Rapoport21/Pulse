@@ -16,7 +16,24 @@ import {
   Trash2,
   UserCircle,
 } from 'lucide-react';
-import { FunctionDeclaration, Type } from '@google/genai';
+// The @google/genai SDK no longer ships to the browser (the Gemini
+// key is server-side only — see lib/gemini.ts + api/gemini.ts). The
+// `Type` enum values are just the strings the Gemini API expects, so
+// we mirror them locally and keep a structural FunctionDeclaration
+// type. Tool declarations are forwarded verbatim through the proxy.
+const Type = {
+  STRING: 'STRING',
+  NUMBER: 'NUMBER',
+  INTEGER: 'INTEGER',
+  BOOLEAN: 'BOOLEAN',
+  ARRAY: 'ARRAY',
+  OBJECT: 'OBJECT',
+} as const;
+type FunctionDeclaration = {
+  name: string;
+  description?: string;
+  parameters?: Record<string, unknown>;
+};
 import { UserProfile, UserRole, Status } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
 import Markdown from 'react-markdown';
