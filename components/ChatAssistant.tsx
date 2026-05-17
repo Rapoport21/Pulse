@@ -534,7 +534,12 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
     setIsTyping(true);
 
     try {
-      const model = 'gemini-3-pro-preview';
+      // Flash, not Pro: this assistant does tool-calling + concise
+      // operational answers + SBAR drafts — squarely in Flash's lane.
+      // Flash is faster (better demo UX) and far cheaper, with no
+      // meaningful quality loss for these tasks. Matches the model
+      // StaffManagementModal already uses.
+      const model = 'gemini-3-flash-preview';
 
       // Pull live realtime context fresh on every send so the assistant always
       // reflects current state (no stale React closures).
