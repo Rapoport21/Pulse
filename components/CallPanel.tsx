@@ -610,7 +610,7 @@ const TaskRow: React.FC<{ task: ExtractedTask }> = ({ task }) => {
             <>
               <TacticalButton
                 variant="primary"
-                size="xs"
+                size="sm"
                 fullWidth
                 onClick={() => {
                   editTask(task.id, { text: draftText.trim(), priority: draftPriority });
@@ -621,7 +621,7 @@ const TaskRow: React.FC<{ task: ExtractedTask }> = ({ task }) => {
               </TacticalButton>
               <TacticalButton
                 variant="ghost"
-                size="xs"
+                size="sm"
                 onClick={() => {
                   setDraftText(task.text);
                   setDraftPriority(task.priority);
@@ -635,7 +635,7 @@ const TaskRow: React.FC<{ task: ExtractedTask }> = ({ task }) => {
             <>
               <TacticalButton
                 variant="primary"
-                size="xs"
+                size="sm"
                 icon={<Check size={11} strokeWidth={2.25} />}
                 onClick={() => approveTask(task.id)}
               >
@@ -643,7 +643,7 @@ const TaskRow: React.FC<{ task: ExtractedTask }> = ({ task }) => {
               </TacticalButton>
               <TacticalButton
                 variant="ghost"
-                size="xs"
+                size="sm"
                 icon={<Edit3 size={11} strokeWidth={2} />}
                 onClick={() => setEditing(true)}
               >
@@ -651,7 +651,7 @@ const TaskRow: React.FC<{ task: ExtractedTask }> = ({ task }) => {
               </TacticalButton>
               <TacticalButton
                 variant="ghost"
-                size="xs"
+                size="sm"
                 icon={<X size={11} strokeWidth={2.25} />}
                 onClick={() => rejectTask(task.id)}
               >

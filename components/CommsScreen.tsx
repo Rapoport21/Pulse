@@ -703,7 +703,7 @@ const TaskCard: React.FC<{
           {onApprove && (
             <TacticalButton
               variant="primary"
-              size="xs"
+              size="sm"
               icon={<Check size={10} strokeWidth={2.5} />}
               onClick={onApprove}
             >
@@ -713,7 +713,7 @@ const TaskCard: React.FC<{
           {onReject && (
             <TacticalButton
               variant="ghost"
-              size="xs"
+              size="sm"
               icon={<X size={10} strokeWidth={2.5} />}
               onClick={onReject}
             >
@@ -723,7 +723,7 @@ const TaskCard: React.FC<{
           {onComplete && (
             <TacticalButton
               variant="ghost"
-              size="xs"
+              size="sm"
               icon={<Check size={10} strokeWidth={2.5} />}
               onClick={onComplete}
             >

@@ -366,7 +366,7 @@ const TaskRow: React.FC<{
         <div style={{ display: 'flex', gap: 4 }}>
           <TacticalButton
             variant="primary"
-            size="xs"
+            size="sm"
             icon={<Check size={11} strokeWidth={2.25} />}
             onClick={onApprove}
           >
@@ -374,7 +374,7 @@ const TaskRow: React.FC<{
           </TacticalButton>
           <TacticalButton
             variant="ghost"
-            size="xs"
+            size="sm"
             icon={<X size={11} strokeWidth={2.25} />}
             onClick={onReject}
           >
@@ -385,7 +385,7 @@ const TaskRow: React.FC<{
       {(task.status === 'approved' || task.status === 'edited' || task.status === 'in_progress') && (
         <TacticalButton
           variant="ghost"
-          size="xs"
+          size="sm"
           icon={<Check size={11} strokeWidth={2.25} />}
           onClick={onComplete}
         >
