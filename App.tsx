@@ -69,6 +69,7 @@ import {
   broadcastReset,
   getDeviceId,
 } from './lib/realtime';
+import { clearAiMemory } from './lib/persistence';
 import {
   INITIAL_POOL,
   type BraceletPool,
@@ -1169,10 +1170,14 @@ function App() {
 
     // Clear any side-effect state from the EMS board / notifications
     publish('ems-reset');
-    // Notify any other devices to clear their own realtime caches too
+    // Notify any other devices to clear their own realtime caches too.
+    // broadcastReset() also wipes the persisted cross-session state
+    // snapshot; clear the assistant's remembered conversation alongside it
+    // so "reset" is a complete memory wipe, not just a state reset.
     broadcastReset();
+    clearAiMemory();
 
-    showToast('Simulation reset to baseline', 'info');
+    showToast('Reset to baseline · memory wiped', 'info');
   }, [
     setSurgeState,
     setUrgentTasks,

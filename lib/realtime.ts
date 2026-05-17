@@ -19,6 +19,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import {
+  loadPersistedState,
+  persistState,
+  clearPersistedState,
+} from './persistence';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -255,6 +260,34 @@ const store: RealtimeStore = {
 };
 
 const LOG_MAX = 50;
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Cross-session memory: hydrate the cache from localStorage at module init.
+//
+// This runs at import time, before any React component mounts, so
+// `useRealtimeState`'s lazy initializer (which reads `store.cache` first)
+// transparently restores the last session. On a single device this means a
+// reload no longer wipes the demo. With peers connected, the per-key Lamport
+// versions are restored too, so optimistic concurrency still resolves
+// correctly against whatever the network currently holds.
+// ──────────────────────────────────────────────────────────────────────────────
+
+let hydrated = false;
+function hydrateFromStorage() {
+  if (hydrated) return;
+  hydrated = true;
+  const snap = loadPersistedState();
+  if (!snap) return;
+  for (const [key, value] of Object.entries(snap.cache)) {
+    store.cache.set(key, value);
+    const vm = snap.versions[key];
+    if (vm && typeof vm.version === 'number' && typeof vm.device === 'string') {
+      store.versions.set(key, { version: vm.version, device: vm.device });
+    }
+  }
+}
+
+hydrateFromStorage();
 
 function appendLog(entry: RealtimeLogEntry) {
   store.log.push(entry);
@@ -497,6 +530,7 @@ function handleIncoming(data: OutgoingMessage) {
       device: incomingDevice,
     });
     store.cacheSubs.get(key)?.forEach((fn) => fn(incomingValue));
+    persistState(store.cache, store.versions);
   } else if (data.type === 'state-request' && data.key) {
     // Another device is asking — if we have it, respond with both the
     // current value and our version metadata so they can align.
@@ -536,6 +570,7 @@ function handleIncoming(data: OutgoingMessage) {
         });
       }
       store.cacheSubs.get(payload.key)?.forEach((fn) => fn(payload.value));
+      persistState(store.cache, store.versions);
     }
   } else if (data.type === 'reset-all') {
     // Clear cache + versions and notify everyone.
@@ -545,6 +580,9 @@ function handleIncoming(data: OutgoingMessage) {
     keys.forEach((k) => {
       store.cacheSubs.get(k)?.forEach((fn) => fn(undefined));
     });
+    // A peer wiped: drop our persisted snapshot too so the reset survives
+    // a reload on this device.
+    clearPersistedState();
   }
 }
 
@@ -666,6 +704,8 @@ export function broadcastReset() {
   keys.forEach((k) => {
     store.cacheSubs.get(k)?.forEach((fn) => fn(undefined));
   });
+  // Wipe the persisted snapshot so the reset is permanent across reloads.
+  clearPersistedState();
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -802,6 +842,9 @@ export function useRealtimeState<T>(
     // 1. Update local cache + version side-table (synchronous)
     store.cache.set(key, resolved);
     store.versions.set(key, { version: nextVersion, device: DEVICE_ID });
+
+    // 1b. Persist (debounced) so this write survives a reload / relaunch.
+    persistState(store.cache, store.versions);
 
     // 2. Set React state (batched by React, but that's fine — UI catches up)
     setValue(resolved);

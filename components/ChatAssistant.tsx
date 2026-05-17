@@ -40,6 +40,7 @@ import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createGeminiClient } from '../lib/gemini';
 import { getRealtimeStateSnapshot, getDeviceCount } from '../lib/realtime';
+import { loadAiMemory, persistAiMemory, clearAiMemory } from '../lib/persistence';
 import type { SurgeModeState, UrgentTask } from '../lib/surgeTaskTemplates';
 import { metricValue, type ScenarioState } from '../lib/scenario';
 import type { BedUnit } from '../data/bedMock';
@@ -619,7 +620,16 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   loginCount = 0,
 }) => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Cross-session AI memory: rehydrate the transcript from localStorage on
+  // mount. ChatAssistant sends the full message history to Gemini every
+  // turn, so restoring the transcript restores the model's memory of the
+  // conversation for free. A restored thread (length > 0) makes the opener
+  // effect below a no-op, so a returning user keeps their conversation
+  // instead of getting a fresh greeting.
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const remembered = loadAiMemory();
+    return remembered ? (remembered as Message[]) : [];
+  });
   const [isTyping, setIsTyping] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
 
@@ -665,6 +675,10 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
   const handleClearChat = () => {
     if (currentUser) {
+      // Forget the remembered conversation. The persist effect will then
+      // re-save just the fresh greeting, so "clear" is a clean slate that
+      // also survives the next reload.
+      clearAiMemory();
       setMessages([
         {
           id: Date.now().toString(),
@@ -682,6 +696,21 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  // Persist the transcript (debounced inside persistAiMemory). The
+  // typewriter reveal mutates messages many times per answer; the debounce
+  // collapses that into a single write of the settled conversation.
+  useEffect(() => {
+    if (messages.length > 0) {
+      persistAiMemory(
+        messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content ?? '',
+        })),
+      );
+    }
+  }, [messages]);
 
   // Typewriter reveal of a finished assistant answer. The model
   // returns the whole text at once (the function-calling flow can't

@@ -776,7 +776,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                             marginBottom: 4,
                           }}
                         >
-                          Reset Simulation
+                          Reset &amp; Wipe Memory
                         </div>
                         <div
                           style={{
@@ -788,7 +788,9 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                         >
                           Returns beds, patients, admissions, surge state,
                           alerts and notes to baseline across every
-                          connected device.
+                          connected device, and erases PULSE&rsquo;s saved
+                          cross-session memory: the restored demo state and
+                          the assistant&rsquo;s remembered conversation.
                         </div>
                       </div>
                     </div>
