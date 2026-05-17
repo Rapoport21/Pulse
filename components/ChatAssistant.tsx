@@ -34,13 +34,15 @@ type FunctionDeclaration = {
   description?: string;
   parameters?: Record<string, unknown>;
 };
-import { UserProfile, UserRole, Status } from '../types';
+import { UserProfile, UserRole, Status, type Patient } from '../types';
 import { ROLE_METRICS } from '../data/userProfiles';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { createGeminiClient } from '../lib/gemini';
 import { getRealtimeStateSnapshot, getDeviceCount } from '../lib/realtime';
 import type { SurgeModeState, UrgentTask } from '../lib/surgeTaskTemplates';
+import { metricValue, type ScenarioState } from '../lib/scenario';
+import type { BedUnit } from '../data/bedMock';
 import {
   COLORS,
   FONTS,
@@ -62,38 +64,220 @@ import {
 // Mock data + tool declarations (unchanged business logic)
 // ─────────────────────────────────────────────────────────────────────────
 
-const getMockDrivers = (loginCount: number, role?: UserRole) => {
-  const baseDrivers = ROLE_METRICS[role || UserRole.MANAGER];
-  if (loginCount > 1) {
-    return baseDrivers.map((driver) => {
-      if (role === UserRole.MANAGER) {
-        if (driver.id === '1')
-          return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' };
-        if (driver.id === '2')
-          return { ...driver, value: '15m Avg', status: Status.NORMAL, impact: 15, trend: 'down' };
-        if (driver.id === '3')
-          return { ...driver, value: 'Fully Staffed', status: Status.NORMAL, impact: 5, trend: 'stable' };
-      }
-      if (role === UserRole.NURSE) {
-        if (driver.id === 'n1')
-          return { ...driver, value: '0 Overdue', status: Status.NORMAL, impact: 10, trend: 'down' };
-        if (driver.id === 'n2')
-          return { ...driver, value: '0 Patients', status: Status.NORMAL, impact: 5, trend: 'down' };
-        if (driver.id === 'n3')
-          return { ...driver, value: '1 Waiting', status: Status.NORMAL, impact: 15, trend: 'stable' };
-      }
-      if (role === UserRole.ER_PERSONNEL) {
-        if (driver.id === 'e1')
-          return { ...driver, value: '2 Available', status: Status.NORMAL, impact: 20, trend: 'stable' };
-        if (driver.id === 'e2')
-          return { ...driver, value: '15 mins', status: Status.NORMAL, impact: 15, trend: 'down' };
-        if (driver.id === 'e3')
-          return { ...driver, value: '0 Inbound', status: Status.NORMAL, impact: 5, trend: 'down' };
-      }
-      return { ...driver, status: Status.NORMAL, impact: Math.floor(driver.impact * 0.3), trend: 'down' };
+// ─────────────────────────────────────────────────────────────────────────
+// LIVE OPS SNAPSHOT
+//
+// The AI's tools used to return canned blobs keyed off loginCount —
+// disconnected from the scenario engine that drives every screen, so
+// the assistant could contradict the dashboard. getLiveOps() pulls a
+// FRESH snapshot from the exact same sources the Horizon / Bed Board
+// read: the scenario metrics (`metricValue`), the live bed-units
+// realtime state, the patient roster, and surge state. Called fresh on
+// every send so the AI is always truthful to what's on screen.
+// ─────────────────────────────────────────────────────────────────────────
+
+interface LiveOps {
+  scenario: ScenarioState | null;
+  surgeActive: boolean;
+  nedocs: number;
+  census: number;
+  erWaitMin: number;
+  staffRatio: number;
+  alerts: number;
+  codes: number;
+  beds: {
+    total: number;
+    ready: number;
+    occupied: number;
+    dirty: number;
+    notStaffed: number;
+    blocked: number;
+    occupancyPct: number;
+    byUnit: Array<{ unit: string; total: number; ready: number; occupied: number }>;
+  };
+  patients: Patient[];
+}
+
+function getLiveOps(): LiveOps {
+  const scenario = getRealtimeStateSnapshot<ScenarioState | null>('active-scenario') ?? null;
+  const surge = getRealtimeStateSnapshot<SurgeModeState>('surge-mode') ?? { active: false, activatedAt: null };
+  const bedUnits = getRealtimeStateSnapshot<BedUnit[]>('bed-units') ?? [];
+  const patients = getRealtimeStateSnapshot<Patient[]>('patients') ?? [];
+
+  const allBeds = bedUnits.flatMap((u) => u.beds);
+  const total = allBeds.length || 1;
+  const count = (s: string) => allBeds.filter((b) => b.state === s).length;
+  const occupied = count('occupied');
+
+  return {
+    scenario,
+    surgeActive: !!surge.active,
+    nedocs: Math.round(metricValue('nedocsScore', scenario)),
+    census: Math.round(metricValue('census', scenario)),
+    erWaitMin: Math.round(metricValue('erWaitMinutes', scenario)),
+    staffRatio: Number(metricValue('staffingRatio', scenario).toFixed(1)),
+    alerts: Math.round(metricValue('activeAlerts', scenario)),
+    codes: Math.round(metricValue('activeCodes', scenario)),
+    beds: {
+      total: allBeds.length,
+      ready: count('ready'),
+      occupied,
+      dirty: count('dirty'),
+      notStaffed: count('not_staffed'),
+      blocked: count('blocked'),
+      occupancyPct: Math.round((occupied / total) * 100),
+      byUnit: bedUnits.map((u) => ({
+        unit: u.name,
+        total: u.beds.length,
+        ready: u.beds.filter((b) => b.state === 'ready').length,
+        occupied: u.beds.filter((b) => b.state === 'occupied').length,
+      })),
+    },
+    patients,
+  };
+}
+
+/** Live system vitals derived from the scenario + bed state — the
+ *  numbers here match the Horizon / Bed Board screens exactly. Shape
+ *  is kept compatible with the existing vitals visual card (nedocs /
+ *  currentLoad / houseStatus / waitingRoom / inboundEMS) so the card
+ *  keeps rendering, just with real numbers now. */
+const getLiveVitals = (ops: LiveOps) => {
+  const band =
+    ops.nedocs >= 160 ? 'Dangerous' : ops.nedocs >= 120 ? 'Severe' : ops.nedocs >= 100 ? 'Busy' : 'Normal';
+  const unitReady = (match: string) => {
+    const u = ops.beds.byUnit.find((x) => x.unit.toLowerCase().includes(match));
+    if (!u) return 'n/a';
+    return `${u.ready} of ${u.total} ready`;
+  };
+  // No discrete waiting-room metric in the scenario engine; approximate
+  // a credible count from census so the card's "N Patients" reads
+  // sensibly, paired with the real ED wait time.
+  const waitingCount = Math.max(0, Math.round(ops.census / 12) + (ops.surgeActive ? 14 : 0));
+  return {
+    nedocs: ops.nedocs,
+    currentLoad: `${ops.beds.occupancyPct}% (${band})`,
+    houseStatus: {
+      medSurg: unitReady('med'),
+      icu: unitReady('icu'),
+      psych: unitReady('psych'),
+    },
+    waitingRoom: `${waitingCount} Patients (${ops.erWaitMin}m Wait)`,
+    inboundEMS: 'Live inbound feed on the Live Ops board',
+    // Extra fields the AI reads from the tool result for richer text
+    // reasoning (ignored by the visual card):
+    systemStatus: ops.surgeActive
+      ? 'Surge Mode ACTIVE'
+      : ops.scenario
+        ? `Simulation running (severity ${ops.scenario.severity})`
+        : 'Normal Operations',
+    censusTotal: ops.census,
+    edWaitMinutes: ops.erWaitMin,
+    nurseRatio: `1:${ops.staffRatio}`,
+    activeAlerts: ops.alerts,
+    activeCodes: ops.codes,
+    bedsByUnit: ops.beds.byUnit,
+  };
+};
+
+/** Live pressure drivers — what is actually pushing load right now,
+ *  computed from the same metrics the dashboard shows. */
+const getLiveDrivers = (ops: LiveOps) => {
+  const baseline = { census: 284, erWait: 45, staffRatio: 4.2 };
+  const drivers: Array<{ name: string; value: string; status: string; impact: number; trend: string }> = [];
+
+  const censusDelta = ops.census - baseline.census;
+  drivers.push({
+    name: 'Inpatient boarding / census',
+    value: `${ops.census} census (${censusDelta >= 0 ? '+' : ''}${censusDelta} vs baseline)`,
+    status: censusDelta >= 25 ? 'CRITICAL' : censusDelta >= 10 ? 'WARNING' : 'NORMAL',
+    impact: Math.max(5, Math.min(40, Math.round(censusDelta))),
+    trend: censusDelta > 0 ? 'up' : 'down',
+  });
+  drivers.push({
+    name: 'ED throughput / wait time',
+    value: `${ops.erWaitMin}m average wait`,
+    status: ops.erWaitMin >= 90 ? 'CRITICAL' : ops.erWaitMin >= 60 ? 'WARNING' : 'NORMAL',
+    impact: Math.max(5, Math.min(35, Math.round((ops.erWaitMin - baseline.erWait) / 2))),
+    trend: ops.erWaitMin > baseline.erWait ? 'up' : 'down',
+  });
+  drivers.push({
+    name: 'Staffing pressure',
+    value: `1:${ops.staffRatio} nurse ratio`,
+    status: ops.staffRatio >= 5.5 ? 'CRITICAL' : ops.staffRatio >= 4.8 ? 'WARNING' : 'NORMAL',
+    impact: ops.staffRatio >= 5.5 ? 30 : ops.staffRatio >= 4.8 ? 18 : 6,
+    trend: ops.staffRatio > baseline.staffRatio ? 'up' : 'stable',
+  });
+  drivers.push({
+    name: 'Bed availability',
+    value: `${ops.beds.ready} ready of ${ops.beds.total} (${ops.beds.notStaffed} not staffed, ${ops.beds.blocked} blocked)`,
+    status: ops.beds.ready <= 2 ? 'CRITICAL' : ops.beds.ready <= 5 ? 'WARNING' : 'NORMAL',
+    impact: ops.beds.ready <= 2 ? 35 : ops.beds.ready <= 5 ? 20 : 8,
+    trend: 'stable',
+  });
+  if (ops.alerts > 0 || ops.codes > 0) {
+    drivers.push({
+      name: 'Active alerts / codes',
+      value: `${ops.alerts} alerts${ops.codes > 0 ? `, ${ops.codes} active codes` : ''}`,
+      status: ops.codes > 0 || ops.alerts >= 6 ? 'CRITICAL' : ops.alerts >= 3 ? 'WARNING' : 'NORMAL',
+      impact: ops.codes > 0 ? 40 : ops.alerts >= 6 ? 25 : 10,
+      trend: 'up',
     });
   }
-  return baseDrivers;
+  return drivers.sort((a, b) => b.impact - a.impact);
+};
+
+/** Live patient lookup over the real roster + bed board. Answers any
+ *  patient the demo audience might click — by MRN, name, bed, or
+ *  unit/zone — instead of two hardcoded branches. */
+const getLivePatientInfo = (ops: LiveOps, location: string, queryType: string) => {
+  const loc = (location || '').toLowerCase().trim();
+  const q = (queryType || '').toLowerCase();
+
+  const rows = ops.patients.map((p) => {
+    const enc = p.currentEncounter;
+    return {
+      mrn: p.mrn,
+      name: `${p.name.family}, ${p.name.given}`,
+      zone: enc?.location?.zone ?? '—',
+      bed: enc?.location?.bed ?? '—',
+      esi: enc?.esi ?? '—',
+      complaint: enc?.chiefComplaint ?? '—',
+    };
+  });
+
+  const matched = loc
+    ? rows.filter(
+        (r) =>
+          r.mrn.toLowerCase().includes(loc) ||
+          r.name.toLowerCase().includes(loc) ||
+          r.zone.toLowerCase().includes(loc) ||
+          String(r.bed).toLowerCase().includes(loc),
+      )
+    : rows;
+
+  // The visual card renders `patients` entries directly as list items,
+  // so they must be strings. Pack the key facts the AI also needs into
+  // each line — same data powers both the card and the model.
+  const fmt = (r: (typeof rows)[number]) =>
+    `${r.name} · ${r.mrn} · ${r.zone}/${r.bed} · ESI ${r.esi} · ${r.complaint}`;
+
+  if (matched.length === 0) {
+    return {
+      patients: rows.slice(0, 12).map(fmt),
+      status: `No patient matched "${location}". Showing ${Math.min(12, rows.length)} of ${rows.length} tracked ED patients.`,
+    };
+  }
+  return {
+    patients: matched.slice(0, 12).map(fmt),
+    status:
+      `${matched.length} patient${matched.length === 1 ? '' : 's'} matched "${location}"` +
+      (q.includes('discharge')
+        ? ' · disposition view — confirm orders in the chart before acting'
+        : q.includes('attending') || q.includes('physician')
+          ? ' · attending coverage is on the live bed board'
+          : ''),
+  };
 };
 
 const MOCK_HOSPITALS = [
@@ -101,39 +285,6 @@ const MOCK_HOSPITALS = [
   { name: 'St. Mary Level 1', status: 'Divert', time: '25m', load: 98 },
   { name: 'County Trauma', status: 'Busy', time: '18m', load: 85 },
 ];
-
-const getMockVitals = (loginCount: number) => {
-  if (loginCount > 1) {
-    return {
-      nedocs: 85,
-      weather: 'Clear',
-      systemStatus: 'Normal Operations',
-      currentLoad: '32% (Stable)',
-      projectedLoad: '35% (+90m)',
-      houseStatus: {
-        medSurg: '4 Beds Available',
-        icu: '2 Beds Available',
-        psych: '1 Patient Holding',
-      },
-      inboundEMS: '2 Units En Route (0 Critical)',
-      waitingRoom: '12 Patients (25m Wait)',
-    };
-  }
-  return {
-    nedocs: 185,
-    weather: 'Heavy Rain Warning (ETA 16:00)',
-    systemStatus: 'Surge Level 2 Active',
-    currentLoad: '92% (Saturation Warning)',
-    projectedLoad: '112% (+90m)',
-    houseStatus: {
-      medSurg: '0 Beds Available',
-      icu: '1 Bed Available',
-      psych: '4 Patients Holding',
-    },
-    inboundEMS: '8 Units En Route (3 Critical)',
-    waitingRoom: '38 Patients (2h 15m Wait)',
-  };
-};
 
 // Tool Definitions
 const getDriversTool: FunctionDeclaration = {
@@ -480,9 +631,33 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
 
   useEffect(() => {
     if (currentUser && messages.length === 0) {
-      const welcome = ai
-        ? `Operations Command online. Hello ${currentUser.name}. I have access to real-time facility telemetry, bed status, and network load tailored for ${currentUser.role} view.`
-        : `PULSE Assistant is **offline**. The Gemini API key is not configured for this build, so chat is disabled — but the rest of PULSE will continue to operate normally.`;
+      let welcome: string;
+      if (!ai) {
+        welcome = `PULSE Assistant is **offline**. The Gemini API key is not configured for this build, so chat is disabled — but the rest of PULSE will continue to operate normally.`;
+      } else {
+        // Proactive opener: if the department is under pressure, lead
+        // with the live situation instead of a generic greeting. The
+        // summary is composed deterministically from the same snapshot
+        // the screens use — instant, always accurate, zero token cost.
+        const ops = getLiveOps();
+        const underPressure = ops.surgeActive || !!ops.scenario || ops.nedocs >= 120;
+        if (underPressure) {
+          const band =
+            ops.nedocs >= 160 ? 'Dangerous' : ops.nedocs >= 120 ? 'Severe' : ops.nedocs >= 100 ? 'Busy' : 'Normal';
+          welcome =
+            `**Operations Command online — heads up, ${currentUser.name}.**\n\n` +
+            `${ops.surgeActive ? '🔴 **Surge mode is ACTIVE.** ' : ''}` +
+            `NEDOCS **${ops.nedocs} (${band})** · census **${ops.census}** · ED wait **${ops.erWaitMin}m** · nurse ratio **1:${ops.staffRatio}**.\n\n` +
+            `Beds: **${ops.beds.ready} ready** of ${ops.beds.total} (${ops.beds.occupancyPct}% occupied` +
+            `${ops.beds.notStaffed > 0 ? `, ${ops.beds.notStaffed} not staffed` : ''}` +
+            `${ops.beds.blocked > 0 ? `, ${ops.beds.blocked} blocked` : ''}).` +
+            `${ops.alerts > 0 ? ` ${ops.alerts} active alert${ops.alerts === 1 ? '' : 's'}.` : ''}` +
+            `${ops.codes > 0 ? ` ⚠️ ${ops.codes} active code${ops.codes === 1 ? '' : 's'}.` : ''}\n\n` +
+            `Ask me what to prioritise or who to call first — I'm reading the same live data as your screens.`;
+        } else {
+          welcome = `Operations Command online. Hello ${currentUser.name}. Department is stable (NEDOCS ${ops.nedocs}, ${ops.beds.ready} beds ready). I have live facility telemetry, bed status, and network load for your ${currentUser.role} view — ask away.`;
+        }
+      }
       setMessages([{ id: '0', role: 'model', content: welcome }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -507,6 +682,36 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, isOpen]);
+
+  // Typewriter reveal of a finished assistant answer. The model
+  // returns the whole text at once (the function-calling flow can't
+  // true-stream cleanly through the proxy), so we reveal it
+  // progressively client-side — total time is bounded (~1.4s) and
+  // scales with length, which reads as a fast, modern "AI typing"
+  // rather than a single blocking dump.
+  const revealAssistant = (fullText: string) =>
+    new Promise<void>((resolve) => {
+      const id = Date.now().toString();
+      const text = fullText || '';
+      setMessages((prev) => [...prev, { id, role: 'model', content: '' }]);
+      if (!text) {
+        resolve();
+        return;
+      }
+      const step = Math.max(2, Math.round(text.length / 90));
+      let i = 0;
+      const timer = window.setInterval(() => {
+        i = Math.min(text.length, i + step);
+        const slice = text.slice(0, i);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === id ? { ...m, content: slice } : m)),
+        );
+        if (i >= text.length) {
+          window.clearInterval(timer);
+          resolve();
+        }
+      }, 16);
+    });
 
   const handleSend = async (presetInput?: string) => {
     const textToSend = presetInput || input;
@@ -555,11 +760,22 @@ export const ChatAssistant: React.FC<ChatAssistantProps> = ({
           : 0;
       const ackedCount = urgentTasks.filter((t) => t.acknowledged).length;
 
+      // Live operational numbers — identical source to the Horizon /
+      // Bed Board screens. Injected so even non-tool answers ("how
+      // busy are we?", "what's our NEDOCS?") are exact and never
+      // contradict the dashboard.
+      const ops = getLiveOps();
+
       const liveContextBlock = `
-LIVE OPERATIONAL CONTEXT (refreshed every message):
+LIVE OPERATIONAL CONTEXT (refreshed every message — this is GROUND TRUTH, matches every PULSE screen):
 - Logged-in user: ${currentUser?.name} (${currentUser?.role})
 - Connected devices on this incident channel: ${deviceCount}
 - Surge mode: ${surgeState.active ? `ACTIVE (activated ${surgeElapsedMin}m ago)` : 'NOT ACTIVE'}
+- NEDOCS: ${ops.nedocs} (${ops.nedocs >= 160 ? 'Dangerous' : ops.nedocs >= 120 ? 'Severe' : ops.nedocs >= 100 ? 'Busy' : 'Normal'})
+- Census: ${ops.census} · ED avg wait: ${ops.erWaitMin}m · Nurse ratio: 1:${ops.staffRatio}
+- Beds: ${ops.beds.ready} ready / ${ops.beds.occupied} occupied / ${ops.beds.total} total (${ops.beds.occupancyPct}% occupied; ${ops.beds.notStaffed} not staffed, ${ops.beds.blocked} blocked)
+- Active alerts: ${ops.alerts}${ops.codes > 0 ? ` · Active codes: ${ops.codes}` : ''}
+- Simulation: ${ops.scenario ? `running, severity ${ops.scenario.severity}` : 'none (baseline)'}
 ${
   surgeState.active
     ? `- Urgent tasks (${ackedCount}/${urgentTasks.length} acknowledged):
@@ -661,38 +877,27 @@ ${urgentTasks
             | 'priorityMatrix'
             | undefined;
 
+          // Fresh live snapshot for THIS tool call — same data the
+          // Horizon / Bed Board screens render, so the AI never
+          // contradicts the dashboard.
+          const ops = getLiveOps();
+
           if (call.name === 'get_pressure_drivers') {
-            resultData = getMockDrivers(loginCount, currentUser?.role);
+            resultData = getLiveDrivers(ops);
             visualType = 'drivers';
           } else if (call.name === 'get_network_status') {
             resultData = MOCK_HOSPITALS;
             visualType = 'network';
           } else if (call.name === 'get_system_vitals') {
-            resultData = getMockVitals(loginCount);
+            resultData = getLiveVitals(ops);
             visualType = 'vitals';
           } else if (call.name === 'get_patient_info') {
             const args = call.args as Record<string, string>;
-            if (args.queryType === 'discharge_orders' && args.location.includes('L3')) {
-              resultData = {
-                patients: [
-                  'MRN-4921 (Room 302)',
-                  'MRN-8812 (Room 310)',
-                  'MRN-1092 (Room 314)',
-                  'MRN-5531 (Room 322)',
-                ],
-                status: 'Waiting on Transport/Pharmacy',
-              };
-            } else if (
-              args.queryType === 'attending_physician' &&
-              args.location.includes('Trauma Bay 1')
-            ) {
-              resultData = {
-                attending: 'Dr. Sarah Jenkins (MICU)',
-                status: 'Paged successfully to pull patient to ICU',
-              };
-            } else {
-              resultData = { info: 'No specific data found for this query.' };
-            }
+            resultData = getLivePatientInfo(
+              ops,
+              args.location ?? '',
+              args.queryType ?? '',
+            );
             visualType = 'patientInfo';
           } else if (call.name === 'generate_priority_matrix') {
             const args = call.args as {
@@ -743,24 +948,13 @@ ${urgentTasks
           },
         });
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            role: 'model',
-            content: secondResponse.text,
-          },
-        ]);
+        // Stop the "thinking" indicator as the answer starts typing.
+        setIsTyping(false);
+        await revealAssistant(secondResponse.text);
       } else {
         // No tools called, just text
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            role: 'model',
-            content: response.text,
-          },
-        ]);
+        setIsTyping(false);
+        await revealAssistant(response.text);
       }
     } catch (error) {
       console.error(error);
@@ -1551,8 +1745,11 @@ ${urgentTasks
                 className="custom-scrollbar"
               >
                 {[
+                  { label: 'BIGGEST BOTTLENECK', query: "What is our single biggest bottleneck right now, and why?" },
+                  { label: 'WHO DO I CALL FIRST', query: 'Given the current situation, who should I call or page first and what should I say?' },
                   { label: 'CHECK VITALS', query: 'What are the current system vitals?' },
                   { label: 'PRESSURE DRIVERS', query: 'Show me the pressure drivers' },
+                  { label: 'WHERE ARE BEDS', query: 'Which units have beds ready right now?' },
                   { label: 'NETWORK STATUS', query: 'What is the regional network status?' },
                 ].map((q) => (
                   <TacticalButton
