@@ -176,6 +176,16 @@ pending-admit CTA wired in sprint 2026-05-14 item 10).
 
 ## 5. Redesign "AI · ALERTS ACTIVITY" → Rehoboam-style `DESIGN+RESEARCH` → `BUILD`
 
+> **✅ DONE 2026-05-18 (commit 99bb1f7).** Nick picked the cinematic 3D
+> sphere. New `RehoboamOrb.tsx` (Three.js fibonacci shell + strands +
+> inflow particles + Bloom core; hue driven by live pulseAI;
+> reduced-motion static; default-export, lazy-loaded). New
+> `AiActivityOrbPanel.tsx` (orb default + ORB|LIST toggle so the list
+> stays accessible + live readout). Swapped the 3 flat AiActivityPanel
+> mounts (Alerts/Staffing/Tasks). **PulseRadiant is NOT touched and NOT
+> replaced — Rehoboam is a separate component (Nick's directive); the
+> Horizon radiant stays exactly as-is.** Shipped web + iPhone.
+
 **Asked:** Plan + propose a redesign of "AI · ALERTS ACTIVITY" on
 Alerts / Staffing / other pages. Give it a shape — a sphere, or better,
 a PULSE-style take on Rehoboam from Westworld.
@@ -320,6 +330,10 @@ feel real — so subsequent work is aimed, not guessed. Deliver as a
 short question list, not an essay.
 
 ## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (SEPARATE TASK · do LAST)
+
+> **⏸ EXPLICITLY DEFERRED (Nick, 2026-05-18):** Not part of the current
+> build session. To be done later as its own dedicated task. Do NOT
+> start it when working the queue; stop after #11.
 
 **Asked (2026-05-18):** Installed PULSE on the physical iPad (iPad Pro
 11", `iPad8,1`). It opens but is **unusable**: layout impossible to
