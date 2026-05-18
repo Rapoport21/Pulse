@@ -259,7 +259,7 @@ like for the pitch, which surfaces matter most, what's mock vs needs to
 feel real — so subsequent work is aimed, not guessed. Deliver as a
 short question list, not an essay.
 
-## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (DEMO BLOCKER)
+## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (SEPARATE TASK · do LAST)
 
 **Asked (2026-05-18):** Installed PULSE on the physical iPad (iPad Pro
 11", `iPad8,1`). It opens but is **unusable**: layout impossible to
@@ -292,17 +292,16 @@ portrait-only iPhone), so any fix must hold in portrait AND landscape.
    widths (fluid grids, ≥44px targets, kill hover-only affordances).
 3. **Route iPad to an adapted, scaled-up "mobile-plus" layout**
    (fastest path to a usable pitch device; lower ceiling).
-Decide the approach with Nick before building. This is a **demo
-blocker** for any pitch run on iPad, so it should rank above the
-non-blocking polish items.
+Decide the approach with Nick before building. **Priority (Nick's
+call, 2026-05-18): this is a separate task done LAST — only after
+every other backlog item is complete. Not a blocker.** The iPad still
+launches the (cramped) desktop console in the meantime; the free
+signing just needs a weekly refresh before any iPad demo.
 
 ---
 
 ## Suggested order for next session
 
-0. **#12** (iPad redesign) — DEMO BLOCKER if any pitch runs on iPad.
-   Research the 3 directions, get Nick's pick, then build. Rank above
-   the non-blocking polish items below.
 1. **#1** (free vs paid) — gates the urgency of 2 / 2.5 / 2.6. Fast.
    ✅ done 2026-05-17.
 2. **#2 + #2.5** — confirm no background drain, document storage. Fast,
@@ -315,9 +314,13 @@ non-blocking polish items.
    get Nick's pick, then build the embedded orb (#5) and the dedicated
    page (#9).
 7. **#2.6** — cross-session memory (research the pattern, plan, build,
-   include wipe control).
+   include wipe control). ✅ done 2026-05-17.
 8. **#11** — run in parallel / at the start: study + come back with
    questions to aim everything else.
+9. **#12** (iPad redesign) — **separate task, LAST.** Nick's call
+   (2026-05-18): do this only after every other backlog item above is
+   done. Not treated as a blocker. Research the 3 directions, get
+   Nick's pick, then build.
 
 Per `CLAUDE.md` directive #2, every code change auto-ships (Vercel
 auto-deploys on push; iPhone rebuilt). Report links each time.
