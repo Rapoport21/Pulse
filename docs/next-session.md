@@ -49,11 +49,16 @@ enabled on the underlying Google Cloud project tied to the key.
 
 ## 2. Background AI usage drain? `INVESTIGATE`
 
-> **◑ Corroborated 2026-05-17 (not yet formally grepped).** Google Cloud
-> shows only ~21 Gemini requests/day, all user-initiated, none on a
-> timer. Strongly consistent with the preliminary finding (no background
-> drain). Still worth the explicit `createGeminiClient` / `/api/gemini`
-> grep next session to close it formally.
+> **✅ CONFIRMED 2026-05-18 (formally grepped).** No background drain.
+> All 3 `generateContent` call sites are user-initiated:
+> `ChatAssistant.tsx:839/964` are inside `handleSend()` (line 745),
+> invoked only from `onClick` chips/send button (never a `useEffect` or
+> timer); `StaffManagementModal.tsx:148` is inside the `handleAIAssign()`
+> button handler. The two `setInterval`s are non-AI: `pulseAI.tsx:166`
+> has zero gemini/fetch/api refs (pure mock), `ChatAssistant.tsx:732` is
+> the typewriter reveal (slices already-returned text). `createGeminiClient()`
+> in both `useMemo`s only builds the proxy shim. Matches the billing data
+> (~21 user-driven calls/day, nothing periodic). Item closed.
 
 **Asked:** Check if there's background AI activity draining usage (e.g.
 the AI recommendations in the Alerts tab).
