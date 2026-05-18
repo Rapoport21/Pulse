@@ -259,11 +259,52 @@ like for the pitch, which surfaces matter most, what's mock vs needs to
 feel real — so subsequent work is aimed, not guessed. Deliver as a
 short question list, not an essay.
 
+## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (DEMO BLOCKER)
+
+**Asked (2026-05-18):** Installed PULSE on the physical iPad (iPad Pro
+11", `iPad8,1`). It opens but is **unusable**: layout impossible to
+use, things do not fit. Nick: "we need to completely redesign it" for
+iPad. Logged, not started.
+
+**Read / why this happens (HIGH CONFIDENCE):** PULSE renders three
+surfaces from one bundle, chosen purely by viewport width:
+`< 768px` → mobile companion (`components/MobileView.tsx`), `≥ 768px`
+→ the **desktop command console**, plus the Capacitor iOS shell. The
+iPad (~834pt portrait / 1194pt landscape) lands in the `≥ 768px`
+branch, so it gets the **full desktop console**, which was built for a
+true desktop: wide viewport, mouse + hover affordances, dense tactical
+HUD. On the iPad that overflows, doesn't fit, and isn't touch-sized.
+**There is no tablet breakpoint or tablet surface at all.** Also note
+CLAUDE.md directive #6: iPad keeps **all orientations** (unlike the
+portrait-only iPhone), so any fix must hold in portrait AND landscape.
+
+**Where to look:**
+- The viewport→surface switch (the `768` breakpoint / `isMobile`-style
+  hook deciding `MobileView` vs desktop console; likely `App.tsx` or a
+  shared media-query hook).
+- `components/MobileView.tsx`, the desktop console components, and
+  `components/design/tokens.ts` (breakpoints, spacing, touch targets).
+
+**Directions to evaluate with Nick (research → propose → build):**
+1. **Dedicated tablet surface** — a real iPad layout between mobile and
+   desktop (best fidelity, most work).
+2. **Make the desktop console responsive + touch-first** down to iPad
+   widths (fluid grids, ≥44px targets, kill hover-only affordances).
+3. **Route iPad to an adapted, scaled-up "mobile-plus" layout**
+   (fastest path to a usable pitch device; lower ceiling).
+Decide the approach with Nick before building. This is a **demo
+blocker** for any pitch run on iPad, so it should rank above the
+non-blocking polish items.
+
 ---
 
 ## Suggested order for next session
 
+0. **#12** (iPad redesign) — DEMO BLOCKER if any pitch runs on iPad.
+   Research the 3 directions, get Nick's pick, then build. Rank above
+   the non-blocking polish items below.
 1. **#1** (free vs paid) — gates the urgency of 2 / 2.5 / 2.6. Fast.
+   ✅ done 2026-05-17.
 2. **#2 + #2.5** — confirm no background drain, document storage. Fast,
    mostly verification of the preliminary findings above.
 3. **#3, #7, #4, #8** — the quick/medium fixes (visible wins, low risk).
