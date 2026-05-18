@@ -681,6 +681,33 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
     const acuityColor = (a: number) =>
       a <= 2 ? COLORS.crit : a === 3 ? COLORS.warn : COLORS.ok;
 
+    // Inline "Admit" CTA: open the right-side admission wizard
+    // pre-filled from this awaiting patient's queue entry, so the
+    // operator finishes one form instead of re-keying known data.
+    const beginAdmitForEntry = (entry: AdmissionEntry) => {
+      const parts = entry.name.trim().split(/\s+/);
+      const firstName = parts.shift() ?? '';
+      const lastName = parts.join(' ');
+      setFormData(p => ({
+        ...p,
+        firstName,
+        lastName,
+        mrn: entry.mrn,
+        complaint: entry.complaint,
+        attending: entry.attending,
+        esi: entry.acuity,
+        requestedUnit: entry.requestedUnit,
+        arrivalMode: entry.source === 'ED' ? 'ems' : p.arrivalMode,
+      }));
+      setSelectedBed(null);
+      setSelectedUnit(null);
+      setAdmitted(false);
+      setAssigningAdmissionId(null);
+      setExpandedEntryId(null);
+      setStep('identity');
+      showToast(`Admission started for ${entry.name}`);
+    };
+
     const filteredQueue = queueFilter === 'all'
       ? ADMISSION_QUEUE
       : ADMISSION_QUEUE.filter(q => q.status === queueFilter);
@@ -1017,9 +1044,14 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
                     {/* Secondary action buttons */}
                     {entry.status !== 'admitted' ? (
-                      <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id); setAssigningAdmissionId(null); }}>
-                        Info
-                      </TacticalButton>
+                      <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
+                        <TacticalButton variant="primary" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); beginAdmitForEntry(entry); }}>
+                          Admit
+                        </TacticalButton>
+                        <TacticalButton variant="ghost" size="sm" onClick={(e: React.MouseEvent) => { e.stopPropagation(); setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id); setAssigningAdmissionId(null); }}>
+                          Info
+                        </TacticalButton>
+                      </div>
                     ) : (
                       <div style={{ display: 'flex', gap: SPACE.sm, alignItems: 'center' }}>
                         <Mono tone="ok" size="xs">{entry.assignedBed} ({entry.assignedUnit})</Mono>
