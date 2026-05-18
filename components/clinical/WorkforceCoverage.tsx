@@ -55,7 +55,7 @@ import {
   TacticalButton, Divider, CornerBracket, ScanningLine,
 } from '../design';
 import { UserRole } from '../../types';
-import { AiActivityPanel } from '../PulseAi';
+import { AiActivityOrbPanel } from '../AiActivityOrbPanel';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Viewport — share the mobile breakpoint used elsewhere in the app
@@ -1203,7 +1203,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
       {/* PULSE.AI staffing activity — float proposals, auto-shifted
           coverage, scheduling recs. Sprint 2026-05-14 item 16. */}
       <div style={{ padding: `${SPACE.md}px ${SPACE.lg}px 0` }}>
-        <AiActivityPanel surface="staffing" title="AI · STAFFING ACTIVITY" limit={4} />
+        <AiActivityOrbPanel surface="staffing" title="AI · STAFFING ACTIVITY" limit={4} />
       </div>
 
       {/* ═════════════════════════════════════════════════════════════════ */}
