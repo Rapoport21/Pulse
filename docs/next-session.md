@@ -158,6 +158,13 @@ Keep `AiActivityStrip` exported — it'll be reused by #5/#9.
 
 ## 4. Admit button on awaiting patients (Admissions Command Center) `BUILD`
 
+> **✅ DONE 2026-05-18 (commit ba482b4).** Each non-admitted queue row
+> in `AdmitFlow.tsx` (embedded desktop) now has an "Admit" primary
+> button next to "Info". `beginAdmitForEntry()` prefills the right-side
+> wizard formData from the entry (name split, MRN, complaint, attending,
+> ESI←acuity, requested unit, arrival mode), resets to the identity
+> step, clears inline panels. ASSIGN BED unchanged. Shipped web + iPhone.
+
 **Asked:** Have an admit button on awaiting patients in the ADMISSIONS
 COMMAND CENTER.
 
