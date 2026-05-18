@@ -1710,6 +1710,9 @@ function App() {
               onActivateSurge={activateSurge}
               onDeactivateSurge={deactivateSurge}
               simControls={simControls}
+              activeScenario={activeScenario}
+              onStartScenario={startScenario}
+              onStopScenario={stopScenario}
               onNavigateToComms={() => navigateToTab(Tab.COMMS)}
               isCommsOpen={activeTab === Tab.COMMS}
             />

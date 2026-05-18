@@ -57,7 +57,6 @@ import {
   metricValue,
   useScenarioTick,
 } from '../lib/scenario';
-import { ScenarioCards } from './ScenarioCards';
 import { useCall } from '../lib/callState';
 import { useEmsInbound } from '../lib/emsLive';
 import {
@@ -869,34 +868,10 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
                   overflowY: 'auto',
                 }}
               >
-                {/* ── Scenario selector — same component as Settings.
-                       Render only when start/stop handlers are wired. */}
-                {onStartScenario && onStopScenario && (
-                  <>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: SPACE.sm,
-                        marginBottom: SPACE.md,
-                      }}
-                    >
-                      <Mono tone="primary" size="sm">
-                        Scenarios
-                      </Mono>
-                      <Mono tone="muted" size="xs">
-                        · S1 / S2 / S3 · 3-minute trajectories
-                      </Mono>
-                    </div>
-                    <ScenarioCards
-                      activeScenario={activeScenario ?? null}
-                      tick={scenarioTick}
-                      onStart={onStartScenario}
-                      onStop={onStopScenario}
-                    />
-                    <Divider variant="dashed" style={{ marginTop: SPACE.lg, marginBottom: SPACE.lg }} />
-                  </>
-                )}
+                {/* Scenario triggers (S1/S2/S3) were consolidated into
+                    the right sidebar's Sim Controls panel (backlog #8) so
+                    there is one place to run them. The What-If levers
+                    below stay here. */}
 
                 <div
                   style={{

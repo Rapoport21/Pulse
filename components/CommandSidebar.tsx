@@ -34,6 +34,12 @@ import {
 } from './design';
 import { useCall } from '../lib/callState';
 import { CallPanel } from './CallPanel';
+import { ScenarioCards } from './ScenarioCards';
+import {
+  useScenarioTick,
+  type ScenarioState,
+  type ScenarioSeverity,
+} from '../lib/scenario';
 
 export interface SimControlAction {
   id: string;
@@ -51,6 +57,11 @@ interface CommandSidebarProps {
   onActivateSurge: () => void;
   onDeactivateSurge: () => void;
   simControls?: SimControlAction[];
+  /** Scenario engine, consolidated here as the single place to run
+   *  S1/S2/S3 trajectories (mirrors App's existing start/stop wiring). */
+  activeScenario?: ScenarioState | null;
+  onStartScenario?: (severity: ScenarioSeverity) => void;
+  onStopScenario?: () => void;
   /** App-supplied navigator — Quick Paging takes the visitor to the
    *  Comms tab where the live CallPanel renders the active call. */
   onNavigateToComms?: () => void;
@@ -289,11 +300,15 @@ export const CommandSidebar = ({
   onActivateSurge,
   onDeactivateSurge,
   simControls = [],
+  activeScenario = null,
+  onStartScenario,
+  onStopScenario,
   onNavigateToComms,
   isCommsOpen = false,
 }: CommandSidebarProps) => {
   const [showStandDownConfirm, setShowStandDownConfirm] = useState(false);
   const [simPanelOpen, setSimPanelOpen] = useState(false);
+  const scenarioTick = useScenarioTick(activeScenario ?? null);
 
   // Call placement:
   //   - When a call is active AND the Comms tab is NOT open, the sidebar
@@ -971,6 +986,41 @@ export const CommandSidebar = ({
                             </motion.button>
                           );
                         })}
+
+                        {/* Scenario engine — single home for S1/S2/S3
+                            trajectories (consolidated out of the Horizon
+                            What-If panel; App's start/stop wiring reused). */}
+                        {onStartScenario && onStopScenario && (
+                          <>
+                            {simControls.length > 0 && (
+                              <Divider
+                                variant="dashed"
+                                style={{ marginTop: SPACE.sm, marginBottom: SPACE.sm }}
+                              />
+                            )}
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: SPACE.sm,
+                                marginBottom: SPACE.xs,
+                              }}
+                            >
+                              <Mono tone="primary" size="sm">
+                                Scenarios
+                              </Mono>
+                              <Mono tone="muted" size="xs">
+                                · S1 / S2 / S3
+                              </Mono>
+                            </div>
+                            <ScenarioCards
+                              activeScenario={activeScenario ?? null}
+                              tick={scenarioTick}
+                              onStart={onStartScenario}
+                              onStop={onStopScenario}
+                            />
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   )}
