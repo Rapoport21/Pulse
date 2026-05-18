@@ -278,6 +278,13 @@ primary tab — decide with Nick).
 
 ## 10. Full list of every dead button `AUDIT` (then a separate build epic)
 
+> **✅ DONE 2026-05-18 (commit pending).** Deliverable written:
+> `docs/dead-buttons.md`. 47 dead buttons across 11 surfaces, grouped
+> by surface with file:line + intended behavior + systemic patterns.
+> Flagged 2 PulseHorizon stubs (Schedule Discharges :1064, Request
+> Float Pool :1082) that survived the 2026-05-14 fix. No code changed
+> (audit only); fixing is the future epic.
+
 **Asked:** Create a full list of every button that does nothing; we'll
 have a separate large task to make them work.
 
