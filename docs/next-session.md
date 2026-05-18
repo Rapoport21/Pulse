@@ -9,6 +9,12 @@ starts ahead instead of re-deriving).
 Categories: `INVESTIGATE` · `QUICK FIX` · `BUILD` · `DESIGN+RESEARCH` ·
 `AUDIT` · `DISCOVERY`.
 
+**How to show this list to Nick (his standing preference, 2026-05-18):**
+ONE combined table, every item in execution order, columns
+`# | Item | Type | Status / Order`. Include completed items (marked
+✅ Done) in the same table. Do not split into separate active/done
+tables.
+
 ---
 
 ## 1. Is AI usage free or paid? `INVESTIGATE` (gates 2 / 2.5 / 2.6)
