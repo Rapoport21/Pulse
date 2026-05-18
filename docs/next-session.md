@@ -143,6 +143,11 @@ Best way to do it? With an option to restart / wipe the memory.
 
 ## 3. Remove PULSE.AI LIVE strip above Horizon graph `QUICK FIX`
 
+> **✅ DONE 2026-05-18 (commit 656c561).** Removed the `<AiActivityStrip/>`
+> mount + now-unused import from the Horizon LEFT column in
+> `components/PulseHorizon.tsx`. `AiActivityStrip` stays exported from
+> `PulseAi.tsx` for #5/#9 reuse. Shipped web + iPhone.
+
 **Asked:** Remove the "PULSE.AI · LIVE" activity tab/strip above the
 Horizon graph tile.
 
