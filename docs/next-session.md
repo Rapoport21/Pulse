@@ -287,6 +287,14 @@ sidebar Sim Controls so they're one place. Keep `onStartScenario` /
 
 ## 9. Dedicated PULSE Rehoboam AI page `BUILD` (depends on #5)
 
+> **✅ DONE 2026-05-18 (commit 01ebd07).** New `Tab.PULSE_AI` surface
+> under the "More" dropdown (Nick's pick). `components/PulseAiPage.tsx`:
+> full-size lazy Rehoboam orb + AUTO/NEEDS-YOU/ESCALATED/WATCHING KPI
+> strip + full live activity feed + cross-session memory status (#2.6
+> tie-in) + confidence mix + one primary CTA into the assistant
+> (`onOpenAssistant`→`setShowChat`). Separate from PulseRadiant; reuses
+> RehoboamOrb. Colour rule respected. Shipped web + iPhone.
+
 **Asked:** Create an entire page dedicated to PULSE Rehoboam — only
 about the AI.
 
@@ -318,6 +326,42 @@ the list is the deliverable. The fixing is its own future epic.
 stubs — exclude those; flag anything still stubbed.)
 
 ## 11. Study PULSE and ask improvement questions `DISCOVERY`
+
+> **✅ DONE 2026-05-18.** Deliverable (high-leverage questions, grounded
+> in this session's deep work — dead-button audit, mock pulseAI,
+> scenario engine, memory, the new AI page):
+>
+> **Audience & pitch**
+> 1. Primary pitch audience: hospital ops/C-suite, clinical leadership
+>    (CMO/CNO), or investors? (Drives lead surface + ROI vs clinical depth.)
+> 2. The one "wow" they should leave with: autonomous AI (Rehoboam),
+>    surge prediction/trajectory, or one-view consolidation?
+> 3. Demoed live by you (controlled) or self-explored? (Affects how
+>    guided/forgiving flows must be.)
+>
+> **What "great" looks like**
+> 4. Believable scale: single ED, mid-size hospital, or multi-site?
+>    (Baselines + copy should match.)
+> 5. Which 3 surfaces are the spine of the story? Those get made
+>    flawless; the rest de-prioritised.
+>
+> **Mock vs real (47 dead buttons logged in docs/dead-buttons.md)**
+> 6. Which stubs must *feel* real on the demo path vs stay visibly
+>    "coming soon"?
+> 7. Scripted/mock AI acceptable for the pitch, or must any part call
+>    real Gemini live on stage (latency/cost/failure risk)?
+>
+> **The AI story (now the showcase)**
+> 8. Should the Rehoboam orb visibly react to demo events (surge →
+>    orb spikes, escalations stream) or stay ambient?
+> 9. Show cross-session memory as a feature ("PULSE remembered…") or
+>    keep it invisible plumbing?
+>
+> **Surfaced this session**
+> 10. Pitch device: iPhone, the desktop console, or iPad? (Sets how
+>     urgent #12 is and where the polish budget goes.)
+> 11. Need more scenario variety (mass-casualty, EHR-down, staffing
+>     collapse) or is S1/S2/S3 surge enough?
 
 **Asked:** A separate task where I study PULSE and ask Nick the
 questions that would help me improve it.
