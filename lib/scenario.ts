@@ -97,25 +97,28 @@ export type MetricKey =
   | 'orAvailable'; // OR rooms available (of 4)
 
 /**
- * Baseline — the "zero" that deltas apply to. These are the numbers the
- * app reads when NO scenario is active. Matches existing mock copy.
+ * Baseline: the "zero" that scenario deltas apply to. These are the
+ * numbers the app reads when NO scenario is active. Deliberately a CALM,
+ * well-run hospital (NEDOCS in the Normal band, short waits, fully
+ * staffed). Pressure only appears when a scenario or surge is explicitly
+ * triggered, at which point the timeline deltas overlay on top of these.
  */
 export const METRIC_BASELINES: Record<MetricKey, number> = {
-  census: 284,
-  erWaitMinutes: 45,
+  census: 218,
+  erWaitMinutes: 17,
   ambulanceCount: 1,
-  icuOccupancyPct: 83,
-  staffingRatio: 4.2,
-  activeAlerts: 3,
+  icuOccupancyPct: 66,
+  staffingRatio: 3.3,
+  activeAlerts: 1,
   activeCodes: 0,
-  triageWaitMin: 125,
-  nedocsScore: 112,
+  triageWaitMin: 19,
+  nedocsScore: 52,
   traumaBaysAvailable: 3,
-  boardingAdmitted: 24,
-  dischargesPending: 3,
-  emsOffloadRiskMin: 45,
-  rnShortfall: -2,
-  orAvailable: 3,
+  boardingAdmitted: 6,
+  dischargesPending: 5,
+  emsOffloadRiskMin: 12,
+  rnShortfall: 0,
+  orAvailable: 4,
 };
 
 // ────────────────────────────────────────────────────────────────────────

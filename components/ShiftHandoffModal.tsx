@@ -42,7 +42,6 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
   role,
   onComplete,
   onCancel,
-  loginCount = 1,
 }) => {
   const [note, setNote] = useState('');
   const [noteFocused, setNoteFocused] = useState(false);
@@ -51,7 +50,9 @@ export const ShiftHandoffModal: React.FC<ShiftHandoffModalProps> = ({
   const displayRole = role.replace(/_/g, ' ');
 
   const HeaderIcon = isIn ? ClipboardList : LogOut;
-  const surgeStable = loginCount > 1;
+  // Calm is the standing default, so the briefing always reads stable
+  // unless a future caller wires through an explicit surge signal.
+  const surgeStable = true;
 
   // Array-back the briefing payload so the section headers can show
   // accurate counts and the body scales cleanly to N items. Body

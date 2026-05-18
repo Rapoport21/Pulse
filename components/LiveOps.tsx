@@ -183,23 +183,26 @@ export const LiveOps: React.FC<LiveOpsProps> = ({
   }, [currentUser]);
 
   const activeZones = useMemo<ExtendedZoneStatus[]>(() => {
-    if (loginCount > 1 || isSurgeActive) {
-      return mockZones.map((zone) => {
-        const newOccupancy = Math.floor(zone.occupancy * 0.35);
-        const newPatients = Math.floor(zone.patients * 0.35);
-        return {
-          ...zone,
-          status: Status.NORMAL,
-          occupancy: newOccupancy,
-          patients: newPatients,
-          trend: 'Stable' as const,
-          waitTime:
-            zone.waitTime === 'N/A' || zone.waitTime === 'Sch Only' ? zone.waitTime : '10m',
-        };
-      });
+    // An active surge shows the crowded zones; otherwise the standing
+    // state is calm (well below capacity, short waits). Not tied to
+    // loginCount any more — calm is the default the operator sees.
+    if (isSurgeActive) {
+      return mockZones;
     }
-    return mockZones;
-  }, [loginCount, isSurgeActive]);
+    return mockZones.map((zone) => {
+      const newOccupancy = Math.floor(zone.occupancy * 0.35);
+      const newPatients = Math.floor(zone.patients * 0.35);
+      return {
+        ...zone,
+        status: Status.NORMAL,
+        occupancy: newOccupancy,
+        patients: newPatients,
+        trend: 'Stable' as const,
+        waitTime:
+          zone.waitTime === 'N/A' || zone.waitTime === 'Sch Only' ? zone.waitTime : '10m',
+      };
+    });
+  }, [isSurgeActive]);
 
   const floorZones = useMemo(
     () => activeZones.filter((z) => z.floor === currentFloor),

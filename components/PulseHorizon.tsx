@@ -226,9 +226,9 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     // Scenario wins — when a scenario is running the role metrics helper
     // overlays live values from the phase timeline. Baseline otherwise.
     const baseDrivers = getRoleMetrics(currentUser.role, activeScenario);
-    // First-login "things are fine" override only applies when we're NOT
-    // mid-scenario — scenario data always wins.
-    if (loginCount > 1 && !activeScenario) {
+    // Calm "things are fine" values are the standing default. A running
+    // scenario OR an active surge overrides them; nothing else does.
+    if (!activeScenario && !isSurgeActive) {
       return baseDrivers.map((driver) => {
         if (currentUser.role === UserRole.MANAGER) {
           if (driver.id === '1') return { ...driver, value: '4 Admitted', status: Status.NORMAL, impact: 25, trend: 'down' as const };
@@ -249,11 +249,13 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
       });
     }
     return baseDrivers;
-  }, [currentUser.role, loginCount, activeScenario, scenarioTick.phase]);
+  }, [currentUser.role, isSurgeActive, activeScenario, scenarioTick.phase]);
 
   const chartData = useMemo(() => {
-    let baseLoad = { now: 92, plus30: 98, plus60: 105, plus90: 112 };
-    let prevLoad = 85; // -30m anchor
+    // Default = CALM (well below the WARN 85 / CAPACITY 100 lines).
+    // Pressure only shows when a scenario or surge is explicitly active.
+    let baseLoad = { now: 32, plus30: 34, plus60: 35, plus90: 38 };
+    let prevLoad = 32; // -30m anchor
     if (activeScenario) {
       // Scenario drives the curve. Each severity has its OWN trajectory
       // shape — they don't share a "things get worse, then recover"
@@ -316,10 +318,9 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
     } else if (isSurgeActive) {
       baseLoad = { now: 32, plus30: 30, plus60: 28, plus90: 25 };
       prevLoad = 85;
-    } else if (loginCount > 1) {
-      baseLoad = { now: 32, plus30: 34, plus60: 35, plus90: 38 };
-      prevLoad = 32;
     }
+    // No scenario, no surge → keep the calm default set above
+    // (regardless of loginCount: calm is now the standing state).
     // Lever impacts — applied to the SIM line only (the solid `load`
     // series). The dashed `loadBaseline` shows what the forecast would
     // be WITHOUT the levers, so the user can see "before vs after"
@@ -960,8 +961,8 @@ export const PulseHorizon: React.FC<PulseHorizonProps> = ({
             ) : (
               <TacticalCard
                 padding="md"
-                highlight={!isSurgeActive && loginCount <= 1}
-                accentBar={!isSurgeActive && loginCount <= 1}
+                highlight={!isSurgeActive}
+                accentBar={!isSurgeActive}
                 style={{
                   padding: SPACE.lg,
                   display: 'flex',
