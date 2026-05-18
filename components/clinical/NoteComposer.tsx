@@ -725,7 +725,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
               marginBottom: SPACE.md,
             }}
           >
-            <BracketLabel tone="accent" size="sm">
+            <BracketLabel tone="muted" size="sm">
               {currentType.label}
             </BracketLabel>
             <Mono tone="muted" size="xs">
@@ -879,7 +879,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">
+            <BracketLabel tone="muted" size="sm">
               Clinical Note
             </BracketLabel>
             <div style={{ flex: 1 }} />

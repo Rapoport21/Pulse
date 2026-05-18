@@ -320,7 +320,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">{headerSubtitle}</BracketLabel>
+            <BracketLabel tone="muted" size="sm">{headerSubtitle}</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={94} ageMinutes={1} compact />
             <Mono tone="muted" size="xs">
@@ -775,7 +775,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                                         }}
                                       >
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                                          <Mono tone="accent" size="xs">{note.type}</Mono>
+                                          <Mono tone="muted" size="xs">{note.type}</Mono>
                                           <Mono tone="muted" size="xs">{new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Mono>
                                         </div>
                                         <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, lineHeight: 1.3 }}>

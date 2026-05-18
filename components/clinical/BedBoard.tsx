@@ -787,7 +787,7 @@ const CardMode: React.FC<{
   return (
     <TacticalCard interactive padding="md" onClick={onExpand}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACE.sm }}>
-        <BracketLabel tone="accent" size="xs">BED BOARD</BracketLabel>
+        <BracketLabel tone="muted" size="xs">BED BOARD</BracketLabel>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Mono tone="muted" size="xs">TAP TO EXPAND</Mono>
           <ChevronRight size={12} color={COLORS.textMuted} />
@@ -990,7 +990,7 @@ const FullMode: React.FC<{
       >
         {/* ── HudStrip header ── */}
         <HudStrip side="top" fixed>
-          <BracketLabel tone="accent">BED BOARD &mdash; COMMAND VIEW</BracketLabel>
+          <BracketLabel tone="muted">BED BOARD &mdash; COMMAND VIEW</BracketLabel>
           <div style={{ flex: 1 }} />
           {surgeActive && <StatusPill label="SURGE ACTIVE" tone="crit" pulse />}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: SPACE.sm }}>
@@ -1483,8 +1483,8 @@ const FullMode: React.FC<{
                   fontFamily: FONTS.mono,
                   fontSize: 11,
                   fontWeight: 700,
-                  color: COLORS.textPrimary,
-                  background: COLORS.accent,
+                  color: COLORS.textSecondary,
+                  background: COLORS.surfaceHover,
                   borderRadius: RADIUS.full,
                   padding: '2px 8px',
                   lineHeight: '16px',
@@ -1681,11 +1681,11 @@ const FullMode: React.FC<{
         borderTop: `1px solid ${COLORS.border}`,
       }}
     >
-      <ScanningLine color={COLORS.accent} duration={20} />
+      <ScanningLine color={COLORS.borderStrong} duration={20} />
 
       {/* Header */}
       <HudStrip side="top" fixed>
-        <BracketLabel tone="accent">BED BOARD</BracketLabel>
+        <BracketLabel tone="muted">BED BOARD</BracketLabel>
         <div style={{ flex: 1 }} />
         {surgeActive && <StatusPill label="SURGE ACTIVE" tone="crit" pulse />}
         <button

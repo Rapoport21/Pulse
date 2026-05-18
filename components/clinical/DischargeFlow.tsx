@@ -625,7 +625,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
         <TacticalCard padding="md">
-          <BracketLabel tone="accent" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>
+          <BracketLabel tone="muted" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>
             Discharge Summary
           </BracketLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
@@ -704,7 +704,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Discharge Patient</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Discharge Patient</BracketLabel>
             <div style={{ flex: 1 }} />
             <StatusPill label={MOCK_PATIENT.id} tone="info" />
           </HudStrip>

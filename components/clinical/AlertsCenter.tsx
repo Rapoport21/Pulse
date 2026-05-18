@@ -618,7 +618,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
       >
         {/* Header */}
         <HudStrip side="top" fixed>
-          <BracketLabel tone="accent" size="sm">ALERT CENTER — COMMAND VIEW</BracketLabel>
+          <BracketLabel tone="muted" size="sm">ALERT CENTER — COMMAND VIEW</BracketLabel>
           <div style={{ flex: 1 }} />
           {deskUnread > 0 && (
             <div
@@ -1017,7 +1017,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Alerts</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Alerts</BracketLabel>
             <div style={{ flex: 1 }} />
             {unreadCount > 0 && (
               <div

@@ -513,7 +513,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           )}
 
           <TacticalCard padding="md">
-            <BracketLabel tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+            <BracketLabel tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
               {selectedDrug.name} Order
             </BracketLabel>
 
@@ -726,7 +726,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           transition={{ duration: MOTION.fast }}
         >
           <TacticalCard padding="md">
-            <BracketLabel tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+            <BracketLabel tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
               {selectedStudy.name}
             </BracketLabel>
 
@@ -827,7 +827,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           transition={{ duration: MOTION.fast }}
         >
           <TacticalCard padding="md">
-            <BracketLabel tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+            <BracketLabel tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
               {selectedService} Consult
             </BracketLabel>
 
@@ -891,8 +891,8 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-          <FileText size={14} color={COLORS.accent} />
-          <Mono tone="accent" size="sm">Review Orders</Mono>
+          <FileText size={14} color={COLORS.textSecondary} />
+          <Mono tone="muted" size="sm">Review Orders</Mono>
           <div style={{ flex: 1 }} />
           <StatusPill label={`${orders.length} PENDING`} tone="warn" />
         </div>
@@ -1053,7 +1053,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">CPOE &middot; Orders</BracketLabel>
+            <BracketLabel tone="muted" size="sm">CPOE &middot; Orders</BracketLabel>
             <div style={{ flex: 1 }} />
             {patientId && <StatusPill label={patientId} tone="info" />}
           </HudStrip>

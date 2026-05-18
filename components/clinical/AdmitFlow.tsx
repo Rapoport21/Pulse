@@ -314,14 +314,14 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
               width: 40,
               height: 40,
               borderRadius: RADIUS.full,
-              background: COLORS.accentDim,
-              border: `1.5px solid ${COLORS.accent}`,
+              background: COLORS.surface,
+              border: `1.5px solid ${COLORS.border}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <User size={18} color={COLORS.accent} />
+            <User size={18} color={COLORS.textSecondary} />
           </div>
           <div>
             <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.h3.size, fontWeight: TYPE.h3.weight, color: COLORS.textPrimary }}>
@@ -562,7 +562,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
         <TacticalCard padding="md">
-          <BracketLabel tone="accent" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>
+          <BracketLabel tone="muted" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>
             Admission Summary
           </BracketLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
@@ -775,7 +775,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
       >
         {/* ── Header strip ──────────────────────────────────────────── */}
         <HudStrip side="top">
-          <BracketLabel tone="accent" size="sm">Admissions Command Center</BracketLabel>
+          <BracketLabel tone="muted" size="sm">Admissions Command Center</BracketLabel>
           <div style={{ flex: 1 }} />
           <StatusPill label={`${ADMISSION_QUEUE.length} ACTIVE`} tone="info" pulse />
         </HudStrip>
@@ -1110,9 +1110,9 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                         <div style={{
                           padding: `${SPACE.md}px 0 ${SPACE.sm}px`,
                           marginTop: SPACE.sm,
-                          borderTop: `1px solid ${COLORS.accent}40`,
+                          borderTop: `1px solid ${COLORS.border}`,
                         }}>
-                          <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
+                          <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.sm, display: 'block' }}>
                             Select Available Bed
                           </Mono>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm, maxHeight: 200, overflowY: 'auto' }}>
@@ -1196,8 +1196,8 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                 flexShrink: 0,
               }}
             >
-              <Plus size={14} color={COLORS.accent} />
-              <BracketLabel tone="accent" size="xs">New Admission Request</BracketLabel>
+              <Plus size={14} color={COLORS.textSecondary} />
+              <BracketLabel tone="muted" size="xs">New Admission Request</BracketLabel>
             </div>
 
             {/* Form body */}
@@ -1213,7 +1213,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
             >
               {/* ═══ Section 1: Patient Demographics ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   1 &mdash; Patient Demographics
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
@@ -1295,7 +1295,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
               {/* ═══ Section 2: Clinical Info ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   2 &mdash; Clinical Info
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
@@ -1354,7 +1354,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
               {/* ═══ Section 3: Admission Vitals ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   3 &mdash; Admission Vitals
                 </Mono>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: SPACE.md }}>
@@ -1397,7 +1397,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
               {/* ═══ Section 4: Allergies ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   4 &mdash; Allergies
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -1458,7 +1458,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
               {/* ═══ Section 5: Problems / Diagnoses ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   5 &mdash; Problems / Diagnoses
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -1517,7 +1517,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
 
               {/* ═══ Section 6: Bed Request ═══ */}
               <div>
-                <Mono tone="accent" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
+                <Mono tone="muted" size="xs" style={{ marginBottom: SPACE.md, display: 'block' }}>
                   6 &mdash; Bed Request
                 </Mono>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
@@ -1687,7 +1687,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Admit Patient</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Admit Patient</BracketLabel>
             <div style={{ flex: 1 }} />
             <StatusPill label="ESI 2" tone="crit" />
           </HudStrip>

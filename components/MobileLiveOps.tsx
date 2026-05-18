@@ -154,7 +154,7 @@ export const MobileLiveOps: React.FC<MobileLiveOpsProps> = ({
 
       {/* KPI grid 2x2 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE.sm }}>
-        <KpiTile icon={<Users size={16} color={COLORS.accent} />}
+        <KpiTile icon={<Users size={16} color={COLORS.textSecondary} />}
           label="Census" value={`${kpis.totalPax}`} sub={`/ ${kpis.totalCap}`} tone="primary" />
         <KpiTile icon={<Activity size={16} color={toColor(
             kpis.util >= 90 ? Status.CRITICAL : kpis.util >= 75 ? Status.WARNING : Status.NORMAL)} />}

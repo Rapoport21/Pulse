@@ -196,7 +196,7 @@ const StepHeader: React.FC<{ index: number; total: number; label: string; title:
       <Mono tone="dim" size="xs">
         // STEP {index + 1} / {total}
       </Mono>
-      <BracketLabel tone="accent" size="xs">
+      <BracketLabel tone="muted" size="xs">
         {label}
       </BracketLabel>
     </div>
@@ -987,7 +987,7 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
               <X size={18} strokeWidth={2} />
             </motion.button>
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <BracketLabel tone="accent" size="xs">
+              <BracketLabel tone="muted" size="xs">
                 ESI · TRIAGE
               </BracketLabel>
               <span
@@ -1206,7 +1206,7 @@ const CriteriaList: React.FC<{ label: string; items: string[] }> = ({ label, ite
               top: 8,
               width: 6,
               height: 1,
-              background: COLORS.accent,
+              background: COLORS.textMuted,
             }}
           />
           {item}

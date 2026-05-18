@@ -527,7 +527,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                 }}
               >
                 <div>
-                  <BracketLabel tone="accent" size="xs">STAFFING</BracketLabel>
+                  <BracketLabel tone="muted" size="xs">STAFFING</BracketLabel>
                   <div
                     style={{
                       fontSize: 18,
@@ -1076,11 +1076,11 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
           minHeight: 88,
         }}
       >
-        <ScanningLine color={COLORS.accent} duration={24} />
+        <ScanningLine color={COLORS.borderStrong} duration={24} />
 
         {/* Title block */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 200 }}>
-          <BracketLabel tone="accent" size="xs">STAFFING</BracketLabel>
+          <BracketLabel tone="muted" size="xs">STAFFING</BracketLabel>
           <div
             style={{
               fontFamily: FONTS.sans,
@@ -1830,7 +1830,7 @@ const UnitDetailPanel: React.FC<UnitDetailProps> = ({
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <BracketLabel tone="accent" size="xs">UNIT DETAIL</BracketLabel>
+          <BracketLabel tone="muted" size="xs">UNIT DETAIL</BracketLabel>
           <div
             style={{
               fontFamily: FONTS.sans,
@@ -2751,11 +2751,11 @@ const AssignSheet: React.FC<{
           overflow: 'hidden',
         }}
       >
-        <CornerBracket position="tl" color={COLORS.accent} size={10} thickness={1.5} />
-        <CornerBracket position="tr" color={COLORS.accent} size={10} thickness={1.5} />
-        <CornerBracket position="bl" color={COLORS.accent} size={10} thickness={1.5} />
-        <CornerBracket position="br" color={COLORS.accent} size={10} thickness={1.5} />
-        <ScanningLine color={COLORS.accent} duration={16} />
+        <CornerBracket position="tl" color={COLORS.border} size={10} thickness={1.5} />
+        <CornerBracket position="tr" color={COLORS.border} size={10} thickness={1.5} />
+        <CornerBracket position="bl" color={COLORS.border} size={10} thickness={1.5} />
+        <CornerBracket position="br" color={COLORS.border} size={10} thickness={1.5} />
+        <ScanningLine color={COLORS.borderStrong} duration={16} />
 
         <div
           style={{
@@ -2766,7 +2766,7 @@ const AssignSheet: React.FC<{
             gap: SPACE.sm,
           }}
         >
-          <BracketLabel tone="accent" size="xs">ASSIGN</BracketLabel>
+          <BracketLabel tone="muted" size="xs">ASSIGN</BracketLabel>
           <span
             style={{
               fontFamily: FONTS.sans,

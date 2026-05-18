@@ -147,7 +147,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
           {/* Header */}
           <HudStrip side="top" fixed>
             <button onClick={handleClose} style={closeBtnStyle}><X size={14} /></button>
-            <BracketLabel tone="accent" size="sm">Brief Me</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Brief Me</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={91} ageMinutes={2} />
           </HudStrip>
@@ -159,7 +159,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               {/* 1. Briefing Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: SPACE.sm }}>
                 <div>
-                  <BracketLabel tone="accent" size="base">Operational Brief</BracketLabel>
+                  <BracketLabel tone="muted" size="base">Operational Brief</BracketLabel>
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginTop: SPACE.xs }}>
                     <Clock size={11} color={COLORS.textMuted} />
                     <Mono tone="muted" size="xs">Generated 2 minutes ago</Mono>
@@ -174,10 +174,10 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
               <TacticalCard highlight accentBar padding="lg"
                 style={{ position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${COLORS.surface} 0%, ${COLORS.surfaceElev} 100%)` }}
               >
-                <ScanningLine duration={8} />
+                <ScanningLine color={COLORS.borderStrong} duration={8} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-                  <BrainCircuit size={14} color={COLORS.accent} />
-                  <Mono tone="accent" size="xs">AI Synthesis</Mono>
+                  <BrainCircuit size={14} color={COLORS.textSecondary} />
+                  <Mono tone="muted" size="xs">AI Synthesis</Mono>
                 </div>
                 <div style={{ fontFamily: FONTS.sans, fontSize: TYPE.body.size + 1, fontWeight: 400, lineHeight: 1.65, color: COLORS.textPrimary, minHeight: 72, letterSpacing: '-0.005em' }}>
                   <AnimatePresence mode="wait">
@@ -328,7 +328,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                       <motion.button key={i} onClick={() => setExpandedHistory(expanded ? null : i)} whileTap={{ scale: 0.99 }}
                         style={{ display: 'flex', flexDirection: 'column', gap: expanded ? SPACE.sm : 0, padding: `${SPACE.md}px ${SPACE.base}px`, background: expanded ? COLORS.surfaceElev : COLORS.surface, border: `1px solid ${expanded ? COLORS.borderStrong : COLORS.border}`, borderRadius: RADIUS.sm, cursor: 'pointer', textAlign: 'left', width: '100%', outline: 'none', transition: cssTransition() }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, width: '100%' }}>
-                          <Mono tone="accent" size="xs" style={{ flexShrink: 0 }}>{entry.time}</Mono>
+                          <Mono tone="muted" size="xs" style={{ flexShrink: 0 }}>{entry.time}</Mono>
                           <span style={{ fontFamily: FONTS.sans, fontSize: TYPE.bodySm.size, color: COLORS.textSecondary, flex: 1 }}>{entry.summary}</span>
                           <ChevronDown size={12} color={COLORS.textMuted} style={{ transition: `transform ${MOTION.fast}s ease`, transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
                         </div>

@@ -566,8 +566,8 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-              <Radio size={14} color={COLORS.accent} strokeWidth={2} />
-              <BracketLabel tone="accent" size="xs">
+              <Radio size={14} color={COLORS.textSecondary} strokeWidth={2} />
+              <BracketLabel tone="muted" size="xs">
                 EMS · INBOUND
               </BracketLabel>
             </div>
@@ -644,7 +644,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
               </motion.button>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-              <BracketLabel tone="accent" size="xs">
+              <BracketLabel tone="muted" size="xs">
                 RADIO · LIVE
               </BracketLabel>
               <span

@@ -202,6 +202,17 @@ build):**
 
 ## 6. Too much red — visual hierarchy broken `DESIGN+RESEARCH` → fix
 
+> **✅ DONE 2026-05-18 (commit pending).** Nick approved the colour
+> hierarchy rule + "do it all at once". Rule recorded as a standing
+> ADR (docs/decisions.md 2026-05-18) and in the tokens.ts header.
+> Swept 18 operational/clinical surfaces: ~46 low-value rose sites
+> neutralized (section captions `tone="accent"→"muted"`, decorative
+> scanlines/glows/borders → neutral tokens). KEPT: primary CTAs,
+> nav-active, surge/codes/STAT/ESI-1-2/NEEDS-YOU danger, data-encoding
+> palettes, focus rings, all `crit`. Brand/boot/hero (Welcome, Loading,
+> Radiant, login) untouched by design. `primitives.tsx`/`tokens.ts`
+> defs untouched. Build green, shipped web + iPhone.
+
 **Asked:** There's too much red on pages; can't tell what's important.
 Think about it and fix it.
 

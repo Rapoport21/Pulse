@@ -200,7 +200,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
           {selected.size === MOCK_PATIENTS.length ? 'Deselect All' : 'Select All'}
         </motion.button>
       </div>
-      <Mono tone={selected.size > 0 ? 'accent' : 'warn'} size="xs">{selected.size}/{MOCK_PATIENTS.length} selected for handoff</Mono>
+      <Mono tone={selected.size > 0 ? 'muted' : 'warn'} size="xs">{selected.size}/{MOCK_PATIENTS.length} selected for handoff</Mono>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
         {MOCK_PATIENTS.map((p) => {
@@ -318,7 +318,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
     return (
       <div style={{ padding: SPACE.base, display: 'flex', flexDirection: 'column', gap: SPACE.base }}>
         <TacticalCard padding="md">
-          <BracketLabel tone="accent" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>Handoff Summary</BracketLabel>
+          <BracketLabel tone="muted" size="sm" style={{ marginBottom: SPACE.md, display: 'block' }}>Handoff Summary</BracketLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.md }}>
             <InfoRow label="Patients" value={`${selectedPatients.length}`} />
             <InfoRow label="Shift" value={shift} />
@@ -370,7 +370,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
             <button onClick={handleClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, color: COLORS.textSecondary, cursor: 'pointer' }}>
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Shift Handoff</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Shift Handoff</BracketLabel>
             <div style={{ flex: 1 }} />
             <StatusPill label={`${selected.size} PT`} tone={selected.size > 0 ? 'info' : 'neutral'} />
           </HudStrip>

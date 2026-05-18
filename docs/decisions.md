@@ -12,6 +12,38 @@ New entries go at the top. Most recent first.
 
 ---
 
+## 2026-05-18 · Colour hierarchy: rose is scarce, neutrals carry structure
+
+**Context.** `COLORS.accent` (rose) had 557 call sites and `COLORS.crit`
+(red) 310, vs ok 333 / warn 292 / info 180. Rose+red were the most-used
+colours app-wide, so nothing read as urgent ("too much red, can't tell
+what's important"). The token file's own header already intended
+"accent is scarce" but practice had drifted: dividers, section labels,
+default borders, decorative glows were all rose.
+
+**Decision (the standing rule, Nick-approved 2026-05-18).**
+- **Tier 0 rose (`accent`):** the single most important action per
+  view, primary-nav active state, and brand moments only (boot, login,
+  Welcome, Radiant/Rehoboam hero). Max ONE rose focal point per
+  viewport. Never dividers/labels/meta/default borders/hover/decorative
+  glow.
+- **Tier 1 red (`crit`):** genuine danger only (codes, STAT, surge
+  active, ESI 1-2, NEEDS-YOU, at-risk thresholds).
+- **Tier 2:** `warn`/`ok`/`info` only where the value truly is that
+  status.
+- **Tier 3:** neutrals (text tones + border + weight + size + spacing)
+  carry all structural hierarchy.
+- Brand/boot/hero surfaces (WelcomeScreen, LoadingScreen, PulseRadiant,
+  boot/login) stay rose by design and are out of scope for the sweep.
+
+**Considered and rejected.** A blanket token retarget (e.g. point
+`accent` at a neutral) — rejected because the same token legitimately
+drives primary CTAs and genuine criticals; only the low-value
+structural uses should change. So the sweep reclassifies abused
+*patterns* (accent dividers, `tone="accent"` section labels, default
+accent borders, decorative accent glow) to neutrals, leaving primary
+CTAs and clinical criticals rose.
+
 ## 2026-05-17 · Cross-session memory: localStorage hydrate-at-init, not a Supabase table
 
 **Context.** App state (`useRealtimeState`) and the AI transcript were

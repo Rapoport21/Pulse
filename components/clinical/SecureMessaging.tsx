@@ -529,7 +529,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                       fontFamily: FONTS.sans,
                       fontSize: TYPE.bodySm.size,
                       fontWeight: 600,
-                      color: isOwn ? COLORS.accent : COLORS.textSecondary,
+                      color: isOwn ? COLORS.textPrimary : COLORS.textSecondary,
                     }}
                   >
                     {msg.sender}
@@ -568,17 +568,15 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                     background: msg.urgent
                       ? `${COLORS.crit}08`
                       : isOwn
-                        ? `${COLORS.accent}12`
+                        ? COLORS.surfaceElev
                         : COLORS.surface,
                     border: `1px solid ${
-                      msg.urgent ? `${COLORS.crit}30` : isOwn ? `${COLORS.accent}25` : COLORS.border
+                      msg.urgent ? `${COLORS.crit}30` : isOwn ? COLORS.borderStrong : COLORS.border
                     }`,
                     borderRadius: RADIUS.sm,
                     borderLeft: msg.urgent
                       ? `3px solid ${COLORS.crit}`
-                      : isOwn
-                        ? `3px solid ${COLORS.accent}`
-                        : undefined,
+                      : undefined,
                     fontFamily: FONTS.sans,
                     fontSize: TYPE.body.size,
                     color: COLORS.textPrimary,
@@ -812,7 +810,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
                 <X size={14} />
               </button>
             )}
-            <BracketLabel tone="accent" size="sm">COMMS</BracketLabel>
+            <BracketLabel tone="muted" size="sm">COMMS</BracketLabel>
             {activeChannel && (
               <Mono tone="secondary" size="sm" style={{ marginLeft: SPACE.xs }}>
                 {activeChannel.kind === 'channel' ? '#' : ''} {activeChannel.name}

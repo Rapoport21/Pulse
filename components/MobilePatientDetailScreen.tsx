@@ -416,7 +416,7 @@ const AccordionHeader: React.FC<{
       textAlign: 'left',
     }}
   >
-    <span style={{ color: COLORS.accent, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+    <span style={{ color: COLORS.textSecondary, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
       {icon}
     </span>
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
@@ -1327,7 +1327,7 @@ const VitalsTab: React.FC<{
       {/* Vitals mini-grid */}
       <TacticalCard padding="sm">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${SPACE.sm}px 0 ${SPACE.sm}px ${SPACE.xs}px` }}>
-          <BracketLabel tone="accent" size="xs">CURRENT VITALS</BracketLabel>
+          <BracketLabel tone="muted" size="xs">CURRENT VITALS</BracketLabel>
           <Mono tone="muted" size="xs">
             {formatRelative(latestVitals.timestamp).toUpperCase()}
           </Mono>
@@ -1396,7 +1396,7 @@ const VitalsTab: React.FC<{
       {scores && (
         <TacticalCard padding="sm">
           <div style={{ padding: `${SPACE.sm}px 0 ${SPACE.sm}px ${SPACE.xs}px` }}>
-            <BracketLabel tone="accent" size="xs">EARLY WARNING</BracketLabel>
+            <BracketLabel tone="muted" size="xs">EARLY WARNING</BracketLabel>
           </div>
           <Divider style={{ margin: `0 0 ${SPACE.sm}px 0` }} />
           <div
@@ -1475,7 +1475,7 @@ const NotesTab: React.FC<{
       </TacticalButton>
       <TacticalCard padding="sm">
         <div style={{ padding: `${SPACE.sm}px 0 ${SPACE.sm}px ${SPACE.xs}px` }}>
-          <BracketLabel tone="accent" size="xs">DOCUMENTATION</BracketLabel>
+          <BracketLabel tone="muted" size="xs">DOCUMENTATION</BracketLabel>
         </div>
         <Divider style={{ margin: `0 0 ${SPACE.sm}px 0` }} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE.sm }}>
@@ -1491,13 +1491,13 @@ const NotesTab: React.FC<{
                 padding: `${SPACE.md}px`,
                 background: COLORS.bgDeep,
                 border: `1px solid ${COLORS.border}`,
-                borderLeft: `2px solid ${COLORS.accent}`,
+                borderLeft: `2px solid ${COLORS.border}`,
                 borderRadius: RADIUS.sm,
                 cursor: 'pointer',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: SPACE.sm }}>
-                <BracketLabel tone="accent" size="xs">{note.kind.toUpperCase()}</BracketLabel>
+                <BracketLabel tone="muted" size="xs">{note.kind.toUpperCase()}</BracketLabel>
                 <Mono tone="muted" size="xs">{formatRelative(note.at).toUpperCase()}</Mono>
               </div>
               <div
@@ -1550,7 +1550,7 @@ const OrdersTab: React.FC<{
 
       <TacticalCard padding="sm">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `${SPACE.sm}px 0 ${SPACE.sm}px ${SPACE.xs}px` }}>
-          <BracketLabel tone="accent" size="xs">ACTIVE ORDERS</BracketLabel>
+          <BracketLabel tone="muted" size="xs">ACTIVE ORDERS</BracketLabel>
           <StatusPill label={`${activeCount} LIVE`} tone="info" size="xs" />
         </div>
         <Divider style={{ margin: `0 0 ${SPACE.sm}px 0` }} />
@@ -1700,7 +1700,7 @@ const DischargeTab: React.FC<{
       {/* Checklist */}
       <TacticalCard padding="sm">
         <div style={{ padding: `${SPACE.sm}px 0 ${SPACE.sm}px ${SPACE.xs}px` }}>
-          <BracketLabel tone="accent" size="xs">CHECKLIST</BracketLabel>
+          <BracketLabel tone="muted" size="xs">CHECKLIST</BracketLabel>
         </div>
         <Divider style={{ margin: `0 0 ${SPACE.sm}px 0` }} />
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -1865,7 +1865,7 @@ export const MobilePatientDetailScreen: React.FC<MobilePatientDetailScreenProps>
               padding: `0 ${SPACE.xs}px`,
               background: 'none',
               border: 'none',
-              color: COLORS.accent,
+              color: COLORS.textSecondary,
               fontFamily: FONTS.sans,
               fontSize: 14,
               fontWeight: 500,

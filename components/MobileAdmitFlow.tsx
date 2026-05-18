@@ -551,7 +551,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
       })}
     </div>
 
-    {/* Scanline under progress — subtle ambient */}
+    {/* Scanline under progress — subtle ambient (neutralised:
+        decorative, not a priority signal, so no rose) */}
     <div
       style={{
         position: 'absolute',
@@ -559,7 +560,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, maxReached, onJu
         left: 0,
         right: 0,
         height: 1,
-        background: `linear-gradient(90deg, transparent 0%, ${COLORS.accent}88 50%, transparent 100%)`,
+        background: `linear-gradient(90deg, transparent 0%, ${COLORS.borderStrong} 50%, transparent 100%)`,
         opacity: 0.4,
         pointerEvents: 'none',
       }}
@@ -589,19 +590,19 @@ const StepHeader: React.FC<{ step: StepMeta }> = ({ step }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: COLORS.accentDim,
-          border: `1px solid ${COLORS.accent}`,
+          background: COLORS.surface,
+          border: `1px solid ${COLORS.border}`,
           borderRadius: RADIUS.sm,
-          color: COLORS.accent,
+          color: COLORS.textSecondary,
           flexShrink: 0,
           position: 'relative',
         }}
       >
         <Icon size={18} strokeWidth={1.75} />
-        <CornerBracket position="tl" color={COLORS.accent} size={5} thickness={1} />
-        <CornerBracket position="tr" color={COLORS.accent} size={5} thickness={1} />
-        <CornerBracket position="bl" color={COLORS.accent} size={5} thickness={1} />
-        <CornerBracket position="br" color={COLORS.accent} size={5} thickness={1} />
+        <CornerBracket position="tl" color={COLORS.border} size={5} thickness={1} />
+        <CornerBracket position="tr" color={COLORS.border} size={5} thickness={1} />
+        <CornerBracket position="bl" color={COLORS.border} size={5} thickness={1} />
+        <CornerBracket position="br" color={COLORS.border} size={5} thickness={1} />
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
         <Mono tone="muted" size="xs">
@@ -681,7 +682,7 @@ const ReviewCard: React.FC<{
         gap: SPACE.sm,
       }}
     >
-      <BracketLabel tone="accent" size="sm">
+      <BracketLabel tone="muted" size="sm">
         {title}
       </BracketLabel>
       <button
@@ -1041,7 +1042,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                 padding: `0 ${SPACE.sm}px`,
                 background: 'none',
                 border: 'none',
-                color: COLORS.accent,
+                color: COLORS.textSecondary,
                 fontFamily: FONTS.sans,
                 fontSize: TYPE.bodySm.size,
                 fontWeight: 500,
@@ -1839,7 +1840,7 @@ export const MobileAdmitFlow: React.FC<MobileAdmitFlowProps> = ({
                     ) : (
                       availableBedsByUnit.map(({ unit, beds }) => (
                         <TacticalCard key={unit.id} padding="sm">
-                          <BracketLabel tone="accent" size="sm">
+                          <BracketLabel tone="muted" size="sm">
                             {unit.shortName} · {beds.length} READY
                           </BracketLabel>
                           <Divider style={{ margin: `${SPACE.sm}px 0` }} />

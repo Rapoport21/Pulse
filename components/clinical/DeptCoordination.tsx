@@ -432,7 +432,7 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
       <div style={{ padding: `${SPACE.base}px ${SPACE.base}px 0` }}>
         {/* Clinical departments */}
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, marginBottom: SPACE.md }}>
-          <BracketLabel tone="accent" size="xs">DEPARTMENTS</BracketLabel>
+          <BracketLabel tone="muted" size="xs">DEPARTMENTS</BracketLabel>
           <Mono tone="muted" size="xs">{DEPARTMENTS.length} ACTIVE</Mono>
         </div>
 
@@ -580,7 +580,7 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
           padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <BracketLabel tone="accent" size="xs">ACTIVE TRANSFERS</BracketLabel>
+            <BracketLabel tone="muted" size="xs">ACTIVE TRANSFERS</BracketLabel>
             <span style={{
               padding: `1px ${SPACE.sm}px`, background: `${COLORS.info}20`,
               border: `1px solid ${COLORS.info}40`, borderRadius: RADIUS.sm,
@@ -712,7 +712,7 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
           padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <BracketLabel tone="accent" size="xs">SHARED RESOURCES</BracketLabel>
+            <BracketLabel tone="muted" size="xs">SHARED RESOURCES</BracketLabel>
           </div>
           {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
         </button>
@@ -860,7 +860,7 @@ export const DeptCoordinationBody: React.FC<DeptCoordinationBodyProps> = ({ show
           padding: `${SPACE.md}px 0`, background: 'none', border: 'none', cursor: 'pointer',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
-            <BracketLabel tone="accent" size="xs">DEPT COMMS</BracketLabel>
+            <BracketLabel tone="muted" size="xs">DEPT COMMS</BracketLabel>
             <Mono tone="muted" size="xs">{COORD_MESSAGES.length} RECENT</Mono>
           </div>
           {isOpen ? <ChevronUp size={14} color={COLORS.textMuted} /> : <ChevronDown size={14} color={COLORS.textMuted} />}
@@ -1047,7 +1047,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
             >
               <X size={14} />
             </button>
-            <BracketLabel tone="accent" size="sm">Coordination</BracketLabel>
+            <BracketLabel tone="muted" size="sm">Coordination</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={94} ageMinutes={0.5} />
           </HudStrip>

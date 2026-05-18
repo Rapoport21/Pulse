@@ -1735,7 +1735,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
             }}
             aria-label="Open QR scanner"
             whileTap={{ scale: 0.97 }}
-            whileHover={{ borderColor: COLORS.accent }}
+            whileHover={{ borderColor: COLORS.borderHover }}
             transition={{ duration: MOTION.fast, ease: MOTION.ease }}
             style={{
               width: 44,
@@ -1746,7 +1746,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
               background: COLORS.surface,
               border: `1px solid ${COLORS.border}`,
               borderRadius: RADIUS.sm,
-              color: COLORS.accent,
+              color: COLORS.textSecondary,
               cursor: 'pointer',
             }}
           >
@@ -3038,14 +3038,14 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 gap: SPACE.md,
                 width: '100%',
                 padding: `${SPACE.md}px ${SPACE.base}px`,
-                // WORKFORCE block — was tinted rgba(139,92,246,*) (violet
-                // leak). Now uses COLORS.accentDeep (rose-deep) which is
-                // the same staffing tone used in AlertsCenter staffing
-                // tab, WorkforceCoverage LPN role, and PulseHorizon's
-                // Request Float button. Brand-aligned, no purple.
-                background: `linear-gradient(90deg, ${COLORS.accentDeep}14 0%, ${COLORS.accentDeep}05 100%)`,
-                border: `1px solid ${COLORS.accentDeep}80`,
-                borderLeft: `3px solid ${COLORS.accentDeep}B3`,
+                // WORKFORCE block — neutralised per colour-hierarchy
+                // rule: a passive category launcher is structural
+                // chrome, not a priority signal, so it no longer
+                // carries rose. Neutral surface + border; the
+                // left-edge tone bar + title carry its identity.
+                background: COLORS.surface,
+                border: `1px solid ${COLORS.border}`,
+                borderLeft: `3px solid ${COLORS.borderStrong}`,
                 borderRadius: RADIUS.sm,
                 color: COLORS.textPrimary,
                 fontFamily: FONTS.sans,
@@ -3058,9 +3058,9 @@ export const MobileView: React.FC<MobileViewProps> = ({
               {/* /distill D3+D5: dropped 2 corner brackets + 32×32
                   icon frame. The left-edge 3px tone bar + the title
                   already carry the launcher's identity. */}
-              <Users size={20} strokeWidth={2} color={COLORS.accentDeep} style={{ flexShrink: 0 }} />
+              <Users size={20} strokeWidth={2} color={COLORS.textSecondary} style={{ flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <BracketLabel size="xs" style={{ color: COLORS.accentDeep }}>WORKFORCE</BracketLabel>
+                <BracketLabel size="xs" style={{ color: COLORS.textMuted }}>WORKFORCE</BracketLabel>
                 <div style={{ marginTop: 2, fontFamily: FONTS.sans, fontSize: 15, fontWeight: 600, color: COLORS.textPrimary }}>
                   Staff coverage · 47 on shift · 1:4.2 ratio
                 </div>
@@ -3096,15 +3096,15 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 style={{
                   flex: 1, position: 'relative', display: 'flex', alignItems: 'center',
                   gap: SPACE.sm, padding: `${SPACE.sm}px ${SPACE.md}px`,
-                  background: `linear-gradient(90deg, ${COLORS.accent}10 0%, ${COLORS.accent}02 100%)`,
-                  border: `1px solid ${COLORS.accent}`, borderLeft: `3px solid ${COLORS.accent}`,
+                  background: COLORS.surface,
+                  border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.borderStrong}`,
                   borderRadius: RADIUS.sm, color: COLORS.textPrimary, fontFamily: FONTS.sans,
                   textAlign: 'left', cursor: 'pointer', overflow: 'hidden', minHeight: 48,
                 }}
               >
-                <BrainCircuit size={16} strokeWidth={2} color={COLORS.accent} />
+                <BrainCircuit size={16} strokeWidth={2} color={COLORS.textSecondary} />
                 <div style={{ flex: 1 }}>
-                  <Mono tone="accent" size="xs">BRIEF ME</Mono>
+                  <Mono tone="muted" size="xs">BRIEF ME</Mono>
                   <div style={{ fontSize: 13, fontWeight: 600, color: COLORS.textSecondary }}>AI Briefing</div>
                 </div>
               </motion.button>
@@ -4150,7 +4150,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm, minWidth: 0 }}>
-                    <BracketLabel tone="accent" size="sm">
+                    <BracketLabel tone="muted" size="sm">
                       MY PATIENTS
                     </BracketLabel>
                     <StatusPill
@@ -4358,7 +4358,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                                 >
                                   {/* S — Situation */}
                                   <div>
-                                    <Mono tone="accent" size="xs">S · SITUATION</Mono>
+                                    <Mono tone="muted" size="xs">S · SITUATION</Mono>
                                     <div
                                       style={{
                                         marginTop: 2,
@@ -4373,7 +4373,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                                   </div>
                                   {/* B — Background */}
                                   <div>
-                                    <Mono tone="accent" size="xs">B · BACKGROUND</Mono>
+                                    <Mono tone="muted" size="xs">B · BACKGROUND</Mono>
                                     <div
                                       style={{
                                         marginTop: 2,
@@ -4398,7 +4398,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                                   </div>
                                   {/* A — Assessment (vitals + MEWS) */}
                                   <div>
-                                    <Mono tone="accent" size="xs">A · ASSESSMENT</Mono>
+                                    <Mono tone="muted" size="xs">A · ASSESSMENT</Mono>
                                     <div
                                       style={{
                                         marginTop: 2,
@@ -4418,7 +4418,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                                   </div>
                                   {/* R — Recommendation */}
                                   <div>
-                                    <Mono tone="accent" size="xs">R · RECOMMENDATION</Mono>
+                                    <Mono tone="muted" size="xs">R · RECOMMENDATION</Mono>
                                     <div
                                       style={{
                                         marginTop: 2,
@@ -5520,7 +5520,7 @@ export const MobileView: React.FC<MobileViewProps> = ({
                 flexShrink: 0,
               }}
             >
-              <BracketLabel tone="accent" size="xs">
+              <BracketLabel tone="muted" size="xs">
                 COMMS
               </BracketLabel>
               <div style={{ flex: 1 }} />

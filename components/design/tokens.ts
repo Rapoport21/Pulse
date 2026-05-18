@@ -9,6 +9,17 @@
  * - Near-black canvas, sharp corners, monospace data, rose-600 accent.
  * - Corner brackets, scanlines, status pills are the signature chrome.
  * - Accent is scarce — reserved for active, critical, and actionable moments.
+ *
+ * COLOUR HIERARCHY RULE (standing, see docs/decisions.md 2026-05-18):
+ *   Tier 0 `accent` rose = ONE most-important action per view + primary
+ *     nav active + brand moments (boot/login/Welcome/Radiant). Max one
+ *     rose focal point per viewport. Never dividers/labels/meta/default
+ *     borders/hover/decorative glow.
+ *   Tier 1 `crit` red = genuine danger only (codes, STAT, surge, ESI
+ *     1-2, NEEDS-YOU, at-risk).
+ *   Tier 2 `warn`/`ok`/`info` = only where the value truly is that status.
+ *   Tier 3 neutrals (text tones + border + weight + size + spacing)
+ *     carry all structural hierarchy.
  */
 
 // ─────────────────────────────────────────────────────────────────────────
