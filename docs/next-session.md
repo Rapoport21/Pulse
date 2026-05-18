@@ -247,6 +247,15 @@ one.
 
 ## 8. Move scenarios into Sim Controls (right sidebar) `BUILD`
 
+> **✅ DONE 2026-05-18 (commit 6d248eb).** `ScenarioCards` (S1/S2/S3
+> start+stop) now renders in the right sidebar's Sim Controls panel.
+> `CommandSidebar` gained `activeScenario`/`onStartScenario`/`onStopScenario`
+> props (App reuses existing `startScenario`/`stopScenario`) + its own
+> `useScenarioTick`. Removed the duplicate block + unused import from
+> PulseHorizon's What-If panel. Settings keeps its copy as the admin
+> surface (decision: low-traffic, removing it was extra risk). Shipped
+> web + iPhone.
+
 **Asked:** Put scenarios in Sim Controls in the right sidebar.
 
 **Where:** `components/CommandSidebar.tsx` has a `simPanelOpen` / sim
