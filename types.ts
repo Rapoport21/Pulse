@@ -28,6 +28,7 @@ export enum Tab {
   BRIEF_ME = 'Brief Me',
   REPLAY = 'Replay',
   ROSTER = 'Roster',
+  PULSE_AI = 'PULSE AI',
 }
 
 export enum ConfidenceLevel {

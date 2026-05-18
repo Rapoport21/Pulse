@@ -27,6 +27,7 @@ import {
   SlidersHorizontal,
   PhoneCall,
   MoreHorizontal,
+  Boxes,
 } from 'lucide-react';
 import { Tab, UserRole, UserProfile, type Allergy } from './types';
 import { USERS } from './data/userProfiles';
@@ -39,6 +40,7 @@ import { LiveOps } from './components/LiveOps';
 import { Playbooks } from './components/Playbooks';
 import { Roster } from './components/Roster';
 import { ChatAssistant } from './components/ChatAssistant';
+import { PulseAiPage } from './components/PulseAiPage';
 import { LoginScreen } from './components/LoginScreen';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { CommandSidebar, type SimControlAction } from './components/CommandSidebar';
@@ -769,6 +771,7 @@ function App() {
   // Secondary nav: lower-traffic surfaces live under a "More" dropdown
   // (sprint 2026-05-14 item 17). Keeps the top nav lean.
   const moreItems = [
+    { id: Tab.PULSE_AI, icon: Boxes, label: 'PULSE AI', code: 'A' },
     { id: Tab.PLAYBOOKS, icon: BookOpen, label: 'Playbooks', code: 'P' },
     { id: Tab.ROSTER, icon: Users, label: 'Roster', code: 'R' },
     { id: Tab.REPLAY, icon: PlayCircle, label: 'Replay', code: 'Y' },
@@ -1701,6 +1704,12 @@ function App() {
                 <BriefMe isSurgeActive={isSurgeActive} currentUser={currentUser} showToast={showToast} />
               )}
               {activeTab === Tab.REPLAY && <Replay showToast={showToast} />}
+              {activeTab === Tab.PULSE_AI && (
+                <PulseAiPage
+                  currentUser={currentUser}
+                  onOpenAssistant={() => setShowChat(true)}
+                />
+              )}
             </main>
 
             <CommandSidebar
