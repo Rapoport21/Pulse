@@ -215,6 +215,16 @@ discipline notes — extend that philosophy app-wide.)
 
 ## 7. Default to NORMAL scenario on login `QUICK FIX` / `INVESTIGATE`
 
+> **✅ DONE 2026-05-18 (commit 454c8a9).** Nick chose "calm, surge on
+> trigger". `METRIC_BASELINES` lowered to a calm hospital (NEDOCS 52,
+> triage 19m, ED wait 17m, boarding 6, fully staffed). Removed the
+> `loginCount > 1` "first walk-up sees drama" heuristic across
+> PulseHorizon (load chart default + role drivers + idle highlight),
+> LiveOps (zones), ShiftHandoffModal (briefing). Pressure now appears
+> ONLY when a scenario or surge is explicitly triggered; scenario
+> deltas still overlay the baseline so a triggered surge escalates
+> harder against the calm floor. Shipped web + iPhone.
+
 **Asked:** See a normal scenario by default on login, not a near-surge
 one.
 
