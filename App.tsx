@@ -731,6 +731,15 @@ function App() {
   );
   const isCompactNav = windowWidth < 1280;
 
+  // Large-format scaling (multidevice rebuild, step 1). The console is
+  // built in fixed px for ~1440-1920 (iMac). On a 55" wall it would
+  // render sparse with unreadable 11-13px text. Uniformly scale the
+  // WHOLE desktop shell up above 2200px so it fills the wall with the
+  // same proportions and readable type — no per-call-site rewrites.
+  // CRITICAL: a literal no-op at <=2200px (iMac / iPad / iPhone) so it
+  // cannot regress the working demo on the scrutinised screens.
+  const uiScale = windowWidth > 2200 ? Math.min(1.9, windowWidth / 2200) : 1;
+
   // Backup auto-end for the boot animation. Fires once isBooting flips
   // to true (i.e. after the user taps Enter PULSE). CinematicBoot also
   // calls onComplete on its own timer; whichever fires first wins.
@@ -1380,6 +1389,19 @@ function App() {
             fontFamily: FONTS.sans,
             overflow: 'hidden',
             border: systemStatus === 'manual' ? `2px solid ${COLORS.warn}` : 'none',
+            // Large-format scale-up. When uiScale === 1 (iMac / iPad /
+            // iPhone) this spread is empty → byte-identical to before,
+            // provably zero regression. When scaled (55" wall), divide
+            // the viewport box by the zoom so the shell still occupies
+            // exactly 100vw x 100lvh after `zoom` magnifies it.
+            ...(uiScale !== 1
+              ? {
+                  zoom: uiScale,
+                  width: `${100 / uiScale}vw`,
+                  minHeight: `${100 / uiScale}vh`,
+                  height: `${100 / uiScale}lvh`,
+                }
+              : {}),
           }}
         >
           {/* ═══════════════════════════════════════════════════════
