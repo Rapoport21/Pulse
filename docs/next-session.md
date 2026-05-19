@@ -402,6 +402,19 @@ short question list, not an essay.
 
 ## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (SEPARATE TASK · do LAST)
 
+> **✅ DONE 2026-05-18 — four-screen rebuild shipped (foundation +
+> QA).** Approach: phone (MobileView) kept separate; the desktop shell
+> rebuilt to flex across iPad / iMac 24" / 55" touch. Shipped commits
+> 4ff88d8 (large-format scaling for 55"), 6e90e7a (off-canvas sidebar
+> on iPad band), 803b2e3 (Staffing 3-pane stacks <1100), d465b6c
+> (coarse-pointer 44px touch targets on shared nav/icon buttons),
+> 88c243a (QA: 40 clinical tap targets + PulseAI 55" width). Every
+> change gated so iMac & iPhone are byte-identical (zero regression);
+> one-command revert via tag `safe-pre-multidevice` / docs/revert-point.md.
+> Residual (deliberate): some intentionally-dense clinical table/grid
+> *cells* not enlarged for touch — verify on-device, targeted
+> follow-ups only if a specific one is unusable.
+
 > **⏸ DEFERRED out of the build session, then SUPERSEDED 2026-05-18:**
 > The #11 answers put iPad (+ a 55" touchscreen + iMac) IN the pitch
 > room, so this is no longer "last/deferred". It is now folded into
