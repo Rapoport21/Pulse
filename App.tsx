@@ -161,6 +161,10 @@ function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  // Off-canvas command sidebar (multidevice: iPad band only). On iMac/
+  // large the sidebar stays inline; below 1180px it becomes a slide-over
+  // so the cramped iPad main area gets its ~300px back.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatQuery, setChatQuery] = useState('');
   const [systemStatus, setSystemStatus] = useState<'normal' | 'stale' | 'manual'>('normal');
   const [actionFilter, setActionFilter] = useState<string>('');
@@ -739,6 +743,12 @@ function App() {
   // CRITICAL: a literal no-op at <=2200px (iMac / iPad / iPhone) so it
   // cannot regress the working demo on the scrutinised screens.
   const uiScale = windowWidth > 2200 ? Math.min(1.9, windowWidth / 2200) : 1;
+
+  // iPad/tablet band. >=1180 (iMac / large / 55") renders the shell
+  // exactly as before — zero regression. <1180 reclaims the 300px
+  // sidebar (the audit's #1 cause of the cramped/broken iPad) by
+  // moving it off-canvas.
+  const isNarrowShell = windowWidth < 1180;
 
   // Backup auto-end for the boot animation. Fires once isBooting flips
   // to true (i.e. after the user taps Enter PULSE). CinematicBoot also
@@ -1522,6 +1532,18 @@ function App() {
                 <MessageSquare size={16} strokeWidth={2} />
               </IconButton>
 
+              {/* Command sidebar toggle — only on the iPad band, where
+                  the sidebar is off-canvas to reclaim main width. */}
+              {isNarrowShell && (
+                <IconButton
+                  active={sidebarOpen}
+                  onClick={() => setSidebarOpen((o) => !o)}
+                  label="Controls"
+                >
+                  <SlidersHorizontal size={16} strokeWidth={2} />
+                </IconButton>
+              )}
+
               {/* Bell + dropdown removed (sprint 2026-05-14 item 22).
                   Notifications live on the dedicated Alerts tab, tasks
                   on the Comms Tasks tab + TasksDrawer, and proactive
@@ -1734,19 +1756,73 @@ function App() {
               )}
             </main>
 
-            <CommandSidebar
-              isSurgeActive={isSurgeActive}
-              surgeActivatedAt={surgeState.activatedAt}
-              urgentTasks={urgentTasks}
-              onActivateSurge={activateSurge}
-              onDeactivateSurge={deactivateSurge}
-              simControls={simControls}
-              activeScenario={activeScenario}
-              onStartScenario={startScenario}
-              onStopScenario={stopScenario}
-              onNavigateToComms={() => navigateToTab(Tab.COMMS)}
-              isCommsOpen={activeTab === Tab.COMMS}
-            />
+            {!isNarrowShell ? (
+              /* iMac / large / 55" — inline, exactly as before. */
+              <CommandSidebar
+                isSurgeActive={isSurgeActive}
+                surgeActivatedAt={surgeState.activatedAt}
+                urgentTasks={urgentTasks}
+                onActivateSurge={activateSurge}
+                onDeactivateSurge={deactivateSurge}
+                simControls={simControls}
+                activeScenario={activeScenario}
+                onStartScenario={startScenario}
+                onStopScenario={stopScenario}
+                onNavigateToComms={() => navigateToTab(Tab.COMMS)}
+                isCommsOpen={activeTab === Tab.COMMS}
+              />
+            ) : (
+              /* iPad band — off-canvas slide-over so main reclaims
+                 ~300px. Toggled by the header "Controls" button. */
+              <>
+                {sidebarOpen && (
+                  <div
+                    onClick={() => setSidebarOpen(false)}
+                    style={{
+                      position: 'fixed',
+                      inset: 0,
+                      background: 'rgba(0,0,0,0.5)',
+                      zIndex: 60,
+                    }}
+                  />
+                )}
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: 'min(360px, 88vw)',
+                    transform: sidebarOpen ? 'translateX(0)' : 'translateX(105%)',
+                    transition: 'transform 220ms cubic-bezier(0.32,0.72,0,1)',
+                    zIndex: 61,
+                    background: COLORS.bg,
+                    borderLeft: `1px solid ${COLORS.border}`,
+                    boxShadow: sidebarOpen ? '-12px 0 32px rgba(0,0,0,0.4)' : 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <CommandSidebar
+                    isSurgeActive={isSurgeActive}
+                    surgeActivatedAt={surgeState.activatedAt}
+                    urgentTasks={urgentTasks}
+                    onActivateSurge={activateSurge}
+                    onDeactivateSurge={deactivateSurge}
+                    simControls={simControls}
+                    activeScenario={activeScenario}
+                    onStartScenario={startScenario}
+                    onStopScenario={stopScenario}
+                    onNavigateToComms={() => {
+                      navigateToTab(Tab.COMMS);
+                      setSidebarOpen(false);
+                    }}
+                    isCommsOpen={activeTab === Tab.COMMS}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* ═══════════════════════════════════════════════════════
