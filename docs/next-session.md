@@ -1,5 +1,13 @@
 # Next Session — To-Do
 
+> ⚠️ **PENDING REVERT WATCH (2026-05-18):** the four-screen
+> multi-device rebuild is on probation. If Nick says "revert it" /
+> "undo the rebuild", act immediately via `docs/revert-point.md`
+> (surgical revert of commits 88c243a d465b6c 803b2e3 6e90e7a
+> 4ff88d8; safe tag `safe-pre-multidevice`). Also flagged at the top
+> of CLAUDE.md. Don't pile large unrelated work onto the
+> `multidevice:` commits until Nick decides keep-or-revert.
+
 Created 2026-05-17. Source of truth for the next working session. Items
 are in Nick's original numbering. Each carries: **what he asked**, my
 **read**, a **category**, **where to look**, and **preliminary notes**

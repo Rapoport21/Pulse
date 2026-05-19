@@ -2,6 +2,19 @@
 
 Persistent instructions for any Claude session on this repo. Read this first.
 
+> ## ⚠️ PENDING REVERT WATCH (set 2026-05-18) — read before doing anything
+> The four-screen "multi-device" rebuild (iPad/iMac/55" layout) is **on
+> probation**. Nick is trying it for a few days and **may ask to revert
+> it**. If Nick says anything like *"revert it"*, *"undo the
+> multi-device / rebuild"*, *"go back to before"* — that is a pre-made
+> decision: open **`docs/revert-point.md`** and run the surgical revert
+> there immediately (revert commits `88c243a d465b6c 803b2e3 6e90e7a
+> 4ff88d8`, push, redeploy). Safe baseline = git tag
+> `safe-pre-multidevice` (`720e40f`, on remote). Until Nick explicitly
+> says he is KEEPING the rebuild, do not stack large unrelated work on
+> top of the `multidevice:` commits (it complicates a clean revert).
+> Remove this banner only when Nick confirms keep-or-revert.
+
 ## Standing directives from Nick
 
 1. **All actions pre-approved.** Never ask for permission to run builds, installs, commits, pushes, cap syncs, file edits, or agent launches. Just do the work.
