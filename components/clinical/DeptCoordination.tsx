@@ -156,6 +156,7 @@ const DeptDetailPanel: React.FC<{
           <Mono tone="muted" size="xs">{dept.name}</Mono>
         </div>
         <button
+          className="tap-target"
           onClick={onClose}
           aria-label="Collapse"
           style={{
@@ -1037,6 +1038,7 @@ export const DeptCoordination: React.FC<DeptCoordinationProps> = ({ open, onClos
           {/* ── Header strip ──────────────────────────────────────────── */}
           <HudStrip side="top" fixed>
             <button
+              className="tap-target"
               onClick={onClose}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',

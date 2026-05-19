@@ -541,6 +541,7 @@ const TasksTab: React.FC<{ tasks: ExtractedTask[] }> = ({ tasks }) => {
         <div style={{ flex: 1 }} />
         <button
           type="button"
+          className="tap-target"
           onClick={() => setShowAll((s) => !s)}
           style={{
             background: 'transparent',
@@ -897,6 +898,7 @@ const HeldQueue: React.FC<{
           </span>
           <button
             type="button"
+            className="tap-target"
             onClick={() => onResume(h.id)}
             aria-label="Resume call"
             style={{
@@ -914,6 +916,7 @@ const HeldQueue: React.FC<{
           </button>
           <button
             type="button"
+            className="tap-target"
             onClick={() => onEnd(h.id)}
             aria-label="End held call"
             style={{
@@ -973,6 +976,7 @@ const SearchInput: React.FC<{ value: string; onChange: (v: string) => void }> = 
     {value && (
       <button
         type="button"
+        className="tap-target"
         onClick={() => onChange('')}
         aria-label="Clear search"
         style={{

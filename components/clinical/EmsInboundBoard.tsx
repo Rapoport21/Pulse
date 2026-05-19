@@ -416,6 +416,7 @@ const EmsRow: React.FC<{
           </div>
           <motion.button
             type="button"
+            className="tap-target"
             onClick={() => onAcknowledge(run.id)}
             whileTap={{ scale: 0.97 }}
             aria-label={`Acknowledge ${run.unit}`}
@@ -624,6 +625,7 @@ export const EmsInboundBoard: React.FC<EmsInboundBoardProps> = ({
             {onClose && (
               <motion.button
                 type="button"
+                className="tap-target"
                 onClick={onClose}
                 aria-label="Close"
                 whileTap={{ scale: 0.97 }}

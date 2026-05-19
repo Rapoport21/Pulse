@@ -344,6 +344,7 @@ export const CodeBlueScreen: React.FC<CodeBlueScreenProps> = ({
             }}
           >
             <button
+              className="tap-target"
               onClick={handleClose}
               style={{
                 display: 'flex',

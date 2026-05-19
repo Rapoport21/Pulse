@@ -688,6 +688,7 @@ export const DischargeFlow: React.FC<DischargeFlowProps> = ({ open, onClose, sho
           {/* ── Header strip ──────────────────────────────────────────── */}
           <HudStrip side="top" fixed>
             <button
+              className="tap-target"
               onClick={handleClose}
               style={{
                 display: 'flex',

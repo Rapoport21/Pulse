@@ -367,7 +367,7 @@ export const HandoffComposer: React.FC<HandoffComposerProps> = ({ open, onClose,
         <motion.div key="handoff-composer" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: MOTION.fast }} style={{ position: 'fixed', inset: 0, zIndex: Z.modal, background: COLORS.bg, display: 'flex', flexDirection: 'column', fontFamily: FONTS.sans, color: COLORS.textPrimary, overflow: 'hidden', paddingTop: 'env(safe-area-inset-top)' }}>
           {/* Header */}
           <HudStrip side="top" fixed>
-            <button onClick={handleClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, color: COLORS.textSecondary, cursor: 'pointer' }}>
+            <button className="tap-target" onClick={handleClose} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, background: 'transparent', border: `1px solid ${COLORS.border}`, borderRadius: RADIUS.sm, color: COLORS.textSecondary, cursor: 'pointer' }}>
               <X size={14} />
             </button>
             <BracketLabel tone="muted" size="sm">Shift Handoff</BracketLabel>

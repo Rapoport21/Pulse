@@ -210,6 +210,7 @@ const ScoreChip: React.FC<{
   return (
     <button
       type="button"
+      className="tap-target"
       onClick={onSelect}
       style={{
         flex: '1 1 0',

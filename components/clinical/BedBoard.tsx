@@ -388,6 +388,7 @@ const BedPopover: React.FC<{
                 )}
               </div>
               <button
+                className="tap-target"
                 onClick={onClose}
                 style={{
                   background: 'none', border: 'none',
@@ -554,6 +555,7 @@ const BedPopover: React.FC<{
                 />
               </div>
               <button
+                className="tap-target"
                 onClick={onClose}
                 style={{
                   background: 'none', border: 'none',

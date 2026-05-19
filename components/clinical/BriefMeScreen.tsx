@@ -146,7 +146,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
         >
           {/* Header */}
           <HudStrip side="top" fixed>
-            <button onClick={handleClose} style={closeBtnStyle}><X size={14} /></button>
+            <button className="tap-target" onClick={handleClose} style={closeBtnStyle}><X size={14} /></button>
             <BracketLabel tone="muted" size="sm">Brief Me</BracketLabel>
             <div style={{ flex: 1 }} />
             <ConfidenceBadge confidence={91} ageMinutes={2} />
@@ -278,7 +278,7 @@ export const BriefMeScreen: React.FC<BriefMeScreenProps> = ({ open, onClose, sho
                               <VitalChip label="SpO2" value={`${pt.spo2}%`} tone={pt.spo2 < 92 ? 'crit' : pt.spo2 < 95 ? 'warn' : 'ok'} />
                             </div>
                           </div>
-                          <button onClick={() => showToast(`Opening chart for ${pt.name}`)}
+                          <button className="tap-target" onClick={() => showToast(`Opening chart for ${pt.name}`)}
                             style={{ ...closeBtnStyle, flexShrink: 0, alignSelf: 'center' }}>
                             <ChevronRight size={14} />
                           </button>

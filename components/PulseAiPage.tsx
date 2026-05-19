@@ -93,7 +93,11 @@ export const PulseAiPage: React.FC<PulseAiPageProps> = ({
     <div
       style={{
         padding: SPACE.lg,
-        maxWidth: 1280,
+        // multidevice: 1280 read as a lost island once the 55" shell
+        // scales up (big black gutters, audit B.2). 1760 stays a tidy
+        // centered showcase on the iMac but fills the wall properly
+        // after the large-format scale.
+        maxWidth: 1760,
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',

@@ -826,6 +826,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
               {FILTER_TABS.map(tab => (
                 <button
                   key={tab.key}
+                  className="tap-target"
                   onClick={() => setQueueFilter(tab.key)}
                   style={{
                     display: 'inline-flex',
@@ -1126,6 +1127,7 @@ export const AdmitFlow: React.FC<AdmitFlowProps> = ({ open, onClose, showToast, 
                                     {readyBeds.map(bed => (
                                       <button
                                         key={bed.id}
+                                        className="tap-target"
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           if (onAssignBed) {

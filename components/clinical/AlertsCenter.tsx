@@ -771,6 +771,7 @@ export const AlertsCenter: React.FC<AlertsCenterProps> = ({ open, onClose, showT
               return (
                 <button
                   key={tab}
+                  className="tap-target"
                   onClick={() => setDeskFilter(tab)}
                   style={{
                     padding: `${SPACE.md}px ${SPACE.lg}px`,

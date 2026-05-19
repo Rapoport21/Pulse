@@ -342,6 +342,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
         return (
           <motion.button
             key={opt}
+            className="tap-target"
             whileTap={{ scale: 0.96 }}
             onClick={() => onSelect(opt)}
             style={{
@@ -381,6 +382,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
         return (
           <motion.button
             key={cat.id}
+            className="tap-target"
             whileTap={{ scale: 0.96 }}
             onClick={() => { setCategory(cat.id); setReviewing(false); }}
             style={{
@@ -584,6 +586,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Mono tone="secondary" size="sm">Select Lab Panels</Mono>
         <motion.button
+          className="tap-target"
           whileTap={{ scale: 0.95 }}
           onClick={() => setLabStat(!labStat)}
           style={{
@@ -932,6 +935,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
                       )}
                     </div>
                     <motion.button
+                      className="tap-target"
                       whileTap={{ scale: 0.97 }}
                       onClick={() => removeOrder(globalIdx)}
                       style={{
@@ -1037,6 +1041,7 @@ export const OrderEntry: React.FC<OrderEntryProps> = ({ open, onClose, showToast
           {/* ── Header strip ──────────────────────────────────────────── */}
           <HudStrip side="top" fixed>
             <button
+              className="tap-target"
               onClick={handleClose}
               style={{
                 display: 'flex',

@@ -693,6 +693,7 @@ const TacticalInput: React.FC<{
       {value && onClear && (
         <button
           type="button"
+          className="tap-target"
           onClick={onClear}
           style={{
             background: 'transparent',
@@ -1362,6 +1363,7 @@ export const ActionBoard: React.FC<ActionBoardProps> = ({
                 </div>
                 <button
                   type="button"
+                  className="tap-target"
                   onClick={() => setSelectedAction(null)}
                   style={{
                     background: 'transparent',
@@ -1917,6 +1919,7 @@ const TabButton: React.FC<{
 }> = ({ active, onClick, label, icon }) => (
   <button
     type="button"
+    className="tap-target"
     onClick={onClick}
     style={{
       flex: 1,

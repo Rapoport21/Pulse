@@ -1170,6 +1170,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
               return (
                 <button
                   key={s}
+                  className="tap-target"
                   onClick={(e) => { e.stopPropagation(); setShiftFilter(s); }}
                   style={{
                     padding: `6px ${SPACE.md}px`,
@@ -1410,6 +1411,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
                 <div style={{ flex: 1 }} />
                 {changeLog.length > 0 && (
                   <button
+                    className="tap-target"
                     onClick={(e) => { e.stopPropagation(); setChangeLog([]); }}
                     aria-label="Clear change log"
                     style={{
@@ -2205,6 +2207,7 @@ const RoleSlotRow: React.FC<RoleSlotRowProps> = ({
 
 const EmptySlot: React.FC<{ color: string; onClick: () => void }> = ({ color, onClick }) => (
   <motion.button
+    className="tap-target"
     onClick={(e) => { e.stopPropagation(); onClick(); }}
     whileHover={{ scale: 1.04 }}
     whileTap={{ scale: 0.96 }}
@@ -2422,6 +2425,7 @@ const MenuItem: React.FC<{
   danger?: boolean;
 }> = ({ icon, label, onClick, danger }) => (
   <button
+    className="tap-target"
     onClick={(e) => { e.stopPropagation(); onClick(); }}
     style={{
       display: 'flex',
@@ -2654,6 +2658,7 @@ const StaffPoolCard: React.FC<{
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {onCallIn && (
           <button
+            className="tap-target"
             onClick={(e) => { e.stopPropagation(); onCallIn(); }}
             aria-label="Call in"
             style={{
@@ -2679,6 +2684,7 @@ const StaffPoolCard: React.FC<{
           </button>
         )}
         <button
+          className="tap-target"
           onClick={(e) => { e.stopPropagation(); onMessage(); }}
           aria-label="Message"
           title="Message"
@@ -2801,6 +2807,7 @@ const AssignSheet: React.FC<{
           </span>
           <div style={{ flex: 1 }} />
           <button
+            className="tap-target"
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             aria-label="Close"
             style={{

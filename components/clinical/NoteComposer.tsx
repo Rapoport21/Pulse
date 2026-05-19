@@ -415,6 +415,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
             return (
               <motion.button
                 key={nt.id}
+                className="tap-target"
                 onClick={() => {
                   setNoteType(nt.id);
                   setSections({});
@@ -487,6 +488,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
                   {wordCount(sec.key)}w
                 </Mono>
                 <motion.button
+                  className="tap-target"
                   onClick={() =>
                     setAiVisible((prev) => ({ ...prev, [sec.key]: !prev[sec.key] }))
                   }
@@ -863,6 +865,7 @@ export const NoteComposer: React.FC<NoteComposerProps> = ({
           {/* Header strip */}
           <HudStrip side="top" fixed>
             <button
+              className="tap-target"
               onClick={handleClose}
               style={{
                 display: 'flex',

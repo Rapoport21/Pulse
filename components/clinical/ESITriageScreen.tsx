@@ -350,6 +350,7 @@ const IdentityStep: React.FC<{
               <button
                 key={s}
                 type="button"
+                className="tap-target"
                 onClick={() => onChange({ ...value, sex: s })}
                 style={{
                   flex: 1,
@@ -968,6 +969,7 @@ export const ESITriageScreen: React.FC<ESITriageScreenProps> = ({ open, onClose,
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.md, flex: 1, minWidth: 0 }}>
             <motion.button
               type="button"
+              className="tap-target"
               onClick={onClose}
               aria-label="Close"
               whileTap={{ scale: 0.97 }}

@@ -652,6 +652,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
           {/* toggle row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: SPACE.sm }}>
             <button
+              className="tap-target"
               onClick={() => setUrgentToggle((v) => !v)}
               style={{
                 display: 'flex',
@@ -674,6 +675,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               URGENT
             </button>
             <button
+              className="tap-target"
               onClick={handlePage}
               style={{
                 display: 'flex',
@@ -717,6 +719,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               }}
             />
             <button
+              className="tap-target"
               onClick={handleSend}
               disabled={!inputText.trim()}
               style={{
@@ -775,6 +778,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
           <HudStrip side="top" fixed>
             {activeId ? (
               <button
+                className="tap-target"
                 onClick={() => setActiveId(null)}
                 style={{
                   display: 'flex',
@@ -793,6 +797,7 @@ export const SecureMessaging: React.FC<SecureMessagingProps> = ({ open, onClose,
               </button>
             ) : (
               <button
+                className="tap-target"
                 onClick={onClose}
                 style={{
                   display: 'flex',

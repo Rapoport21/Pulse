@@ -304,6 +304,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
           {/* ── Header ─────────────────────────────────────────────── */}
           <HudStrip side="top" fixed>
             <button
+              className="tap-target"
               onClick={onClose}
               style={{
                 display: 'flex',
@@ -354,6 +355,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                 {(['acuity', 'bed', 'name'] as SortMode[]).map((mode) => (
                   <button
                     key={mode}
+                    className="tap-target"
                     onClick={() => setSortMode(mode)}
                     style={{
                       padding: `3px 8px`,
@@ -398,6 +400,7 @@ export const RoundingList: React.FC<RoundingListProps> = ({ open, onClose, showT
                   return (
                     <button
                       key={mode}
+                      className="tap-target"
                       onClick={() => setFilterMode(mode)}
                       style={{
                         padding: `3px 8px`,

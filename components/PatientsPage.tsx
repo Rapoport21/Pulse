@@ -71,6 +71,7 @@ const SortPill: React.FC<{
   onClick: () => void;
 }> = ({ label, active, onClick }) => (
   <button
+    className="tap-target"
     onClick={onClick}
     style={{
       display: 'inline-flex',
@@ -105,6 +106,7 @@ const FilterPill: React.FC<{
   onClick: () => void;
 }> = ({ label, dotColor, active, onClick }) => (
   <button
+    className="tap-target"
     onClick={onClick}
     style={{
       display: 'inline-flex',
