@@ -327,6 +327,33 @@ stubs — exclude those; flag anything still stubbed.)
 
 ## 11. Study PULSE and ask improvement questions `DISCOVERY`
 
+> **▶ ANSWERED 2026-05-18 — re-aims the whole future plan:**
+> - **Audience = industry pros (UI/UX + industrial designers).** Craft
+>   is the #1 judge. Design polish > functional realism. Redefine
+>   audience after this presentation.
+> - **Wow = surge prediction.** Horizon's predictive trajectory is the
+>   hero surface (NOT the Rehoboam page).
+> - **Devices = 55" touchscreen + iMac 24" + iPad + iPhone.** Hard
+>   multi-device/large-format/touch blocker. **#12 iPad is NO LONGER
+>   deferred** (it's in the room), and a NEW 55"-touch large-format
+>   requirement now exists (bigger than #12 alone).
+> - **Delivery = both** (live walkthrough + hands-on). Spine perfect +
+>   robust to poking.
+>
+> **RE-AIMED ORDER (supersedes the table below for the next session):**
+> 1. **Device/scale/touch readiness** (subsumes #12 + adds 55"
+>    large-format + touch targets across iMac/iPad/iPhone). Blocker:
+>    the demo physically runs on these screens.
+> 2. **Surge-prediction showcase** — make Horizon's predictive
+>    trajectory cinematic + flawless; add scenario variety if it
+>    sharpens the narrative. (The remembered "wow".)
+> 3. **Design-craft pass** (audience = designers): motion polish,
+>    typography, hierarchy, kill any AI-slop tells. Use the design
+>    skills (impeccable/critique/polish/animate).
+> 4. **Robustness for hands-on** — only the explore-path dead buttons
+>    + guardrails/"coming soon" (scoped, NOT all 47).
+> 5. **Spine QA/polish pass** right before the presentation.
+
 > **✅ DONE 2026-05-18.** Deliverable (high-leverage questions, grounded
 > in this session's deep work — dead-button audit, mock pulseAI,
 > scenario engine, memory, the new AI page):
@@ -375,9 +402,13 @@ short question list, not an essay.
 
 ## 12. iPad layout is broken: needs a tablet redesign `DESIGN+RESEARCH` → `BUILD` (SEPARATE TASK · do LAST)
 
-> **⏸ EXPLICITLY DEFERRED (Nick, 2026-05-18):** Not part of the current
-> build session. To be done later as its own dedicated task. Do NOT
-> start it when working the queue; stop after #11.
+> **⏸ DEFERRED out of the build session, then SUPERSEDED 2026-05-18:**
+> The #11 answers put iPad (+ a 55" touchscreen + iMac) IN the pitch
+> room, so this is no longer "last/deferred". It is now folded into
+> the re-aimed #1 priority: **Device/scale/touch readiness** (iPad +
+> 55" large-format + touch targets across iMac/iPad/iPhone). See the
+> RE-AIMED ORDER under #11. Treat #12 as part of that task, not a
+> standalone last item.
 
 **Asked (2026-05-18):** Installed PULSE on the physical iPad (iPad Pro
 11", `iPad8,1`). It opens but is **unusable**: layout impossible to
