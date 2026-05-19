@@ -2231,6 +2231,7 @@ const NavButton: React.FC<{
   return (
     <button
       type="button"
+      className="tap-target"
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -2279,6 +2280,7 @@ const IconButton: React.FC<{
   return (
     <button
       type="button"
+      className="tap-target"
       onClick={onClick}
       title={label}
       onMouseEnter={() => setHovered(true)}

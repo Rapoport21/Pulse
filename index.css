@@ -220,3 +220,18 @@ svg {
     margin: 0;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────
+   multidevice: touch-target floor.
+   ONLY on coarse-pointer (finger) devices — the iPad and the 55"
+   touchscreen. Mouse devices (iMac) never match this query, so the
+   dense 34px tactical chrome there is byte-identical to before.
+   min-width/min-height override the inline width/height:34 (used
+   value = max(min, width)), so no !important / specificity fight.
+   ─────────────────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
