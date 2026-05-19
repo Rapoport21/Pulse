@@ -75,6 +75,25 @@ const useIsMobile = (): boolean => {
   return isMobile;
 };
 
+// multidevice: the 3-pane staffing body cannot stay side-by-side on
+// the iPad band — even with the sidebar reclaimed, ~834px crushes the
+// center pane. Below 1100px stack the panes vertically. >=1100px
+// (iMac / large / 55") keeps the exact original 3-col layout.
+const useIsNarrow = (): boolean => {
+  const [narrow, setNarrow] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 1100 : false,
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 1099px)');
+    const handler = (e: MediaQueryListEvent) => setNarrow(e.matches);
+    mql.addEventListener('change', handler);
+    setNarrow(mql.matches);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  return narrow;
+};
+
 // ─────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────
@@ -306,6 +325,7 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
 
   // Mobile layout state
   const isMobile = useIsMobile();
+  const isNarrow = useIsNarrow();
   const [mobileTab, setMobileTab] = useState<'units' | 'crew' | 'log'>('units');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
 
@@ -1212,10 +1232,12 @@ export const WorkforceCoverage: React.FC<WorkforceCoverageProps> = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(260px, 300px) minmax(0, 1fr) minmax(320px, 360px)',
+          gridTemplateColumns: isNarrow
+            ? '1fr'
+            : 'minmax(260px, 300px) minmax(0, 1fr) minmax(320px, 360px)',
           gap: 1,
           background: COLORS.border,
-          overflow: 'hidden',
+          overflow: isNarrow ? 'auto' : 'hidden',
         }}
       >
         {/* ───────── LEFT · UNIT LIST ───────── */}
